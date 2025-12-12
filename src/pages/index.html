@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Радар технологий</title>
+  <link rel="icon" href="/assets/images/icon.png" type="image/png">
+  <link rel="shortcut icon" href="/assets/images/icon.png" type="image/png">
+  <link rel="stylesheet" href="/src/css/styles.css">
+  <link rel="stylesheet" href="/src/css/about.css">
+  <link rel="stylesheet" href="/src/css/common.css">
+</head>
+<body class="dark">
+  <!-- ===== Хедер ===== -->
+  <header>
+    <a class="logo" href="index.html">
+      <img src="/assets/images/icon.png" alt="Logo" class="logo-img" />
+      <span>Радар технологий</span>
+    </a>
+    <nav class="enterprise-nav">
+      <button>РМК</button>
+      <button>ТГОК</button>
+      <button>МГОК</button>
+      <button>КБМ</button>
+      <button>КМЭЗ</button>
+      <button>АМК</button>
+    </nav>
+    <div class="controls">
+      <button class="about-btn" id="aboutBtn" data-tooltip="О проекте" aria-label="О проекте">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 26" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
+          <circle cx="12" cy="14" r="10"></circle>
+          <line x1="12" y1="7" x2="12" y2="14"></line>
+          <circle cx="12" cy="18" r="1"></circle>
+        </svg>
+        <span class="about-btn__text">О проекте</span>
+      </button>
+      <label class="theme-switch" data-tooltip="Переключить тему" aria-label="Переключить тему">
+        <input type="checkbox" id="themeToggle" />
+        <span class="slider"></span>
+      </label>
+      <div id="authInfo"></div>
+      <div id="logoutContainer"></div>
+    </div>
+  </header>
+
+  <!-- ===== Главная ===== -->
+<main>
+  <div class="main-header">
+    <div class="selection-hint">
+      <div class="arrow-up">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <polyline points="18,15 12,9 6,15"></polyline>
+        </svg>
+      </div>
+      <div class="selection-text">Чтобы перейти к радару — выберите предприятие</div>
+    </div>
+    <h1>
+      <span>ИНТЕРАКТИВНАЯ ВИЗУАЛИЗАЦИЯ</span><br>
+      <span>ЦИФРОВОЙ ЗРЕЛОСТИ</span>
+    </h1>
+
+  </div>
+  <div id="radarContainer" class="radar-container">
+    <svg id="techRadar" viewBox="0 0 1000 1000"></svg>
+    <div id="quadrantLabels"></div>
+    <div id="hoverLabel" class="hover-label"></div>
+  </div>
+</main>
+<script src="/src/js/script.js"></script>
+
+</body>
+</html>

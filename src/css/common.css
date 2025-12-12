@@ -1,0 +1,446 @@
+/* ===== Глобальное правило шрифта ===== */
+html, body, *, *::before, *::after {
+  font-family: "gf_TikTok_Sans variant0", Tofu;
+  font-weight: 400;
+  font-style: normal;
+  font-stretch: normal;
+  font-optical-sizing: auto;
+  box-sizing: border-box;
+}
+
+/* ===== Кастомные подсказки ===== */
+.custom-tooltip,
+.tooltip-float,
+.tooltip-global {
+  position: fixed;
+  z-index: 9999;
+  min-width: 50px;
+  max-width: 280px;
+  padding: 6px 10px;
+  background: var(--modal-bg);
+  color: var(--text);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  font-size: 14px;
+  line-height: 1.4;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.custom-tooltip.visible,
+.tooltip-float.visible,
+.tooltip-global.visible {
+  opacity: 1;
+}
+
+/* Стрелки для разных позиций */
+.custom-tooltip::before,
+.custom-tooltip::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  width: 8px;
+  height: 8px;
+}
+
+/* Стрелка снизу */
+.custom-tooltip.top::before {
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  background: var(--modal-bg);
+  border-right: 1px solid var(--accent);
+  border-bottom: 1px solid var(--accent);
+}
+
+/* Стрелка сверху */
+.custom-tooltip.bottom::before {
+  top: -5px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-135deg);
+  background: var(--modal-bg);
+  border-right: 1px solid var(--accent);
+  border-bottom: 1px solid var(--accent);
+}
+
+/* Стрелка справа */
+.custom-tooltip.left::before {
+  right: -5px;
+  top: 50%;
+  transform: translateY(-50%) rotate(-45deg);
+  background: var(--modal-bg);
+  border-right: 1px solid var(--accent);
+  border-bottom: 1px solid var(--accent);
+}
+
+/* Стрелка слева */
+.custom-tooltip.right::before {
+  left: -5px;
+  top: 50%;
+  transform: translateY(-50%) rotate(135deg);
+  background: var(--modal-bg);
+  border-right: 1px solid var(--accent);
+  border-bottom: 1px solid var(--accent);
+}
+
+/* Анимации позиционирования */
+.custom-tooltip.top {
+  transform: translateY(-8px);
+}
+.custom-tooltip.top.visible {
+  transform: translateY(0);
+}
+
+.custom-tooltip.bottom {
+  transform: translateY(8px);
+}
+.custom-tooltip.bottom.visible {
+  transform: translateY(0);
+}
+
+.custom-tooltip.left {
+  transform: translateX(-8px);
+}
+.custom-tooltip.left.visible {
+  transform: translateX(0);
+}
+
+.custom-tooltip.right {
+  transform: translateX(8px);
+}
+.custom-tooltip.right.visible {
+  transform: translateX(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .custom-tooltip {
+    transition: none;
+  }
+}
+
+[data-tooltip] {
+  position: relative;
+}
+
+/* Обеспечиваем видимость подсказок внутри прокручиваемых контейнеров */
+.modal-content,
+.filter-panel-sidebar,
+.detail-panel {
+  overflow: visible !important;
+}
+
+/* ===== Переменные тем ===== */
+:root {
+  --accent: #ce9068;
+  --header-height: 72px;
+  --muted: #808080;
+  --bg-light: #ffffff;
+  --bg-dark: #000000;
+  --text-light: #000000;
+  --text-dark: #ffffff;
+}
+
+body.light {
+  --bg: var(--bg-light);
+  --text: var(--text-light);
+  --header-bg-color: var(--bg-light);
+}
+body.dark {
+  --bg: var(--bg-dark);
+  --text: var(--text-dark);
+  --header-bg-color: var(--bg-dark);
+}
+
+/* ===== Общие стили тела ===== */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ===== Хедер ===== */
+header {
+  position: fixed;         /* Фиксирует шапку сверху */
+  top: 0;                  /* Прижимает к верхнему краю */
+  left: 0;
+  right: 0;
+  z-index: 1000;           /* Чтобы шапка была поверх контента */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 20px;
+  flex-wrap: wrap;
+  height: var(--header-height);
+  padding: 10px 5%;
+  gap: 10px;
+  background: var(--header-bg-color);
+  backdrop-filter: blur(8px);   /* (необязательно) эффект полупрозрачности */
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.logo img {
+  width: clamp(36px, 5vw, 56px);
+  height: auto;
+  object-fit: contain;
+}
+a.logo {
+  color: inherit;
+  text-decoration: none;
+}
+a.logo:visited { color: inherit; }
+.logo span {
+  position: relative;
+}
+.logo span::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -4px;
+  height: 2px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.25s ease;
+}
+.logo:hover span::after { transform: scaleX(1); }
+body.dark .logo-img {
+  content: url("/image/Vector.png");
+}
+
+/* ===== Навигация предприятий ===== */
+.enterprise-nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 50%;
+  gap: 5px;
+  padding: 0;
+  border-radius: 8px;
+  margin: 0 auto;
+}
+.enterprise-nav button {
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 8px 16px;
+  font-size: clamp(18px, 2vw, 16px);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: 0.3s;
+}
+body.light .enterprise-nav button:hover {
+  background: #fff;
+  border: 1px solid #C8977F;
+  color: var(--accent);
+}
+body.dark .enterprise-nav button {
+  color: #fff;
+}
+body.dark .enterprise-nav button:hover {
+  background: #000;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+}
+/* ===== Контролы (тема, авторизация) ===== */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+/* кнопки входа/выхода */
+/* кнопки входа/выхода */
+.login, .logout {
+  border: none;
+  background: transparent;
+  padding: 4px;
+  border-radius: 0;
+  cursor: pointer;
+  font-size: clamp(12px, 1.5vw, 14px);
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logout svg, .login svg {
+  width: 24px;
+  height: 24px;
+  vertical-align: middle;
+  /* Убираем старый transition, так как мы используем animation */
+}
+
+/* --- АНИМАЦИЯ ДЛЯ КНОПКИ ВЫХОДА --- */
+/* При наведении запускаем анимацию для стрелки и линии */
+.logout:hover svg polyline {
+  animation: slide-out-arrow 0.8s ease-in-out infinite;
+}
+.logout:hover svg line {
+  animation: slide-out-line 0.8s ease-in-out infinite;
+}
+
+/* --- АНИМАЦИЯ ДЛЯ КНОПКИ ВХОДА --- */
+/* При наведении запускаем анимацию для стрелки и линии */
+.login:hover svg polyline {
+  animation: slide-in-arrow 0.8s ease-in-out infinite;
+}
+.login:hover svg line {
+  animation: slide-in-line 0.8s ease-in-out infinite;
+}
+
+
+/* --- ОПИСАНИЕ АНИМАЦИЙ (KEYFRAMES) --- */
+
+/* Анимация для стрелки "выхода" (уходит вправо) */
+@keyframes slide-out-arrow {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(4px); }
+}
+
+/* Анимация для линии "выхода" (создает эффект движения) */
+@keyframes slide-out-line {
+  0% { stroke-dashoffset: 0; }
+  50% { stroke-dashoffset: -10; }
+  100% { stroke-dashoffset: 0; }
+}
+
+/* Анимация для стрелки "входа" (уходит вправо, в "дверь") */
+@keyframes slide-in-arrow {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(4px); }
+}
+
+/* Анимация для линии "входа" (создает эффект втягивания) */
+@keyframes slide-in-line {
+  0% { stroke-dashoffset: 0; }
+  50% { stroke-dashoffset: 10; }
+  100% { stroke-dashoffset: 0; }
+}
+
+/* --- ТЕМЫ (без изменений) --- */
+body.light .login, body.light .logout { color: #000; }
+body.dark .login, body.dark .logout { color: #fff; }
+
+/* ===== Переключатель темы ===== */
+.theme-switch {
+  --switch-w: 50px;
+  --switch-h: 25px;
+  --knob-size: 18px;
+  --icon-size: var(--knob-size);
+  --gap: 2px;
+  --icon-gap: 8px;
+  position: relative;
+  width: var(--switch-w);
+  height: var(--switch-h);
+}
+.theme-switch input {
+  display: none;
+}
+.slider {
+  position: absolute;
+  inset: 0;
+  background: #dfdfdf;
+  border-radius: calc(var(--switch-h) / 2);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.slider::before {
+  content: "";
+  position: absolute;
+  height: var(--knob-size);
+  width: var(--knob-size);
+  left: var(--gap);
+  top: calc((var(--switch-h) - var(--knob-size)) / 2);
+  background: white;
+  border-radius: 50%;
+  transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+  z-index: 2;
+}
+input:checked + .slider {
+  background: #444;
+}
+input:checked + .slider::before {
+  left: calc(var(--switch-w) - var(--knob-size) - var(--gap));
+}
+.slider::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: var(--icon-size);
+  height: var(--icon-size);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  pointer-events: none;
+  transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+  z-index: 1;
+}
+body.light .slider::after {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='currentColor' d='M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z'/></svg>");
+  left: clamp(var(--gap), calc(var(--gap) + var(--knob-size) + var(--icon-gap)), calc(var(--switch-w) - var(--gap) - var(--icon-size)));
+}
+body.dark .slider::after {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><circle cx='12' cy='12' r='4' fill='%23fff'/><path stroke='%23fff' stroke-linecap='round' stroke-width='1.5' d='M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41' fill='none'/></svg>");
+  left: clamp(var(--gap), calc(var(--switch-w) - var(--knob-size) - var(--gap) - var(--icon-gap) - var(--icon-size)), calc(var(--switch-w) - var(--gap) - var(--icon-size)));
+}
+.theme-switch:hover .slider,
+.theme-switch:focus-within .slider {
+  transform: translateY(-2px);
+  background: linear-gradient(90deg, #b7866a, rgba(0,0,0,0.06));
+}
+.theme-switch:hover .slider::before,
+.theme-switch:focus-within .slider::before {
+  transform: scale(1.1);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+}
+.theme-switch:focus-within {
+  outline: 3px solid rgba(206, 145, 104, 0.35);
+  outline-offset: 4px;
+  border-radius: 8px;
+}
+
+/* ===== USER ROLE (если используется) ===== */
+.user-role {
+  font-size: clamp(20px, 1.5vw, 14px);
+  margin-right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  position: relative;
+}
+.user-role::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -4px;
+  height: 2px;
+  background: #ce9068;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.25s ease;
+}
+.user-role:hover::after { transform: scaleX(1); }
+
+/* ===== Адаптивность хедера ===== */
+@media (max-width: 768px) {
+  header {
+    flex-direction: column;
+    gap: 15px;
+  }
+  .enterprise-nav {
+    width: 100%;
+    order: 3;
+  }
+  .controls {
+    order: 2;
+    justify-content: center;
+  }
+  .logo {
+    order: 1;
+  }
+}

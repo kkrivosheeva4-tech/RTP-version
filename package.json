@@ -1,0 +1,15 @@
+{
+  "name": "package",
+  "version": "1.0.0",
+  "description": "",
+  "main": "rmk.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "d3": "^7.9.0"
+  },
+  "_comment": "ВНИМАНИЕ: Установка зависимостей через npm НЕ требуется! Проект работает без Node.js. Все библиотеки загружаются через CDN автоматически. Этот файл оставлен для совместимости, но не используется в работе проекта."
+}

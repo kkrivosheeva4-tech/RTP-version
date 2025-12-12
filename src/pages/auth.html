@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Авторизация - Радар Технологий</title>
+  <link rel="icon" href="/assets/images/icon.png" type="image/png">
+  <link rel="shortcut icon" href="/assets/images/icon.png" type="image/png">
+  <meta name="color-scheme" content="light dark">
+  <link rel="stylesheet" href="/src/css/auth.css">
+</head>
+<body>
+  <div class="page" id="page">
+    <div class="decor" aria-hidden="true">
+      <div class="radar">
+      </div>
+      <!-- Geometric SVGs -->
+    </div>
+
+    <main class="card" role="main" aria-labelledby="brand-title">
+      <div class="brand">
+        <div>
+          <h1 id="brand-title" class="brand__title">Радар Технологий</h1>
+          <p class="brand__subtitle">Войдите для доступа к системе</p>
+        </div>
+        <button id="themeToggle" class="theme-toggle" type="button" aria-label="Переключить тему">
+          <svg id="iconSun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>
+          </svg>
+          <svg id="iconMoon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none" aria-hidden="true">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+      </div>
+
+      <form id="loginForm" novalidate>
+        <div class="group">
+          <span class="icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </span>
+          <input class="input" id="username" name="username" type="text" autocomplete="username"
+                 placeholder="Имя пользователя" required aria-label="Имя пользователя">
+        </div>
+
+        <div class="group">
+          <span class="icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </span>
+          <input class="input" id="password" name="password" type="password" autocomplete="current-password"
+                 placeholder="Пароль" required minlength="4" aria-label="Пароль">
+          <button class="password-toggle" id="passwordToggle" type="button" aria-label="Показать пароль">
+            <svg id="eyeOn" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+            <svg id="eyeOff" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none">
+              <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.77 21.77 0 0 1 5.06-6.87"></path>
+              <path d="M1 1l22 22"></path>
+            </svg>
+          </button>
+        </div>
+
+        <div class="row">
+          <label>
+            <input id="remember" type="checkbox"> Запомнить меня
+          </label>
+          <a href="#" tabindex="0">Забыли пароль?</a>
+        </div>
+
+        <button id="submitBtn" class="btn" type="submit">
+          <span class="btn__text">Войти</span>
+          <span class="btn__spinner" aria-hidden="true"></span>
+        </button>
+      </form>
+
+      <div class="foot">© 2025 РМК‑Диджитал</div>
+    </main>
+  </div>
+
+  <script src="/src/js/auth.js"></script>
+</body>
+</html>

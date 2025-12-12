@@ -1,0 +1,615 @@
+/* ... (весь ваш предыдущий CSS остается без изменений) ... */
+/* --- СТИЛИ МОДАЛЬНОГО ОКНА (ИСХОДНЫЕ) --- */
+:root {
+  --quadrant-color-q1: rgb(162, 190, 76, 1);
+  --quadrant-color-q2: rgba(249, 124, 54, 1);
+  --quadrant-color-q3: rgba(0, 166, 231, 1);
+  --quadrant-color-q4: rgba(199, 1, 127, 1);
+}
+/* Модальное окно и фон */
+.about-modal {
+  /* опциональные локальные настройки (можно переопределять) */
+  --bg-opacity: 0.65;
+  --backdrop-blur: 12px;
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  pointer-events: none;
+}
+
+.about-modal.visible {
+  display: flex;
+  pointer-events: all;
+}
+
+.about-backdrop {
+  position: fixed;
+  inset: 0;
+  /* фон затемнения — настраивается под тему */
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(var(--backdrop-blur)) saturate(180%);
+  transition: opacity 0.3s ease;
+  opacity: 0;
+}
+
+/* Тонкая подстройка бекдропа под светлую/тёмную тему (проект задаёт body.light / body.dark)
+   Используем более сильное затемнение в dark и чуть более мягкое в light */
+body.light .about-backdrop { background: rgba(0,0,0,0.18); }
+body.dark  .about-backdrop { background: rgba(0,0,0,0.52); }
+
+/* Панель с эффектом стекла */
+.about-panel {
+  /* эффект стекла: полупрозрачный фон + blur. Цвета подстраиваются под глобальную тему */
+  background: rgba(255,255,255,var(--bg-opacity)); /* fallback */
+  backdrop-filter: blur(8px) saturate(120%);
+  color: var(--text, #000);
+  border-radius: 16px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.25),
+    0 2px 8px rgba(0, 0, 0, 0.15),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  max-width: clamp(320px, 86vw, 760px);
+  max-height: clamp(360px, 86vh, 900px);
+  overflow: auto;
+  padding: 28px;
+  transform: translateY(16px) scale(0.98);
+  opacity: 0;
+  transition:
+    transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.25s ease;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.about-panel.open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* Подстройка фона панели под глобальные переменные темы проекта.
+   Сохраняем стеклянный эффект, но используем цвета из :root / body.light / body.dark. */
+body.light .about-panel {
+  background: rgba(255,255,255,0.82);
+  border: 1px solid rgba(0,0,0,0.06);
+  color: var(--text, #000);
+}
+body.dark .about-panel {
+  background: rgba(0,0,0,0.48);
+  border: 1px solid rgba(255,255,255,0.06);
+  color: var(--text, #fff);
+}
+
+/* Кнопка закрытия */
+.about-close {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(0,0,0,0.06);
+  background: transparent;
+  color: var(--text);
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.18s ease;
+  backdrop-filter: blur(4px);
+}
+
+.about-close:hover {
+  background: var(--close-btn-hover, rgba(0,0,0,0.06));
+  transform: scale(1.08);
+}
+
+.about-close:active {
+  transform: scale(0.96);
+}
+
+
+/* --- СТИЛИ КНОПКИ "О ПРОЕКТЕ" (ИСХОДНЫЕ) --- */
+
+.about-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px; /* отступ между иконкой и текстом */
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font: inherit; /* наследует шрифт от родителя */
+  position: relative; /* Необходимо для позиционирования псевдоэлемента ::after */
+}
+
+.about-btn:after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -4px;
+  height: 2px;
+  background: #ce9068;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.25s ease;
+}
+.about-btn:hover:after {
+  transform: scaleX(1);
+}
+
+.about-btn:active {
+  transform: translateY(0);
+}
+
+.about-btn svg {
+  display: block;
+  transition: transform 0.2s ease;
+  flex-shrink: 0; /* предотвращает сжатие иконки при узком контейнере */
+}
+
+.about-btn:hover svg {
+  transform: scale(1.1);
+}
+
+/* Скрыть текст в узких контейнерах (опционально) */
+@media (max-width: 768px) {
+  .about-btn__text {
+    display: none;
+  }
+}
+.about-content h2 {
+  margin-top: 0;
+  font-size: 1.8rem;
+  color: var(--accent);
+  text-decoration: underline;
+}
+.about-content h3 {
+  font-size: 1.4rem;
+  margin-top: 24px;
+}
+/* Уровни колец - УБРАНЫ КРУГИ */
+.ring-levels {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ring-level {
+  padding: 12px;
+  border-radius: 12px;
+  backdrop-filter: blur(4px);
+  transition: transform 0.2s;
+}
+body.dark  .ring-level {
+  background: rgba(255, 255, 255, 0.219);
+}
+body.light .ring-level {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.ring-level:hover {
+  transform: translateX(4px);
+}
+
+/* Стили для .ring-indicator и .ring-content больше не нужны в таком виде */
+.ring-content h5 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+  color: var(--accent);
+}
+
+.ring-content p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+/* --- СТИЛЬ ДЛЯ ЗАМЕТКИ (УЖЕ БЫЛ, НО НА КОНТРОЛЕ) --- */
+.about-note {
+  margin-top: 24px;
+  font-style: italic; /* Курсив */
+  font-size: 0.85rem;
+  color: color-mix(in srgb, var(--text) 75%, transparent);
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(var(--text-rgb, 0, 0, 0), 0.05);
+  backdrop-filter: blur(4px);
+}
+
+/* --- СТИЛИ ДЛЯ ОСТАЛЬНЫХ ЭЛЕМЕНТОВ (БЕЗ ИЗМЕНЕНИЙ) --- */
+
+/* Карточки функций */
+.feature-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.feature-card {
+  display: flex;
+  align-items: flex-start;
+  padding: 16px;
+  border-radius: 12px;
+  backdrop-filter: blur(4px);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+body.dark  .feature-card {
+  background: rgba(255, 255, 255, 0.219);
+}
+body.light .feature-card {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.card-icon {
+  margin-right: 12px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+}
+
+.card-icon svg {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.card-content h4 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  color: var(--accent);
+}
+
+.card-content p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+/* Структура радара */
+.radar-structure {
+  margin: 16px 0;
+}
+
+.structure-section {
+  margin-bottom: 24px;
+}
+
+.section-header {
+  margin-bottom: 16px;
+}
+
+.section-header h4 {
+  display: flex;
+  align-items: center;
+  gap: 5px; /* отступ между иконкой и текстом */
+  margin: 0 0 8px;
+  font-size: 1.1rem;
+  color: var(--accent);
+}
+
+.section-header p {
+  margin: 0;
+  font-size: 0.95rem;
+  opacity: 0.9;
+}
+
+.sector-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.sector-card {
+  padding: 16px;
+  border-radius: 12px;
+  backdrop-filter: blur(4px);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+body.dark  .sector-card {
+  background: rgba(255, 255, 255, 0.219);
+}
+body.light .sector-card {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.sector-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.sector-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  margin-bottom: 12px;
+}
+
+/* Общий стиль для всех заголовков */
+.sector-card h5 {
+  margin: 0 0 8px;
+  font-size: 18px ;
+}
+
+/* Цвета по квадрантам */
+.sector-card.q1 h5 { color: var(--quadrant-color-q1); }
+.sector-card.q2 h5 { color: var(--quadrant-color-q2); }
+.sector-card.q3 h5 { color: var(--quadrant-color-q3); }
+.sector-card.q4 h5 { color: var(--quadrant-color-q4); }
+
+.sector-card p {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+/* Легенда */
+.legend-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin: 16px 0;
+}
+
+.legend-section {
+  padding: 16px;
+  border-radius: 12px;
+  backdrop-filter: blur(4px);
+}
+body.dark  .legend-section {
+  background: rgba(255, 255, 255, 0.219);
+}
+body.light .legend-section {
+  background: rgba(0, 0, 0, 0.05);
+}
+.legend-section h4 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  color: var(--accent);
+}
+
+.legend-section p {
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.legend-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+}
+
+.shape {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background-color: var(--accent);
+  margin-right: 8px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.type_basic {
+  border-radius: 50%;
+}
+
+.type_advanced {
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+}
+
+.type_expert {
+  clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
+}
+
+.type_star {
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+
+.label {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.position-factors {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.factor {
+  display: flex;
+  align-items: center;
+}
+
+.factor-icon {
+  margin-right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+}
+
+.factor-icon svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.factor-text {
+  font-size: 0.9rem;
+}
+
+/* Доступность по ролям */
+.role-access {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.role-card {
+  display: flex;
+  align-items: flex-start;
+  padding: 16px;
+  border-radius: 12px;
+  backdrop-filter: blur(4px);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+body.dark  .role-card {
+  background: rgba(255, 255, 255, 0.219);
+}
+body.light .role-card {
+  background: rgba(0, 0, 0, 0.05);
+}
+.role-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.role-icon {
+  margin-right: 12px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+}
+
+.role-icon svg {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.role-content h4 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  color: var(--accent);
+}
+
+.role-content p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+/* Стек технологий */
+.tech-stack {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.tech-item {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 16px;
+  border-radius: 10px;
+  backdrop-filter: blur(4px);
+  transition: transform 0.2s;
+}
+
+body.dark .tech-item {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+body.light .tech-item {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.tech-item:hover {
+  transform: translateY(-2px);
+}
+
+.tech-label {
+  font-size: 0.8rem;
+  color: var(--accent);
+  font-weight: 600;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tech-value {
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+/* Футер с информацией о проекте */
+.about-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 32px;
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(128, 128, 128, 0.2);
+}
+
+.about-footer > div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.version-label,
+.developer-label,
+.year-label {
+  font-size: 0.85rem;
+  color: color-mix(in srgb, var(--text) 65%, transparent);
+}
+
+.version-value,
+.developer-value,
+.year-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .feature-cards,
+  .sector-cards,
+  .role-access {
+    grid-template-columns: 1fr;
+  }
+
+  .legend-container {
+    grid-template-columns: 1fr;
+  }
+
+  .tech-stack {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .about-footer {
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .tech-stack {
+    grid-template-columns: 1fr;
+  }
+}
