@@ -15,6 +15,16 @@ const RING_LABEL_HEIGHT = 42;
 let RINGS = [];
 let QUADRANTS = [];
 let levelToRing = {};
+
+// Экспорт констант в window для использования модулями
+window.CENTER_X = CENTER_X;
+window.CENTER_Y = CENTER_Y;
+window.RADIUS_STEP = RADIUS_STEP;
+window.POSITION_PAD = POSITION_PAD;
+window.POSITION_ANGLE_PAD = POSITION_ANGLE_PAD;
+window.MIN_BLIP_DISTANCE = MIN_BLIP_DISTANCE;
+window.RING_LABEL_WIDTH = RING_LABEL_WIDTH;
+window.RING_LABEL_HEIGHT = RING_LABEL_HEIGHT;
 // Соответствие techType → форма
 const TECHTYPE_TO_SHAPE = {
   "Базовые": "triangle",
@@ -22,51 +32,9 @@ const TECHTYPE_TO_SHAPE = {
   "Платформенные решения": "square",
   "Управление с ML и AI": "star",
 };
+// Экспорт TECHTYPE_TO_SHAPE в window для использования модулями
+window.TECHTYPE_TO_SHAPE = TECHTYPE_TO_SHAPE;
 // Координаты вычисляются детерминированно на основе id, blocks и level
-// ===== УТИЛИТЫ =====
-function debounce(func, wait) {
-  let timeout;
-  return function executedFunction(...args) {
-    const later = () => {
-      clearTimeout(timeout);
-      func(...args);
-    };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-  };
-}
-
-function polarToCartesian(cx, cy, r, deg) {
-  const rad = ((deg - 90) * Math.PI) / 180;
-  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
-}
-
-// Обратное преобразование: из декартовых координат в полярные (относительно центра радара)
-function cartesianToPolar(cx, cy, x, y) {
-  const dx = x - cx;
-  const dy = y - cy;
-  const radius = Math.sqrt(dx * dx + dy * dy);
-  // Угол в градусах в той же системе, что и в polarToCartesian (0° — вверх)
-  let deg = (Math.atan2(dy, dx) * 180) / Math.PI + 90;
-  // Нормализуем угол в диапазон [0, 360)
-  if (!Number.isFinite(deg)) deg = 0;
-  while (deg < 0) deg += 360;
-  while (deg >= 360) deg -= 360;
-  return { radius, angle: deg };
-}
-
-function describeArc(x, y, r, sa, ea) {
-  const s = polarToCartesian(x, y, r, ea);
-  const e = polarToCartesian(x, y, r, sa);
-  return `M ${s.x} ${s.y} A ${r} ${r} 0 0 0 ${e.x} ${e.y}`;
-}
-
-function describeWedge(x, y, r, sa, ea) {
-  const s = polarToCartesian(x, y, r, ea);
-  const e = polarToCartesian(x, y, r, sa);
-  return `M ${x},${y} L ${s.x},${s.y} A ${r},${r} 0 0 0 ${e.x},${e.y} Z`;
-}
-
 // ===== VFS: virtual file system using localStorage =====
 function vfsKey(filename) { return `vfs:${filename}`; }
 function vfsRead(filename) {
@@ -83,16 +51,87 @@ function vfsWrite(filename, data) {
     return true;
   } catch (e) { console.error('vfsWrite error', e); return false; }
 }
+
+// ===== ПОДКЛЮЧЕНИЕ МОДУЛЕЙ (без fallback) =====
+function toKebab(name) {
+  return name
+    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+    .replace(/_/g, '-')
+    .toLowerCase();
+}
+function requireGlobalModule(name) {
+  if (typeof window === 'undefined' || !window[name]) {
+    const file = toKebab(name);
+    throw new Error(`Модуль ${name} не загружен. Подключите src/js/modules/${file}.js перед RMK2.js`);
+  }
+  return window[name];
+}
+
+const DOMCache = requireGlobalModule('DOMCache');
+const EventManager = requireGlobalModule('EventManager');
+const RenderQueue = requireGlobalModule('RenderQueue');
+const DataIndex = requireGlobalModule('DataIndex');
+const Memoization = requireGlobalModule('Memoization');
+const StateManager = requireGlobalModule('StateManager');
+const ErrorHandler = requireGlobalModule('ErrorHandler');
+const Positioning = requireGlobalModule('Positioning');
+const RadarRenderer = requireGlobalModule('RadarRenderer');
+const Filters = requireGlobalModule('Filters');
+const Modals = requireGlobalModule('Modals');
+
+// ===== СЕТЬ И КЭШ ОТВЕТОВ =====
+// Кэшируем ответы fetch и дедуплицируем параллельные запросы, чтобы сократить трафик
+const FETCH_CACHE_TTL_MS = 5 * 60 * 1000; // 5 минут
+const DEFAULT_FETCH_TIMEOUT_MS = 8000;
+const fetchCache = new Map();
+const inflightFetches = new Map();
+
+function clearFetchCache() {
+  fetchCache.clear();
+  inflightFetches.clear();
+}
+
+async function fetchJsonWithCache(url, { ttl = FETCH_CACHE_TTL_MS, timeout = DEFAULT_FETCH_TIMEOUT_MS } = {}) {
+  const now = Date.now();
+  const cached = fetchCache.get(url);
+  if (cached && cached.expiresAt > now) {
+    return cached.data;
+  }
+
+  if (inflightFetches.has(url)) {
+    return inflightFetches.get(url);
+  }
+
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timerId = timeout ? setTimeout(() => controller?.abort(), timeout) : null;
+
+  const promise = fetch(url, controller ? { signal: controller.signal } : undefined)
+    .then(async (r) => {
+      if (!r || !r.ok) {
+        throw new Error(`HTTP ${r ? r.status : 'no response'}`);
+      }
+      return r.json();
+    })
+    .then((json) => {
+      fetchCache.set(url, { data: json, expiresAt: now + ttl });
+      return json;
+    })
+    .finally(() => {
+      inflightFetches.delete(url);
+      if (timerId) clearTimeout(timerId);
+    });
+
+  inflightFetches.set(url, promise);
+  return promise;
+}
 async function loadJsonPreferVfs(filename) {
   const fromVfs = vfsRead(filename);
   if (fromVfs !== null) return { path: `local:${filename}`, data: fromVfs };
   const paths = [`/src/data/${filename}`, `/src/data/ru/${filename}`];
   for (const p of paths) {
     try {
-      const r = await fetch(p);
-      if (r && r.ok) {
-        try { const json = await r.json(); return { path: p, data: json }; } catch (err) { }
-      }
+      const json = await fetchJsonWithCache(p);
+      if (json) return { path: p, data: json };
     } catch (err) { /* ignore fetch errors */ }
   }
   return { path: null, data: null };
@@ -100,12 +139,13 @@ async function loadJsonPreferVfs(filename) {
 
 // ===== УВЕДОМЛЕНИЯ =====
 function showNotification(message, isSuccess = false) {
-  let panel = document.getElementById('notificationPanel');
+  let panel = DOMCache.get('notificationPanel');
   if (!panel) {
     panel = document.createElement('div');
     panel.id = 'notificationPanel';
     panel.className = 'notification-panel';
     document.body.appendChild(panel);
+    DOMCache.refresh('notificationPanel');
   }
   const notification = document.createElement('div');
   notification.className = `notification ${isSuccess ? 'success' : 'info'}`;
@@ -119,365 +159,376 @@ function showNotification(message, isSuccess = false) {
   notification.style.zIndex = String(topZ);
   panel.appendChild(notification);
 
-  const closeBtn = notification.querySelector('.notification-close');
+  const closeBtn = DOMCache.find(notification, '.notification-close');
   const hide = () => {
     notification.style.animation = 'slideOutRight 0.28s ease forwards';
     setTimeout(() => panel.contains(notification) && panel.removeChild(notification), 300);
   };
-  closeBtn?.addEventListener('click', hide);
-  notification.addEventListener('click', hide);
+  if (closeBtn) EventManager.on('.notification-close', 'click', hide);
+  EventManager.on('.notification', 'click', hide);
   setTimeout(hide, 4000);
 }
 
 // ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
-let technologies = [];
-let enterpriseData = {};
-let blockToQuadrant = {};
-let currentEnterprise = "РМК";
+// Переменные состояния перенесены в StateManager
+// Для обратной совместимости создаем геттеры/сеттеры, которые синхронизируются с StateManager
+
+// Инициализация состояния в StateManager
+StateManager.set('technologies', []);
+StateManager.set('enterpriseData', {});
+StateManager.set('blockToQuadrant', {});
+StateManager.set('currentEnterprise', "РМК");
+StateManager.set('nextId', 1);
+StateManager.set('currentTech', null);
+StateManager.set('selectedBlipId', null);
+StateManager.set('blocksList', []);
+StateManager.set('functions', []);
+StateManager.set('nameToBlockId', {});
+StateManager.set('functionToBlockMap', {});
+StateManager.set('currentZoomedQuadrant', null);
+StateManager.set('quadrantsCache', new Map());
+StateManager.set('quadrantsCacheVersion', 0);
+StateManager.set('technologiesById', new Map());
+
+// Геттеры для обратной совместимости (синхронизируются с StateManager)
+function getTechnologies() { return StateManager.get('technologies'); }
+function setTechnologies(value) {
+  StateManager.set('technologies', value);
+  window.technologies = value; // Синхронизация с window для модулей
+}
+function getEnterpriseData() { return StateManager.get('enterpriseData'); }
+function setEnterpriseData(value) {
+  StateManager.set('enterpriseData', value);
+  window.enterpriseData = value;
+}
+function getCurrentEnterprise() { return StateManager.get('currentEnterprise'); }
+function setCurrentEnterprise(value) {
+  StateManager.set('currentEnterprise', value);
+  window.currentEnterprise = value;
+}
+function getCurrentZoomedQuadrant() { return StateManager.get('currentZoomedQuadrant'); }
+function setCurrentZoomedQuadrant(value) {
+  StateManager.set('currentZoomedQuadrant', value);
+  window.currentZoomedQuadrant = value;
+}
+function getSelectedBlipId() { return StateManager.get('selectedBlipId'); }
+function setSelectedBlipId(value) { StateManager.set('selectedBlipId', value); }
+function getCurrentTech() { return StateManager.get('currentTech'); }
+function setCurrentTech(value) { StateManager.set('currentTech', value); }
+function getBlocksList() { return StateManager.get('blocksList'); }
+function setBlocksList(value) {
+  StateManager.set('blocksList', value);
+  window.blocksList = value;
+}
+function getFunctions() { return StateManager.get('functions'); }
+function setFunctions(value) {
+  StateManager.set('functions', value);
+  window.functions = value;
+}
+function getNameToBlockId() { return StateManager.get('nameToBlockId'); }
+function setNameToBlockId(value) {
+  StateManager.set('nameToBlockId', value);
+  window.nameToBlockId = value;
+}
+function getFunctionToBlockMap() { return StateManager.get('functionToBlockMap'); }
+function setFunctionToBlockMap(value) {
+  StateManager.set('functionToBlockMap', value);
+  window.functionToBlockMap = value;
+}
+function getBlockToQuadrant() { return StateManager.get('blockToQuadrant'); }
+function setBlockToQuadrant(value) {
+  StateManager.set('blockToQuadrant', value);
+  window.blockToQuadrant = value;
+}
+function getTechnologiesById() { return StateManager.get('technologiesById'); }
+function getQuadrantsCache() { return StateManager.get('quadrantsCache'); }
+function getQuadrantsCacheVersion() { return StateManager.get('quadrantsCacheVersion'); }
+function setQuadrantsCacheVersion(value) { StateManager.set('quadrantsCacheVersion', value); }
+
+// Временные переменные (не переносятся в state-manager, т.к. не являются состоянием приложения)
 let nextId = 1;
-let currentTech = null;
-let selectedBlipId = null;
-let blocksList = [];
-let functions = [];
-let nameToBlockId = {}; // Маппинг имени блока к его id
-let functionToBlockMap = {}; // Маппинг функции к id блока(ов)
-// временный таймаут, чтобы игнорировать click, который открыл модалку
 let ignoreOutsideClickUntil = 0;
 
-// DOM
-const svg = document.getElementById("techRadar");
-const detailPanel = document.getElementById("detailPanel");
-const hoverLabel = document.getElementById("hoverLabel");
-const searchInput = document.getElementById("searchInput");
-const themeToggle = document.getElementById("themeToggle");
-const authInfo = document.getElementById("authInfo");
-const logoutContainer = document.getElementById("logoutContainer");
-const addTechBtn = document.getElementById("addTechBtn");
+// Экспорт переменных в window для использования модулями
+window.RINGS = RINGS;
+window.QUADRANTS = QUADRANTS;
+window.levelToRing = levelToRing;
+// Синхронизация с StateManager при инициализации
+window.blockToQuadrant = getBlockToQuadrant();
+window.technologies = StateManager.get('technologies');
+window.enterpriseData = StateManager.get('enterpriseData');
+window.currentEnterprise = StateManager.get('currentEnterprise');
+window.currentZoomedQuadrant = StateManager.get('currentZoomedQuadrant');
+window.blocksList = StateManager.get('blocksList');
+window.functions = StateManager.get('functions');
+window.nameToBlockId = StateManager.get('nameToBlockId');
+window.functionToBlockMap = StateManager.get('functionToBlockMap');
+
+// Подписки на изменения состояния для синхронизации window
+StateManager.subscribeToKey('blockToQuadrant', (value) => { window.blockToQuadrant = value; });
+StateManager.subscribeToKey('technologies', (value) => { window.technologies = value; });
+StateManager.subscribeToKey('enterpriseData', (value) => { window.enterpriseData = value; });
+StateManager.subscribeToKey('currentEnterprise', (value) => { window.currentEnterprise = value; });
+StateManager.subscribeToKey('currentZoomedQuadrant', (value) => { window.currentZoomedQuadrant = value; });
+StateManager.subscribeToKey('blocksList', (value) => { window.blocksList = value; });
+StateManager.subscribeToKey('functions', (value) => { window.functions = value; });
+StateManager.subscribeToKey('nameToBlockId', (value) => { window.nameToBlockId = value; });
+StateManager.subscribeToKey('functionToBlockMap', (value) => { window.functionToBlockMap = value; });
+
+// Подписки на изменения состояния для автоматического обновления UI
+// При изменении technologies - обновляем радар и индекс
+StateManager.subscribeToKey('technologies', (newValue, oldValue) => {
+  rebuildTechnologiesIndex();
+  // Не обновляем радар, если открыто модальное окно редактирования или добавления
+  // Это предотвращает закрытие модального окна из-за перерисовки DOM
+  const editPanel = document.getElementById('editTechPanel');
+  const addPanel = document.getElementById('addTechPanel');
+  const isModalOpen = (editPanel && (editPanel.style.display === 'block' || editPanel.classList.contains('open'))) ||
+                      (addPanel && (addPanel.style.display === 'block' || addPanel.classList.contains('open')));
+
+  if (isModalOpen) {
+    // Если модальное окно открыто, пропускаем обновление радара
+    return;
+  }
+
+  // Обновляем радар, если он уже отрисован (проверяем через DOMCache)
+  const svgEl = DOMCache.get('techRadar');
+  if (svgEl && svgEl.children && svgEl.children.length > 0) {
+    // Используем debounce для избежания множественных обновлений
+    if (typeof updateRadar === 'function') {
+      requestAnimationFrame(() => {
+        try {
+          updateRadar();
+        } catch (e) {
+          console.warn('Ошибка при автоматическом обновлении радара:', e);
+        }
+      });
+    }
+  }
+});
+
+// При изменении currentEnterprise - обновляем фильтры и радар
+StateManager.subscribeToKey('currentEnterprise', (newValue, oldValue) => {
+  // Не обновляем радар, если открыто модальное окно редактирования или добавления
+  const editPanel = document.getElementById('editTechPanel');
+  const addPanel = document.getElementById('addTechPanel');
+  const isModalOpen = (editPanel && (editPanel.style.display === 'block' || editPanel.classList.contains('open'))) ||
+                      (addPanel && (addPanel.style.display === 'block' || addPanel.classList.contains('open')));
+
+  // Обновляем фильтры предприятий, если они доступны
+  const enterpriseData = getEnterpriseData();
+  if (enterpriseData && Object.keys(enterpriseData).length > 0) {
+    const companies = Object.keys(enterpriseData).filter(c => c);
+    // Обновляем селект предприятий, если он существует
+    const companySelect = document.querySelector('.enterprise-nav');
+    if (companySelect) {
+      // Обновление кнопок предприятий происходит через другие механизмы
+      // Здесь можно добавить дополнительную логику при необходимости
+    }
+  }
+
+  // Обновляем радар при смене предприятия только если модальное окно не открыто
+  if (!isModalOpen) {
+    const svgEl = DOMCache.get('techRadar');
+    if (svgEl && svgEl.children && svgEl.children.length > 0) {
+      if (typeof updateRadar === 'function') {
+        requestAnimationFrame(() => {
+          try {
+            updateRadar();
+          } catch (e) {
+            console.warn('Ошибка при автоматическом обновлении радара при смене предприятия:', e);
+          }
+        });
+      }
+    }
+  }
+});
+
+// При изменении selectedBlipId - обновляем подсветку blip'ов
+StateManager.subscribeToKey('selectedBlipId', (newValue, oldValue) => {
+  const svgEl = DOMCache.get('techRadar');
+  if (!svgEl) return;
+
+  // Снимаем подсветку со старого blip'а
+  if (oldValue) {
+    const oldBlip = svgEl.querySelector(`[data-tech-id="${oldValue}"]`);
+    if (oldBlip) {
+      oldBlip.classList.remove('selected');
+    }
+  }
+  // Подсвечиваем новый blip
+  if (newValue) {
+    const newBlip = svgEl.querySelector(`[data-tech-id="${newValue}"]`);
+    if (newBlip) {
+      newBlip.classList.add('selected');
+    }
+  }
+});
+
+// При изменении currentZoomedQuadrant - обновляем отображение квадрантов
+StateManager.subscribeToKey('currentZoomedQuadrant', (newValue, oldValue) => {
+  // Обновление зума квадранта происходит через другие функции
+  // Здесь можно добавить дополнительную логику при необходимости
+});
+
+// Обновить индекс технологий по id
+function rebuildTechnologiesIndex() {
+  const technologiesById = getTechnologiesById();
+  technologiesById.clear();
+  getTechnologies().forEach(tech => {
+    if (tech && tech.id != null) {
+      technologiesById.set(tech.id, tech);
+    }
+  });
+  try { DataIndex.build(getTechnologies()); } catch (e) { console.warn('DataIndex.build failed', e); }
+}
+
+// Быстрый поиск технологии по id (O(1) вместо O(n))
+function getTechById(id) {
+  const technologiesById = getTechnologiesById();
+  return technologiesById.get(id) || null;
+}
+
+// DOM - используем DOMCache для получения элементов
+// Создаем функции-геттеры, которые возвращают элементы через DOMCache
+function createDOMGetter(id) {
+  return function() {
+    return DOMCache.get(id);
+  };
+}
+
+// Для элементов, которые используются как объекты (svg, detailPanel), создаем Proxy
+function createDOMProxy(id) {
+  return new Proxy({}, {
+    get(target, prop) {
+      const el = DOMCache.get(id);
+      if (!el) {
+        // Безопасные значения для отсутствующих элементов
+        if (prop === 'querySelector') return () => null;
+        if (prop === 'querySelectorAll') return () => [];
+        if (prop === 'appendChild') return () => null;
+        if (prop === 'getBoundingClientRect') return () => ({ top: 0, left: 0, width: 0, height: 0 });
+        return null;
+      }
+      const value = el[prop];
+      return typeof value === 'function' ? value.bind(el) : value;
+    },
+    set(target, prop, value) {
+      const el = DOMCache.get(id);
+      if (el) {
+        el[prop] = value;
+        return true;
+      }
+      return false;
+    }
+  });
+}
+
+// Создаем helper для создания Proxy с правильной обработкой отсутствующих элементов
+function createElementProxy(id) {
+  return new Proxy({}, {
+    get(target, prop) {
+      const el = DOMCache.get(id);
+      if (!el) {
+        // Для отсутствующих элементов возвращаем безопасные значения
+        if (prop === 'addEventListener' || prop === 'removeEventListener') {
+          // Возвращаем функцию, которая ничего не делает
+          return function() {};
+        }
+        if (prop === 'checked') return false;
+        if (prop === 'value') return '';
+        if (prop === 'style') return {};
+        if (prop === 'classList') return { add: () => {}, remove: () => {}, toggle: () => {} };
+        if (prop === 'textContent') return '';
+        if (prop === 'innerHTML') return '';
+        return null;
+      }
+      const value = el[prop];
+      // Привязываем методы к элементу
+      if (typeof value === 'function') {
+        return value.bind(el);
+      }
+      return value;
+    },
+    set(target, prop, value) {
+      const el = DOMCache.get(id);
+      if (el) {
+        el[prop] = value;
+        return true;
+      }
+      return false;
+    }
+  });
+}
+
+// Создаем прокси для элементов, используемых как объекты (с методами querySelector и т.д.)
+const svg = createDOMProxy("techRadar");
+const detailPanel = createDOMProxy("detailPanel");
+
+// Создаем прокси для остальных DOM-элементов
+const hoverLabel = createElementProxy("hoverLabel");
+const searchInput = createElementProxy("searchInput");
+const themeToggle = createElementProxy("themeToggle");
+
+// authInfo и logoutContainer больше не используются в RMK2.js
+// Они используются в модуле auth.js
+const addTechBtn = createElementProxy("addTechBtn");
+
+// Кэш для групп квадрантов (оптимизация DOM-запросов)
+const quadrantGroupsCache = new Map();
+function getQuadrantGroup(quadrantId) {
+  if (!quadrantGroupsCache.has(quadrantId)) {
+    const group = svg.querySelector(`.quadrant-group.q${quadrantId}`);
+    if (group) {
+      quadrantGroupsCache.set(quadrantId, group);
+    } else {
+      return null;
+    }
+  }
+  return quadrantGroupsCache.get(quadrantId) || null;
+}
+
+// Очистить кэш групп квадрантов (при изменении структуры SVG)
+function clearQuadrantGroupsCache() {
+  quadrantGroupsCache.clear();
+}
 
 // ===== ПОЗИЦИОНИРОВАНИЕ ТОЧЕК =====
-function frac(n) { return n - Math.floor(n); }
-function getQuadrantIdForBlock(blockKey) {
-  if (!blockKey || !blockToQuadrant) return null;
-  const m = blockToQuadrant[blockKey];
-  if (Array.isArray(m)) return m.length ? m[0] : null;
-  return (typeof m === 'number') ? m : null;
-}
+// Функции позиционирования вынесены в модуль positioning.js
+// Используем алиасы для обратной совместимости
+const frac = Positioning.frac;
+const getQuadrantIdForBlock = Positioning.getQuadrantIdForBlock;
+const getQuadrantsForBlock = Positioning.getQuadrantsForBlock;
+const getAllQuadrantsForTech = Positioning.getAllQuadrantsForTech;
+const assignFixedPosition = Positioning.assignFixedPosition;
+const assignFixedPositionForQuadrant = Positioning.assignFixedPositionForQuadrant;
+const computeCoordinates = Positioning.computeCoordinates;
+const applyNonOverlappingLayout = Positioning.applyNonOverlappingLayout;
+const avoidRingLabelOverlap = Positioning.avoidRingLabelOverlap;
 
-/**
- * Получить все квадранты для блока.
- * Возвращает массив квадрантов (даже если один).
- */
-function getQuadrantsForBlock(blockKey) {
-  if (!blockKey || !blockToQuadrant) return [];
-  const m = blockToQuadrant[blockKey];
-  if (m == null) return [];
-  if (Array.isArray(m)) return m.filter(q => typeof q === 'number');
-  if (typeof m === 'number') return [m];
-  return [];
-}
+// ===== ФИЛЬТРЫ =====
+// Функции фильтрации вынесены в модуль filters.js
+// Используем алиасы для обратной совместимости
+const createCheckboxOptionLi = Filters.createCheckboxOptionLi;
+const createSelectAllLi = Filters.createSelectAllLi;
+const getFilterValues = Filters.getFilterValues;
+const populateSelect = Filters.populateSelect;
+const populateSelectForModal = Filters.populateSelectForModal;
+const renderMultiSelectTags = Filters.renderMultiSelectTags;
+const updateFunctionFilterForBlock = Filters.updateFunctionFilterForBlock;
+const updateBlockFilterForZoomedQuadrant = Filters.updateBlockFilterForZoomedQuadrant;
+const setCustomSelectValue = Filters.setCustomSelectValue;
+const resetCustomSelects = Filters.resetCustomSelects;
 
-/**
- * Получить все уникальные квадранты для технологии.
- * Проходит по всем блокам технологии и собирает все связанные квадранты.
- */
-function getAllQuadrantsForTech(tech) {
-  if (!tech) return [];
-  const quadrantsSet = new Set();
+// ===== МОДАЛЬНЫЕ ОКНА =====
+// Функции модальных окон вынесены в модуль modals.js
+// Используем обертки для обратной совместимости с дополнительной логикой
+// showModal и hideModal определены ниже как обертки с дополнительной логикой
+const showInternalConfirm = Modals.showInternalConfirm;
 
-  // Получаем все блоки технологии
-  const blocks = Array.isArray(tech.blocks) && tech.blocks.length
-    ? tech.blocks
-    : (tech.block ? [tech.block] : []);
-
-  // Для каждого блока получаем все его квадранты
-  blocks.forEach(blockKey => {
-    const blockQuadrants = getQuadrantsForBlock(blockKey);
-    blockQuadrants.forEach(q => quadrantsSet.add(q));
-  });
-
-  return Array.from(quadrantsSet);
-}
-
-function assignFixedPosition(tech) {
-  const blockKey = (tech.blocks && tech.blocks.length) ? tech.blocks[0] : tech.block;
-  const quadrantId = getQuadrantIdForBlock(blockKey);
-  const ringIndex = levelToRing[tech.level];
-  if (quadrantId == null || ringIndex == null) return { x: CENTER_X, y: CENTER_Y };
-  const q = QUADRANTS.find(q => q.id === quadrantId);
-  const PAD = POSITION_PAD; // Увеличен отступ от границ колец
-  const ANGLE_PAD = POSITION_ANGLE_PAD; // Отступ от границ секторов (в градусах)
-  const ANGLE_SPAN = 90 - (ANGLE_PAD * 2); // Уменьшаем доступный угол с учетом отступов
-  const aBase = q.startAngle + ANGLE_PAD; // Начинаем с отступом от границы сектора
-  const rMin = ringIndex * RADIUS_STEP + PAD;
-  const rMax = (ringIndex + 1) * RADIUS_STEP - PAD;
-  const id = Number(tech.id) || 0;
-  const GOLDEN_ANGLE = 137.50776405003785;
-  const PHI_FRAC = 0.6180339887498949;
-  const angleOffset = ((id * GOLDEN_ANGLE) % ANGLE_SPAN);
-  const angle = aBase + angleOffset;
-  const rFrac = frac(id * PHI_FRAC + ringIndex * 0.173 + quadrantId * 0.317);
-  const radius = rMin + rFrac * (rMax - rMin);
-  const p = polarToCartesian(CENTER_X, CENTER_Y, radius, angle);
-  return { x: Math.round(p.x), y: Math.round(p.y) };
-}
-
-/**
- * Рассчитать позицию технологии для конкретного квадранта.
- * Находит первый блок технологии, который относится к целевому квадранту,
- * и использует его для расчета позиции в этом квадранте.
- */
-function assignFixedPositionForQuadrant(tech, targetQuadrant) {
-  if (!tech || targetQuadrant == null) {
-    return assignFixedPosition(tech);
-  }
-
-  // Находим первый блок, который относится к целевому квадранту
-  const blocks = Array.isArray(tech.blocks) && tech.blocks.length
-    ? tech.blocks
-    : (tech.block ? [tech.block] : []);
-
-  let blockKey = null;
-  for (const block of blocks) {
-    const blockQuadrants = getQuadrantsForBlock(block);
-    if (blockQuadrants.includes(targetQuadrant)) {
-      blockKey = block;
-      break;
-    }
-  }
-
-  // Если не нашли блок для этого квадранта, используем стандартную функцию
-  if (!blockKey) {
-    return assignFixedPosition(tech);
-  }
-
-  // Используем целевый квадрант для расчета позиции
-  const ringIndex = levelToRing[tech.level];
-  if (ringIndex == null) return { x: CENTER_X, y: CENTER_Y };
-
-  const q = QUADRANTS.find(q => q.id === targetQuadrant);
-  if (!q) return { x: CENTER_X, y: CENTER_Y };
-
-  const PAD = POSITION_PAD;
-  const ANGLE_PAD = POSITION_ANGLE_PAD;
-  const ANGLE_SPAN = 90 - (ANGLE_PAD * 2);
-  const aBase = q.startAngle + ANGLE_PAD;
-  const rMin = ringIndex * RADIUS_STEP + PAD;
-  const rMax = (ringIndex + 1) * RADIUS_STEP - PAD;
-  const id = Number(tech.id) || 0;
-  const GOLDEN_ANGLE = 137.50776405003785;
-  const PHI_FRAC = 0.6180339887498949;
-
-  // Добавляем смещение на основе блока, чтобы blip'ы в разных квадрантах были в разных местах
-  const blockHash = String(blockKey).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const angleOffset = ((id * GOLDEN_ANGLE + blockHash * 37) % ANGLE_SPAN);
-  const angle = aBase + angleOffset;
-  const rFrac = frac(id * PHI_FRAC + ringIndex * 0.173 + targetQuadrant * 0.317 + blockHash * 0.041);
-  const radius = rMin + rFrac * (rMax - rMin);
-  const p = polarToCartesian(CENTER_X, CENTER_Y, radius, angle);
-  return { x: Math.round(p.x), y: Math.round(p.y) };
-}
-
-// Форма по типу технологии
+// Форма по типу технологии (используем модуль RadarRenderer)
 function computeShapeByTechType(techType) {
-  if (!techType) return null;
-  return TECHTYPE_TO_SHAPE[techType] || null;
-}
-
-// Рассчитать координаты для технологии и записать в объект (детерминировано)
-// Позиция вычисляется только на основе свойств технологии (id, blocks, level),
-// что гарантирует стабильность независимо от порядка обработки
-function computeCoordinates(tech) {
-  const pos = assignFixedPosition(tech);
-  tech.x = pos.x;
-  tech.y = pos.y;
-  return tech;
-}
-
-// Разведение точек внутри каждого сектора и кольца,
-// чтобы технологии не накладывались друг на друга.
-// Пересечения допускаются только если в секторе/кольце физически не хватает места.
-function applyNonOverlappingLayout(renderData) {
-  if (!Array.isArray(renderData) || !renderData.length) return;
-  if (!Array.isArray(QUADRANTS) || !QUADRANTS.length) return;
-
-  // Предсоздадим быстрый доступ к квадрантам по id
-  const quadrantById = {};
-  QUADRANTS.forEach(q => {
-    if (q && typeof q.id !== 'undefined') quadrantById[q.id] = q;
-  });
-
-  // Группируем технологии по (quadrant, ring)
-  const groups = new Map();
-  renderData.forEach(t => {
-    if (t == null || t.quadrant == null || t.ring == null) return;
-    const key = `${t.quadrant}|${t.ring}`;
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(t);
-  });
-
-  const MAX_ITER = 80;
-
-  // Вспомогательная функция: ограничить точку внутри заданного сектора и кольца
-  function clampToSectorRing(t) {
-    const q = quadrantById[t.quadrant];
-    if (!q) return;
-    const ringIndex = t.ring;
-    const PAD = POSITION_PAD;
-    const ANGLE_PAD = POSITION_ANGLE_PAD;
-    const ANGLE_SPAN = 90 - (ANGLE_PAD * 2);
-
-    const rMin = ringIndex * RADIUS_STEP + PAD;
-    const rMax = (ringIndex + 1) * RADIUS_STEP - PAD;
-    const angleMin = q.startAngle + ANGLE_PAD;
-    const angleMax = angleMin + ANGLE_SPAN;
-
-    const polar = cartesianToPolar(CENTER_X, CENTER_Y, t.x, t.y);
-    let radius = polar.radius;
-    let angle = polar.angle;
-
-    if (!Number.isFinite(radius)) radius = (rMin + rMax) / 2;
-    if (!Number.isFinite(angle)) angle = (angleMin + angleMax) / 2;
-
-    if (radius < rMin) radius = rMin;
-    if (radius > rMax) radius = rMax;
-    if (angle < angleMin) angle = angleMin;
-    if (angle > angleMax) angle = angleMax;
-
-    const p = polarToCartesian(CENTER_X, CENTER_Y, radius, angle);
-    t.x = Math.round(p.x);
-    t.y = Math.round(p.y);
-  }
-
-  // Для каждой группы выполняем простую итеративную «расталкивающую» раскладку
-  for (const group of groups.values()) {
-    if (!group || group.length <= 1) continue;
-
-    // Сначала убедимся, что все точки находятся внутри своего сектора/кольца
-    group.forEach(t => {
-      if (typeof t.x !== 'number' || typeof t.y !== 'number' || isNaN(t.x) || isNaN(t.y)) {
-        const pos = assignFixedPosition(t);
-        t.x = pos.x;
-        t.y = pos.y;
-      }
-      clampToSectorRing(t);
-    });
-
-    // Итеративно раздвигаем точки до минимального расстояния
-    for (let iter = 0; iter < MAX_ITER; iter++) {
-      let moved = false;
-      for (let i = 0; i < group.length; i++) {
-        for (let j = i + 1; j < group.length; j++) {
-          const a = group[i];
-          const b = group[j];
-          const dx = b.x - a.x;
-          const dy = b.y - a.y;
-          const dist = Math.sqrt(dx * dx + dy * dy) || 0.001;
-          if (dist >= MIN_BLIP_DISTANCE) continue;
-
-          // Сколько нужно раздвинуть точки
-          const overlap = MIN_BLIP_DISTANCE - dist;
-          const shiftX = (dx / dist) * (overlap / 2);
-          const shiftY = (dy / dist) * (overlap / 2);
-
-          // Смещаем точки в противоположные стороны
-          a.x -= shiftX;
-          a.y -= shiftY;
-          b.x += shiftX;
-          b.y += shiftY;
-
-          // Ограничиваем в пределах сектора и кольца
-          clampToSectorRing(a);
-          clampToSectorRing(b);
-
-          moved = true;
-        }
-      }
-      // Если за проход ничего не сдвинули — достигли устойчивого состояния
-      if (!moved) break;
-      // Если точек слишком много и места объективно мало, часть пересечений останется —
-      // это соответствует требованию, что наложения допустимы только при нехватке места.
-    }
-  }
-}
-
-// Дополнительное разведение технологий относительно подписей колец:
-// технологии не должны находиться поверх прямоугольников с названиями колец,
-// а располагаться рядом с ними.
-function avoidRingLabelOverlap(renderData) {
-  if (!Array.isArray(renderData) || !renderData.length) return;
-  if (!Array.isArray(RINGS) || !RINGS.length) return;
-
-  // Предрассчитываем «запрещённые» зоны вокруг подписей колец
-  const PADDING = 6; // небольшой запас вокруг прямоугольника
-  const labelZones = RINGS.map((_, ringIndex) => {
-    const r = (ringIndex + 1) * RADIUS_STEP;
-    const pos = polarToCartesian(CENTER_X, CENTER_Y, r, 0);
-    return {
-      ringIndex,
-      centerX: pos.x,
-      centerY: pos.y,
-      radius: r,
-      xMin: pos.x - RING_LABEL_WIDTH / 2 - PADDING,
-      xMax: pos.x + RING_LABEL_WIDTH / 2 + PADDING,
-      yMin: pos.y - RING_LABEL_HEIGHT / 2 - PADDING,
-      yMax: pos.y + RING_LABEL_HEIGHT / 2 + PADDING,
-    };
-  });
-
-  renderData.forEach((t) => {
-    if (!t || t.ring == null || typeof t.x !== "number" || typeof t.y !== "number") return;
-    const zone = labelZones[t.ring];
-    if (!zone) return;
-
-    // Проверяем, попадает ли технология в прямоугольник подписи кольца
-    if (
-      t.x >= zone.xMin &&
-      t.x <= zone.xMax &&
-      t.y >= zone.yMin &&
-      t.y <= zone.yMax
-    ) {
-      const polar = cartesianToPolar(CENTER_X, CENTER_Y, t.x, t.y);
-      let radius = polar.radius;
-      if (!Number.isFinite(radius) || radius <= 0) radius = zone.radius;
-
-      // Определяем, в какую сторону «уводить» точку:
-      // для квадранта 1 — вправо от подписи, для квадранта 4 — влево.
-      // Для остальных квадрантов (2 и 3) подписи не пересекаются.
-      const qId = t.quadrant;
-      if (qId !== 1 && qId !== 4) return;
-
-      const side = qId === 4 ? -1 : 1;
-
-      // Оцениваем угловую ширину подписи на данном радиусе
-      const chord = RING_LABEL_WIDTH;
-      const halfAngleRad = Math.min(
-        Math.PI / 3, // не более 60°
-        Math.max(0, Math.asin(Math.min(1, chord / (2 * radius))))
-      );
-      const halfAngleDeg = (halfAngleRad * 180) / Math.PI;
-
-      // Добавляем небольшой зазор по углу, чтобы точки были «рядом, но не на подписи»
-      const extraGap = 4;
-      let targetAngle =
-        (halfAngleDeg + extraGap) * (side > 0 ? 1 : -1);
-      // Нормализуем в [0, 360)
-      while (targetAngle < 0) targetAngle += 360;
-      while (targetAngle >= 360) targetAngle -= 360;
-
-      // Учитываем ограничения сектора, чтобы не выйти за его границы
-      const q = QUADRANTS.find((qq) => qq.id === qId);
-      if (q) {
-        const angleMin = q.startAngle + POSITION_ANGLE_PAD;
-        const angleMax = q.startAngle + 90 - POSITION_ANGLE_PAD;
-        if (targetAngle < angleMin) targetAngle = angleMin;
-        if (targetAngle > angleMax) targetAngle = angleMax;
-      }
-
-      const p = polarToCartesian(CENTER_X, CENTER_Y, radius, targetAngle);
-      t.x = Math.round(p.x);
-      t.y = Math.round(p.y);
-    }
-  });
+  return RadarRenderer.computeShapeByTechType(techType, TECHTYPE_TO_SHAPE);
 }
 
 // ===== ЗАГРУЗКА ДАННЫХ =====
@@ -488,6 +539,7 @@ async function loadData() {
       localStorage.removeItem(key);
     }
   });
+  clearFetchCache();
 
   // Helper: try to load JSON from VFS first, then from disk via fetch
   async function loadJsonPreferVfs(filename) {
@@ -495,24 +547,10 @@ async function loadData() {
     const paths = [`/src/data/ru/${filename}`, `/src/data/${filename}`];
     for (const p of paths) {
       try {
-        const r = await fetch(p, {
-          headers: {
-            'Accept': 'application/json',
-            'Cache-Control': 'no-cache'
-          }
-        });
-        if (r && r.ok) {
-          try {
-            const text = await r.text();
-            const json = JSON.parse(text);
-            console.debug(`Загружены данные из файла ${p}:`, json);
-            return { path: p, data: json };
-          } catch (err) {
-            console.warn(`Ошибка парсинга JSON из ${p}:`, err);
-            continue;
-          }
-        } else {
-          console.warn(`Не удалось загрузить ${p}, статус:`, r.status);
+        const json = await fetchJsonWithCache(p, { ttl: FETCH_CACHE_TTL_MS, timeout: DEFAULT_FETCH_TIMEOUT_MS });
+        if (json) {
+          console.debug(`Загружены данные из файла ${p}:`, json);
+          return { path: p, data: json };
         }
       } catch (err) {
         console.warn(`Ошибка загрузки ${p}:`, err);
@@ -534,17 +572,11 @@ async function loadData() {
     const errors = [];
     for (const p of paths) {
       try {
-        const r = await fetch(p);
-        if (r && r.ok) {
-          try {
-            const json = await r.json();
-            return { path: p, data: json };
-          } catch (err) {
-            errors.push(`Парсинг ${p} не удался: ${err?.message || err}`);
-          }
-        } else {
-          errors.push(`${p} ответ: ${r ? r.status : 'нет ответа'}`);
+        const json = await fetchJsonWithCache(p, { ttl: FETCH_CACHE_TTL_MS, timeout: DEFAULT_FETCH_TIMEOUT_MS });
+        if (json) {
+          return { path: p, data: json };
         }
+        errors.push(`${p} ответ: нет данных`);
       } catch (err) {
         errors.push(`Ошибка fetch(${p}): ${err?.message || err}`);
       }
@@ -563,8 +595,9 @@ async function loadData() {
     // Справочники блоков и список имен для селектов
     const blockIdToName = {};
     // Используем глобальную переменную nameToBlockId
-    nameToBlockId = {};
+    setNameToBlockId({});
     if (Array.isArray(blocks)) {
+      const nameToBlockId = {};
       blocks.forEach(b => {
         const id = b?.id;
         const nm = b?.name || b;
@@ -573,8 +606,9 @@ async function loadData() {
           nameToBlockId[nm] = id;
         }
       });
+      setNameToBlockId(nameToBlockId);
     }
-    blocksList = Array.isArray(blocks) ? blocks.map(b => (b && b.name) ? b.name : b).filter(Boolean) : [];
+    setBlocksList(Array.isArray(blocks) ? blocks.map(b => (b && b.name) ? b.name : b).filter(Boolean) : []);
 
     const fileNames = [
       'functions.json',
@@ -602,17 +636,37 @@ async function loadData() {
       throw new Error(`Не удалось загрузить файлы: ${hint}`);
     }
 
+    // Базовая валидация полученных данных
+    const validationErrors = [];
+    const ensureArray = (name, value) => {
+      if (!Array.isArray(value)) {
+        validationErrors.push(`${name} не является массивом`);
+        return [];
+      }
+      return value;
+    };
+    const ensureObject = (name, value) => {
+      if (!value || typeof value !== 'object') {
+        validationErrors.push(`${name} не является объектом`);
+        return {};
+      }
+      return value;
+    };
+
     // Присваиваем распаршенные данные
-    const functionsData = fetched['functions.json'].data;
-    functions = Array.isArray(functionsData)
-      ? functionsData.map(f => (f && typeof f === 'object' && f.name) ? f.name : String(f || '')).filter(Boolean)
-      : [];
-    const techTypes = fetched['techTypes.json'].data;
-    const statusList = fetched['status.json'].data;
-    const sectors = fetched['sector.json'].data;
-    functionToBlockMap = fetched['functionToBlock.json'].data || {};
+    const functionsData = ensureArray('functions.json', fetched['functions.json'].data);
+    setFunctions(functionsData
+      .map(f => (f && typeof f === 'object' && f.name) ? f.name : String(f || '')).filter(Boolean));
+    const techTypes = ensureArray('techTypes.json', fetched['techTypes.json'].data);
+    // Экспорт techTypes в window для использования модулями (обрабатываем как массив строк или объектов)
+    window.techTypes = Array.isArray(techTypes) && techTypes.length > 0
+      ? techTypes.map(t => (t && typeof t === 'object' && t.name) ? t.name : String(t || '')).filter(Boolean)
+      : Object.keys(TECHTYPE_TO_SHAPE);
+    const statusList = ensureArray('status.json', fetched['status.json'].data);
+    const sectors = ensureArray('sector.json', fetched['sector.json'].data);
+    setFunctionToBlockMap(ensureObject('functionToBlock.json', fetched['functionToBlock.json'].data));
     // enterpriseData may come from VFS (path startsWith 'local:') or from disk
-    enterpriseData = fetched['enterpriseData.json'].data || {};
+    setEnterpriseData(ensureObject('enterpriseData.json', fetched['enterpriseData.json'].data));
     // If enterpriseData was loaded from VFS, attempt to read disk copy and merge any new entries (helps when user edited JSON on disk)
     try {
       if (fetched['enterpriseData.json'].path && String(fetched['enterpriseData.json'].path).startsWith('local:')) {
@@ -620,12 +674,11 @@ async function loadData() {
         const diskPaths = ['/src/data/enterpriseData.json', '/src/data/ru/enterpriseData.json'];
         for (const p of diskPaths) {
           try {
-            const resp = await fetch(p);
-            if (!resp || !resp.ok) continue;
-            const diskJson = await resp.json();
+            const diskJson = await fetchJsonWithCache(p, { ttl: FETCH_CACHE_TTL_MS, timeout: DEFAULT_FETCH_TIMEOUT_MS });
             if (!diskJson) continue;
             // Merge: for each enterprise, add technologies with ids not present in VFS
             let merged = false;
+            let enterpriseData = getEnterpriseData();
             Object.keys(diskJson).forEach(ent => {
               const arrDisk = Array.isArray(diskJson[ent]) ? diskJson[ent] : [];
               if (!enterpriseData[ent]) {
@@ -644,6 +697,7 @@ async function loadData() {
             });
             if (merged) {
               console.info('VFS enterpriseData merged with disk copy from', p);
+              setEnterpriseData({...enterpriseData}); // Сохраняем изменения обратно в StateManager
               try { vfsWrite('enterpriseData.json', enterpriseData); } catch (e) { console.warn('vfs write failed during merge', e); }
             }
             break; // whether merged or not, we've checked disk
@@ -651,9 +705,18 @@ async function loadData() {
         }
       }
     } catch (err) { console.warn('Error while attempting to merge enterpriseData from disk into VFS', err); }
-  blockToQuadrant = fetched['blockToQuadrant.json'].data || {};
+    if (validationErrors.length) {
+      console.warn('Валидация данных: обнаружены проблемы', validationErrors);
+      showNotification(`Проверка данных: ${validationErrors.join('; ')}`, false);
+    }
+    setBlockToQuadrant(fetched['blockToQuadrant.json'].data || {});
+    // Инвалидируем кэш квадрантов при изменении blockToQuadrant
+    const quadrantsCache = getQuadrantsCache();
+    quadrantsCache.clear();
+    setQuadrantsCacheVersion(getQuadrantsCacheVersion() + 1);
     // Установим RINGS и QUADRANTS из JSON
     RINGS = Array.isArray(statusList) ? statusList.slice() : ["Используемые", "Внедряемые", "Перспективные"];
+    window.RINGS = RINGS;
     levelToRing = {};
     RINGS.forEach((rName, idx) => {
       levelToRing[rName] = idx;
@@ -661,6 +724,7 @@ async function loadData() {
         levelToRing[rName.slice(0, -2) + 'ая'] = idx;
       }
     });
+    window.levelToRing = levelToRing;
     QUADRANTS = Array.isArray(sectors)
       ? sectors.map(s => ({ id: s.quadrant, name: s.name, startAngle: (s.quadrant - 1) * 90 }))
       : [
@@ -669,6 +733,7 @@ async function loadData() {
           { id: 3, name: "Производственная поддержка и безопасность", startAngle: 180 },
           { id: 4, name: "Внешние бизнесы", startAngle: 270 },
         ];
+    window.QUADRANTS = QUADRANTS;
     // Преобразуем enterpriseData к объекту по предприятиям, если пришел массив
     if (Array.isArray(fetched['enterpriseData.json'].data)) {
       const grouped = {};
@@ -677,10 +742,10 @@ async function loadData() {
         const companies = Array.isArray(item.company) ? item.company : (item.company ? [item.company] : ['РМК']);
         // Преобразуем блоки (id → имя)
         const blockNames = Array.isArray(item.blocks)
-          ? item.blocks.map(bid => blockIdToName[bid]).filter(Boolean)
+          ? item.blocks.map(bid => (blockIdToName && blockIdToName[bid]) || '').filter(Boolean)
           : [];
         const normalized = Object.assign({}, item, {
-          block: blockNames.length ? blockNames[0] : (typeof item.block === 'number' ? (blockIdToName[item.block] || '') : (item.block || '')),
+          block: blockNames.length ? blockNames[0] : (typeof item.block === 'number' ? ((blockIdToName && blockIdToName[item.block]) || '') : (item.block || '')),
           blocks: blockNames.length ? blockNames : (Array.isArray(item.blocks) ? item.blocks : []),
           techType: item.techTypes || item.techType || '',
           level: item.status || item.level || '',
@@ -691,12 +756,12 @@ async function loadData() {
           grouped[company].push(normalized);
         });
       });
-      enterpriseData = grouped;
+      setEnterpriseData(grouped);
     }
 
     // Заполнение фильтров
-    populateSelect('block', blocksList, 'Функциональные блоки: Все');
-    populateSelect('function', functions, 'Функции: Все');
+    populateSelect('block', getBlocksList(), 'Функциональные блоки: Все');
+    populateSelect('function', getFunctions(), 'Функции: Все');
     populateSelect('techType', Array.isArray(techTypes) ? techTypes : Object.keys(TECHTYPE_TO_SHAPE), 'Тип технологий: Все');
     populateSelect('level', RINGS, 'Статус: Все');
 
@@ -711,13 +776,35 @@ async function loadData() {
       sectorNames = QUADRANTS.map(q => q && q.name).filter(Boolean);
     }
     populateSelectForModal('techSector', sectorNames, 'Выберите');
-    populateSelectForModal('techBlock', blocksList, 'Выберите');
-    populateSelectForModal('techFunc', functions, 'Выберите');
+    populateSelectForModal('techBlock', getBlocksList(), 'Выберите');
+    populateSelectForModal('techFunc', getFunctions(), 'Выберите');
     populateSelectForModal('techTechType', Array.isArray(techTypes) ? techTypes : Object.keys(TECHTYPE_TO_SHAPE), 'Выберите');
     populateSelectForModal('techStatus', RINGS, 'Выберите');
     // Заполняем список предприятий
-    const enterpriseList = Object.keys(enterpriseData);
+    const enterpriseList = Object.keys(getEnterpriseData());
     populateSelectForModal('techCompany', enterpriseList, 'Выберите');
+    // Заполняем список TRL с подсказками (объявляем один раз для обеих форм)
+    const trlOptions = ['1 — Ранняя стадия (исследование)', '2 — Разработка (прототип)', '3 — Зрелость (готовность к внедрению)'];
+    populateSelectForModal('techTrlStage', trlOptions, 'Выберите стадию');
+    // Добавляем подсказки для опций TRL после создания опций
+    const addTrlTooltips = (fieldId) => {
+      const trlSelect = document.querySelector(`.custom-select-modal[data-field="${fieldId}"]`);
+      if (trlSelect) {
+        const options = trlSelect.querySelectorAll('.select-options li[data-value]');
+        const tooltips = {
+          '1 — Ранняя стадия (исследование)': 'Ранняя исследовательская стадия: технология находится на начальном этапе разработки, концепция только формируется',
+          '2 — Разработка (прототип)': 'Стадия разработки и прототипирования: технология проходит активную разработку, создаются прототипы',
+          '3 — Зрелость (готовность к внедрению)': 'Зрелая стадия: технология готова к внедрению и использованию в производстве'
+        };
+        options.forEach(li => {
+          const value = li.getAttribute('data-value');
+          if (value && tooltips[value]) {
+            li.setAttribute('title', tooltips[value]);
+          }
+        });
+      }
+    };
+    setTimeout(() => addTrlTooltips('techTrlStage'), 50);
     // Поле стоимости внедрения теперь доступно для всех статусов
     function setupCostToggle(prefix) {
       const group = document.getElementById(`${prefix}CostGroup`);
@@ -756,8 +843,18 @@ async function loadData() {
         };
 
         // Добавляем в массив технологий
+        const technologies = getTechnologies();
         technologies.push(tech);
-        enterpriseData[currentEnterprise] = technologies;
+        setTechnologies([...technologies]);
+        // Инвалидируем кэш квадрантов при добавлении технологии
+        const quadrantsCache = getQuadrantsCache();
+        quadrantsCache.clear();
+        setQuadrantsCacheVersion(getQuadrantsCacheVersion() + 1);
+        rebuildTechnologiesIndex();
+        const enterpriseData = getEnterpriseData();
+        const currentEnterprise = getCurrentEnterprise();
+        enterpriseData[currentEnterprise] = [...technologies];
+        setEnterpriseData({...enterpriseData});
 
         // Сохраняем в VFS
         vfsWrite('enterpriseData.json', enterpriseData);
@@ -804,10 +901,17 @@ async function loadData() {
         };
 
         // Обновляем в массиве
+        const technologies = getTechnologies();
+        const currentTech = getCurrentTech();
         const index = technologies.findIndex(t => t.id === currentTech.id);
         if (index !== -1) {
           technologies[index] = updatedTech;
-          enterpriseData[currentEnterprise] = technologies;
+          setTechnologies([...technologies]);
+          rebuildTechnologiesIndex();
+          const enterpriseData = getEnterpriseData();
+          const currentEnterprise = getCurrentEnterprise();
+          enterpriseData[currentEnterprise] = [...technologies];
+          setEnterpriseData({...enterpriseData});
 
           // Сохраняем в VFS
           vfsWrite('enterpriseData.json', enterpriseData);
@@ -829,16 +933,20 @@ async function loadData() {
       };
     }
 
-    populateSelectForModal('editBlock', blocksList, 'Выберите');
-    populateSelectForModal('editFunc', functions, 'Выберите');
+    populateSelectForModal('editBlock', getBlocksList(), 'Выберите');
+    populateSelectForModal('editFunc', getFunctions(), 'Выберите');
     populateSelectForModal('editTechType', techTypes, 'Выберите');
     populateSelectForModal('editStatus', RINGS, 'Выберите');
+    // Используем уже объявленный trlOptions и addTrlTooltips для формы редактирования
+    populateSelectForModal('editTrlStage', trlOptions, 'Выберите стадию');
+    setTimeout(() => addTrlTooltips('editTrlStage'), 50);
     setupCostToggle('edit');
 
     // removed: editDigitalizationLevel, editLevel, editRef
     // --- Нормализация данных: вычислим и закрепим зрелости, форму и координаты для каждой технологии ---
     function normalizeEnterpriseData() {
       let updated = false;
+      const enterpriseData = getEnterpriseData();
       Object.keys(enterpriseData).forEach(ent => {
         enterpriseData[ent] = enterpriseData[ent].map(t => {
           // Приведём id к числу
@@ -893,100 +1001,15 @@ async function loadData() {
 }
 
 // ===== ФИЛЬТРЫ =====
-function createCheckboxOptionLi(value, labelText) {
-  const li = document.createElement('li');
-  li.classList.add('select-option-item');
-  li.setAttribute('data-value', value);
-  li.innerHTML = `
-    <label class="option-label">
-      <input type="checkbox" class="option-checkbox" />
-      <span>${labelText}</span>
-    </label>
-  `;
-  return li;
-}
+// Функции фильтрации вынесены в модуль filters.js
+// Используем алиасы для обратной совместимости (определены выше)
 
-function createSelectAllLi() {
-  const li = document.createElement('li');
-  li.className = 'select-all-option';
-  li.innerHTML = `
-    <label class="option-label">
-      <input type="checkbox" class="select-all-checkbox" />
-      <span>Выбрать все</span>
-    </label>
-  `;
-  return li;
-}
+// Старые функции удалены - используются из модуля Filters
+// Оставляем только функции, специфичные для модалок (updateModalBlocksForSectors, updateModalFunctionsForBlocks)
 
-function populateSelect(filterKey, items, placeholderText) {
-  const select = document.querySelector(`.custom-select[data-filter="${filterKey}"]`);
-  if (!select) return;
-  const optionsList = select.querySelector('.select-options');
-  const selectedText = select.querySelector('.selected-text');
-  const hiddenInput = document.getElementById(`filter_${filterKey}`);
-
-  // Сохраняем плейсхолдер и "базовый" заголовок без ": Все"
-  select.setAttribute('data-placeholder', placeholderText);
-  const baseLabel = placeholderText.includes(':')
-    ? placeholderText.split(':')[0].trim()
-    : placeholderText;
-  select.setAttribute('data-label', baseLabel);
-
-  // Все фильтры sidebar работают в режиме множественного выбора
-  select.setAttribute('data-multi', 'true');
-  optionsList.innerHTML = '';
-
-  // Поиск для блоков и функций
-  if (filterKey === 'block' || filterKey === 'function') {
-    const searchWrap = document.createElement('li');
-    searchWrap.className = 'select-search';
-    searchWrap.innerHTML = `<input type="text" placeholder="Поиск..." autocomplete="off" />`;
-    optionsList.appendChild(searchWrap);
-  }
-
-  // "Выбрать все"
-  optionsList.appendChild(createSelectAllLi());
-
-  // Если это фильтр блоков и есть зуммированный квадрант, фильтруем блоки
-  let filteredItems = items;
-  if (filterKey === 'block' && currentZoomedQuadrant != null) {
-    filteredItems = items.filter(blockName => {
-      const quadrantId = getQuadrantIdForBlock(blockName);
-      return quadrantId === currentZoomedQuadrant;
-    });
-  }
-
-  // Если это фильтр функций и выбран блок, фильтруем функции
-  if (filterKey === 'function') {
-    const selectedBlocks = getFilterValues('block'); // Получаем массив выбранных блоков
-    if (selectedBlocks.length > 0 && nameToBlockId && functionToBlockMap) {
-      const selectedBlockIds = selectedBlocks
-        .map(blockName => nameToBlockId[blockName])
-        .filter(id => id != null);
-      if (selectedBlockIds.length > 0) {
-        filteredItems = items.filter(funcName => {
-          const blockIds = functionToBlockMap[funcName];
-          if (!blockIds) return false;
-          // blockIds может быть числом или массивом чисел
-          const funcBlockIds = Array.isArray(blockIds) ? blockIds : [blockIds];
-          return funcBlockIds.some(id => selectedBlockIds.includes(id));
-        });
-      }
-    }
-  }
-
-  filteredItems.forEach(item => {
-    const li = createCheckboxOptionLi(item, item);
-    optionsList.appendChild(li);
-  });
-
-  // Инициализируем отображение (по умолчанию ничего не выбрано)
-  if (hiddenInput) hiddenInput.value = '';
-  renderMultiSelectTags(select);
-}
-
-// Функция для обновления фильтра функций по выбранным блокам
-function updateFunctionFilterForBlock(blockNames) {
+// Обновление списка функциональных блоков в модалке добавления/редактирования технологии
+// в зависимости от выбранных секторов
+function updateModalBlocksForSectors(sectorNames) {
   if (!functions || functions.length === 0) return;
   if (!functionToBlockMap || Object.keys(functionToBlockMap).length === 0) return;
 
@@ -1057,8 +1080,10 @@ function updateFunctionFilterForBlock(blockNames) {
 // Обновление списка функциональных блоков в модалке добавления/редактирования технологии
 // в зависимости от выбранных секторов
 function updateModalBlocksForSectors(sectorNames) {
+  const blocksList = getBlocksList();
   if (!Array.isArray(blocksList) || blocksList.length === 0) return;
   if (!Array.isArray(QUADRANTS) || QUADRANTS.length === 0) return;
+  const blockToQuadrant = getBlockToQuadrant();
   if (!blockToQuadrant || Object.keys(blockToQuadrant).length === 0) return;
 
   const blockSelect = document.querySelector('.custom-select-modal[data-field="techBlock"]');
@@ -1255,536 +1280,82 @@ function updateModalFunctionsForBlocks(blockNames, fieldId) {
 }
 
 // Функция для обновления фильтра блоков при зуме/анзуме
-function updateBlockFilterForZoomedQuadrant(quadrantId) {
-  if (!blocksList || blocksList.length === 0) return;
+// Вынесена в модуль filters.js - используется через алиас updateBlockFilterForZoomedQuadrant
 
-  const select = document.querySelector('.custom-select[data-filter="block"]');
-  if (!select) return;
+// Функция для заполнения селекта в модальном окне
+// Вынесена в модуль filters.js - используется через алиас populateSelectForModal
 
-  const optionsList = select.querySelector('.select-options');
-  if (!optionsList) return;
-  const hiddenInput = document.getElementById('filter_block');
-
-  // Сохраняем текущие выбранные значения (множественный выбор)
-  const currentSelected = getFilterValues('block');
-
-  // Очищаем список опций
-  optionsList.innerHTML = '';
-
-  // Добавляем поиск
-  const searchWrap = document.createElement('li');
-  searchWrap.className = 'select-search';
-  searchWrap.innerHTML = `<input type="text" placeholder="Поиск..." autocomplete="off" />`;
-  optionsList.appendChild(searchWrap);
-
-  // Добавляем "Выбрать все"
-  optionsList.appendChild(createSelectAllLi());
-
-  // Фильтруем блоки по квадранту, если есть зум
-  let filteredBlocks = blocksList;
-  if (quadrantId != null) {
-    filteredBlocks = blocksList.filter(blockName => {
-      const blockQuadrantId = getQuadrantIdForBlock(blockName);
-      return blockQuadrantId === quadrantId;
-    });
-  }
-
-  // Добавляем отфильтрованные блоки
-  filteredBlocks.forEach(blockName => {
-    const li = createCheckboxOptionLi(blockName, blockName);
-    // Восстанавливаем выделение, если блок был выбран и все еще доступен
-    if (currentSelected.includes(blockName)) {
-      li.classList.add('selected');
-      const checkbox = li.querySelector('input[type="checkbox"]');
-      if (checkbox) checkbox.checked = true;
-    }
-    optionsList.appendChild(li);
-  });
-
-  // Обновляем скрытое поле и отображение, оставляя только доступные выбранные блоки
-  const validSelected = currentSelected.filter(block => filteredBlocks.includes(block));
-  if (hiddenInput) hiddenInput.value = JSON.stringify(validSelected);
-  select.setAttribute('data-value', hiddenInput ? hiddenInput.value : JSON.stringify(validSelected));
-  renderMultiSelectTags(select);
-
-  // Если какие-то выбранные блоки стали недоступны, обновляем радар и фильтр функций
-  if (validSelected.length !== currentSelected.length) {
-    updateFunctionFilterForBlock(validSelected);
-    updateRadar();
-  }
-}
-
-function populateSelectForModal(selectId, items, placeholder) {
-  const customSelect = document.querySelector(`.custom-select-modal[data-field="${selectId}"]`);
-  if (!customSelect) return;
-  const optionsList = customSelect.querySelector('.select-options');
-  const selectedText = customSelect.querySelector('.selected-text');
-  const hiddenInput = document.getElementById(selectId);
-  customSelect.setAttribute('data-placeholder', placeholder);
-  selectedText.textContent = placeholder;
-  optionsList.innerHTML = '';
-  // Для селектов с поиском проверяем, есть ли уже обёртка select-dropdown в HTML
-  const selectDropdown = customSelect.querySelector('.select-dropdown');
-  // Определяем, нужны ли чекбоксы для данного селекта (блоки и функции в модалках)
-  const needsCheckboxes = ['techBlock', 'techFunc', 'editBlock', 'editFunc'].includes(selectId);
-  if (needsCheckboxes) {
-    // Если есть select-dropdown, поиск уже есть в HTML, не добавляем
-    if (!selectDropdown) {
-      const searchWrap = document.createElement('li');
-      searchWrap.className = 'select-search';
-      searchWrap.innerHTML = `<input type="text" placeholder="Поиск..." autocomplete="off" />`;
-      optionsList.appendChild(searchWrap);
-    }
-    // Добавляем опцию "Выбрать все" для блоков и функций
-    const selectAllLi = document.createElement('li');
-    selectAllLi.className = 'select-all-option';
-    selectAllLi.innerHTML = `
-      <label class="option-label">
-        <input type="checkbox" class="select-all-checkbox" />
-        <span>Выбрать все</span>
-      </label>
-    `;
-    optionsList.appendChild(selectAllLi);
-  }
-  // Для блоков, функций, процессов и предприятий в модалке разрешим множественный выбор
-  const isMulti = ['techSector', 'techBlock', 'editBlock', 'techFunc', 'editFunc', 'techLevel', 'editLevel', 'techCompany'].includes(selectId);
-  if (isMulti) {
-    customSelect.setAttribute('data-multi', 'true');
-  } else {
-    customSelect.removeAttribute('data-multi');
-  }
-  // Для множественного выбора не добавляем placeholder-опцию, только для одиночного
-  if (!isMulti) {
-    const allOption = document.createElement('li');
-    allOption.textContent = placeholder;
-    allOption.setAttribute('data-value', '');
-    optionsList.appendChild(allOption);
-  }
-  items.forEach(item => {
-    if (needsCheckboxes) {
-      // Создаём элемент с чекбоксом для блоков и функций
-      const li = document.createElement('li');
-      li.classList.add('select-option-item');
-      li.setAttribute('data-value', item);
-      li.innerHTML = `
-        <label class="option-label">
-          <input type="checkbox" class="option-checkbox" />
-          <span>${item}</span>
-        </label>
-      `;
-      optionsList.appendChild(li);
-    } else {
-      const li = document.createElement('li');
-      li.textContent = item;
-      li.setAttribute('data-value', item);
-      optionsList.appendChild(li);
-    }
-  });
-  if (hiddenInput) hiddenInput.value = '';
-  // Если это multi-select, отрендерим теги (пустые по умолчанию)
-  if (customSelect.getAttribute('data-multi') === 'true') renderMultiSelectTags(customSelect);
-}
+// Старая функция populateSelectForModal удалена - используется из модуля Filters
+// Оставляем только функции, специфичные для модалок (updateModalBlocksForSectors, updateModalFunctionsForBlocks)
 
 // Визуализация выбранных элементов для множественного выбора: теги с крестиком
-function renderMultiSelectTags(customSelect) {
-  if (!customSelect) return;
-  const selectedTextEl = customSelect.querySelector('.selected-text');
-  if (!selectedTextEl) return;
+// Вынесена в модуль filters.js - используется через алиас renderMultiSelectTags
 
-  // Определяем скрытое поле: для модальных селектов используется data-field, для фильтров - data-filter
-  const hiddenInputId = customSelect.dataset.field || `filter_${customSelect.dataset.filter}`;
-  const hiddenInput = document.getElementById(hiddenInputId);
-  let selected = [];
-
-  // Предпочитаем читать из li.selected, иначе парсим скрытое поле
-  const selLis = Array.from(customSelect.querySelectorAll('.select-options li.selected'))
-    .map(li => li.getAttribute('data-value'))
-    .filter(v => v && v.length > 0);
-  if (selLis.length) selected = selLis;
-  else if (hiddenInput && hiddenInput.value) {
-    try { selected = JSON.parse(hiddenInput.value); } catch (e) { selected = []; }
-  }
-
-  if (!selected || selected.length === 0) {
-    selectedTextEl.innerHTML = customSelect.getAttribute('data-placeholder') || 'Выберите';
-    customSelect.setAttribute('data-value', '');
-    if (hiddenInput) hiddenInput.value = '';
-    // Если это фильтр (не модальное окно), обновляем радар при очистке
-    const filterKey = customSelect.getAttribute('data-filter');
-    if (filterKey) {
-      // Если это фильтр блоков, обновляем фильтр функций
-      if (filterKey === 'block') {
-        updateFunctionFilterForBlock([]);
-      }
-      // Обновляем радар
-      updateRadar();
-    }
-    return;
-  }
-
-  const isSidebarFilter = !!customSelect.getAttribute('data-filter') && !customSelect.classList.contains('custom-select-modal');
-
-  if (isSidebarFilter) {
-    // Для фильтров в левой панели показываем только счётчик, без перечисления выбранных пунктов
-    const baseLabel = customSelect.getAttribute('data-label') || customSelect.getAttribute('data-placeholder') || 'Выберите';
-    const count = selected.length;
-    selectedTextEl.textContent = `${baseLabel}: выбрано ${count}`;
-    customSelect.setAttribute('data-value', hiddenInput ? hiddenInput.value : JSON.stringify(selected));
-  } else {
-    // Соберём теги (поведение для модальных мультиселектов и др.)
-    selectedTextEl.innerHTML = '';
-    selected.forEach(val => {
-      const span = document.createElement('span');
-      span.className = 'multi-tag';
-      span.setAttribute('data-value', val);
-      span.innerHTML = `${val} <button type="button" class="multi-tag-remove" aria-label="Удалить">&times;</button>`;
-      // обработчик удаления
-      span.querySelector('.multi-tag-remove').addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        // снять выделение в списке
-        const li = customSelect.querySelector(`.select-options li[data-value="${val}"]`);
-        if (li) li.classList.remove('selected');
-        // обновить скрытое поле
-        const remaining = Array.from(customSelect.querySelectorAll('.select-options li.selected'))
-          .map(x => x.getAttribute('data-value'))
-          .filter(v => v && v.length > 0);
-        if (hiddenInput) hiddenInput.value = JSON.stringify(remaining);
-        customSelect.setAttribute('data-value', hiddenInput ? hiddenInput.value : JSON.stringify(remaining));
-        // повторно отрисуем теги
-        renderMultiSelectTags(customSelect);
-        // удерживать фокус на select
-        positionOptions(customSelect);
-
-        // Если это фильтр блоков, обновляем фильтр функций
-        const filterKeyInner = customSelect.getAttribute('data-filter');
-        if (filterKeyInner === 'block') {
-          updateFunctionFilterForBlock(remaining);
-        }
-
-        // Если это поле techCompany, обновляем видимость полей оценок
-        const fieldId = customSelect.getAttribute('data-field');
-        if (fieldId === 'techCompany' && typeof updateTechRatingsVisibility === 'function') {
-          setTimeout(() => {
-            updateTechRatingsVisibility();
-          }, 50);
-        }
-
-        // Обновляем радар (если remaining не пуст, иначе renderMultiSelectTags обновит радар)
-        // Но для надежности обновляем всегда, так как renderMultiSelectTags может вернуться раньше
-        updateRadar();
-      });
-      selectedTextEl.appendChild(span);
-    });
-    customSelect.setAttribute('data-value', hiddenInput ? hiddenInput.value : JSON.stringify(selected));
-  }
-
-  // Для фильтров в левой панели (data-filter) после любого изменения набора тегов
-  // принудительно обновляем радар и связанные списки, чтобы состояние всегда
-  // соответствовало текущему набору выбранных значений.
-  const filterKey = customSelect.getAttribute('data-filter');
-  if (filterKey) {
-    // Дополнительно синхронизируем фильтр функций при изменении блоков
-    if (filterKey === 'block') {
-      const currentSelected = Array.from(customSelect.querySelectorAll('.select-options li.selected'))
-        .map(li => li.getAttribute('data-value'))
-        .filter(v => v && v.length > 0);
-      updateFunctionFilterForBlock(currentSelected);
-    }
-    updateRadar();
-  }
-}
-
-let radarBackgroundRendered = false;
+// Функции рендеринга вынесены в модуль radar-renderer.js
+// Используем обертки для обратной совместимости
 function renderRadarBackground() {
-  if (radarBackgroundRendered) return;
-
-  // Сначала создаем ringLabelsGroup (добавим его в SVG после секторов,
-  // чтобы подписи колец были поверх линий радара, но под технологиями)
-  const ringLabels = document.createElementNS(SVG_NS, "g");
-  ringLabels.id = "ringLabelsGroup";
-  RINGS.forEach((name, i) => {
-    const r = (i + 1) * RADIUS_STEP;
-    const pos = polarToCartesian(CENTER_X, CENTER_Y, r, 0);
-    const labelGroup = document.createElementNS(SVG_NS, "g");
-    labelGroup.setAttribute("transform", `translate(${pos.x}, ${pos.y})`);
-    const bg = document.createElementNS(SVG_NS, "rect");
-    bg.classList.add("ring-label-bg");
-    const width = 180;
-    const height = 42;
-    bg.setAttribute("x", -width / 2);
-    bg.setAttribute("y", -height / 2);
-    bg.setAttribute("width", width);
-    bg.setAttribute("height", height);
-    const txt = document.createElementNS(SVG_NS, "text");
-    txt.classList.add("ring-label");
-    txt.setAttribute("x", 0);
-    txt.setAttribute("y", 0);
-    txt.setAttribute("dominant-baseline", "middle");
-    txt.setAttribute("text-anchor", "middle");
-    txt.textContent = name;
-    labelGroup.appendChild(bg);
-    labelGroup.appendChild(txt);
-    ringLabels.appendChild(labelGroup);
+  RadarRenderer.renderRadarBackground({
+    SVG_NS,
+    CENTER_X,
+    CENTER_Y,
+    RADIUS_STEP,
+    RINGS,
+    QUADRANTS,
+    RING_LABEL_WIDTH,
+    RING_LABEL_HEIGHT,
+    svg,
+    clearQuadrantGroupsCache,
+    polarToCartesian: window.polarToCartesian,
+    describeArc: window.describeArc,
+    describeWedge: window.describeWedge
   });
-
-  // Затем создаем и добавляем quadrant-group (фон радара и линии)
-  QUADRANTS.forEach((q) => {
-    const g = document.createElementNS(SVG_NS, "g");
-    g.classList.add("quadrant-group", `q${q.id}`);
-    g.dataset.quadrant = q.id;
-    const maxR = RINGS.length * RADIUS_STEP;
-    const wedge = document.createElementNS(SVG_NS, "path");
-    wedge.setAttribute("d", describeWedge(CENTER_X, CENTER_Y, maxR, q.startAngle, q.startAngle + 90));
-    wedge.classList.add("quadrant-bg");
-    g.appendChild(wedge);
-    for (let i = 1; i <= RINGS.length; i++) {
-      const arc = document.createElementNS(SVG_NS, "path");
-      arc.setAttribute("d", describeArc(CENTER_X, CENTER_Y, i * RADIUS_STEP, q.startAngle, q.startAngle + 90));
-      arc.classList.add("radar-arc");
-      g.appendChild(arc);
-    }
-    const p1 = polarToCartesian(CENTER_X, CENTER_Y, maxR, q.startAngle);
-    const p2 = polarToCartesian(CENTER_X, CENTER_Y, maxR, q.startAngle + 90);
-    [p1, p2].forEach((p) => {
-      const line = document.createElementNS(SVG_NS, "line");
-      line.setAttribute("x1", CENTER_X);
-      line.setAttribute("y1", CENTER_Y);
-      line.setAttribute("x2", p.x);
-      line.setAttribute("y2", p.y);
-      line.classList.add("radar-line");
-      g.appendChild(line);
-    });
-
-    // Добавляем подпись сектора по диагонали от центра, вне радара
-    const sectorCenterAngle = q.startAngle + 45; // Центр сектора (45 градусов от начала)
-    const sectorLabelRadius = maxR * 1.25; // Размещаем подпись на 115% от максимального радиуса (вне радара)
-    const sectorLabelPos = polarToCartesian(CENTER_X, CENTER_Y, sectorLabelRadius, sectorCenterAngle);
-
-    const sectorLabelGroup = document.createElementNS(SVG_NS, "g");
-    sectorLabelGroup.classList.add("sector-label-group");
-    sectorLabelGroup.setAttribute("transform", `translate(${sectorLabelPos.x}, ${sectorLabelPos.y})`);
-
-    // Текст подписи с поддержкой переноса
-    const sectorLabelText = document.createElementNS(SVG_NS, "text");
-    sectorLabelText.classList.add("sector-label");
-    sectorLabelText.setAttribute("x", 0);
-    sectorLabelText.setAttribute("y", 0);
-    sectorLabelText.setAttribute("dominant-baseline", "middle");
-    sectorLabelText.setAttribute("text-anchor", "middle");
-
-    // Разбиваем длинный текст на строки
-    const words = q.name.split(' ');
-    const maxCharsPerLine = 25; // Максимальное количество символов на строку
-    let currentLine = '';
-    const lines = [];
-
-    words.forEach(word => {
-      const testLine = currentLine ? `${currentLine} ${word}` : word;
-      if (testLine.length <= maxCharsPerLine) {
-        currentLine = testLine;
-      } else {
-        if (currentLine) lines.push(currentLine);
-        currentLine = word;
-      }
-    });
-    if (currentLine) lines.push(currentLine);
-
-    // Если текст не помещается в одну строку, создаем многострочный текст
-    if (lines.length === 1) {
-      sectorLabelText.textContent = lines[0];
-    } else {
-      // Многострочный текст с использованием tspan
-      lines.forEach((line, idx) => {
-        const tspan = document.createElementNS(SVG_NS, "tspan");
-        tspan.setAttribute("x", 0);
-        tspan.setAttribute("dy", idx === 0 ? "-0.6em" : "1.2em");
-        tspan.textContent = line;
-        sectorLabelText.appendChild(tspan);
-      });
-    }
-
-    sectorLabelGroup.appendChild(sectorLabelText);
-    g.appendChild(sectorLabelGroup);
-
-    svg.appendChild(g);
-  });
-
-  // ВАЖНО: добавляем группу подписей колец ПОСЛЕ секторов,
-  // чтобы непрозрачный фон подписей перекрывал линии радара
-  // (но сами технологии, которые рисуются позже, были поверх этих подписей)
-  svg.appendChild(ringLabels);
-
-  radarBackgroundRendered = true;
 }
-// Легенда фигур технологий по типам
+
+// Легенда фигур технологий по типам (используем модуль)
 function renderLegend() {
-  const legend = document.querySelector('.legend');
-  if (!legend) return;
-  const items = [
-    { label: 'Базовые', shape: 'triangle' },
-    { label: 'Интегрированные', shape: 'circle' },
-    { label: 'Платформенные решения', shape: 'square' },
-    { label: 'Управление с ML и AI', shape: 'star' },
-  ];
-  // Вспомогательная генерация звезды для SVG
-  const starPath = (cx, cy, outerR, innerR, points = 5) => {
-    const step = Math.PI / points;
-    let d = '';
-    for (let i = 0; i < 2 * points; i++) {
-      const r = i % 2 === 0 ? outerR : innerR;
-      const a = -Math.PI / 2 + i * step;
-      const x = cx + r * Math.cos(a);
-      const y = cy + r * Math.sin(a);
-      d += (i === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`);
-    }
-    return d + ' Z';
-  };
-  // Соберём HTML
-  const wrap = document.createElement('div');
-  wrap.className = 'legend-items';
-  items.forEach(it => {
-    const row = document.createElement('div');
-    row.className = 'legend-item';
-    const svgEl = document.createElementNS(SVG_NS, 'svg');
-    svgEl.setAttribute('width', '28');
-    svgEl.setAttribute('height', '28');
-    svgEl.setAttribute('viewBox', '0 0 40 40');
-    let shapeEl;
-    if (it.shape === 'circle') {
-      shapeEl = document.createElementNS(SVG_NS, 'circle');
-      shapeEl.setAttribute('cx', '20'); shapeEl.setAttribute('cy', '20'); shapeEl.setAttribute('r', '12');
-    } else if (it.shape === 'square') {
-      shapeEl = document.createElementNS(SVG_NS, 'rect');
-      shapeEl.setAttribute('x', '10'); shapeEl.setAttribute('y', '10'); shapeEl.setAttribute('width', '22'); shapeEl.setAttribute('height', '22');
-    } else if (it.shape === 'triangle') {
-      shapeEl = document.createElementNS(SVG_NS, 'path');
-      shapeEl.setAttribute('d', `M 20 8 L 30 28 L 10 28 Z`);
-    } else if (it.shape === 'star') {
-      shapeEl = document.createElementNS(SVG_NS, 'path');
-      shapeEl.setAttribute('d', starPath(21, 21, 15, 5, 5));
-    }
-    if (shapeEl) {
-      shapeEl.setAttribute('class', `legend-icon legend-icon--${it.shape}`);
-      svgEl.appendChild(shapeEl);
-    }
-    const text = document.createElement('span');
-    text.className = 'legend-label';
-    text.textContent = it.label;
-    row.appendChild(svgEl);
-    row.appendChild(text);
-    wrap.appendChild(row);
+  RadarRenderer.renderLegend({
+    SVG_NS,
+    starPath: window.starPath
   });
-  legend.innerHTML = '';
-  legend.appendChild(wrap);
 }
+
 // ===== РАДАР =====
-function renderRadar(data = technologies) {
-  // Отрисовываем фон один раз
-  renderRadarBackground();
-  // Обновляем легенду под актуальные формы
-  try { renderLegend(); } catch (e) { /* ignore */ }
-
-  // Удаляем только точки (blips) и иконки предупреждения, не трогая фон
-  svg.querySelectorAll('.blip').forEach(el => el.remove());
-  svg.querySelectorAll('.blip-warning').forEach(el => el.remove());
-
-  console.debug('renderRadar: start — input data length:', Array.isArray(data) ? data.length : 0);
-
-  // Сначала фильтруем технологии по валидности кольца
-  const validTechs = (Array.isArray(data) ? data : [])
-    .filter((t) => {
-      const ring = (t && typeof t.level !== 'undefined' && levelToRing && Object.prototype.hasOwnProperty.call(levelToRing, t.level)) ? levelToRing[t.level] : null;
-      return t && ring != null;
-    });
-
-  console.debug('renderRadar: start — valid techs:', validTechs.length);
-
-  // Создаем структуру данных для отображения: каждая технология может иметь несколько blip'ов
-  const renderData = [];
-
-  validTechs.forEach((t) => {
-    // Получаем все квадранты для технологии
-    const techQuadrants = getAllQuadrantsForTech(t);
-
-    if (techQuadrants.length === 0) {
-      console.debug('renderRadar: tech has no quadrants', { id: t.id, name: t.name });
-      return;
-    }
-
-    // Принудительно используем форму по типу технологии
-    const shape = computeShapeByTechType(t.techType) || 'circle';
-
-    // Для каждого квадранта создаем запись для отображения
-    techQuadrants.forEach((quadrantId) => {
-      renderData.push({
-        ...t,
-        quadrant: quadrantId,
-        ring: levelToRing[t.level],
-        shape: shape,
-        // Позиция будет вычислена позже для каждого квадранта отдельно
-        x: null,
-        y: null
-      });
-    });
+// Функция рендеринга радара (используем модуль)
+function renderRadar(data = getTechnologies()) {
+  RadarRenderer.renderRadar(data, {
+    technologies: getTechnologies(),
+    levelToRing,
+    QUADRANTS,
+    svg,
+    selectedBlipId: getSelectedBlipId(),
+    attachBlipHoverHandlers,
+    getAllQuadrantsForTech,
+    assignFixedPositionForQuadrant,
+    applyNonOverlappingLayout,
+    avoidRingLabelOverlap,
+    getQuadrantGroup,
+    computeShapeByTechType,
+    TECHTYPE_TO_SHAPE,
+    createBlip: createBlipWrapper,
+    renderRadarBackground,
+    renderLegend
   });
+}
 
-  console.debug('renderRadar: after mapping — renderData entries:', renderData.length);
-
-  // Вычисляем позиции для каждого blip'а в его квадранте
-  renderData.forEach((entry) => {
-    const pos = assignFixedPositionForQuadrant(entry, entry.quadrant);
-    entry.x = pos.x;
-    entry.y = pos.y;
+// Обертка для createBlip из модуля
+function createBlipWrapper(tech, pos, quadrant) {
+  RadarRenderer.createBlip(tech, pos, quadrant, {
+    SVG_NS,
+    svg,
+    getQuadrantGroup,
+    computeShapeByTechType,
+    TECHTYPE_TO_SHAPE,
+    starPath: window.starPath,
+    isRatingFilled,
+    currentEnterprise: getCurrentEnterprise(),
+    getTechById,
+    showDetail
   });
-
-  // Группируем по квадрантам для раскладки
-  const renderDataByQuadrant = {};
-  renderData.forEach(entry => {
-    if (!renderDataByQuadrant[entry.quadrant]) {
-      renderDataByQuadrant[entry.quadrant] = [];
-    }
-    renderDataByQuadrant[entry.quadrant].push(entry);
-  });
-
-  // Применяем раскладку для каждого квадранта отдельно
-  Object.keys(renderDataByQuadrant).forEach(quadrantId => {
-    const quadrantData = renderDataByQuadrant[quadrantId];
-    applyNonOverlappingLayout(quadrantData);
-    avoidRingLabelOverlap(quadrantData);
-  });
-
-  // Создаём blip'ы в SVG для каждого квадранта
-  renderData.forEach((entry) => {
-    console.debug('renderRadar: rendering blip', {
-      id: entry.id,
-      name: entry.name,
-      quadrant: entry.quadrant,
-      ring: entry.ring,
-      x: entry.x,
-      y: entry.y
-    });
-    createBlip(entry, { x: entry.x, y: entry.y }, entry.quadrant);
-  });
-
-  // Пометить пустые квадранты в DOM и в сайдбаре
-  // Проверяем наличие blip'ов в каждом квадранте
-  QUADRANTS.forEach(q => {
-    const has = renderData.some(t => t.quadrant === q.id);
-    const g = svg.querySelector(`.quadrant-group.q${q.id}`);
-    if (g) {
-      g.classList.toggle('empty', !has);
-    }
-    const sidebarItem = document.querySelector(`.sector-item[data-quadrant="${q.id}"]`);
-    if (sidebarItem) sidebarItem.classList.toggle('empty', !has);
-  });
-
-  attachBlipHoverHandlers();
-  // Выделяем все blip'ы выбранной технологии (если их несколько в разных секторах)
-  if (selectedBlipId != null) {
-    svg.querySelectorAll(`.blip[data-id="${selectedBlipId}"]`).forEach(blipEl => {
-      blipEl.classList.add('selected');
-    });
-  }
 }
 
 // Ensure fields, compute coordinates and persist enterpriseData for a newly added tech
@@ -1840,16 +1411,21 @@ function ensureAndPersistNewTech(newTech) {
     console.debug('ensureAndPersistNewTech: coords computed', { id: newTech.id, x: newTech.x, y: newTech.y });
 
     // Ensure technologies array contains the tech (if not, add it)
+    const technologies = getTechnologies();
     const existsIdx = technologies.findIndex(t => t.id === newTech.id);
     if (existsIdx === -1) {
       technologies.push(newTech);
     } else {
       technologies[existsIdx] = Object.assign({}, technologies[existsIdx], newTech);
     }
+    setTechnologies([...technologies]);
 
     // Synchronize enterpriseData for current enterprise before persisting
     try {
+      const enterpriseData = getEnterpriseData();
+      const currentEnterprise = getCurrentEnterprise();
       enterpriseData[currentEnterprise] = Array.isArray(enterpriseData[currentEnterprise]) ? [...technologies] : [...technologies];
+      setEnterpriseData({...enterpriseData});
       vfsWrite('enterpriseData.json', enterpriseData);
       console.debug('ensureAndPersistNewTech: enterpriseData persisted for', currentEnterprise, 'total techs:', technologies.length);
     } catch (e) { console.warn('persist enterpriseData failed', e); }
@@ -1864,306 +1440,12 @@ function isRatingFilled(rating) {
 }
 
 // ===== Приоритет технологии на основе TRL / готовностей =====
-/**
- * Безопасное приведение значения к числу в диапазоне [min, max].
- */
-function clampNumber(value, min, max) {
-  const n = Number(value);
-  if (Number.isNaN(n)) return min;
-  return Math.min(max, Math.max(min, n));
-}
+// Функции приоритетов вынесены в модуль priorities.js
+// Используем функции из модуля через window (экспортированы из priorities.js)
 
-/**
- * Получить нормализованные оценки готовности и TRL в интервале [0, 1].
- * Org_n = Org/3, Tech_n = Tech/3, TRL_n = (trlStage-1)/2 при trlStage ∈ {1,2,3}.
- */
-function getNormalizedReadinessAndTrl(tech, company = null) {
-  // Если указано предприятие и есть индивидуальные оценки, используем их
-  let techRead, organRead;
-  if (company && tech.companyRatings && typeof tech.companyRatings === 'object' && tech.companyRatings[company]) {
-    const ratings = tech.companyRatings[company];
-    techRead = clampNumber(ratings.techRead !== undefined ? ratings.techRead : (tech.techRead ?? tech.tech_read), 0, 3);
-    organRead = clampNumber(ratings.organRead !== undefined ? ratings.organRead : (tech.organRead ?? tech.organ_read), 0, 3);
-  } else {
-    // Используем общие оценки
-    techRead = clampNumber(tech.techRead ?? tech.tech_read, 0, 3);
-    organRead = clampNumber(tech.organRead ?? tech.organ_read, 0, 3);
-  }
-
-  // Если trlStage не задан — пробуем вывести его из статуса, иначе считаем TRL неизвестным.
-  // TRL остается общим для всех предприятий
-  let trlStage = tech.trlStage;
-  if (trlStage === undefined || trlStage === null) {
-    const status = (tech.status || tech.level || '').toString().toLowerCase();
-    if (!status) {
-      trlStage = null;
-    } else if (status.includes('перспектив')) {
-      trlStage = 1;
-    } else if (status.includes('внедряем')) {
-      trlStage = 2;
-    } else {
-      // Используемые / Существующие и любые «боевые» статусы
-      trlStage = 3;
-    }
-  }
-  const trlNum = trlStage == null ? null : clampNumber(trlStage, 1, 3);
-
-  const orgN = organRead / 3;
-  const techN = techRead / 3;
-  const trlN = trlNum == null ? null : (trlNum - 1) / 2;
-
-  return { orgN, techN, trlN, techRead, organRead, trlStage: trlNum };
-}
-
-/**
- * Вычисление приоритета технологии в диапазоне [0,1].
- * model:
- *  - 'avg'  – среднее трёх нормализованных показателей;
- *  - 'min'  – «слабое звено», минимум из трёх;
- *  - 'mult' – мультипликативная модель (по умолчанию).
- * company - опциональный параметр для указания предприятия (для использования индивидуальных оценок)
- * Если каких‑то данных нет (особенно TRL), функция возвращает null.
- */
-function computePriority(tech, model = 'mult', company = null) {
-  // Если не указано предприятие, но есть текущее предприятие и технология с несколькими предприятиями, используем его
-  if (!company && typeof currentEnterprise !== 'undefined' && currentEnterprise &&
-      Array.isArray(tech.company) && tech.company.includes(currentEnterprise)) {
-    company = currentEnterprise;
-  }
-
-  const { orgN, techN, trlN } = getNormalizedReadinessAndTrl(tech, company);
-  if (trlN == null || Number.isNaN(orgN) || Number.isNaN(techN)) return null;
-
-  switch (model) {
-    case 'avg':
-      return (orgN + techN + trlN) / 3;
-    case 'min':
-      return Math.min(orgN, techN, trlN);
-    case 'mult':
-    default:
-      return orgN * techN * trlN;
-  }
-}
-
-/**
- * Категория приоритета по порогам:
- * 0–0.3  → low
- * 0.3–0.6 → medium
- * 0.6–1.0 → high
- */
-function getPriorityCategory(priority) {
-  if (priority == null || Number.isNaN(priority)) {
-    return { key: 'none', label: 'нет данных', description: 'Недостаточно данных для расчёта приоритета.' };
-  }
-  const p = Math.max(0, Math.min(1, Number(priority)));
-  if (p < 0.3) {
-    return {
-      key: 'low',
-      label: 'низкий',
-      description: 'Низкий приоритет: технологию можно отложить и наблюдать за развитием.'
-    };
-  }
-  if (p < 0.6) {
-    return {
-      key: 'medium',
-      label: 'средний',
-      description: 'Средний приоритет: уместны пилоты и проработка бизнес‑кейсов.'
-    };
-  }
-  return {
-    key: 'high',
-    label: 'высокий',
-    description: 'Высокий приоритет: стоит активно искать кейсы внедрения и масштабирования.'
-  };
-}
-
-/**
- * Определение «слабого звена» для комментария.
- */
-function getPriorityWeakLinkComment(tech, company = null) {
-  // Если не указано предприятие, но есть текущее предприятие и технология с несколькими предприятиями, используем его
-  if (!company && typeof currentEnterprise !== 'undefined' && currentEnterprise &&
-      Array.isArray(tech.company) && tech.company.includes(currentEnterprise)) {
-    company = currentEnterprise;
-  }
-
-  const { orgN, techN, trlN, techRead, organRead, trlStage } = getNormalizedReadinessAndTrl(tech, company);
-  if (trlN == null) {
-    return 'Заполните TRL для более точной оценки приоритета.';
-  }
-  const values = [
-    { key: 'org', v: orgN, raw: organRead, label: 'организационная готовность' },
-    { key: 'tech', v: techN, raw: techRead, label: 'технологическая готовность' },
-    { key: 'trl', v: trlN, raw: trlStage, label: 'TRL' }
-  ];
-  values.sort((a, b) => a.v - b.v);
-  const weakest = values[0];
-
-  if (weakest.key === 'org') {
-    return 'Слабое звено: организационная готовность — нужна подготовка процессов и команды.';
-  }
-  if (weakest.key === 'tech') {
-    return 'Слабое звено: технологическая готовность — важно доработать прототипы и архитектуру.';
-  }
-  return 'Слабое звено: стадия TRL — технология ещё на ранней исследовательской стадии.';
-}
-
+// Функция создания blip'а (используем модуль)
 function createBlip(tech, pos, quadrant = null) {
-  // Используем переданный квадрант или квадрант из tech.quadrant
-  const targetQuadrant = quadrant !== null ? quadrant : tech.quadrant;
-  const g = svg.querySelector(`.quadrant-group.q${targetQuadrant}`);
-  if (!g) return;
-  const size = 10;
-  let el;
-  const shape = computeShapeByTechType(tech.techType) || tech.shape || 'circle';
-  // debug attribute
-  const dataShape = shape;
-  // Вспомогательная генерация звезды
-  const starPath = (cx, cy, outerR, innerR, points = 5) => {
-    const step = Math.PI / points;
-    let d = '';
-    for (let i = 0; i < 2 * points; i++) {
-      const r = i % 2 === 0 ? outerR : innerR;
-      const a = -Math.PI / 2 + i * step;
-      const x = cx + r * Math.cos(a);
-      const y = cy + r * Math.sin(a);
-      d += (i === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`);
-    }
-    return d + ' Z';
-  };
-
-  if (shape === "circle") {
-    el = document.createElementNS(SVG_NS, "circle");
-    el.setAttribute("cx", pos.x);
-    el.setAttribute("cy", pos.y);
-    el.setAttribute("r", size);
-  } else if (shape === "square") {
-    el = document.createElementNS(SVG_NS, "rect");
-    el.setAttribute("x", pos.x - size);
-    el.setAttribute("y", pos.y - size);
-    el.setAttribute("width", size * 2);
-    el.setAttribute("height", size * 2);
-  } else if (shape === "triangle") {
-    el = document.createElementNS(SVG_NS, "path");
-    el.setAttribute("d", `M ${pos.x} ${pos.y - size} L ${pos.x + size} ${pos.y + size} L ${pos.x - size} ${pos.y + size} Z`);
-  } else if (shape === "star") {
-    el = document.createElementNS(SVG_NS, "path");
-    const outer = Math.round(size * 1.3);
-    const inner = Math.round(size * 0.58);
-    el.setAttribute("d", starPath(pos.x, pos.y, outer, inner, 5));
-  }
-  // Если не создали элемент предыдущей логикой (т.к. tech.type не соответствует), создадим на основании shape
-  if (!el) {
-    if (dataShape === 'circle') {
-      el = document.createElementNS(SVG_NS, "circle");
-      el.setAttribute("cx", pos.x);
-      el.setAttribute("cy", pos.y);
-      el.setAttribute("r", size);
-    } else if (dataShape === 'triangle') {
-      el = document.createElementNS(SVG_NS, "path");
-      el.setAttribute("d", `M ${pos.x} ${pos.y - size} L ${pos.x + size} ${pos.y + size} L ${pos.x - size} ${pos.y + size} Z`);
-    } else if (dataShape === 'star') {
-      el = document.createElementNS(SVG_NS, "path");
-      el.setAttribute("d", starPath(pos.x, pos.y, size, Math.round(size * 0.5), 5));
-    } else {
-      el = document.createElementNS(SVG_NS, "rect");
-      el.setAttribute("x", pos.x - size);
-      el.setAttribute("y", pos.y - size);
-      el.setAttribute("width", size * 2);
-      el.setAttribute("height", size * 2);
-    }
-  }
-  el.classList.add("blip");
-  el.dataset.id = tech.id;
-  el.dataset.shape = dataShape;
-  el.dataset.quadrant = targetQuadrant; // Сохраняем квадрант в dataset
-  // Добавим класс формы для стилизации
-  el.classList.add(`blip--${dataShape}`);
-  g.appendChild(el);
-
-  // Проверяем наличие оценок и добавляем иконку предупреждения, если они отсутствуют
-  // Проверяем оценки для текущего предприятия, если есть индивидуальные оценки
-  const companies = Array.isArray(tech.company) ? tech.company : (tech.company ? [tech.company] : []);
-  let techRead, organRead, funcCover;
-
-  // Если есть несколько предприятий и индивидуальные оценки для текущего предприятия, используем их
-  if (companies.length > 1 && tech.companyRatings && typeof tech.companyRatings === 'object' &&
-      currentEnterprise && companies.includes(currentEnterprise) && tech.companyRatings[currentEnterprise]) {
-    const ratings = tech.companyRatings[currentEnterprise];
-    techRead = ratings.techRead !== undefined ? ratings.techRead : tech.techRead;
-    organRead = ratings.organRead !== undefined ? ratings.organRead : tech.organRead;
-    funcCover = ratings.funcCover !== undefined ? ratings.funcCover : tech.funcCover;
-  } else {
-    // Используем общие оценки
-    techRead = tech.techRead;
-    organRead = tech.organRead;
-    funcCover = tech.funcCover;
-  }
-
-  // Иконка предупреждения появляется, если ВСЕ три оценки отсутствуют
-  const hasRatings = isRatingFilled(techRead) || isRatingFilled(organRead) || isRatingFilled(funcCover);
-
-  // Проверяем, заполнены ли технологическая и организационная готовность
-  const techReadFilled = isRatingFilled(techRead);
-  const organReadFilled = isRatingFilled(organRead);
-  const hasReadinessRatings = techReadFilled && organReadFilled;
-
-  // Добавляем класс для подсветки, если не заполнены techRead или organRead
-  if (!hasReadinessRatings) {
-    el.classList.add('blip-incomplete');
-  }
-
-  if (!hasRatings) {
-    // Создаем группу для иконки предупреждения
-    const warningGroup = document.createElementNS(SVG_NS, "g");
-    warningGroup.classList.add("blip-warning");
-    warningGroup.setAttribute("transform", `translate(${pos.x + size + 3}, ${pos.y - size - 3})`);
-
-    // Создаем круг-фон для иконки
-    const bgCircle = document.createElementNS(SVG_NS, "circle");
-    bgCircle.setAttribute("cx", "0");
-    bgCircle.setAttribute("cy", "0");
-    bgCircle.setAttribute("r", "6");
-    bgCircle.setAttribute("fill", "#ff9800");
-    bgCircle.setAttribute("stroke", "#fff");
-    bgCircle.setAttribute("stroke-width", "1");
-    warningGroup.appendChild(bgCircle);
-
-    // Создаем иконку восклицательного знака
-    const exclamation = document.createElementNS(SVG_NS, "text");
-    exclamation.setAttribute("x", "0");
-    exclamation.setAttribute("y", "0");
-    exclamation.setAttribute("text-anchor", "middle");
-    exclamation.setAttribute("dominant-baseline", "middle");
-    exclamation.setAttribute("fill", "#fff");
-    exclamation.setAttribute("font-size", "8");
-    exclamation.setAttribute("font-weight", "bold");
-    exclamation.textContent = "!";
-    warningGroup.appendChild(exclamation);
-
-    // Добавляем title для подсказки
-    const title = document.createElementNS(SVG_NS, "title");
-    title.textContent = "Заполните поля оценок";
-    warningGroup.appendChild(title);
-
-    g.appendChild(warningGroup);
-  }
-
-  // Надёжный обработчик клика прямо на blip — вызывает показ панели подробностей
-  el.addEventListener('click', (e) => {
-    e.stopPropagation();
-    try {
-      const id = +el.dataset.id;
-      const blipQuadrant = el.dataset.quadrant ? +el.dataset.quadrant : null;
-      const t = technologies.find(tt => tt.id === id);
-      if (t) {
-        // Источник — клик по blip на радаре, передаем квадрант blip'а
-        showDetail(t, 'blip', blipQuadrant);
-      }
-    } catch (err) {
-      console.warn('Ошибка при обработке клика на blip:', err);
-    }
-  });
+  createBlipWrapper(tech, pos, quadrant);
 }
 
 // Показ панели подробной информации для заданной технологии
@@ -2185,7 +1467,7 @@ function showDetail(t, source = 'unknown', sourceQuadrant = null) {
   }
 
   currentTech = t;
-  selectedBlipId = t.id;
+  setSelectedBlipId(t.id);
   // Снять выделение со всех других blip
   svg.querySelectorAll('.blip.selected').forEach(el => el.classList.remove('selected'));
 
@@ -2239,6 +1521,7 @@ function showDetail(t, source = 'unknown', sourceQuadrant = null) {
     const techReadEl = detailPanel.querySelector('#panelTechRead');
     const organReadEl = detailPanel.querySelector('#panelOrganRead');
     const funcCoverEl = detailPanel.querySelector('#panelFuncCover');
+    const trlStageEl = detailPanel.querySelector('#panelTrlStage');
 
     // Проверяем, есть ли индивидуальные оценки по предприятиям
     const companies = Array.isArray(t.company) ? t.company : (t.company ? [t.company] : []);
@@ -2276,6 +1559,11 @@ function showDetail(t, source = 'unknown', sourceQuadrant = null) {
       } else {
         funcCoverEl.textContent = (t.funcCover ?? '') !== '' ? String(t.funcCover) : '—';
       }
+    }
+
+    // Отображаем TRL (общий для всех предприятий)
+    if (trlStageEl) {
+      trlStageEl.textContent = (t.trlStage !== undefined && t.trlStage !== null && t.trlStage !== '') ? String(t.trlStage) : '—';
     }
 
     // Проверяем заполненность оценок и подсвечиваем кнопку/блок оценок при их отсутствии
@@ -2412,7 +1700,7 @@ function showDetail(t, source = 'unknown', sourceQuadrant = null) {
             } else {
               // Создаём список технологий в секторе
               document.querySelectorAll('.tech-list').forEach(tl => tl.parentNode?.removeChild(tl));
-              createTechListForSector(sectorItem, q, technologies);
+              createTechListForSector(sectorItem, q, getTechnologies());
               const newList = sectorItem.nextElementSibling;
               if (newList && newList.classList.contains('tech-list')) {
                 const listItem = newList.querySelector(`.tech-list-item[data-tech-id="${t.id}"]`);
@@ -2436,7 +1724,7 @@ function showDetail(t, source = 'unknown', sourceQuadrant = null) {
   // Выполним зум в квадрант, из которого был клик (или в первый доступный)
   // Если источник - 'priority' и сектор уже зуммирован, не применяем зум повторно
   if (q != null) {
-    if (source === 'priority' && currentZoomedQuadrant === q) {
+    if (source === 'priority' && getCurrentZoomedQuadrant() === q) {
       // Сектор уже зуммирован, просто убедимся, что он правильно отображается
       const g = document.querySelector(`.quadrant-group.q${q}`);
       if (g && !g.classList.contains('zoomed-in')) {
@@ -2450,36 +1738,7 @@ function showDetail(t, source = 'unknown', sourceQuadrant = null) {
 
 // ===== ФИЛЬТРАЦИЯ =====
 // Вспомогательная функция для получения значений фильтра (массив для множественного выбора)
-function getFilterValues(key) {
-  const select = document.querySelector(`.custom-select[data-filter="${key}"]`);
-  if (!select) return [];
-  const hiddenInput = document.getElementById(`filter_${key}`);
-  if (hiddenInput && hiddenInput.value) {
-    try {
-      const parsed = JSON.parse(hiddenInput.value);
-      if (Array.isArray(parsed)) return parsed;
-    } catch (e) {
-      // Если не JSON, проверяем data-value
-    }
-  }
-  // Fallback: читаем из data-value или из выбранных li
-  const dataValue = select.getAttribute('data-value') || '';
-  if (dataValue && dataValue.trim().startsWith('[')) {
-    try {
-      const parsed = JSON.parse(dataValue);
-      if (Array.isArray(parsed)) return parsed;
-    } catch (e) {
-      // Игнорируем ошибки парсинга
-    }
-  }
-  // Читаем из выбранных элементов списка
-  const selected = Array.from(select.querySelectorAll('.select-options li.selected'))
-    .map(li => li.getAttribute('data-value'))
-    .filter(v => v && v.length > 0);
-  if (selected.length > 0) return selected;
-  // Если ничего не выбрано, возвращаем пустой массив
-  return [];
-}
+// Вынесена в модуль filters.js - используется через алиас getFilterValues
 
 function updateRadar() {
   const b = getFilterValues('block');
@@ -2488,7 +1747,12 @@ function updateRadar() {
   const l = getFilterValues('level');
   const q = (searchInput.value || '').toLowerCase().trim();
 
-  let filtered = technologies.filter((t) => {
+  // Оптимизация: предварительно нормализуем данные для поиска, если есть текстовый запрос
+  const hasTextSearch = q.length > 0;
+  const searchFieldsCache = hasTextSearch ? new Map() : null;
+
+  // Используем DataIndex для быстрой фильтрации
+  let filtered = DataIndex.filter((t) => {
     // Проверяем блок (может быть в t.block или t.blocks)
     if (b.length > 0) {
       const techBlocks = t.blocks && Array.isArray(t.blocks) ? t.blocks : (t.block ? [t.block] : []);
@@ -2509,37 +1773,48 @@ function updateRadar() {
   // Применяем текстовый поиск поверх фильтров
   if (q) {
     filtered = filtered.filter(t => {
-      const fields = [
-        String(t.name || ''),
-        String(t.description || ''),
-        String(t.block || ''),
-        ...(t.blocks || []),
-        String(t.func || ''),
-        ...(t.functions || []),
-        String(t.techType || ''),
-        String(t.level || ''),
-        String(t.id || '')
-      ];
-      return fields.some(fld => fld.toLowerCase().includes(q));
+      // Используем кэш для нормализованных полей
+      let normalizedFields = searchFieldsCache.get(t.id);
+      if (!normalizedFields) {
+        normalizedFields = [
+          String(t.name || ''),
+          String(t.description || ''),
+          String(t.block || ''),
+          ...(t.blocks || []),
+          String(t.func || ''),
+          ...(t.functions || []),
+          String(t.techType || ''),
+          String(t.level || ''),
+          String(t.id || '')
+        ].map(fld => fld.toLowerCase());
+        searchFieldsCache.set(t.id, normalizedFields);
+      }
+      return normalizedFields.some(fld => fld.includes(q));
     });
   }
 
-  renderRadar(filtered);
+  // Оптимизация: группируем обновления DOM через RenderQueue
+  RenderQueue.schedule(() => {
+    renderRadar(filtered);
 
-  // 🔥 Обновляем сайдбар ТОЛЬКО если есть активный поиск или фильтры
-  const hasActiveFilter = b.length > 0 || f.length > 0 || tt.length > 0 || l.length > 0 || q;
-  if (hasActiveFilter) {
-    updateSidebarLists(filtered);
-  } else {
-    // Сбрасываем сайдбар: скрываем все списки
-    document.querySelectorAll('.tech-list').forEach(el => {
-      el.classList.remove('open');
-      setTimeout(() => el.remove(), 260);
-    });
-    document.querySelectorAll('.sector-item').forEach(el => {
-      el.classList.remove('active');
-    });
-  }
+    // 🔥 Обновляем сайдбар ТОЛЬКО если есть активный поиск или фильтры
+    const hasActiveFilter = b.length > 0 || f.length > 0 || tt.length > 0 || l.length > 0 || q;
+    if (hasActiveFilter) {
+      updateSidebarLists(filtered);
+    } else {
+      // Сбрасываем сайдбар: скрываем все списки
+      // Оптимизация: собираем все элементы в один список перед операциями
+      const techLists = DOMCache.queryAll('.tech-list');
+      const sectorItems = DOMCache.queryAll('.sector-item');
+      techLists.forEach(el => {
+        el.classList.remove('open');
+        setTimeout(() => el.remove(), 260);
+      });
+      sectorItems.forEach(el => {
+        el.classList.remove('active');
+      });
+    }
+  });
 
   // Если открыт модал приоритета сектора и есть зуммированный сектор,
   // обновляем список технологий в панели с учётом текущих фильтров
@@ -2562,8 +1837,13 @@ function updateSidebarLists(filteredTechs) {
     });
   });
 
+  // Оптимизация: кэшируем селекторы sectorItem
+  const sectorItemsCache = {};
   QUADRANTS.forEach(q => {
-    const sectorItem = document.querySelector(`.sector-item[data-quadrant="${q.id}"]`);
+    if (!sectorItemsCache[q.id]) {
+      sectorItemsCache[q.id] = document.querySelector(`.sector-item[data-quadrant="${q.id}"]`);
+    }
+    const sectorItem = sectorItemsCache[q.id];
     if (!sectorItem) return;
 
     const hasMatches = techsByQuadrant[q.id]?.length > 0;
@@ -2636,7 +1916,7 @@ function createTechListForSector(sectorItem, quadrantId, allTechnologies) {
       }
       list.querySelectorAll('.tech-list-item').forEach(el => el.classList.remove('selected'));
       ti.classList.add('selected');
-      selectedBlipId = t.id;
+      setSelectedBlipId(t.id);
     });
 
     list.appendChild(ti);
@@ -2664,14 +1944,21 @@ function updateTechListItems(quadrantId, matchedTechs) {
 
 // ===== ПРЕДПРИЯТИЯ =====
 function switchEnterprise(enterpriseName) {
+  const enterpriseData = getEnterpriseData();
   if (!enterpriseData[enterpriseName]) {
     console.error(`Данные для предприятия "${enterpriseName}" не найдены`);
     return;
   }
-  currentEnterprise = enterpriseName;
-  technologies = [...enterpriseData[enterpriseName]];
+  setCurrentEnterprise(enterpriseName);
+  setTechnologies([...enterpriseData[enterpriseName]]);
+  // Инвалидируем кэш квадрантов при смене предприятия
+  const quadrantsCache = getQuadrantsCache();
+  quadrantsCache.clear();
+  setQuadrantsCacheVersion(getQuadrantsCacheVersion() + 1);
+  rebuildTechnologiesIndex();
+  const technologies = getTechnologies();
   nextId = technologies.length > 0 ? Math.max(...technologies.map((t) => t.id)) + 1 : 1;
-  currentTech = null;
+  setCurrentTech(null);
   document.querySelectorAll('.custom-select').forEach(select => {
     const filterKey = select.getAttribute('data-filter');
     const hiddenInput = filterKey ? document.getElementById(`filter_${filterKey}`) : null;
@@ -2715,289 +2002,16 @@ function getQuadrantName(qId) {
 }
 
 function getTechnologiesForQuadrant(qId) {
-  return technologies.filter(t => {
+  return getTechnologies().filter(t => {
     // Проверяем все квадранты технологии, а не только первый блок
     const techQuadrants = getAllQuadrantsForTech(t);
     return techQuadrants.includes(qId);
   });
 }
 
-function recomputeQuadrantPriorityList(qId) {
-  if (!quadrantPriorityPanel || !qpListEl) return;
-
-  const allTechs = getTechnologiesForQuadrant(qId);
-  if (!allTechs.length) {
-    qpListEl.innerHTML = '<p style="font-size:12px; opacity:0.8;">В этом секторе пока нет технологий.</p>';
-    return;
-  }
-
-  // Учитываем фильтры из левой панели и строку поиска
-  const b = getFilterValues('block');
-  const f = getFilterValues('function');
-  const tt = getFilterValues('techType');
-  const l = getFilterValues('level');
-  // Поиск: используем поле поиска в панели приоритетов (qpSearchInput) или основной поиск (searchInput)
-  const qpQuery = (qpSearchInput && qpSearchInput.value ? qpSearchInput.value : '').toLowerCase().trim();
-  const sidebarQuery = (searchInput && searchInput.value ? searchInput.value : '').toLowerCase().trim();
-  const textQuery = qpQuery || sidebarQuery;
-
-  let sidebarFilteredTechs = allTechs.filter(t => {
-    // Фильтр по блокам (t.block или t.blocks)
-    if (b.length > 0) {
-      const techBlocks = t.blocks && Array.isArray(t.blocks) ? t.blocks : (t.block ? [t.block] : []);
-      if (!techBlocks.some(block => b.includes(block))) return false;
-    }
-    // Фильтр по функциям (t.func или t.functions)
-    if (f.length > 0) {
-      const techFunctions = t.functions && Array.isArray(t.functions) ? t.functions : (t.func ? [t.func] : []);
-      if (!techFunctions.some(func => f.includes(func))) return false;
-    }
-    // Фильтр по типу технологии
-    if (tt.length > 0 && !tt.includes(t.techType)) return false;
-    // Фильтр по статусу/уровню
-    if (l.length > 0 && !l.includes(t.level)) return false;
-    return true;
-  });
-
-  // Текстовый поиск
-  if (textQuery) {
-    sidebarFilteredTechs = sidebarFilteredTechs.filter(t => {
-      const fields = [
-        String(t.name || ''),
-        String(t.description || ''),
-        String(t.block || ''),
-        ...(t.blocks || []),
-        String(t.func || ''),
-        ...(t.functions || []),
-        String(t.techType || ''),
-        String(t.level || ''),
-        String(t.id || '')
-      ];
-      return fields.some(fld => fld.toLowerCase().includes(textQuery));
-    });
-  }
-
-  if (!sidebarFilteredTechs.length) {
-    qpListEl.innerHTML = '<p style="font-size:12px; opacity:0.8;">В этом секторе нет технологий, соответствующих текущим фильтрам.</p>';
-    qpSummaryEl.textContent = '';
-    return;
-  }
-
-  // Фильтрация по статусам на панели
-  // Сначала синхронизируем кнопки статусов с фильтром "Статус" в левой панели
-  const sidebarLevels = getFilterValues('level');
-  const statusButtons = Array.from(quadrantPriorityPanel.querySelectorAll('.qp-filter-btn'));
-
-  if (sidebarLevels && sidebarLevels.length > 0) {
-    statusButtons.forEach(btn => {
-      const st = btn.getAttribute('data-status');
-      if (!st) return;
-      // В модалке подсвечиваем только те статусы, которые выбраны в фильтре слева
-      btn.classList.toggle('active', sidebarLevels.includes(st));
-    });
-  } else if (!statusButtons.some(btn => btn.classList.contains('active'))) {
-    // Если в фильтре слева статусы не заданы и в модалке ничего не активно —
-    // по умолчанию считаем все статусы активными
-    statusButtons.forEach(btn => btn.classList.add('active'));
-  }
-
-  const activeStatuses = statusButtons
-    .filter(btn => btn.classList.contains('active'))
-    .map(btn => btn.getAttribute('data-status'));
-
-  const filteredTechs = sidebarFilteredTechs.filter(t => {
-    const st = getTechStatus(t);
-    if (!activeStatuses.length) return true;
-    return activeStatuses.some(s => st.includes(s));
-  });
-
-  // Строим список технологий с приоритетами
-  qpListEl.innerHTML = '';
-
-  const stats = { low: 0, medium: 0, high: 0, all: 0, sumPriority: 0 };
-
-  filteredTechs.forEach(t => {
-    const priority = computePriority(t, 'mult');
-    const category = getPriorityCategory(priority);
-    const percent = priority == null ? null : Math.round(priority * 100);
-
-    if (priority != null && !Number.isNaN(priority)) {
-      stats.all += 1;
-      stats.sumPriority += priority;
-      if (category.key === 'low') stats.low += 1;
-      else if (category.key === 'medium') stats.medium += 1;
-      else if (category.key === 'high') stats.high += 1;
-    }
-
-    const item = document.createElement('div');
-    item.className = 'qp-item';
-    item.dataset.techId = t.id;
-
-    if (category.key === 'low') item.classList.add('priority-low');
-    else if (category.key === 'medium') item.classList.add('priority-medium');
-    else if (category.key === 'high') item.classList.add('priority-high');
-
-    const titleEl = document.createElement('div');
-    titleEl.className = 'qp-item-title';
-    titleEl.textContent = t.name || 'Без названия';
-
-    // Заголовок элемента с кнопкой-стрелкой для сворачивания/разворачивания описания
-    const headerEl = document.createElement('div');
-    headerEl.className = 'qp-item-header';
-
-    const toggleBtn = document.createElement('button');
-    toggleBtn.type = 'button';
-    toggleBtn.className = 'qp-item-toggle';
-    toggleBtn.setAttribute('aria-label', 'Показать описание технологии');
-    toggleBtn.setAttribute('aria-expanded', 'false');
-
-    const arrowSpan = document.createElement('span');
-    arrowSpan.className = 'qp-item-arrow';
-    arrowSpan.innerHTML = `
-      <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" focusable="false">
-        <polyline points="3 4 6 7 9 4"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.5"
-          stroke-linecap="round"
-          stroke-linejoin="round" />
-      </svg>
-    `;
-
-    toggleBtn.appendChild(arrowSpan);
-    headerEl.appendChild(toggleBtn);
-    headerEl.appendChild(titleEl);
-
-    const prEl = document.createElement('div');
-    prEl.className = 'qp-item-priority';
-    if (percent == null) {
-      prEl.textContent = 'Приоритет: нет данных';
-    } else {
-      prEl.textContent = `Приоритет: ${percent}% (${category.label})`;
-    }
-
-    const commentEl = document.createElement('div');
-    commentEl.className = 'qp-item-comment';
-    commentEl.textContent = (priority == null ? category.description : getPriorityWeakLinkComment(t));
-
-    const detailsEl = document.createElement('div');
-    detailsEl.className = 'qp-item-details';
-    detailsEl.appendChild(prEl);
-    detailsEl.appendChild(commentEl);
-
-    item.appendChild(headerEl);
-    item.appendChild(detailsEl);
-
-    // Наведение и клик синхронизируют blip и detailPanel
-    item.addEventListener('mouseenter', () => {
-      // Подсвечиваем элемент в модальном окне
-      qpListEl.querySelectorAll('.qp-item').forEach(el => el.classList.remove('highlighted'));
-      item.classList.add('highlighted');
-
-      // Находим все blip для этой технологии (может быть несколько в разных квадрантах)
-      const allBlips = svg.querySelectorAll(`.blip[data-id="${t.id}"]`);
-      svg.querySelectorAll('.blip').forEach(el => el.classList.remove('highlighted'));
-
-      if (allBlips.length > 0) {
-        // Если есть зуммированный квадрант, предпочитаем blip из него
-        let targetBlip = null;
-        if (currentZoomedQuadrant !== null) {
-          targetBlip = Array.from(allBlips).find(b => {
-            const blipQuadrant = b.dataset.quadrant ? +b.dataset.quadrant : null;
-            return blipQuadrant === currentZoomedQuadrant;
-          });
-        }
-        // Если не нашли в зуммированном квадранте, берем первый
-        if (!targetBlip) {
-          targetBlip = allBlips[0];
-        }
-
-        targetBlip.classList.add('highlighted');
-
-        // Точное позиционирование подсказки на blip
-        const rect = targetBlip.getBoundingClientRect();
-        const svgRect = svg.getBoundingClientRect();
-        const text = getHoverText(t);
-        hoverLabel.textContent = text;
-        hoverLabel.classList.remove('priority-low', 'priority-medium', 'priority-high');
-        // Позиционируем подсказку точно над blip по центру
-        hoverLabel.style.left = `${rect.left + rect.width / 2 - svgRect.left}px`;
-        hoverLabel.style.top = `${rect.top - svgRect.top}px`;
-        hoverLabel.classList.add('visible');
-      }
-    });
-
-    item.addEventListener('mouseleave', () => {
-      svg.querySelectorAll('.blip').forEach(el => el.classList.remove('highlighted'));
-      qpListEl.querySelectorAll('.qp-item').forEach(el => el.classList.remove('highlighted'));
-      hoverLabel.classList.remove('visible');
-    });
-
-    // Клик по стрелке разворачивает/сворачивает описание, не открывая детали
-    toggleBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const expanded = item.classList.toggle('expanded');
-      toggleBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-    });
-
-    // Клик по технологии в списке приоритета:
-    //  - открывает панель подробной информации
-    //  - скрывает панель приоритета
-    //  - не сбрасывает зум сектора
-    item.addEventListener('click', (e) => {
-      e.stopPropagation();
-      currentTech = t;
-      if (detailPanel) {
-        // Открываем детали с пометкой, что источник — панель приоритетов
-        // Передаем текущий зуммированный квадрант, чтобы сохранить зум
-        showDetail(t, 'priority', qId);
-      } else {
-        console.warn('recomputeQuadrantPriorityList: detailPanel не найден при клике по технологии');
-      }
-      // Скрываем панель приоритета, но НЕ вызываем unzoom(),
-      // чтобы зум сектора сохранился.
-      closeQuadrantPriorityPanel();
-    });
-
-    qpListEl.appendChild(item);
-  });
-
-  // Ранее здесь обновлялась текстовая сводка по приоритетам в элементе qpSummary.
-  // Элемент и связанные с ним тексты удалены по требованию, поэтому дополнительная
-  // текстовая сводка больше не отображается.
-}
-
-function openQuadrantPriorityPanel(qId) {
-  if (!quadrantPriorityPanel) return;
-  quadrantPriorityPanel.classList.add('open');
-  quadrantPriorityPanel.setAttribute('aria-hidden', 'false');
-  if (qpTitleEl) {
-    qpTitleEl.textContent = `Приоритет технологий: ${getQuadrantName(qId)}`;
-  }
-  // Синхронизируем статусы панели с фильтром "Статус" из левой панели
-  const sidebarLevels = getFilterValues('level');
-  const statusButtons = quadrantPriorityPanel.querySelectorAll('.qp-filter-btn');
-  if (sidebarLevels && sidebarLevels.length > 0) {
-    statusButtons.forEach(btn => {
-      const st = btn.getAttribute('data-status');
-      if (!st) return;
-      btn.classList.toggle('active', sidebarLevels.includes(st));
-    });
-  } else {
-    // Если фильтр статуса не задан — по умолчанию все три статуса активны
-    statusButtons.forEach(btn => btn.classList.add('active'));
-  }
-  recomputeQuadrantPriorityList(qId);
-}
-
-function closeQuadrantPriorityPanel() {
-  if (!quadrantPriorityPanel) return;
-  quadrantPriorityPanel.classList.remove('open');
-  quadrantPriorityPanel.setAttribute('aria-hidden', 'true');
-  if (qpListEl) qpListEl.innerHTML = '';
-  // Очищаем поле поиска при закрытии панели
-  if (qpSearchInput) qpSearchInput.value = '';
-}
+// Функции приоритетов вынесены в модуль priorities.js
+// recomputeQuadrantPriorityList, openQuadrantPriorityPanel, closeQuadrantPriorityPanel
+// доступны через window из модуля priorities.js
 
 // Функция для перемещения кнопки "Сбросить выбор" под фильтры при раскрытии панели
 function moveResetButtonToFilterPanel() {
@@ -3093,7 +2107,7 @@ function unzoom() {
   }
 
   // Сбрасываем текущий зуммированный квадрант
-  currentZoomedQuadrant = null;
+  setCurrentZoomedQuadrant(null);
 
   // Восстанавливаем фильтр блоков (показываем все блоки)
   updateBlockFilterForZoomedQuadrant(null);
@@ -3109,11 +2123,12 @@ function renderSectorTechListFilteredByCurrentFilters(quadrantId) {
   const sectorItem = document.querySelector(`.sector-item[data-quadrant="${quadrantId}"]`);
   if (!sectorItem) return;
   const blockVals = getFilterValues('block'); // Получаем массив выбранных блоков
-  const techs = technologies.filter(t => {
+  const blockValsSet = blockVals.length > 0 ? new Set(blockVals) : null;
+  const techs = getTechnologies().filter(t => {
     if (getQuadrantIdForBlock(t.block) !== quadrantId) return false;
-    if (blockVals.length > 0) {
+    if (blockValsSet) {
       const techBlocks = t.blocks && Array.isArray(t.blocks) ? t.blocks : (t.block ? [t.block] : []);
-      if (!techBlocks.some(block => blockVals.includes(block))) return false;
+      if (!techBlocks.some(block => blockValsSet.has(block))) return false;
     }
     return true;
   });
@@ -3125,7 +2140,7 @@ function renderSectorTechListFilteredByCurrentFilters(quadrantId) {
     ti.dataset.techId = t.id;
     ti.textContent = t.name;
     ti.addEventListener('mouseenter', () => {
-      const tech = technologies.find(tt => tt.id == t.id);
+      const tech = getTechById(t.id);
       if (tech) {
         const blip = svg.querySelector(`.blip[data-id="${t.id}"]`);
         if (blip) blip.classList.add('highlighted');
@@ -3152,7 +2167,7 @@ function renderSectorTechListFilteredByCurrentFilters(quadrantId) {
       }
       list.querySelectorAll('.tech-list-item').forEach(el => el.classList.remove('selected'));
       ti.classList.add('selected');
-      selectedBlipId = t.id;
+      setSelectedBlipId(t.id);
     });
     list.appendChild(ti);
   });
@@ -3208,7 +2223,7 @@ function attachBlipHoverHandlers() {
   svg.querySelectorAll('.blip').forEach(b => {
     b.addEventListener('mouseenter', () => {
       const id = +b.dataset.id;
-      const tech = technologies.find(t => t.id === id);
+      const tech = getTechById(id);
       if (!tech) return;
       b.classList.add('highlighted');
 
@@ -3250,10 +2265,10 @@ function attachBlipHoverHandlers() {
       ev.stopPropagation();
       const id = +b.dataset.id;
       const blipQuadrant = b.dataset.quadrant ? +b.dataset.quadrant : null;
-      const tech = technologies.find(t => t.id === id);
+      const tech = getTechById(id);
       if (!tech) return;
       // Установим как текущую технологию
-      currentTech = tech;
+      setCurrentTech(tech);
       b.classList.remove('highlighted'); // убрать бордер, он только для hover
 
       // Обновим панель деталей, передавая квадрант blip'а
@@ -3265,126 +2280,39 @@ function attachBlipHoverHandlers() {
 
 
   // ===== АВТОРИЗАЦИЯ =====
-  function checkArchitectRole() {
+  // Функции аутентификации вынесены в модуль auth.js
+  // Используем функции из модуля для обратной совместимости
+  const checkArchitectRole = window.checkArchitectRole || (() => {
+    console.warn('AuthModule не загружен. Используется fallback для checkArchitectRole.');
     const role = localStorage.getItem("role");
     return role === "architect" || role === "admin";
-  }
+  });
+  const renderAuth = window.renderAuth || (() => {
+    console.warn('AuthModule не загружен. Используется fallback для renderAuth.');
+  });
 
-  function renderAuth() {
-    if (!authInfo || !logoutContainer) return;
-    const role = localStorage.getItem("role");
-    const exportPdfBtn = document.getElementById("exportPdfBtn");
-    const editBtn = document.getElementById("editTechBtn");
-    const deleteBtn = document.getElementById("deleteTechBtn");
-
-    const setButtonsVisibility = (visible) => {
-      // addTech visibility remains role-based
-      if (addTechBtn) addTechBtn.style.display = visible ? "flex" : "none";
-      // Export button — доступна всем пользователям (не зависит от роли)
-      if (exportPdfBtn) exportPdfBtn.style.display = "flex";
-      if (editBtn) editBtn.style.display = visible ? "inline-flex" : "none";
-      if (deleteBtn) deleteBtn.style.display = visible ? "inline-flex" : "none";
-    };
-
-    // Удаляем класс неавторизованного пользователя при наличии роли
-    document.body.classList.remove('not-authorized');
-
-    if (role === "architect") {
-      authInfo.innerHTML = `<div class="user-role architect-role" data-tooltip="Страница аналитики" style="cursor: pointer;">Архитектор</div>`;
-          // Добавляем обработчик клика для перехода на analitic.html
-          const adminRoleElement = authInfo.querySelector('.architect-role');
-          if (adminRoleElement) {
-            adminRoleElement.onclick = () => {
-              window.location.href = 'analitic.html';
-            };
-          }
-      logoutContainer.innerHTML = `<button class="logout" data-tooltip="Выйти" aria-label="Выйти">
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-      <polyline points="16,17 21,12 16,7"/>
-      <!-- Добавляем stroke-dasharray сюда -->
-      <line x1="21" y1="12" x2="9" y2="12" stroke-dasharray="100"/>
-    </svg>
-  </button>`;
-      setButtonsVisibility(true);
-      logoutContainer.querySelector(".logout").onclick = () => {
-        const theme = localStorage.getItem('theme');
-        localStorage.clear();
-        if (theme) localStorage.setItem('theme', theme);
-        location.reload();
-      };
-    } else if (role === "admin") {
-      authInfo.innerHTML = `<div class="user-role admin-role" data-tooltip="Перейти в админ-панель" style="cursor: pointer;">Администратор</div>`;
-      logoutContainer.innerHTML = `<button class="logout" data-tooltip="Выйти" aria-label="Выйти">
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-      <polyline points="16,17 21,12 16,7"/>
-      <!-- Добавляем stroke-dasharray сюда -->
-      <line x1="21" y1="12" x2="9" y2="12" stroke-dasharray="100"/>
-    </svg>
-  </button>`;
-      setButtonsVisibility(true);
-      const adminRoleElement = authInfo.querySelector('.admin-role');
-      if (adminRoleElement) {
-        adminRoleElement.onclick = () => window.location.href = 'admin.html';
-      }
-      logoutContainer.querySelector(".logout").onclick = () => {
-        const theme = localStorage.getItem('theme');
-        localStorage.clear();
-        if (theme) localStorage.setItem('theme', theme);
-        location.reload();
-      };
-    } else {
-      authInfo.innerHTML = ``;
-      logoutContainer.innerHTML = `<button class="login" data-tooltip="Войти" aria-label="Войти">
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-      <polyline points="10,17 15,12 10,7"/>
-      <!-- И сюда тоже -->
-      <line x1="15" y1="12" x2="3" y2="12" stroke-dasharray="100"/>
-    </svg>
-  </button>`;
-      setButtonsVisibility(false);
-      // Добавляем класс для неавторизованных пользователей
-      document.body.classList.add('not-authorized');
-      logoutContainer.querySelector(".login").onclick = () => {
-        window.location.href = "auth.html";
-      };
-    }
-  }
 
 // ===== МОДАЛЬНЫЕ ОКНА =====
+// Функции модальных окон вынесены в модуль modals.js
+// Используем обертки для обратной совместимости с дополнительной логикой
+
+// Обертка для showModal с дополнительной логикой
 function showModal(panelId) {
+  Modals.showModal(panelId);
   const panel = typeof panelId === 'string' ? document.getElementById(panelId) : panelId;
   if (!panel) return;
-  panel.style.display = 'block';
-  // игнорировать внешние клики в течение короткого окна после открытия
-  // Увеличим окно игнорирования до 300ms — это предотвращает моментальное закрытие
-  // модалки в тех браузерах/сценариях, где глобальный document.click обрабатывается
-  // после локального обработчика открытия в той же цепочке событий.
-  ignoreOutsideClickUntil = Date.now() + 300;
-  // Сделаем снимок начального состояния формы внутри панели (если есть) для dirty-check
-  try {
-    const form = panel.querySelector && panel.querySelector('form');
-    if (form && !form.dataset.initial) snapshotFormInitial(form);
-  } catch (e) { /* ignore */ }
-  requestAnimationFrame(() => panel.classList.add('open'));
+  // Дополнительная логика: установка ignoreOutsideClickUntil и snapshotFormInitial
+  // (это делается в модуле, но для совместимости оставляем здесь)
+  // ignoreOutsideClickUntil устанавливается в модуле modals.js
+  // snapshotFormInitial вызывается в модуле modals.js
 }
 
+// Обертка для hideModal с дополнительной логикой сброса форм
 function hideModal(panelIdOrEl) {
+  Modals.hideModal(panelIdOrEl);
   const panel = typeof panelIdOrEl === 'string' ? document.getElementById(panelIdOrEl) : panelIdOrEl;
   if (!panel) return;
-  panel.classList.remove('open');
-  const onEnd = () => {
-    panel.style.display = 'none';
-    panel.removeEventListener('transitionend', onEnd);
-  };
-  const dur = parseFloat(getComputedStyle(panel).transitionDuration) || 0;
-  if (dur > 0) {
-    panel.addEventListener('transitionend', onEnd);
-  } else {
-    setTimeout(onEnd, 220);
-  }
+  // Дополнительная логика сброса форм после закрытия
   if (panel.id === 'addTechPanel') {
     document.getElementById('addTechForm')?.reset();
     resetCustomSelects('add');
@@ -3417,324 +2345,27 @@ function hideModal(panelIdOrEl) {
 }
 
 // Проверка, были ли изменения в форме модалки (сравнение текущих значений с исходными)
-function isFormDirty(formEl) {
-  if (!formEl) return false;
-  const initial = formEl.dataset.initial ? JSON.parse(formEl.dataset.initial) : {};
-  const data = {};
-  Array.from(formEl.elements).forEach(el => {
-    const key = el.name || el.id;
-    if (!key) return;
-    if (el.type === 'checkbox' || el.type === 'radio') data[key] = el.checked;
-    else data[key] = el.value;
-  });
-  return JSON.stringify(initial) !== JSON.stringify(data);
-}
+// Функции resetCustomSelects и setCustomSelectValue вынесены в модуль filters.js
+// Используем алиасы для обратной совместимости (определены выше)
 
-// Сохранить snapshot initial для формы
-function snapshotFormInitial(formEl) {
-  if (!formEl) return;
-  const data = {};
-  Array.from(formEl.elements).forEach(el => {
-    const key = el.name || el.id;
-    if (!key) return;
-    if (el.type === 'checkbox' || el.type === 'radio') data[key] = el.checked;
-    else data[key] = el.value;
-  });
-  formEl.dataset.initial = JSON.stringify(data);
-}
-
-function resetCustomSelects(prefix) {
-  document.querySelectorAll(`.custom-select-modal[data-field^="${prefix}"]`).forEach(select => {
-    const hiddenInputId = select.dataset.field;
-    const hiddenInput = document.getElementById(hiddenInputId);
-    if (hiddenInput) hiddenInput.value = '';
-    const placeholder = select.getAttribute('data-placeholder') || 'Выберите';
-    const selectedTextEl = select.querySelector('.selected-text');
-    if (selectedTextEl) selectedTextEl.innerHTML = placeholder;
-    select.setAttribute('data-value', '');
-    select.classList.remove('open');
-    select.querySelectorAll('.select-options li').forEach(li => {
-      li.classList.remove('selected');
-      // Сбрасываем чекбоксы
-      const checkbox = li.querySelector('input[type="checkbox"]');
-      if (checkbox) checkbox.checked = false;
-    });
-  });
-}
-
-function setCustomSelectValue(fieldId, value) {
-  const customSelect = document.querySelector(`.custom-select-modal[data-field="${fieldId}"]`);
-  if (!customSelect) return;
-  const hiddenInput = document.getElementById(fieldId);
-  // Поддерживаем передачу массива или JSON-строки массива
-  let normalized = value;
-  if (Array.isArray(value)) {
-    normalized = JSON.stringify(value);
-  } else if (typeof value === 'string' && value.trim().startsWith('[')) {
-    // оставим как есть
-    normalized = value;
-  }
-  if (hiddenInput) hiddenInput.value = normalized;
-  const options = customSelect.querySelectorAll('.select-options li');
-  let selectedOption = null;
-  // Снимем все выделения и сбросим чекбоксы, затем отметим нужные
-  options.forEach(li => {
-    li.classList.remove('selected');
-    const checkbox = li.querySelector('input[type="checkbox"]');
-    if (checkbox) checkbox.checked = false;
-  });
-  // Если hidden содержит JSON-массив — распарсим
-  let toSelect = [];
-  try {
-    if (hiddenInput && hiddenInput.value && hiddenInput.value.trim().startsWith('[')) {
-      const parsed = JSON.parse(hiddenInput.value);
-      if (Array.isArray(parsed)) toSelect = parsed;
-    } else if (typeof value === 'string' && value.trim().startsWith('[')) {
-      const parsed = JSON.parse(value);
-      if (Array.isArray(parsed)) toSelect = parsed;
-    } else if (Array.isArray(value)) {
-      toSelect = value;
-    } else if (value) {
-      toSelect = [value];
-    }
-  } catch (err) { toSelect = [] }
-
-  toSelect.forEach(v => {
-    const li = customSelect.querySelector(`.select-options li[data-value="${v}"]`);
-    if (li) {
-      li.classList.add('selected');
-      // Обновляем чекбокс
-      const checkbox = li.querySelector('input[type="checkbox"]');
-      if (checkbox) checkbox.checked = true;
-    }
-  });
-
-  // Обновляем состояние чекбокса "Выбрать все" для блоков и функций
-  const hasCheckboxes = ['techBlock', 'techFunc', 'editBlock', 'editFunc'].includes(fieldId);
-  if (hasCheckboxes) {
-    const allLi = customSelect.querySelector('.select-all-option');
-    const allCheckbox = allLi ? allLi.querySelector('input[type="checkbox"]') : null;
-    if (allCheckbox) {
-      const optionLis = Array.from(customSelect.querySelectorAll('.select-options li.select-option-item'));
-      const allSelected = optionLis.length > 0 && optionLis.every(optLi => optLi.classList.contains('selected'));
-      allCheckbox.checked = allSelected;
-    }
-  }
-
-  // Если есть выбранные — отобразим
-  if (toSelect.length) {
-    customSelect.setAttribute('data-value', hiddenInput ? (hiddenInput.value || JSON.stringify(toSelect)) : JSON.stringify(toSelect));
-    if (customSelect.getAttribute('data-multi') === 'true') {
-      renderMultiSelectTags(customSelect);
-    } else {
-      const first = customSelect.querySelector('.select-options li.selected');
-      if (first) customSelect.querySelector('.selected-text').textContent = first.textContent;
-    }
-  } else {
-    const placeholder = customSelect.getAttribute('data-placeholder') || 'Выберите';
-    customSelect.querySelector('.selected-text').textContent = placeholder;
-    customSelect.setAttribute('data-value', '');
-  }
-
-  // Если это поле techCompany, обновляем видимость полей оценок
-  if (fieldId === 'techCompany' && typeof updateTechRatingsVisibility === 'function') {
-    setTimeout(() => {
-      updateTechRatingsVisibility();
-    }, 50);
-  }
-}
-
-// ===== ФУНКЦИИ ДЛЯ УПРАВЛЕНИЯ ВИДИМОСТЬЮ ПОЛЕЙ ОЦЕНОК =====
-// Функция для проверки количества выбранных предприятий и управления видимостью полей
-// Функция для создания динамических полей оценок для предприятий
-function createCompanyRatingsFields(companies, containerId, prefix) {
-  const container = document.getElementById(containerId);
-  if (!container) return;
-
-  // Очищаем контейнер
-  container.innerHTML = '';
-
-  if (companies.length === 0) {
-    container.style.display = 'none';
-    return;
-  }
-
-  if (companies.length === 1) {
-    container.style.display = 'none';
-    return;
-  }
-
-  // Создаем поля для каждого предприятия
-  companies.forEach(company => {
-    const companyGroup = document.createElement('div');
-    companyGroup.className = 'company-ratings-group';
-
-    const companyLabel = document.createElement('div');
-    companyLabel.className = 'company-ratings-label';
-    companyLabel.textContent = company;
-    companyGroup.appendChild(companyLabel);
-
-    const ratingsRow = document.createElement('div');
-    ratingsRow.className = 'ratings-row';
-    ratingsRow.style.display = 'flex';
-    ratingsRow.style.flexDirection = 'row';
-    ratingsRow.style.gap = '12px';
-
-    // Технологическая готовность
-    const techReadDiv = document.createElement('div');
-    techReadDiv.style.flex = '1';
-    techReadDiv.style.display = 'flex';
-    techReadDiv.style.flexDirection = 'column';
-    techReadDiv.style.gap = '6px';
-    const techReadLabel = document.createElement('span');
-    techReadLabel.textContent = 'Технологическая готовность';
-    techReadLabel.style.display = 'block';
-    techReadLabel.style.marginBottom = '4px';
-    techReadLabel.style.fontSize = '13px';
-    techReadLabel.style.fontWeight = '500';
-    const techReadInput = document.createElement('input');
-    techReadInput.type = 'number';
-    techReadInput.min = '0';
-    techReadInput.max = '3';
-    techReadInput.step = '1';
-    techReadInput.id = `${prefix}TechRead_${company}`;
-    techReadInput.className = 'company-rating-input';
-    techReadDiv.appendChild(techReadLabel);
-    techReadDiv.appendChild(techReadInput);
-    ratingsRow.appendChild(techReadDiv);
-
-    // Организационная готовность
-    const organReadDiv = document.createElement('div');
-    organReadDiv.style.flex = '1';
-    organReadDiv.style.display = 'flex';
-    organReadDiv.style.flexDirection = 'column';
-    organReadDiv.style.gap = '6px';
-    const organReadLabel = document.createElement('span');
-    organReadLabel.textContent = 'Организационная готовность';
-    organReadLabel.style.display = 'block';
-    organReadLabel.style.marginBottom = '4px';
-    organReadLabel.style.fontSize = '13px';
-    organReadLabel.style.fontWeight = '500';
-    const organReadInput = document.createElement('input');
-    organReadInput.type = 'number';
-    organReadInput.min = '0';
-    organReadInput.max = '3';
-    organReadInput.step = '1';
-    organReadInput.id = `${prefix}OrganRead_${company}`;
-    organReadInput.className = 'company-rating-input';
-    organReadDiv.appendChild(organReadLabel);
-    organReadDiv.appendChild(organReadInput);
-    ratingsRow.appendChild(organReadDiv);
-
-    companyGroup.appendChild(ratingsRow);
-    container.appendChild(companyGroup);
-  });
-
-  container.style.display = 'block';
-}
-
-function updateTechRatingsVisibility() {
-  const techCompanyInput = document.getElementById('techCompany');
-  if (!techCompanyInput) return;
-
-  let selectedCompanies = [];
-  try {
-    const value = techCompanyInput.value || '';
-    if (value.trim().startsWith('[')) {
-      selectedCompanies = JSON.parse(value);
-    } else if (value) {
-      selectedCompanies = [value];
-    }
-  } catch (e) {
-    // Если не удалось распарсить, считаем что ничего не выбрано
-    selectedCompanies = [];
-  }
-
-  const techTechReadGroup = document.getElementById('techTechReadGroup');
-  const techOrganReadGroup = document.getElementById('techOrganReadGroup');
-  const techRatingsWarning = document.getElementById('techRatingsWarning');
-  const techCompanyRatingsContainer = document.getElementById('techCompanyRatingsContainer');
-
-  if (selectedCompanies.length === 1) {
-    // Одно предприятие - показываем обычные поля, скрываем динамические
-    if (techTechReadGroup) techTechReadGroup.style.display = '';
-    if (techOrganReadGroup) techOrganReadGroup.style.display = '';
-    if (techRatingsWarning) techRatingsWarning.style.display = 'none';
-    if (techCompanyRatingsContainer) techCompanyRatingsContainer.style.display = 'none';
-  } else if (selectedCompanies.length > 1) {
-    // Несколько предприятий - скрываем обычные поля, показываем динамические
-    if (techTechReadGroup) techTechReadGroup.style.display = 'none';
-    if (techOrganReadGroup) techOrganReadGroup.style.display = 'none';
-    if (techRatingsWarning) techRatingsWarning.style.display = 'none';
-    // Создаем динамические поля для каждого предприятия
-    createCompanyRatingsFields(selectedCompanies, 'techCompanyRatingsContainer', 'tech');
-    // Очищаем значения обычных полей
-    const techTechReadInput = document.getElementById('techTechRead');
-    const techOrganReadInput = document.getElementById('techOrganRead');
-    if (techTechReadInput) techTechReadInput.value = '';
-    if (techOrganReadInput) techOrganReadInput.value = '';
-  } else {
-    // Нет выбранных предприятий - показываем поля (по умолчанию будет установлено текущее предприятие)
-    if (techTechReadGroup) techTechReadGroup.style.display = '';
-    if (techOrganReadGroup) techOrganReadGroup.style.display = '';
-    if (techRatingsWarning) techRatingsWarning.style.display = 'none';
-    if (techCompanyRatingsContainer) techCompanyRatingsContainer.style.display = 'none';
-  }
-}
-
-// Аналогичная функция для модального окна редактирования
-function updateEditTechRatingsVisibility(tech) {
-  if (!tech) return;
-
-  const companies = Array.isArray(tech.company) ? tech.company : (tech.company ? [tech.company] : []);
-  const editTechReadGroup = document.getElementById('editTechReadGroup');
-  const editOrganReadGroup = document.getElementById('editOrganReadGroup');
-  const editCompanyRatingsContainer = document.getElementById('editCompanyRatingsContainer');
-
-  if (companies.length === 1) {
-    // Одно предприятие - показываем обычные поля, скрываем динамические
-    if (editTechReadGroup) editTechReadGroup.style.display = '';
-    if (editOrganReadGroup) editOrganReadGroup.style.display = '';
-    if (editCompanyRatingsContainer) editCompanyRatingsContainer.style.display = 'none';
-  } else if (companies.length > 1) {
-    // Несколько предприятий - скрываем обычные поля, показываем динамические
-    if (editTechReadGroup) editTechReadGroup.style.display = 'none';
-    if (editOrganReadGroup) editOrganReadGroup.style.display = 'none';
-    // Создаем динамические поля и заполняем их значениями из companyRatings
-    createCompanyRatingsFields(companies, 'editCompanyRatingsContainer', 'edit');
-    // Заполняем значения из companyRatings или общих полей
-    if (tech.companyRatings && typeof tech.companyRatings === 'object') {
-      companies.forEach(company => {
-        const ratings = tech.companyRatings[company];
-        if (ratings) {
-          const techReadInput = document.getElementById(`editTechRead_${company}`);
-          const organReadInput = document.getElementById(`editOrganRead_${company}`);
-          if (techReadInput) techReadInput.value = ratings.techRead !== undefined ? ratings.techRead : '';
-          if (organReadInput) organReadInput.value = ratings.organRead !== undefined ? ratings.organRead : '';
-        } else {
-          // Используем общие значения
-          const techReadInput = document.getElementById(`editTechRead_${company}`);
-          const organReadInput = document.getElementById(`editOrganRead_${company}`);
-          if (techReadInput) techReadInput.value = tech.techRead !== undefined ? tech.techRead : '';
-          if (organReadInput) organReadInput.value = tech.organRead !== undefined ? tech.organRead : '';
-        }
-      });
-    } else {
-      // Нет companyRatings - используем общие значения для всех
-      companies.forEach(company => {
-        const techReadInput = document.getElementById(`editTechRead_${company}`);
-        const organReadInput = document.getElementById(`editOrganRead_${company}`);
-        if (techReadInput) techReadInput.value = tech.techRead !== undefined ? tech.techRead : '';
-        if (organReadInput) organReadInput.value = tech.organRead !== undefined ? tech.organRead : '';
-      });
-    }
-  } else {
-    // Нет предприятий - показываем обычные поля
-    if (editTechReadGroup) editTechReadGroup.style.display = '';
-    if (editOrganReadGroup) editOrganReadGroup.style.display = '';
-    if (editCompanyRatingsContainer) editCompanyRatingsContainer.style.display = 'none';
-  }
-}
+// Функции работы с формами вынесены в модуль forms.js
+// Используем алиасы для обратной совместимости
+const isFormDirty = window.FormsModule ? window.FormsModule.isFormDirty : (formEl) => {
+  console.warn('FormsModule not loaded, isFormDirty fallback');
+  return false;
+};
+const snapshotFormInitial = window.FormsModule ? window.FormsModule.snapshotFormInitial : (formEl) => {
+  console.warn('FormsModule not loaded, snapshotFormInitial fallback');
+};
+const createCompanyRatingsFields = window.FormsModule ? window.FormsModule.createCompanyRatingsFields : (companies, containerId, prefix) => {
+  console.warn('FormsModule not loaded, createCompanyRatingsFields fallback');
+};
+const updateTechRatingsVisibility = window.FormsModule ? window.FormsModule.updateTechRatingsVisibility : () => {
+  console.warn('FormsModule not loaded, updateTechRatingsVisibility fallback');
+};
+const updateEditTechRatingsVisibility = window.FormsModule ? window.FormsModule.updateEditTechRatingsVisibility : (tech) => {
+  console.warn('FormsModule not loaded, updateEditTechRatingsVisibility fallback');
+};
 
 // ===== ИНИЦИАЛИЗАЦИЯ =====
 document.addEventListener("DOMContentLoaded", async () => {
@@ -3752,15 +2383,18 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   await loadData();
   const selectedEnterprise = localStorage.getItem("selectedEnterprise") || "РМК";
-  currentEnterprise = enterpriseData[selectedEnterprise] ? selectedEnterprise : "РМК";
-  switchEnterprise(currentEnterprise);
+  const enterpriseData = getEnterpriseData();
+  const enterpriseToSwitch = enterpriseData && enterpriseData[selectedEnterprise] ? selectedEnterprise : "РМК";
+  setCurrentEnterprise(enterpriseToSwitch);
+  switchEnterprise(enterpriseToSwitch);
   renderAuth();
+  // Первый рендер не оборачиваем в requestAnimationFrame, так как он выполняется при загрузке
   renderRadar();
   const debouncedSearch = debounce(() => updateRadar(), 300);
   if (searchInput) searchInput.addEventListener("input", debouncedSearch);
   // Фильтры
-  const filterBtn = document.getElementById('filterBtn');
-  const filterPanel = document.getElementById('filterPanel');
+  const filterBtn = DOMCache.get('filterBtn');
+  const filterPanel = DOMCache.get('filterPanel');
   if (filterBtn && filterPanel) {
     filterBtn.onclick = (e) => {
       e.stopPropagation();
@@ -4355,7 +2989,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       detail: { enterprise: selectedEnterprise }
     }));
   });
-});
+  });
 
   // Плавный локальный переход между предприятиями через событие enterpriseChanged
   // Если событие пришло (например, из script.js), выполним плавную смену без перезагрузки
@@ -4407,7 +3041,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.querySelectorAll('.custom-select .select-search input').forEach(inp => { inp.value = ''; inp.dispatchEvent(new Event('input')); });
     searchInput.value = "";
     updateRadar();
-    selectedBlipId = null;
+    setSelectedBlipId(null);
     svg.querySelectorAll('.blip.highlighted').forEach(el => el.classList.remove('highlighted'));
     svg.querySelectorAll('.blip.selected').forEach(el => el.classList.remove('selected'));
     currentTech = null;
@@ -4594,9 +3228,9 @@ if (resetBtn) {
     const sector = e.target.closest(".quadrant-group");
       if (blip) {
       const id = +blip.dataset.id;
-      currentTech = technologies.find(t => t.id === id);
+      currentTech = DataIndex.getById(id) || getTechById(id);
       if (!currentTech) return;
-      selectedBlipId = id;
+      setSelectedBlipId(id);
       svg.querySelectorAll('.blip.selected').forEach(el => el.classList.remove('selected'));
       blip.classList.remove('highlighted'); // бордер только для hover
       blip.classList.add('selected');
@@ -4644,7 +3278,7 @@ if (resetBtn) {
     } else if (sector) {
         const qId = +sector.dataset.quadrant;
         // Проверяем, есть ли технологии в этом секторе
-        const hasTechs = technologies.some(t => getQuadrantIdForBlock(t.block) === qId);
+        const hasTechs = getTechnologies().some(t => getQuadrantIdForBlock(t.block) === qId);
         if (!hasTechs) {
           showNotification('На данный момент в данном секторе отсутствуют технологии, но мы активно работаем над внедрением новых технологий.', false);
           return;
@@ -4663,13 +3297,13 @@ if (resetBtn) {
         detailPanel.classList.remove('active');
         detailPanel.style.display = 'none';
       }
-      selectedBlipId = null;
+      setSelectedBlipId(null);
       svg.querySelectorAll('.blip.highlighted').forEach(el => el.classList.remove('highlighted'));
       svg.querySelectorAll('.blip.selected').forEach(el => el.classList.remove('selected'));
       document.querySelectorAll('.tech-list').forEach(tl => tl.parentNode?.removeChild(tl));
       document.querySelectorAll('.sector-item').forEach(i => i.classList.remove('active'));
       document.querySelectorAll('.tech-list-item.selected').forEach(li => li.classList.remove('selected'));
-      currentTech = null;
+      setCurrentTech(null);
       unzoom();
     }
   });
@@ -4702,7 +3336,7 @@ if (resetBtn) {
     document.querySelectorAll('.tech-list').forEach(tl => tl.parentNode?.removeChild(tl));
     document.querySelectorAll('.custom-select').forEach(s => s.classList.remove('open'));
     document.querySelectorAll('.tech-list-item.selected').forEach(li => li.classList.remove('selected'));
-    selectedBlipId = null;
+    setSelectedBlipId(null);
     svg.querySelectorAll('.blip.highlighted').forEach(el => el.classList.remove('highlighted'));
     svg.querySelectorAll('.blip.selected').forEach(el => el.classList.remove('selected'));
     currentTech = null;
@@ -5037,9 +3671,22 @@ if (resetBtn) {
     ['addTechPanel','editTechPanel','addBlockPanel'].forEach(id => {
       const panel = document.getElementById(id);
       if (!panel) return;
-      if (panel.style.display !== 'block' && !panel.classList.contains('open')) return;
+      // Проверяем, что модальное окно действительно открыто
+      const isOpen = panel.style.display === 'block' || panel.classList.contains('open');
+      if (!isOpen) return;
+
+      // Дополнительная проверка: если модальное окно только что открылось, не закрываем его
+      // Это предотвращает закрытие при клике, который открыл модальное окно
+      if (Date.now() < ignoreOutsideClickUntil) return;
+
       // найдём форму внутри
       const form = panel.querySelector('form');
+      // Проверяем, что форма существует и snapshot был сделан
+      if (!form || !form.dataset.initial) {
+        // Если snapshot не был сделан, просто закрываем без проверки dirty
+        hideModal(panel);
+        return;
+      }
       const wasDirty = isFormDirty(form);
       if (!wasDirty) {
         hideModal(panel);
@@ -5107,14 +3754,24 @@ if (resetBtn) {
 
   if (confirmDeleteBtn) {
     confirmDeleteBtn.onclick = () => {
+      const currentTech = getCurrentTech();
       if (!currentTech) return;
-      technologies = technologies.filter(t => t.id !== currentTech.id);
+      const technologies = getTechnologies();
+      setTechnologies(technologies.filter(t => t.id !== currentTech.id));
+      // Инвалидируем кэш квадрантов при удалении технологии
+      const quadrantsCache = getQuadrantsCache();
+      quadrantsCache.clear();
+      setQuadrantsCacheVersion(getQuadrantsCacheVersion() + 1);
       detailPanel.classList.remove("active");
       detailPanel.style.display = "none";
       unzoom();
       updateRadar();
       try {
+        const enterpriseData = getEnterpriseData();
+        const currentEnterprise = getCurrentEnterprise();
+        const technologies = getTechnologies();
         enterpriseData[currentEnterprise] = [...technologies];
+        setEnterpriseData({...enterpriseData});
         vfsWrite('enterpriseData.json', enterpriseData);
       } catch (err) { console.warn('Не удалось сохранить enterpriseData после удаления', err); }
       showNotification('Технология удалена!', true);
@@ -5265,9 +3922,23 @@ if (resetBtn) {
     if (!Number.isNaN(costVal)) t.costProm = costVal; else delete t.costProm;
     // Оценки (0–3) - сохраняем только если значение заполнено
     const clamp03 = (n) => Math.max(0, Math.min(3, Number(n)));
+    const clamp13 = (n) => Math.max(1, Math.min(3, Number(n)));
     const fc = document.getElementById('techFuncCover')?.value;
     if (fc !== undefined && fc !== null && fc !== '' && String(fc).trim() !== '') {
       t.funcCover = clamp03(fc);
+    }
+    // TRL (1–3) - сохраняем только если значение заполнено
+    // Получаем значение из hidden input и извлекаем число из строки
+    const trlValue = document.getElementById('techTrlStage')?.value;
+    if (trlValue !== undefined && trlValue !== null && trlValue !== '' && String(trlValue).trim() !== '') {
+      // Извлекаем число из строки вида "1 — Ранняя стадия..."
+      const trlMatch = String(trlValue).match(/^(\d+)/);
+      if (trlMatch) {
+        const trlNum = parseInt(trlMatch[1], 10);
+        if (trlNum >= 1 && trlNum <= 3) {
+          t.trlStage = trlNum;
+        }
+      }
     }
 
     // Обработка оценок готовности в зависимости от количества предприятий
@@ -5382,6 +4053,11 @@ if (resetBtn) {
 
     // Добавляем в основной массив и сохраняем
     technologies.push(t);
+    // Инвалидируем кэш квадрантов при добавлении технологии
+    const quadrantsCache = getQuadrantsCache();
+    quadrantsCache.clear();
+    setQuadrantsCacheVersion(getQuadrantsCacheVersion() + 1);
+    rebuildTechnologiesIndex();
     // Ensure fields, compute coords and persist before rendering
     ensureAndPersistNewTech(t);
     hideModal('addTechPanel');
@@ -5419,6 +4095,9 @@ if (resetBtn) {
     }
     // Сохраняем технологию во все выбранные предприятия
     try {
+      let enterpriseData = getEnterpriseData();
+      const currentEnterprise = getCurrentEnterprise();
+      const technologies = getTechnologies();
       companiesVal.forEach(company => {
         if (!enterpriseData[company]) {
           enterpriseData[company] = [];
@@ -5433,6 +4112,7 @@ if (resetBtn) {
       });
       // Обновляем текущее предприятие
       enterpriseData[currentEnterprise] = [...technologies];
+      setEnterpriseData({...enterpriseData});
       vfsWrite('enterpriseData.json', enterpriseData);
     } catch (err) { console.warn('Не удалось сохранить enterpriseData в VFS', err); }
     showNotification('Технология добавлена!', true);
@@ -5441,6 +4121,7 @@ if (resetBtn) {
   document.getElementById("editTechForm").onsubmit = (e) => {
     e.preventDefault();
     const id = +document.getElementById("editId").value;
+    const technologies = getTechnologies();
     const idx = technologies.findIndex(t => t.id === id);
     if (idx === -1) return;
     const existing = technologies[idx];
@@ -5474,9 +4155,29 @@ if (resetBtn) {
     else delete technologies[idx].costProm;
     // Оценки
     const clamp03 = (n) => Math.max(0, Math.min(3, Number(n)));
+    const clamp13 = (n) => Math.max(1, Math.min(3, Number(n)));
     const fc = document.getElementById('editFuncCover')?.value;
     if (fc !== undefined && fc !== null && fc !== '' && String(fc).trim() !== '') {
       technologies[idx].funcCover = clamp03(fc);
+    }
+    // TRL (1–3) - сохраняем только если значение заполнено, иначе удаляем
+    // Получаем значение из hidden input и извлекаем число из строки
+    const trlValue = document.getElementById('editTrlStage')?.value;
+    if (trlValue !== undefined && trlValue !== null && trlValue !== '' && String(trlValue).trim() !== '') {
+      // Извлекаем число из строки вида "1 — Ранняя стадия..."
+      const trlMatch = String(trlValue).match(/^(\d+)/);
+      if (trlMatch) {
+        const trlNum = parseInt(trlMatch[1], 10);
+        if (trlNum >= 1 && trlNum <= 3) {
+          technologies[idx].trlStage = trlNum;
+        } else {
+          delete technologies[idx].trlStage;
+        }
+      } else {
+        delete technologies[idx].trlStage;
+      }
+    } else {
+      delete technologies[idx].trlStage;
     }
 
     // Обработка оценок готовности в зависимости от количества предприятий
@@ -5531,10 +4232,17 @@ if (resetBtn) {
       // Также сохраняем общие значения, если они были заполнены (для обратной совместимости)
       // Но приоритет будет отдаваться companyRatings
     }
+    // Сохраняем изменения обратно в StateManager
+    setTechnologies([...technologies]);
+    rebuildTechnologiesIndex();
+
     hideModal('editTechPanel');
     updateRadar();
     try {
+      const enterpriseData = getEnterpriseData();
+      const currentEnterprise = getCurrentEnterprise();
       enterpriseData[currentEnterprise] = [...technologies];
+      setEnterpriseData({...enterpriseData});
       vfsWrite('enterpriseData.json', enterpriseData);
     } catch (err) { console.warn('Не удалось сохранить enterpriseData после редактирования', err); }
     showNotification('Изменения сохранены!', true);
@@ -5543,6 +4251,9 @@ if (resetBtn) {
   document.getElementById("editTechBtn").onclick = () => {
     if (!checkArchitectRole() || !currentTech) return;
     const f = document.getElementById("editTechForm");
+    // Сбрасываем предыдущий snapshot, если он был
+    if (f.dataset.initial) delete f.dataset.initial;
+
     f.querySelector("#editId").value = currentTech.id;
     f.querySelector("#editName").value = currentTech.name;
     setCustomSelectValue("editBlock", (currentTech.blocks && currentTech.blocks.length) ? currentTech.blocks : (currentTech.block ? [currentTech.block] : []));
@@ -5553,6 +4264,22 @@ if (resetBtn) {
     const tr = document.getElementById('editTechRead'); if (tr) tr.value = (currentTech.techRead ?? '');
     const or = document.getElementById('editOrganRead'); if (or) or.value = (currentTech.organRead ?? '');
     const fc = document.getElementById('editFuncCover'); if (fc) fc.value = (currentTech.funcCover ?? '');
+    // Устанавливаем значение TRL в кастомный селект
+    if (currentTech.trlStage !== undefined && currentTech.trlStage !== null) {
+      const trlOptions = {
+        1: '1 — Ранняя стадия (исследование)',
+        2: '2 — Разработка (прототип)',
+        3: '3 — Зрелость (готовность к внедрению)'
+      };
+      const trlValue = trlOptions[currentTech.trlStage];
+      if (trlValue) {
+        setCustomSelectValue('editTrlStage', trlValue);
+      } else {
+        setCustomSelectValue('editTrlStage', '');
+      }
+    } else {
+      setCustomSelectValue('editTrlStage', '');
+    }
     // cost + toggle visibility
     const costGroup = document.getElementById('editCostGroup');
     const costInput = document.getElementById('editCostProm');
@@ -5563,8 +4290,15 @@ if (resetBtn) {
     if (exampleDescEl) exampleDescEl.value = currentTech.exampleDesc || '';
     // Обновляем видимость полей оценок в зависимости от количества предприятий
     updateEditTechRatingsVisibility(currentTech);
-    showModal('editTechPanel');
-    snapshotFormInitial(document.getElementById('editTechForm'));
+
+    // Делаем snapshot ПОСЛЕ заполнения всех полей, но ДО открытия модального окна
+    // Используем setTimeout, чтобы убедиться, что все DOM-обновления завершены
+    setTimeout(() => {
+      snapshotFormInitial(f);
+      // Увеличиваем время игнорирования кликов, чтобы предотвратить закрытие при открытии
+      ignoreOutsideClickUntil = Date.now() + 500;
+      showModal('editTechPanel');
+    }, 0);
   };
 
   document.getElementById("deleteTechBtn").onclick = () => {
@@ -5789,6 +4523,26 @@ if (resetBtn) {
     return ['techRead', 'organRead', 'funcCover'].includes(fieldName);
   }
 
+  // Экспорт функций в window для использования в модуле export.js
+  window.getFieldLabel = getFieldLabel;
+  window.getFieldValue = getFieldValue;
+  window.isNumericField = isNumericField;
+  // checkArchitectRole экспортируется из модуля auth.js
+  // Функции приоритетов экспортируются из модуля priorities.js
+  window.getFilterValues = getFilterValues;
+  window.getEnterpriseData = getEnterpriseData;
+  window.getCurrentEnterprise = getCurrentEnterprise;
+  window.getCurrentZoomedQuadrant = getCurrentZoomedQuadrant;
+  window.getTechnologies = getTechnologies;
+  // Экспорт функций для использования в модуле priorities.js
+  window.getTechnologiesForQuadrant = getTechnologiesForQuadrant;
+  window.getQuadrantName = getQuadrantName;
+  window.getTechStatus = getTechStatus;
+  window.getHoverText = getHoverText;
+  window.showDetail = showDetail;
+  window.setCurrentTech = setCurrentTech;
+  window.getAllQuadrantsForTech = getAllQuadrantsForTech;
+
   // ===== Функции управления индикатором загрузки отчета =====
   function showReportLoading() {
     const modal = document.getElementById('reportLoadingModal');
@@ -5857,1851 +4611,65 @@ if (resetBtn) {
     }, 5000);
   }
 
+  // Экспорт функций управления отчетом в window для использования в модуле export.js
+  window.showReportLoading = showReportLoading;
+  window.showReportSuccess = showReportSuccess;
+  window.showReportError = showReportError;
+
   // Основная функция экспорта PDF с поддержкой выбора полей
+  // ПЕРЕМЕЩЕНА В МОДУЛЬ export.js
+  // Используем функцию из модуля export.js
+  // Основная функция экспорта PDF - ПЕРЕМЕЩЕНА В МОДУЛЬ export.js
   async function performPdfExport(selectedFields, filters = {}) {
-    if (!checkArchitectRole()) {
-      throw new Error('Недостаточно прав для экспорта отчета');
+    // Делегируем вызов модулю export.js
+    if (typeof window.ExportModule !== 'undefined' && window.ExportModule.performPdfExport) {
+      return window.ExportModule.performPdfExport(selectedFields, filters);
     }
-
-    // Проверка, что выбрано хотя бы одно поле
-    const hasSelectedFields = Object.values(selectedFields).some(v => v === true);
-    if (!hasSelectedFields) {
-      throw new Error('Выберите хотя бы одно поле для экспорта');
-    }
-
-    try {
-      const { jsPDF } = window.jspdf;
-
-      // Настройки формата A4 (мм)
-      const margin = 14; // mm
-
-      // canvas rendering helpers (определяем один раз для всего кода)
-      const DPI = 150;
-      const pxPerMM = DPI / 25.4;
-
-      // Получаем список выбранных полей для предварительного расчета
-      // Определяем порядок колонок: Предприятие → Функциональный блок → Функция → Название технологии → остальные поля
-      const columnOrder = ['company', 'blocks', 'functions', 'name'];
-      const selectedFieldsKeys = Object.keys(selectedFields).filter(f => selectedFields[f] === true);
-
-      // Сортируем выбранные поля согласно заданному порядку
-      const selectedFieldsList = [];
-      // Сначала добавляем поля в заданном порядке
-      columnOrder.forEach(field => {
-        if (selectedFieldsKeys.includes(field)) {
-          selectedFieldsList.push(field);
-        }
-      });
-      // Затем добавляем остальные поля в исходном порядке
-      selectedFieldsKeys.forEach(field => {
-        if (!columnOrder.includes(field)) {
-          selectedFieldsList.push(field);
-        }
-      });
-
-      if (selectedFieldsList.length === 0) {
-        throw new Error('Не выбрано ни одного поля');
-      }
-
-      // Временный canvas для измерения текста (используем тот же DPI, что и в основном коде)
-      const tempCanvas = document.createElement('canvas');
-      const tempCtx = tempCanvas.getContext('2d');
-      const tempFontSize = Math.round(12 * pxPerMM / 3.78);
-      const tempFont = `${tempFontSize}px Segoe UI, Roboto, Arial, sans-serif`;
-      const tempBoldFont = `bold ${tempFontSize}px Segoe UI, Roboto, Arial, sans-serif`;
-      tempCtx.font = tempFont;
-
-      // Сохраняем фильтр по компаниям для передачи в getFieldValue (определяем раньше для previewData)
-      const companyFilterForDisplay = filters.company && Array.isArray(filters.company) && filters.company.length > 0
-        ? filters.company
-        : null;
-
-      // Сначала собираем данные для расчета минимальных ширин
-      // (используем предварительный список, если он доступен)
-      let previewData = [];
-      if (filters.company && Array.isArray(filters.company) && filters.company.length > 0) {
-        filters.company.forEach(company => {
-          if (enterpriseData && enterpriseData[company]) {
-            previewData = previewData.concat(enterpriseData[company].slice(0, 10)); // Берем первые 10 для расчета
-          }
-        });
-      } else if (selectedFields.company === true) {
-        const allCompanies = Object.keys(enterpriseData || {}).filter(c => c);
-        allCompanies.forEach(company => {
-          if (enterpriseData && enterpriseData[company]) {
-            previewData = previewData.concat(enterpriseData[company].slice(0, 10));
-          }
-        });
-      } else {
-        const currentEnt = currentEnterprise || 'Предприятие';
-        if (enterpriseData && enterpriseData[currentEnt]) {
-          previewData = enterpriseData[currentEnt].slice(0, 10);
-        } else if (Array.isArray(technologies)) {
-          previewData = technologies.slice(0, 10);
-        }
-      }
-
-      // Вычисляем минимальную ширину для каждой колонки на основе заголовков и содержимого
-      const minColWidths = selectedFieldsList.map(field => {
-        const label = getFieldLabel(field);
-        tempCtx.font = tempBoldFont;
-        const labelWidthPx = tempCtx.measureText(label).width;
-        tempCtx.font = tempFont;
-
-        // Проверяем ширину реального содержимого (берем максимальную ширину из первых записей)
-        let maxContentWidthPx = labelWidthPx;
-        previewData.forEach(tech => {
-          const value = getFieldValue(tech, field, { companyFilter: companyFilterForDisplay });
-          const valueStr = String(value || '');
-          // Измеряем ширину текста (может быть многострочным, берем самую широкую строку)
-          const words = valueStr.split(/\s+/);
-          let line = '';
-          words.forEach(word => {
-            const testLine = line ? line + ' ' + word : word;
-            const testWidth = tempCtx.measureText(testLine).width;
-            if (testWidth > maxContentWidthPx) {
-              maxContentWidthPx = testWidth;
-            }
-            // Если строка слишком длинная, начинаем новую
-            if (testWidth > 200) { // Примерная максимальная ширина для одной строки
-              line = word;
-            } else {
-              line = testLine;
-            }
-          });
-        });
-
-        // Минимальная ширина = максимальная из (заголовок, содержимое) + отступы
-        const cellPadding = 4; // пиксели
-        const minWidthPx = Math.max(labelWidthPx, maxContentWidthPx) + (cellPadding * 2) + 10; // 10px запас
-        const minWidthMm = minWidthPx / pxPerMM;
-        return Math.max(minWidthMm, 20); // Минимум 20mm на колонку
-      });
-
-      // Суммарная минимальная ширина всех колонок + отступы между колонками
-      const cellPadding = 4;
-      const cellPaddingMm = cellPadding / pxPerMM;
-      const totalMinWidth = minColWidths.reduce((sum, w) => sum + w, 0) + (selectedFieldsList.length - 1) * cellPaddingMm;
-
-      // Доступная ширина в portrait (A4: 210mm) и landscape (A4: 297mm)
-      const availableWidthPortrait = 210 - (margin * 2);
-      const availableWidthLandscape = 297 - (margin * 2);
-
-      // Определяем ориентацию
-      const useLandscape = totalMinWidth > availableWidthPortrait;
-      const orientation = useLandscape ? 'landscape' : 'portrait';
-
-      // Создаем PDF с правильной ориентацией
-      const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: orientation });
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-
-      // Список технологий
-      // Если в фильтре выбраны предприятия, собираем данные из всех выбранных предприятий
-      let sourceList = [];
-      let enterpriseName = currentEnterprise || 'Предприятие';
-
-      // Проверяем, выбрано ли поле "company" для экспорта
-      const isCompanyFieldSelected = selectedFields.company === true;
-
-      if (filters.company && Array.isArray(filters.company) && filters.company.length > 0) {
-        // Собираем данные из всех выбранных предприятий
-        filters.company.forEach(company => {
-          if (enterpriseData && enterpriseData[company]) {
-            sourceList = sourceList.concat(enterpriseData[company]);
-          }
-        });
-        // Формируем название для заголовка
-        if (filters.company.length === 1) {
-          enterpriseName = filters.company[0];
-        } else {
-          enterpriseName = filters.company.join(', ');
-        }
-      } else if (isCompanyFieldSelected) {
-        // Если поле "company" выбрано для экспорта, но фильтр пустой - используем все предприятия
-        // Это означает, что пользователь хочет видеть все предприятия в отчете
-        const allCompanies = Object.keys(enterpriseData || {}).filter(c => c);
-        allCompanies.forEach(company => {
-          if (enterpriseData && enterpriseData[company]) {
-            sourceList = sourceList.concat(enterpriseData[company]);
-          }
-        });
-        enterpriseName = 'Все предприятия';
-      } else {
-        // Если фильтр по предприятиям не задан и поле "company" не выбрано, используем текущее предприятие
-        sourceList = (enterpriseData && enterpriseData[enterpriseName]) ? enterpriseData[enterpriseName] : (Array.isArray(technologies) ? technologies : []);
-      }
-
-      // Дедупликация технологий по ID (технология с несколькими предприятиями может попасть в список несколько раз)
-      const seenIds = new Set();
-      sourceList = sourceList.filter(tech => {
-        const techId = tech.id;
-        if (seenIds.has(techId)) {
-          return false;
-        }
-        seenIds.add(techId);
-        return true;
-      });
-
-      // Применяем фильтры к списку технологий (кроме фильтра по предприятиям, так как он уже применен)
-      if (Object.keys(filters).length > 0) {
-        const filtersWithoutCompany = { ...filters };
-        delete filtersWithoutCompany.company; // Удаляем фильтр по компаниям, так как он уже применен при сборе данных
-        if (Object.keys(filtersWithoutCompany).length > 0) {
-          sourceList = applyFiltersToTechnologies(sourceList, filtersWithoutCompany);
-        }
-      }
-
-      // Проверяем, что выбрано хотя бы одно поле (selectedFieldsList уже определен выше)
-      if (selectedFieldsList.length === 0) {
-        throw new Error('Не выбрано ни одного поля');
-      }
-
-      // canvas rendering helpers (DPI и pxPerMM уже определены выше)
-      function mmToPx(mm) { return Math.round(mm * pxPerMM); }
-
-      function wrapText(ctx, text, maxWidthPx) {
-        const words = String(text || '').split(/\s+/);
-        const lines = [];
-        let line = '';
-
-        // Функция для разбиения длинного слова с переносом
-        function breakLongWord(word, maxWidth) {
-          const result = [];
-          let currentPart = '';
-
-          for (let i = 0; i < word.length; i++) {
-            const testPart = currentPart + word[i];
-            const testWidth = ctx.measureText(testPart + '-').width;
-
-            if (testWidth > maxWidth && currentPart.length > 1) {
-              // Добавляем дефис и начинаем новую часть
-              result.push(currentPart + '-');
-              currentPart = word[i];
-            } else {
-              currentPart = testPart;
-            }
-          }
-
-          if (currentPart) {
-            result.push(currentPart);
-          }
-
-          return result;
-        }
-
-        for (let i = 0; i < words.length; i++) {
-          const word = words[i];
-          const test = line ? line + ' ' + word : word;
-          const w = ctx.measureText(test).width;
-
-          if (w > maxWidthPx) {
-            if (line) {
-              lines.push(line);
-              line = '';
-            }
-
-            // Проверяем, помещается ли слово целиком
-            const wordWidth = ctx.measureText(word).width;
-            if (wordWidth > maxWidthPx) {
-              // Слово слишком длинное - разбиваем его
-              const wordParts = breakLongWord(word, maxWidthPx);
-              for (let j = 0; j < wordParts.length; j++) {
-                if (j === wordParts.length - 1) {
-                  // Последняя часть слова - добавляем в текущую строку
-                  line = wordParts[j];
-                } else {
-                  // Не последняя часть - добавляем как отдельную строку
-                  lines.push(wordParts[j]);
-                }
-              }
-            } else {
-              line = word;
-            }
-          } else {
-            line = test;
-          }
-        }
-        if (line) lines.push(line);
-        return lines;
-      }
-
-      // Render a single page to canvas and return PNG dataURL
-      async function renderPagesToImages() {
-        const images = [];
-        const cw = mmToPx(pageWidth);
-        const ch = mmToPx(pageHeight);
-
-        // styles
-        const headerFont = `${Math.round(14 * pxPerMM / 3.78)}px Segoe UI, Roboto, Arial, sans-serif`;
-        const normalFont = `${Math.round(12 * pxPerMM / 3.78)}px Segoe UI, Roboto, Arial, sans-serif`;
-        const smallFont = `${Math.round(11 * pxPerMM / 3.78)}px Segoe UI, Roboto, Arial, sans-serif`;
-        const boldFont = `bold ${Math.round(12 * pxPerMM / 3.78)}px Segoe UI, Roboto, Arial, sans-serif`;
-
-        let canvas = document.createElement('canvas');
-        canvas.width = cw;
-        canvas.height = ch;
-        let ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, cw, ch);
-
-        const marginPx = mmToPx(margin);
-        const contentW = cw - marginPx * 2;
-        const cellPadding = 4;
-        const rowSpacing = 2;
-        const baseHeaderHeight = 20;
-
-        let y = marginPx;
-
-        function newPage() {
-          images.push(canvas.toDataURL('image/png'));
-          canvas = document.createElement('canvas');
-          canvas.width = cw; canvas.height = ch;
-          const cctx = canvas.getContext('2d');
-          cctx.fillStyle = '#ffffff';
-          cctx.fillRect(0, 0, cw, ch);
-          return cctx;
-        }
-
-        const nowStr = new Date().toLocaleString('ru-RU');
-
-        function drawHeader(cctx) {
-          cctx.fillStyle = '#000';
-          cctx.textBaseline = 'top';
-          cctx.font = headerFont;
-          const title = `Технологический отчёт: ${enterpriseName}`;
-          const titleW = cctx.measureText(title).width;
-          cctx.fillText(title, Math.round((cw - titleW) / 2), y);
-          cctx.font = smallFont;
-          cctx.fillText(`Дата формирования отчёта: ${nowStr}`, marginPx, y + Math.round(16 * pxPerMM / 3.78));
-          y += Math.round(26 * pxPerMM / 3.78);
-        }
-
-        ctx.fillStyle = '#000';
-        ctx.textBaseline = 'top';
-        drawHeader(ctx);
-
-        if (!sourceList || sourceList.length === 0) {
-          ctx.font = normalFont;
-          ctx.fillText('На предприятии не зарегистрировано технологий', marginPx, y + 6);
-          images.push(canvas.toDataURL('image/png'));
-          return images;
-        }
-
-        // Вычисляем ширину колонок с учетом минимальных ширин
-        const numCols = selectedFieldsList.length;
-        const availableWidthPx = contentW;
-        const totalPadding = (numCols - 1) * cellPadding;
-        const availableWidthForCols = availableWidthPx - totalPadding;
-
-        // Конвертируем минимальные ширины из мм в пиксели для canvas
-        const minColWidthsPx = minColWidths.map(w => mmToPx(w));
-        const totalMinWidthPx = minColWidthsPx.reduce((sum, w) => sum + w, 0);
-
-        // Распределяем доступное пространство между колонками
-        // Гарантируем, что колонки не накладываются друг на друга
-        let colWidths;
-        if (totalMinWidthPx > availableWidthForCols) {
-          // Если минимальные ширины превышают доступное пространство,
-          // масштабируем их пропорционально, чтобы они поместились
-          const scale = availableWidthForCols / totalMinWidthPx;
-          colWidths = minColWidthsPx.map(w => Math.max(Math.floor(w * scale), 10)); // Минимум 10px
-        } else {
-          // Распределяем доступное пространство пропорционально минимальным ширинам
-          const scale = availableWidthForCols / totalMinWidthPx;
-          colWidths = minColWidthsPx.map(w => Math.floor(w * scale));
-
-          // Убеждаемся, что каждая колонка не меньше своей минимальной ширины
-          colWidths = colWidths.map((w, idx) => Math.max(w, minColWidthsPx[idx]));
-
-          // Корректируем, если сумма превышает доступное пространство
-          const totalWidth = colWidths.reduce((sum, w) => sum + w, 0);
-          if (totalWidth > availableWidthForCols) {
-            const correction = availableWidthForCols / totalWidth;
-            colWidths = colWidths.map(w => Math.max(Math.floor(w * correction), 10)); // Минимум 10px
-          }
-        }
-
-        // Финальная проверка: убеждаемся, что сумма не превышает доступное пространство
-        let totalWidth = colWidths.reduce((sum, w) => sum + w, 0);
-        if (totalWidth > availableWidthForCols) {
-          const finalCorrection = availableWidthForCols / totalWidth;
-          colWidths = colWidths.map(w => Math.floor(w * finalCorrection));
-        }
-
-        // Для обратной совместимости вычисляем среднюю ширину колонки
-        const colWidth = Math.floor(availableWidthForCols / numCols);
-
-        // Вычисляем необходимую высоту заголовка на основе переноса текста
-        ctx.font = boldFont;
-        let maxHeaderLines = 1;
-        selectedFieldsList.forEach((field, idx) => {
-          const label = getFieldLabel(field);
-          const currentColWidth = colWidths[idx] || colWidth;
-          const availableWidth = currentColWidth - cellPadding * 2;
-          const headerLines = wrapText(ctx, label, availableWidth);
-          maxHeaderLines = Math.max(maxHeaderLines, headerLines.length);
-        });
-        const headerHeight = Math.max(baseHeaderHeight, maxHeaderLines * Math.round(12 * pxPerMM / 3.78) + cellPadding * 2);
-
-        // Рисуем заголовок таблицы с фоном
-        const headerY = y;
-        ctx.fillStyle = '#e0e0e0';
-        ctx.fillRect(marginPx, headerY, contentW, headerHeight);
-        ctx.fillStyle = '#000';
-        ctx.font = boldFont;
-        ctx.textBaseline = 'top';
-        ctx.textAlign = 'left';
-
-        let x = marginPx + cellPadding;
-        selectedFieldsList.forEach((field, idx) => {
-          const label = getFieldLabel(field);
-          const currentColWidth = colWidths[idx] || colWidth;
-          const availableWidth = currentColWidth - cellPadding * 2;
-
-          // Переносим текст заголовка, если он не помещается (используем boldFont)
-          ctx.font = boldFont;
-          let headerLines = wrapText(ctx, label, availableWidth);
-          const lineHeight = Math.round(12 * pxPerMM / 3.78);
-
-          // Обрезаем строки, если они все еще слишком длинные
-          headerLines = headerLines.map(line => {
-            let displayLine = line;
-            if (ctx.measureText(displayLine).width > availableWidth) {
-              while (displayLine.length > 0 && ctx.measureText(displayLine + '...').width > availableWidth) {
-                displayLine = displayLine.slice(0, -1);
-              }
-              displayLine = displayLine + '...';
-            }
-            return displayLine;
-          });
-
-          const totalHeaderHeight = headerLines.length * lineHeight;
-          const startY = headerY + Math.max(0, (headerHeight - totalHeaderHeight) / 2);
-
-          headerLines.forEach((line, lineIdx) => {
-            ctx.fillText(line, x, startY + lineIdx * lineHeight);
-          });
-
-          x += currentColWidth + cellPadding;
-        });
-
-        y += headerHeight + rowSpacing;
-
-        // Рисуем строки данных
-        for (let i = 0; i < sourceList.length; i++) {
-          const tech = sourceList[i];
-          const isEvenRow = i % 2 === 0;
-
-          // Измеряем высоту строки
-          ctx.font = normalFont;
-          let maxLines = 1;
-          const cellValues = selectedFieldsList.map((field, idx) => {
-            const value = getFieldValue(tech, field, { companyFilter: companyFilterForDisplay });
-            const currentColWidth = colWidths[idx] || colWidth;
-            const lines = wrapText(ctx, value, currentColWidth - cellPadding * 2);
-            maxLines = Math.max(maxLines, lines.length);
-            return lines;
-          });
-
-          const rowHeight = Math.max(headerHeight, maxLines * Math.round(12 * pxPerMM / 3.78) + cellPadding * 2);
-
-          // Проверка на перенос страницы
-          if (y + rowHeight + marginPx > ch - marginPx) {
-            const cctx = newPage();
-            y = marginPx;
-            drawHeader(cctx);
-            // Перерисовываем заголовок таблицы
-            const newHeaderY = y;
-            cctx.fillStyle = '#e0e0e0';
-            cctx.fillRect(marginPx, newHeaderY, contentW, headerHeight);
-            cctx.fillStyle = '#000';
-            cctx.font = boldFont;
-            cctx.textBaseline = 'top';
-            cctx.textAlign = 'left';
-            let newX = marginPx + cellPadding;
-            selectedFieldsList.forEach((field, idx) => {
-              const label = getFieldLabel(field);
-              const currentColWidth = colWidths[idx] || colWidth;
-              const availableWidth = currentColWidth - cellPadding * 2;
-
-              // Переносим текст заголовка, если он не помещается (используем boldFont)
-              cctx.font = boldFont;
-              let headerLines = wrapText(cctx, label, availableWidth);
-              const lineHeight = Math.round(12 * pxPerMM / 3.78);
-
-              // Обрезаем строки, если они все еще слишком длинные
-              headerLines = headerLines.map(line => {
-                let displayLine = line;
-                if (cctx.measureText(displayLine).width > availableWidth) {
-                  while (displayLine.length > 0 && cctx.measureText(displayLine + '...').width > availableWidth) {
-                    displayLine = displayLine.slice(0, -1);
-                  }
-                  displayLine = displayLine + '...';
-                }
-                return displayLine;
-              });
-
-              const totalHeaderHeight = headerLines.length * lineHeight;
-              const startY = newHeaderY + Math.max(0, (headerHeight - totalHeaderHeight) / 2);
-
-              headerLines.forEach((line, lineIdx) => {
-                cctx.fillText(line, newX, startY + lineIdx * lineHeight);
-              });
-
-              newX += currentColWidth + cellPadding;
-            });
-            y += headerHeight + rowSpacing;
-            ctx = cctx;
-          }
-
-          // Фон строки (zebra striping)
-          if (isEvenRow) {
-            ctx.fillStyle = '#f9f9f9';
-            ctx.fillRect(marginPx, y, contentW, rowHeight);
-          }
-
-          // Границы ячеек
-          ctx.strokeStyle = '#d0d0d0';
-          ctx.lineWidth = 0.5;
-          x = marginPx;
-          for (let col = 0; col <= numCols; col++) {
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.lineTo(x, y + rowHeight);
-            ctx.stroke();
-            if (col < numCols) {
-              const currentColWidth = colWidths[col] || colWidth;
-              x += currentColWidth + cellPadding;
-            }
-          }
-          ctx.beginPath();
-          ctx.moveTo(marginPx, y);
-          ctx.lineTo(marginPx + contentW, y);
-          ctx.stroke();
-          ctx.beginPath();
-          ctx.moveTo(marginPx, y + rowHeight);
-          ctx.lineTo(marginPx + contentW, y + rowHeight);
-          ctx.stroke();
-
-          // Текст в ячейках
-          ctx.font = normalFont;
-          ctx.textBaseline = 'top';
-          ctx.textAlign = 'left';
-          x = marginPx + cellPadding;
-          selectedFieldsList.forEach((field, colIdx) => {
-            const lines = cellValues[colIdx];
-            const isNumeric = isNumericField(field);
-            const currentColWidth = colWidths[colIdx] || colWidth;
-            const availableTextWidth = currentColWidth - cellPadding * 2;
-            const textX = isNumeric ? x + currentColWidth - cellPadding : x;
-            ctx.textAlign = isNumeric ? 'right' : 'left';
-            const lineHeight = Math.round(12 * pxPerMM / 3.78);
-
-            // Все поля отображаются черным цветом
-            ctx.fillStyle = '#000';
-
-            lines.forEach((line, lineIdx) => {
-              // Обрезаем текст, если он все еще слишком длинный (на случай ошибок в wrapText)
-              let displayLine = line;
-              if (ctx.measureText(displayLine).width > availableTextWidth) {
-                // Обрезаем текст до максимальной ширины
-                while (displayLine.length > 0 && ctx.measureText(displayLine + '...').width > availableTextWidth) {
-                  displayLine = displayLine.slice(0, -1);
-                }
-                displayLine = displayLine + '...';
-              }
-              ctx.fillText(displayLine, textX, y + cellPadding + lineIdx * lineHeight);
-            });
-
-            x += currentColWidth + cellPadding;
-            ctx.textAlign = 'left';
-          });
-
-          y += rowHeight + rowSpacing;
-        }
-
-        images.push(canvas.toDataURL('image/png'));
-        return images;
-      }
-
-      // Generate images and put them into pdf
-      const imgs = await renderPagesToImages();
-      if (!imgs || imgs.length === 0) {
-        throw new Error('Не удалось подготовить страницы отчёта');
-      }
-
-      for (let i = 0; i < imgs.length; i++) {
-        if (i > 0) pdf.addPage();
-        pdf.addImage(imgs[i], 'PNG', 0, 0, pageWidth, pageHeight);
-      }
-
-      const filename = `Технологический_отчёт_${enterpriseName.replace(/\s+/g, '_')}.pdf`;
-      pdf.save(filename);
-    } catch (error) {
-      console.error('Ошибка при генерации отчёта (canvas flow):', error);
-      // Пробрасываем ошибку дальше, чтобы она была обработана в обработчике кнопки
-      throw error;
-    }
+    // Fallback для обратной совместимости
+    throw new Error('Модуль экспорта не загружен');
   }
 
-  // Функция для заполнения множественного выбора
-  function populateMultiSelect(containerId, items, placeholder) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
+  // Экспорт функции performPdfExport в window для обратной совместимости
+  window.performPdfExport = performPdfExport;
 
-    const optionsContainer = container.querySelector('.export-multi-select-options');
-    const hiddenInput = container.querySelector('input[type="hidden"]');
-    const textElement = container.querySelector('.export-multi-select-text');
+  // Все остальные функции экспорта ПЕРЕМЕЩЕНЫ В МОДУЛЬ export.js
+  // Используем функции из модуля export.js через window
 
-    if (!optionsContainer || !hiddenInput || !textElement) return;
+  // Обработчик кнопки экспорта PDF - используем функцию из модуля export.js
+  // Инициализация обработчика перенесена в модуль export.js (initExportPdfModalHandlers)
+  // Обработчик кнопки также инициализируется в модуле export.js
 
-    // Сохраняем placeholder для использования в updateMultiSelectValue
-    container.setAttribute('data-placeholder', placeholder);
-
-    // Очистка существующих опций
-    optionsContainer.innerHTML = '';
-
-    // Добавляем опцию "Выбрать все" в начало списка
-    const selectAllOption = document.createElement('div');
-    selectAllOption.className = 'export-multi-select-option select-all-option';
-    const selectAllId = `${containerId}_select_all`;
-    selectAllOption.innerHTML = `
-      <input type="checkbox" value="__SELECT_ALL__" id="${selectAllId}" data-select-all="true">
-      <label for="${selectAllId}">Выбрать все</label>
-    `;
-    optionsContainer.appendChild(selectAllOption);
-
-    // Заполнение опций
-    items.forEach(item => {
-      const option = document.createElement('div');
-      option.className = 'export-multi-select-option';
-      const safeId = `${containerId}_${item.replace(/[^a-zA-Z0-9_]/g, '_')}`;
-      option.innerHTML = `
-        <input type="checkbox" value="${item.replace(/"/g, '&quot;')}" id="${safeId}">
-        <label for="${safeId}">${item}</label>
-      `;
-      optionsContainer.appendChild(option);
-    });
-
-    // Инициализация обработчиков для этого селекта (после добавления опций)
-    setTimeout(() => {
-      initMultiSelect(container, placeholder);
-    }, 0);
-  }
-
-  // Функция для инициализации множественного выбора
-  function initMultiSelect(container, placeholder) {
-    // Проверка, не инициализирован ли уже
-    if (container.dataset.initialized === 'true') {
-      // Обновляем только обработчики для опций
-      const selectAllCheckbox = container.querySelector('input[data-select-all="true"]');
-      let regularCheckboxes = container.querySelectorAll('.export-multi-select-option:not(.select-all-option) input[type="checkbox"]');
-
-      // Обновляем обработчик для "Выбрать все"
-      if (selectAllCheckbox) {
-        const newSelectAllCheckbox = selectAllCheckbox.cloneNode(true);
-        selectAllCheckbox.parentNode.replaceChild(newSelectAllCheckbox, selectAllCheckbox);
-        newSelectAllCheckbox.addEventListener('change', (e) => {
-          const isChecked = e.target.checked;
-          // Получаем актуальный список чекбоксов после клонирования
-          const currentCheckboxes = container.querySelectorAll('.export-multi-select-option:not(.select-all-option) input[type="checkbox"]');
-          currentCheckboxes.forEach(cb => {
-            cb.checked = isChecked;
-          });
-          updateMultiSelectValue(container, placeholder);
-
-          // Очищаем ошибки при выборе "Выбрать все"
-          if (isChecked) {
-            const fieldName = container.getAttribute('data-field');
-            if (fieldName) {
-              const fieldCheckbox = document.getElementById(`field_${fieldName}`);
-              if (fieldCheckbox && fieldCheckbox.checked) {
-                const fieldItem = fieldCheckbox.closest('.export-field-item');
-                if (fieldItem) {
-                  fieldItem.classList.remove('has-error');
-                }
-                container.classList.remove('has-error');
-              }
-            }
-          }
-        });
-      }
-
-      // Обновляем обработчики для обычных опций
-      regularCheckboxes.forEach(checkbox => {
-        const newCheckbox = checkbox.cloneNode(true);
-        checkbox.parentNode.replaceChild(newCheckbox, checkbox);
-        newCheckbox.addEventListener('change', () => {
-          // Получаем актуальный список чекбоксов после клонирования
-          const currentCheckboxes = container.querySelectorAll('.export-multi-select-option:not(.select-all-option) input[type="checkbox"]');
-          const currentSelectAllCheckbox = container.querySelector('input[data-select-all="true"]');
-          const allChecked = Array.from(currentCheckboxes).every(cb => cb.checked);
-          const someChecked = Array.from(currentCheckboxes).some(cb => cb.checked);
-          if (currentSelectAllCheckbox) {
-            currentSelectAllCheckbox.checked = allChecked;
-            currentSelectAllCheckbox.indeterminate = someChecked && !allChecked;
-          }
-          updateMultiSelectValue(container, placeholder);
-
-          // Очищаем ошибки при выборе значения
-          const fieldName = container.getAttribute('data-field');
-          if (fieldName) {
-            const values = getMultiSelectValues(container.id);
-            // Проверяем, все ли чекбоксы выбраны
-            const allCheckboxes = container.querySelectorAll('.export-multi-select-option:not(.select-all-option) input[type="checkbox"]');
-            const checkedBoxes = container.querySelectorAll('.export-multi-select-option:not(.select-all-option) input[type="checkbox"]:checked');
-            const isAllSelected = allCheckboxes.length > 0 && checkedBoxes.length === allCheckboxes.length;
-
-            if (values.length > 0 || isAllSelected) {
-              const fieldCheckbox = document.getElementById(`field_${fieldName}`);
-              if (fieldCheckbox && fieldCheckbox.checked) {
-                const fieldItem = fieldCheckbox.closest('.export-field-item');
-                if (fieldItem) {
-                  fieldItem.classList.remove('has-error');
-                }
-                container.classList.remove('has-error');
-              }
-              // Скрываем общее сообщение об ошибке
-              const errorMessage = document.getElementById('exportFieldsError');
-              if (errorMessage) {
-                errorMessage.style.display = 'none';
-              }
-            }
-          }
-        });
-      });
-
-      updateMultiSelectValue(container, placeholder);
-      return;
-    }
-
-    const trigger = container.querySelector('.export-multi-select-trigger');
-    const dropdown = container.querySelector('.export-multi-select-dropdown');
-    const searchInput = container.querySelector('.export-multi-select-search input');
-    const hiddenInput = container.querySelector('input[type="hidden"]');
-    const textElement = container.querySelector('.export-multi-select-text');
-
-    if (!trigger || !dropdown || !hiddenInput || !textElement) return;
-
-    // Открытие/закрытие выпадающего списка
-    trigger.addEventListener('click', (e) => {
-      e.stopPropagation();
-      container.classList.toggle('open');
-    });
-
-    // Закрытие при клике вне
-    const closeHandler = (e) => {
-      if (!container.contains(e.target)) {
-        container.classList.remove('open');
-      }
-    };
-    document.addEventListener('click', closeHandler);
-
-    // Поиск (только для blocks и functions)
-    const fieldName = container.getAttribute('data-field');
-    const hasSearch = fieldName === 'blocks' || fieldName === 'functions';
-
-    if (searchInput && hasSearch) {
-      searchInput.addEventListener('input', (e) => {
-        const searchText = e.target.value.toLowerCase();
-        const options = container.querySelectorAll('.export-multi-select-option');
-        options.forEach(option => {
-          // Опция "Выбрать все" всегда видима
-          if (option.classList.contains('select-all-option')) {
-            option.classList.remove('hidden');
-            return;
-          }
-          const label = option.querySelector('label');
-          if (label) {
-            const text = label.textContent.toLowerCase();
-            if (text.includes(searchText)) {
-              option.classList.remove('hidden');
-            } else {
-              option.classList.add('hidden');
-            }
-          }
-        });
-      });
-    } else if (searchInput && !hasSearch) {
-      // Скрываем поле поиска, если оно не нужно
-      const searchContainer = container.querySelector('.export-multi-select-search');
-      if (searchContainer) {
-        searchContainer.style.display = 'none';
-      }
-    }
-
-    // Обработка выбора опций
-    const updateOptions = () => {
-      const options = container.querySelectorAll('.export-multi-select-option');
-      const selectAllCheckbox = container.querySelector('input[data-select-all="true"]');
-      const regularCheckboxes = container.querySelectorAll('.export-multi-select-option:not(.select-all-option) input[type="checkbox"]');
-
-      // Обработчик для "Выбрать все"
-      if (selectAllCheckbox && !selectAllCheckbox.dataset.hasHandler) {
-        selectAllCheckbox.dataset.hasHandler = 'true';
-        selectAllCheckbox.addEventListener('change', (e) => {
-          const isChecked = e.target.checked;
-          // Получаем актуальный список чекбоксов
-          const currentRegularCheckboxes = container.querySelectorAll('.export-multi-select-option:not(.select-all-option) input[type="checkbox"]');
-          currentRegularCheckboxes.forEach(cb => {
-            cb.checked = isChecked;
-          });
-          updateMultiSelectValue(container, placeholder);
-
-          // Очищаем ошибки при выборе "Выбрать все"
-          if (isChecked) {
-            const fieldName = container.getAttribute('data-field');
-            if (fieldName) {
-              const fieldCheckbox = document.getElementById(`field_${fieldName}`);
-              if (fieldCheckbox && fieldCheckbox.checked) {
-                const fieldItem = fieldCheckbox.closest('.export-field-item');
-                if (fieldItem) {
-                  fieldItem.classList.remove('has-error');
-                }
-                container.classList.remove('has-error');
-              }
-            }
-          }
-        });
-      }
-
-      // Обработчики для обычных опций
-      options.forEach(option => {
-        const checkbox = option.querySelector('input[type="checkbox"]');
-        if (checkbox && !checkbox.dataset.hasHandler && !checkbox.dataset.selectAll) {
-          checkbox.dataset.hasHandler = 'true';
-          checkbox.addEventListener('change', () => {
-            // Получаем актуальный список чекбоксов и опцию "Выбрать все"
-            const currentSelectAllCheckbox = container.querySelector('input[data-select-all="true"]');
-            const currentRegularCheckboxes = container.querySelectorAll('.export-multi-select-option:not(.select-all-option) input[type="checkbox"]');
-            // Обновляем состояние "Выбрать все"
-            const allChecked = Array.from(currentRegularCheckboxes).every(cb => cb.checked);
-            const someChecked = Array.from(currentRegularCheckboxes).some(cb => cb.checked);
-            if (currentSelectAllCheckbox) {
-              currentSelectAllCheckbox.checked = allChecked;
-              currentSelectAllCheckbox.indeterminate = someChecked && !allChecked;
-            }
-            updateMultiSelectValue(container, placeholder);
-
-            // Очищаем ошибки при выборе значения
-            const fieldName = container.getAttribute('data-field');
-            if (fieldName) {
-              const values = getMultiSelectValues(container.id);
-              // Проверяем, все ли чекбоксы выбраны
-              const allCheckboxes = container.querySelectorAll('.export-multi-select-option:not(.select-all-option) input[type="checkbox"]');
-              const checkedBoxes = container.querySelectorAll('.export-multi-select-option:not(.select-all-option) input[type="checkbox"]:checked');
-              const isAllSelected = allCheckboxes.length > 0 && checkedBoxes.length === allCheckboxes.length;
-
-              if (values.length > 0 || isAllSelected) {
-                const fieldCheckbox = document.getElementById(`field_${fieldName}`);
-                if (fieldCheckbox && fieldCheckbox.checked) {
-                  const fieldItem = fieldCheckbox.closest('.export-field-item');
-                  if (fieldItem) {
-                    fieldItem.classList.remove('has-error');
-                  }
-                  container.classList.remove('has-error');
-                }
-                // Скрываем общее сообщение об ошибке
-                const errorMessage = document.getElementById('exportFieldsError');
-                if (errorMessage) {
-                  errorMessage.style.display = 'none';
-                }
-              }
-            }
-          });
-        }
-      });
-    };
-
-    updateOptions();
-
-    // Инициализация начального состояния "Выбрать все"
-    const initialSelectAllCheckbox = container.querySelector('input[data-select-all="true"]');
-    const initialRegularCheckboxes = container.querySelectorAll('.export-multi-select-option:not(.select-all-option) input[type="checkbox"]');
-    if (initialSelectAllCheckbox && initialRegularCheckboxes.length > 0) {
-      const allChecked = Array.from(initialRegularCheckboxes).every(cb => cb.checked);
-      const someChecked = Array.from(initialRegularCheckboxes).some(cb => cb.checked);
-      initialSelectAllCheckbox.checked = allChecked;
-      initialSelectAllCheckbox.indeterminate = someChecked && !allChecked;
-    }
-
-    // Обновление текста при загрузке
-    updateMultiSelectValue(container, placeholder);
-
-    // Отмечаем как инициализированный
-    container.dataset.initialized = 'true';
-  }
-
-  // Функция для обновления значения множественного выбора
-  function updateMultiSelectValue(container, placeholder) {
-    // Исключаем опцию "Выбрать все" из подсчета
-    const checkboxes = container.querySelectorAll('.export-multi-select-option:not(.select-all-option) input[type="checkbox"]:checked');
-    const hiddenInput = container.querySelector('input[type="hidden"]');
-    const textElement = container.querySelector('.export-multi-select-text');
-
-    if (!hiddenInput || !textElement) return;
-
-    const selectedValues = Array.from(checkboxes).map(cb => cb.value);
-
-    // Получаем общее количество опций (без "Выбрать все")
-    const totalOptions = container.querySelectorAll('.export-multi-select-option:not(.select-all-option)').length;
-
-    // Если выбраны ВСЕ опции, сохраняем пустой массив (означает "без фильтрации")
-    // Это позволяет показать все технологии, когда пользователь хочет "все"
-    if (selectedValues.length === totalOptions) {
-      hiddenInput.value = '[]';
+  // Позиционирование выпадающих списков
+  function positionOptions(select) {
+    if (!select) return;
+    // Для структуры с select-dropdown позиционируем dropdown, иначе позиционируем select-options
+    const dropdown = select.querySelector('.select-dropdown');
+    const list = dropdown || select.querySelector('.select-options');
+    if (!list) return;
+    // требуется, чтобы .custom-select (и .custom-select-modal) имели position: relative (это задано в CSS)
+    if (dropdown) {
+      // Для select-dropdown позиционирование уже задано в CSS, но можно обновить ширину
+      dropdown.style.minWidth = `${select.offsetWidth}px`;
+      dropdown.style.width = `${select.offsetWidth}px`;
     } else {
-      hiddenInput.value = JSON.stringify(selectedValues);
-    }
-
-    if (selectedValues.length === 0) {
-      textElement.textContent = placeholder || 'Все';
-    } else if (selectedValues.length === totalOptions) {
-      textElement.textContent = placeholder || 'Все';
-    } else if (selectedValues.length === 1) {
-      textElement.textContent = selectedValues[0];
-    } else {
-      textElement.textContent = `Выбрано: ${selectedValues.length}`;
-    }
-
-    // Очищаем ошибки при выборе значения
-    // Проверяем реальное количество выбранных чекбоксов (selectedValues.length может быть 0, если все выбраны)
-    const allSelected = totalOptions > 0 && selectedValues.length === totalOptions;
-    const hasSelection = selectedValues.length > 0 || allSelected;
-
-    const fieldName = container.getAttribute('data-field');
-    if (fieldName && hasSelection) {
-      const fieldCheckbox = document.getElementById(`field_${fieldName}`);
-      if (fieldCheckbox && fieldCheckbox.checked) {
-        const fieldItem = fieldCheckbox.closest('.export-field-item');
-        if (fieldItem) {
-          fieldItem.classList.remove('has-error');
-        }
-        container.classList.remove('has-error');
-      }
-    }
-
-    // Также очищаем общее сообщение об ошибке, если есть выбранные значения
-    if (hasSelection) {
-      const errorMessage = document.getElementById('exportFieldsError');
-      if (errorMessage) {
-        errorMessage.style.display = 'none';
-      }
-    }
-  }
-
-  // Функция для получения значений множественного выбора
-  function getMultiSelectValues(containerId) {
-    const container = document.getElementById(containerId);
-    if (!container) return [];
-
-    const hiddenInput = container.querySelector('input[type="hidden"]');
-    if (!hiddenInput || !hiddenInput.value) return [];
-
-    try {
-      return JSON.parse(hiddenInput.value);
-    } catch (e) {
-      return [];
-    }
-  }
-
-  // Функция для заполнения списков фильтров
-  function populateExportFilters() {
-    // Заполнение списка предприятий
-    if (typeof enterpriseData !== 'undefined') {
-      const companies = Object.keys(enterpriseData).filter(c => c);
-      populateMultiSelect('filter_company_container', companies, 'Все предприятия');
-    }
-
-    // Заполнение списка блоков
-    if (typeof blocksList !== 'undefined' && Array.isArray(blocksList)) {
-      populateMultiSelect('filter_blocks_container', blocksList, 'Все блоки');
-    }
-
-    // Заполнение списка функций
-    if (typeof functions !== 'undefined' && Array.isArray(functions)) {
-      populateMultiSelect('filter_functions_container', functions, 'Все функции');
-    }
-
-    // Заполнение списка типов технологий
-    let techTypesList = [];
-    if (typeof techTypes !== 'undefined' && Array.isArray(techTypes)) {
-      techTypesList = techTypes;
-    } else if (typeof TECHTYPE_TO_SHAPE !== 'undefined') {
-      techTypesList = Object.keys(TECHTYPE_TO_SHAPE);
-    }
-    if (techTypesList.length > 0) {
-      populateMultiSelect('filter_techTypes_container', techTypesList, 'Все типы');
-    }
-
-    // Заполнение списка статусов
-    if (typeof RINGS !== 'undefined' && Array.isArray(RINGS)) {
-      populateMultiSelect('filter_status_container', RINGS, 'Все статусы');
-    }
-
-    // Заполнение множественного выбора для стоимости внедрения
-    const costPromOptions = [
-      '0 - 1 000 000',
-      '1 000 000 - 5 000 000',
-      '5 000 000 - 10 000 000',
-      'Более 10 000 000'
-    ];
-    populateMultiSelect('filter_costProm_container', costPromOptions, 'Все значения');
-
-    // Заполнение множественного выбора для технологической готовности, организационной готовности, покрытия функций
-    const ratingOptions = ['0', '1', '2', '3'];
-    ['techRead', 'organRead', 'funcCover'].forEach(fieldName => {
-      populateMultiSelect(`filter_${fieldName}_container`, ratingOptions, 'Все значения');
-    });
-
-    // Заполнение множественного выбора для приоритета технологии (по диапазонам процентов)
-    const priorityOptions = [
-      'Высокий (60-100%)',
-      'Средний (30-60%)',
-      'Низкий (0-30%)'
-    ];
-    populateMultiSelect('filter_priority_container', priorityOptions, 'Все приоритеты');
-  }
-
-  // Функции для работы с ошибками валидации (доступны глобально)
-  function clearAllErrors() {
-    // Убираем все ошибки
-    document.querySelectorAll('.export-field-item').forEach(item => {
-      item.classList.remove('has-error');
-    });
-    document.querySelectorAll('.export-multi-select').forEach(select => {
-      select.classList.remove('has-error');
-    });
-    const errorMessage = document.getElementById('exportFieldsError');
-    if (errorMessage) {
-      errorMessage.style.display = 'none';
-    }
-  }
-
-  function showFieldError(fieldName) {
-    const fieldCheckbox = document.getElementById(`field_${fieldName}`);
-    if (!fieldCheckbox) return;
-
-    const fieldItem = fieldCheckbox.closest('.export-field-item');
-    if (fieldItem) {
-      fieldItem.classList.add('has-error');
-    }
-
-    // Если это поле с множественным выбором, подсвечиваем и его контейнер
-    const multiSelectFields = ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'funcCover'];
-    if (multiSelectFields.includes(fieldName)) {
-      const container = document.getElementById(`filter_${fieldName}_container`);
-      if (container) {
-        container.classList.add('has-error');
-      }
-    }
-  }
-
-  // Функция для включения/отключения фильтров при изменении чекбоксов
-  function setupExportFilterToggles() {
-    const multiSelectFields = ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'funcCover'];
-    const singleSelectFields = [];
-    const textFields = ['description'];
-
-    // Множественный выбор
-    multiSelectFields.forEach(field => {
-      const checkbox = document.getElementById(`field_${field}`);
-      const container = document.getElementById(`filter_${field}_container`);
-
-      if (checkbox && container) {
-        // Установка начального состояния
-        if (!checkbox.checked) {
-          container.classList.add('disabled');
-        }
-
-        // Обработчик изменения чекбокса
-        checkbox.addEventListener('change', () => {
-          if (checkbox.checked) {
-            container.classList.remove('disabled');
-          } else {
-            container.classList.add('disabled');
-            // Сброс значения фильтра при отключении
-            const hiddenInput = container.querySelector('input[type="hidden"]');
-            if (hiddenInput) {
-              hiddenInput.value = '[]';
-              const checkboxes = container.querySelectorAll('input[type="checkbox"]');
-              checkboxes.forEach(cb => {
-                cb.checked = false;
-                cb.indeterminate = false;
-              });
-              const placeholder = container.getAttribute('data-placeholder') || 'Все';
-              updateMultiSelectValue(container, placeholder);
-            }
-          }
-          // Очищаем ошибки при изменении
-          clearAllErrors();
-        });
-
-        // Обработчик изменений в выпадающем списке для скрытия ошибок
-        const hiddenInput = container.querySelector('input[type="hidden"]');
-        if (hiddenInput) {
-          // Используем MutationObserver для отслеживания изменений значения
-          const observer = new MutationObserver(() => {
-            if (checkbox.checked) {
-              const values = getMultiSelectValues(`filter_${field}_container`);
-              if (values.length > 0) {
-                // Убираем ошибку с этого поля
-                const fieldItem = checkbox.closest('.export-field-item');
-                if (fieldItem) {
-                  fieldItem.classList.remove('has-error');
-                }
-                container.classList.remove('has-error');
-              }
-            }
-          });
-          observer.observe(hiddenInput, { attributes: true, attributeFilter: ['value'] });
-        }
-      }
-    });
-
-    // Одиночный выбор (кастомные выпадающие списки)
-    singleSelectFields.forEach(field => {
-      const checkbox = document.getElementById(`field_${field}`);
-      const filterElement = document.getElementById(`filter_${field}`);
-      const customSelect = document.querySelector(`.custom-select-modal[data-field="filter_${field}"]`);
-
-      if (checkbox && filterElement && customSelect) {
-        // Устанавливаем начальное состояние
-        if (!checkbox.checked) {
-          customSelect.classList.add('disabled');
-          customSelect.style.pointerEvents = 'none';
-          customSelect.style.opacity = '0.5';
-        }
-
-        checkbox.addEventListener('change', () => {
-          if (checkbox.checked) {
-            customSelect.classList.remove('disabled');
-            customSelect.style.pointerEvents = '';
-            customSelect.style.opacity = '';
-          } else {
-            customSelect.classList.add('disabled');
-            customSelect.style.pointerEvents = 'none';
-            customSelect.style.opacity = '0.5';
-            filterElement.value = '';
-            // Сбрасываем выбранное значение в кастомном селекте
-            const selectedText = customSelect.querySelector('.selected-text');
-            const placeholder = customSelect.getAttribute('data-placeholder') || 'Все значения';
-            if (selectedText) {
-              selectedText.textContent = placeholder;
-            }
-            customSelect.setAttribute('data-value', '');
-            // Убираем выделение с выбранного элемента
-            customSelect.querySelectorAll('.select-options li').forEach(li => {
-              li.classList.remove('selected');
-            });
-          }
-          // Очищаем ошибки при изменении
-          clearAllErrors();
-        });
-      }
-    });
-
-    // Текстовые поля
-    textFields.forEach(field => {
-      const checkbox = document.getElementById(`field_${field}`);
-      const filterElement = document.getElementById(`filter_${field}`);
-
-      if (checkbox && filterElement) {
-        filterElement.disabled = !checkbox.checked;
-
-        checkbox.addEventListener('change', () => {
-          filterElement.disabled = !checkbox.checked;
-          if (!checkbox.checked) {
-            filterElement.value = '';
-          }
-          // Очищаем ошибки при изменении
-          clearAllErrors();
-        });
-      }
-    });
-
-    // Обработчик для всех основных чекбоксов полей (для скрытия общей ошибки)
-    document.querySelectorAll('#exportPdfModal .export-field-item > label input[type="checkbox"], #exportPdfModal .export-field-row > label input[type="checkbox"]').forEach(cb => {
-      cb.addEventListener('change', () => {
-        // Если выбрано хотя бы одно поле, скрываем общую ошибку
-        let hasAnyFieldSelected = false;
-        document.querySelectorAll('#exportPdfModal .export-field-item > label input[type="checkbox"], #exportPdfModal .export-field-row > label input[type="checkbox"]').forEach(checkbox => {
-          if (checkbox.checked) {
-            hasAnyFieldSelected = true;
-          }
-        });
-        if (hasAnyFieldSelected) {
-          const errorMessage = document.getElementById('exportFieldsError');
-          if (errorMessage) {
-            errorMessage.style.display = 'none';
-          }
-        }
-      });
-    });
-  }
-
-  // Функция для показа модального окна выбора полей
-  function showExportPdfModal() {
-    if (!checkArchitectRole()) return;
-
-    const modal = document.getElementById('exportPdfModal');
-    if (!modal) return;
-
-    // Очищаем все ошибки при открытии модального окна
-    clearAllErrors();
-
-    // Дефолтные значения полей
-    const defaultFields = {
-      name: true,
-      company: true,
-      blocks: true,
-      functions: false,
-      techTypes: false,
-      status: true,
-      costProm: false,
-      description: false,
-      techRead: false,
-      organRead: false,
-      funcCover: false,
-      priority: false
-    };
-
-    // Инициализация чекбоксов
-    Object.keys(defaultFields).forEach(field => {
-      const checkbox = document.getElementById(`field_${field}`);
-      if (checkbox) {
-        checkbox.checked = defaultFields[field];
-      }
-    });
-
-    // Заполнение и обновление фильтров
-    populateExportFilters();
-    setupExportFilterToggles();
-
-    // Автоматическая установка параметров из текущих фильтров
-    // 1. Предприятие (из currentEnterprise)
-    if (currentEnterprise && currentEnterprise !== "all") {
-      const companyContainer = document.getElementById('filter_company_container');
-      if (companyContainer) {
-        // Убеждаемся, что поле company выбрано
-        const companyCheckbox = document.getElementById('field_company');
-        if (companyCheckbox) {
-          companyCheckbox.checked = true;
-          companyContainer.classList.remove('disabled');
-        }
-        // Устанавливаем значение
-        const companyHiddenInput = companyContainer.querySelector('input[type="hidden"]');
-        if (companyHiddenInput) {
-          companyHiddenInput.value = JSON.stringify([currentEnterprise]);
-          // Обновляем визуальное отображение
-          const selectAllCheckbox = companyContainer.querySelector('input[data-select-all="true"]');
-          const regularCheckboxes = companyContainer.querySelectorAll('.export-multi-select-option:not(.select-all-option) input[type="checkbox"]');
-          regularCheckboxes.forEach(cb => {
-            cb.checked = cb.value === currentEnterprise;
-          });
-          if (selectAllCheckbox) {
-            const allChecked = Array.from(regularCheckboxes).every(cb => cb.checked);
-            const someChecked = Array.from(regularCheckboxes).some(cb => cb.checked);
-            selectAllCheckbox.checked = allChecked;
-            selectAllCheckbox.indeterminate = someChecked && !allChecked;
-          }
-          updateMultiSelectValue(companyContainer, 'Все предприятия');
-        }
-      }
-    }
-
-    // 2. Сектор (если есть зум)
-    if (currentZoomedQuadrant !== null) {
-      // Получаем блоки для этого квадранта
-      const blocksInQuadrant = [];
-      if (typeof blockToQuadrant !== 'undefined') {
-        Object.keys(blockToQuadrant).forEach(blockName => {
-          const qId = Array.isArray(blockToQuadrant[blockName])
-            ? blockToQuadrant[blockName][0]
-            : blockToQuadrant[blockName];
-          if (qId === currentZoomedQuadrant) {
-            blocksInQuadrant.push(blockName);
-          }
-        });
-      }
-      if (blocksInQuadrant.length > 0) {
-        const blocksContainer = document.getElementById('filter_blocks_container');
-        if (blocksContainer) {
-          const blocksCheckbox = document.getElementById('field_blocks');
-          if (blocksCheckbox) {
-            blocksCheckbox.checked = true;
-            blocksContainer.classList.remove('disabled');
-          }
-          const blocksHiddenInput = blocksContainer.querySelector('input[type="hidden"]');
-          if (blocksHiddenInput) {
-            blocksHiddenInput.value = JSON.stringify(blocksInQuadrant);
-            const selectAllCheckbox = blocksContainer.querySelector('input[data-select-all="true"]');
-            const regularCheckboxes = blocksContainer.querySelectorAll('.export-multi-select-option:not(.select-all-option) input[type="checkbox"]');
-            regularCheckboxes.forEach(cb => {
-              cb.checked = blocksInQuadrant.includes(cb.value);
-            });
-            if (selectAllCheckbox) {
-              const allChecked = Array.from(regularCheckboxes).every(cb => cb.checked);
-              const someChecked = Array.from(regularCheckboxes).some(cb => cb.checked);
-              selectAllCheckbox.checked = allChecked;
-              selectAllCheckbox.indeterminate = someChecked && !allChecked;
-            }
-            updateMultiSelectValue(blocksContainer, 'Все блоки');
-          }
-        }
-      }
-    }
-
-    // 3. Функциональный блок (из фильтра)
-    const filterBlocks = getFilterValues('block');
-    if (filterBlocks && filterBlocks.length > 0) {
-      const blocksContainer = document.getElementById('filter_blocks_container');
-      if (blocksContainer) {
-        const blocksCheckbox = document.getElementById('field_blocks');
-        if (blocksCheckbox) {
-          blocksCheckbox.checked = true;
-          blocksContainer.classList.remove('disabled');
-        }
-        const blocksHiddenInput = blocksContainer.querySelector('input[type="hidden"]');
-        if (blocksHiddenInput) {
-          blocksHiddenInput.value = JSON.stringify(filterBlocks);
-          const selectAllCheckbox = blocksContainer.querySelector('input[data-select-all="true"]');
-          const regularCheckboxes = blocksContainer.querySelectorAll('.export-multi-select-option:not(.select-all-option) input[type="checkbox"]');
-          regularCheckboxes.forEach(cb => {
-            cb.checked = filterBlocks.includes(cb.value);
-          });
-          if (selectAllCheckbox) {
-            const allChecked = Array.from(regularCheckboxes).every(cb => cb.checked);
-            const someChecked = Array.from(regularCheckboxes).some(cb => cb.checked);
-            selectAllCheckbox.checked = allChecked;
-            selectAllCheckbox.indeterminate = someChecked && !allChecked;
-          }
-          updateMultiSelectValue(blocksContainer, 'Все блоки');
-        }
-      }
-    }
-
-    // 4. Функция (из фильтра)
-    const filterFunctions = getFilterValues('function');
-    if (filterFunctions && filterFunctions.length > 0) {
-      const functionsContainer = document.getElementById('filter_functions_container');
-      if (functionsContainer) {
-        const functionsCheckbox = document.getElementById('field_functions');
-        if (functionsCheckbox) {
-          functionsCheckbox.checked = true;
-          functionsContainer.classList.remove('disabled');
-        }
-        const functionsHiddenInput = functionsContainer.querySelector('input[type="hidden"]');
-        if (functionsHiddenInput) {
-          functionsHiddenInput.value = JSON.stringify(filterFunctions);
-          const selectAllCheckbox = functionsContainer.querySelector('input[data-select-all="true"]');
-          const regularCheckboxes = functionsContainer.querySelectorAll('.export-multi-select-option:not(.select-all-option) input[type="checkbox"]');
-          regularCheckboxes.forEach(cb => {
-            cb.checked = filterFunctions.includes(cb.value);
-          });
-          if (selectAllCheckbox) {
-            const allChecked = Array.from(regularCheckboxes).every(cb => cb.checked);
-            const someChecked = Array.from(regularCheckboxes).some(cb => cb.checked);
-            selectAllCheckbox.checked = allChecked;
-            selectAllCheckbox.indeterminate = someChecked && !allChecked;
-          }
-          updateMultiSelectValue(functionsContainer, 'Все функции');
-        }
-      }
-    }
-
-    // 5. Тип технологии (из фильтра)
-    const filterTechTypes = getFilterValues('techType');
-    if (filterTechTypes && filterTechTypes.length > 0) {
-      const techTypesContainer = document.getElementById('filter_techTypes_container');
-      if (techTypesContainer) {
-        const techTypesCheckbox = document.getElementById('field_techTypes');
-        if (techTypesCheckbox) {
-          techTypesCheckbox.checked = true;
-          techTypesContainer.classList.remove('disabled');
-        }
-        const techTypesHiddenInput = techTypesContainer.querySelector('input[type="hidden"]');
-        if (techTypesHiddenInput) {
-          techTypesHiddenInput.value = JSON.stringify(filterTechTypes);
-          const selectAllCheckbox = techTypesContainer.querySelector('input[data-select-all="true"]');
-          const regularCheckboxes = techTypesContainer.querySelectorAll('.export-multi-select-option:not(.select-all-option) input[type="checkbox"]');
-          regularCheckboxes.forEach(cb => {
-            cb.checked = filterTechTypes.includes(cb.value);
-          });
-          if (selectAllCheckbox) {
-            const allChecked = Array.from(regularCheckboxes).every(cb => cb.checked);
-            const someChecked = Array.from(regularCheckboxes).some(cb => cb.checked);
-            selectAllCheckbox.checked = allChecked;
-            selectAllCheckbox.indeterminate = someChecked && !allChecked;
-          }
-          updateMultiSelectValue(techTypesContainer, 'Все типы');
-        }
-      }
-    }
-
-    // 6. Статус (из фильтра)
-    const filterStatus = getFilterValues('level');
-    if (filterStatus && filterStatus.length > 0) {
-      const statusContainer = document.getElementById('filter_status_container');
-      if (statusContainer) {
-        const statusCheckbox = document.getElementById('field_status');
-        if (statusCheckbox) {
-          statusCheckbox.checked = true;
-          statusContainer.classList.remove('disabled');
-        }
-        const statusHiddenInput = statusContainer.querySelector('input[type="hidden"]');
-        if (statusHiddenInput) {
-          statusHiddenInput.value = JSON.stringify(filterStatus);
-          const selectAllCheckbox = statusContainer.querySelector('input[data-select-all="true"]');
-          const regularCheckboxes = statusContainer.querySelectorAll('.export-multi-select-option:not(.select-all-option) input[type="checkbox"]');
-          regularCheckboxes.forEach(cb => {
-            cb.checked = filterStatus.includes(cb.value);
-          });
-          if (selectAllCheckbox) {
-            const allChecked = Array.from(regularCheckboxes).every(cb => cb.checked);
-            const someChecked = Array.from(regularCheckboxes).some(cb => cb.checked);
-            selectAllCheckbox.checked = allChecked;
-            selectAllCheckbox.indeterminate = someChecked && !allChecked;
-          }
-          updateMultiSelectValue(statusContainer, 'Все статусы');
-        }
-      }
-    }
-
-    showModal('exportPdfModal');
-
-    // Обновляем состояние кнопки переключения после открытия модального окна
-    setTimeout(() => {
-      const toggleBtn = document.getElementById('toggleAllFields');
-      if (toggleBtn) {
-        const checkboxes = document.querySelectorAll('#exportPdfModal input[type="checkbox"]');
-        const allSelected = checkboxes.length > 0 && Array.from(checkboxes).every(cb => cb.checked);
-        const icon = toggleBtn.querySelector('.toggle-all-icon');
-        const text = toggleBtn.querySelector('.toggle-all-text');
-
-        if (allSelected && icon && text) {
-          icon.innerHTML = '<path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>';
-          text.textContent = 'Снять все';
-          toggleBtn.setAttribute('data-state', 'all-selected');
-        } else if (icon && text) {
-          icon.innerHTML = '<path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>';
-          text.textContent = 'Выбрать все';
-          toggleBtn.setAttribute('data-state', 'not-all-selected');
-        }
-      }
-    }, 50);
-  }
-
-  // Функция для применения фильтров к списку технологий
-  function applyFiltersToTechnologies(sourceList, filters) {
-    if (!sourceList || sourceList.length === 0) return sourceList;
-
-    return sourceList.filter(tech => {
-      // Фильтр по предприятию (массив значений)
-      if (filters.company && Array.isArray(filters.company) && filters.company.length > 0) {
-        // Обрабатываем tech.company как массив или строку
-        const techCompanies = Array.isArray(tech.company) ? tech.company : (tech.company ? [tech.company] : []);
-        // Проверяем, есть ли пересечение между фильтром и компаниями технологии
-        const hasMatchingCompany = techCompanies.some(comp => filters.company.includes(comp));
-        if (!hasMatchingCompany) return false;
-      }
-
-      // Фильтр по блоку (массив значений)
-      if (filters.blocks && Array.isArray(filters.blocks) && filters.blocks.length > 0) {
-        const techBlocks = Array.isArray(tech.blocks)
-          ? tech.blocks.map(b => {
-              if (typeof b === 'number' && typeof blockIdToName !== 'undefined' && blockIdToName[b]) {
-                return blockIdToName[b];
-              }
-              return String(b || '');
-            })
-          : [tech.block || tech.blocks].filter(Boolean);
-        const hasMatchingBlock = techBlocks.some(block => filters.blocks.includes(block));
-        if (!hasMatchingBlock) return false;
-      }
-
-      // Фильтр по функциям (массив значений)
-      if (filters.functions && Array.isArray(filters.functions) && filters.functions.length > 0) {
-        const techFunctions = Array.isArray(tech.functions) ? tech.functions : [tech.func || tech.functions].filter(Boolean);
-        const hasMatchingFunction = techFunctions.some(func => filters.functions.includes(func));
-        if (!hasMatchingFunction) return false;
-      }
-
-      // Фильтр по типу технологии (массив значений)
-      if (filters.techTypes && Array.isArray(filters.techTypes) && filters.techTypes.length > 0) {
-        const techType = tech.techTypes || tech.techType || '';
-        if (!filters.techTypes.includes(techType)) return false;
-      }
-
-      // Фильтр по статусу (массив значений)
-      if (filters.status && Array.isArray(filters.status) && filters.status.length > 0) {
-        const techStatus = tech.status || tech.level || '';
-        if (!filters.status.includes(techStatus)) return false;
-      }
-
-      // Фильтр по стоимости (только для перспективных) - множественный выбор
-      if (filters.costProm && Array.isArray(filters.costProm) && filters.costProm.length > 0) {
-        const isPerspective = tech.status === 'Перспективные' || tech.level === 'Перспективные';
-        if (!isPerspective) return false;
-
-        const cost = Number(tech.costProm) || 0;
-        let matchesAnyRange = false;
-
-        filters.costProm.forEach(range => {
-          if (range === '0 - 1 000 000' && cost >= 0 && cost <= 1000000) matchesAnyRange = true;
-          if (range === '1 000 000 - 5 000 000' && cost > 1000000 && cost <= 5000000) matchesAnyRange = true;
-          if (range === '5 000 000 - 10 000 000' && cost > 5000000 && cost <= 10000000) matchesAnyRange = true;
-          if (range === 'Более 10 000 000' && cost > 10000000) matchesAnyRange = true;
-        });
-
-        if (!matchesAnyRange) return false;
-      }
-
-      // Фильтр по описанию (поиск подстроки)
-      if (filters.description && filters.description !== '') {
-        const desc = (tech.description || '').toLowerCase();
-        const searchText = filters.description.toLowerCase();
-        if (!desc.includes(searchText)) return false;
-      }
-
-      // Фильтр по технологической готовности - множественный выбор
-      if (filters.techRead && Array.isArray(filters.techRead) && filters.techRead.length > 0) {
-        const techRead = String(tech.techRead || '');
-        if (!filters.techRead.includes(techRead)) return false;
-      }
-
-      // Фильтр по организационной готовности - множественный выбор
-      if (filters.organRead && Array.isArray(filters.organRead) && filters.organRead.length > 0) {
-        const organRead = String(tech.organRead || '');
-        if (!filters.organRead.includes(organRead)) return false;
-      }
-
-      // Фильтр по покрытию функций - множественный выбор
-      if (filters.funcCover && Array.isArray(filters.funcCover) && filters.funcCover.length > 0) {
-        const funcCover = String(tech.funcCover || '');
-        if (!filters.funcCover.includes(funcCover)) return false;
-      }
-
-      // Фильтр по приоритету технологии (диапазоны процентов)
-      if (filters.priority && Array.isArray(filters.priority) && filters.priority.length > 0) {
-        const p = computePriority(tech, 'mult');
-        // Если приоритет не посчитан – не попадает ни в один диапазон
-        if (p == null || Number.isNaN(p)) return false;
-
-        const percent = Math.round(p * 100);
-        let matchesAnyRange = false;
-
-        filters.priority.forEach(range => {
-          if (range === 'Высокий (60-100%)' && percent >= 60 && percent <= 100) {
-            matchesAnyRange = true;
-          }
-          if (range === 'Средний (30-60%)' && percent >= 30 && percent < 60) {
-            matchesAnyRange = true;
-          }
-          if (range === 'Низкий (0-30%)' && percent >= 0 && percent < 30) {
-            matchesAnyRange = true;
-          }
-        });
-
-        if (!matchesAnyRange) return false;
-      }
-
-      return true;
-    });
-  }
-
-  // Инициализация обработчиков модального окна экспорта (один раз при загрузке)
-  (function initExportPdfModalHandlers() {
-    // Функция для проверки состояния всех чекбоксов
-    function areAllFieldsSelected() {
-      // Проверяем только основные чекбоксы полей, не из выпадающих списков
-      const checkboxes = document.querySelectorAll('#exportPdfModal .export-field-item > label input[type="checkbox"], #exportPdfModal .export-field-row > label input[type="checkbox"]');
-      if (checkboxes.length === 0) return false;
-      return Array.from(checkboxes).every(cb => cb.checked);
-    }
-
-    // Функция для обновления состояния кнопки переключения
-    function updateToggleAllButton() {
-      const toggleBtn = document.getElementById('toggleAllFields');
-      if (!toggleBtn) return;
-
-      const allSelected = areAllFieldsSelected();
-      const icon = toggleBtn.querySelector('.toggle-all-icon');
-      const text = toggleBtn.querySelector('.toggle-all-text');
-
-      if (allSelected) {
-        // Показываем иконку "снять все" (пустой квадрат)
-        icon.innerHTML = '<path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>';
-        if (text) text.textContent = 'Снять все';
-        toggleBtn.setAttribute('data-state', 'all-selected');
+      // Для обычного select-options позиционируем список
+      const selectRect = select.getBoundingClientRect();
+      const listRect = list.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const spaceBelow = viewportHeight - selectRect.bottom;
+      const spaceAbove = selectRect.top;
+
+      if (spaceBelow < listRect.height && spaceAbove > spaceBelow) {
+        // Показываем список сверху
+        list.style.bottom = `${select.offsetHeight}px`;
+        list.style.top = 'auto';
       } else {
-        // Показываем иконку "выбрать все" (галочка в квадрате)
-        icon.innerHTML = '<path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>';
-        if (text) text.textContent = 'Выбрать все';
-        toggleBtn.setAttribute('data-state', 'not-all-selected');
+        // Показываем список снизу (по умолчанию)
+        list.style.top = `${select.offsetHeight}px`;
+        list.style.bottom = 'auto';
       }
     }
-
-    // Обработчик переключения "Выбрать все" / "Снять все"
-    const toggleAllBtn = document.getElementById('toggleAllFields');
-    if (toggleAllBtn) {
-      toggleAllBtn.addEventListener('click', () => {
-        const allSelected = areAllFieldsSelected();
-        const shouldSelectAll = !allSelected;
-
-        // Сначала обрабатываем основные чекбоксы полей (не из выпадающих списков)
-        document.querySelectorAll('#exportPdfModal .export-field-item > label input[type="checkbox"], #exportPdfModal .export-field-row > label input[type="checkbox"]').forEach(cb => {
-          cb.checked = shouldSelectAll;
-          // Включаем/отключаем соответствующие фильтры
-          const field = cb.getAttribute('data-field');
-          const multiSelectFields = ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'funcCover', 'priority'];
-
-          if (multiSelectFields.includes(field)) {
-            const container = document.getElementById(`filter_${field}_container`);
-            if (container) {
-              if (shouldSelectAll) {
-                container.classList.remove('disabled');
-                // Если выбрано "Выбрать все", выбираем все опции в выпадающем списке
-                const selectAllCheckbox = container.querySelector('input[data-select-all="true"]');
-                if (selectAllCheckbox) {
-                  selectAllCheckbox.checked = true;
-                  const regularCheckboxes = container.querySelectorAll('.export-multi-select-option:not(.select-all-option) input[type="checkbox"]');
-                  regularCheckboxes.forEach(cb => {
-                    cb.checked = true;
-                  });
-                  const placeholder = container.getAttribute('data-placeholder') || 'Все';
-                  updateMultiSelectValue(container, placeholder);
-                } else {
-                  // Если опция "Выбрать все" не найдена, выбираем все опции напрямую
-                  const regularCheckboxes = container.querySelectorAll('.export-multi-select-option:not(.select-all-option) input[type="checkbox"]');
-                  regularCheckboxes.forEach(cb => {
-                    cb.checked = true;
-                  });
-                  const placeholder = container.getAttribute('data-placeholder') || 'Все';
-                  updateMultiSelectValue(container, placeholder);
-                }
-              } else {
-                container.classList.add('disabled');
-                const hiddenInput = container.querySelector('input[type="hidden"]');
-                if (hiddenInput) {
-                  hiddenInput.value = '[]';
-                  const checkboxes = container.querySelectorAll('input[type="checkbox"]');
-                  checkboxes.forEach(cb => {
-                    cb.checked = false;
-                    cb.indeterminate = false;
-                  });
-                  const placeholder = container.getAttribute('data-placeholder') || 'Все';
-                  updateMultiSelectValue(container, placeholder);
-                }
-              }
-            }
-          } else {
-            const filterElement = document.getElementById(`filter_${field}`);
-            if (filterElement) {
-              if (shouldSelectAll) {
-                filterElement.disabled = false;
-              } else {
-                filterElement.disabled = true;
-                if (filterElement.tagName === 'SELECT') {
-                  filterElement.value = '';
-                } else if (filterElement.tagName === 'INPUT') {
-                  filterElement.value = '';
-                }
-              }
-            }
-          }
-        });
-
-        // Очищаем ошибки при выборе
-        clearAllErrors();
-
-        // Обновляем состояние кнопки после изменения
-        setTimeout(updateToggleAllButton, 10);
-      });
-    }
-
-    // Обработчики изменений чекбоксов для обновления состояния кнопки
-    const exportModal = document.getElementById('exportPdfModal');
-    if (exportModal) {
-      // Используем делегирование событий для динамических чекбоксов
-      exportModal.addEventListener('change', (e) => {
-        if (e.target.type === 'checkbox' && e.target.closest('#exportPdfModal')) {
-          updateToggleAllButton();
-        }
-      });
-    }
-
-    // Обновляем состояние кнопки при открытии модального окна
-    const modalObserver = new MutationObserver(() => {
-      if (exportModal && exportModal.style.display !== 'none') {
-        updateToggleAllButton();
-      }
-    });
-
-    if (exportModal) {
-      modalObserver.observe(exportModal, {
-        attributes: true,
-        attributeFilter: ['style', 'class']
-      });
-    }
-
-    // Инициализируем состояние кнопки при загрузке
-    updateToggleAllButton();
-
-    function validateExportFields() {
-      clearAllErrors();
-
-      const selectedFields = {};
-      const multiSelectFields = ['company', 'blocks', 'functions', 'techTypes', 'status'];
-      let hasAnyFieldSelected = false;
-      let hasErrors = false;
-      const errorMessages = [];
-
-      // Собираем выбранные поля (только основные чекбоксы, не из выпадающих списков)
-      document.querySelectorAll('#exportPdfModal .export-field-item > label input[type="checkbox"], #exportPdfModal .export-field-row > label input[type="checkbox"]').forEach(cb => {
-        const field = cb.getAttribute('data-field');
-        if (field) {
-          selectedFields[field] = cb.checked;
-          if (cb.checked) {
-            hasAnyFieldSelected = true;
-          }
-        }
-      });
-
-      // Если не выбрано ни одно поле
-      if (!hasAnyFieldSelected) {
-        const errorMessage = document.getElementById('exportFieldsError');
-        if (errorMessage) {
-          errorMessage.textContent = 'Выберите хотя бы одно поле для экспорта';
-          errorMessage.style.display = 'inline-block';
-        }
-        return false;
-      }
-
-      // Проверяем поля с множественным выбором
-      const allMultiSelectFields = ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'funcCover', 'priority'];
-      const fieldLabels = {
-        'company': 'Предприятия',
-        'blocks': 'Функциональный блок',
-        'functions': 'Функции',
-        'techTypes': 'Тип технологии',
-        'status': 'Статус',
-        'costProm': 'Стоимость внедрения',
-        'techRead': 'Технологическая готовность',
-        'organRead': 'Организационная готовность',
-        'funcCover': 'Покрытие функций',
-        'priority': 'Приоритет'
-      };
-
-      allMultiSelectFields.forEach(field => {
-        const checkbox = document.getElementById(`field_${field}`);
-        if (checkbox && checkbox.checked) {
-          const container = document.getElementById(`filter_${field}_container`);
-          if (container && !container.classList.contains('disabled')) {
-            const values = getMultiSelectValues(`filter_${field}_container`);
-
-            // Проверяем, все ли чекбоксы выбраны внутри контейнера
-            // Если все выбраны - это означает "все значения", а не ошибку
-            const regularCheckboxes = container.querySelectorAll('.export-multi-select-option:not(.select-all-option) input[type="checkbox"]');
-            const checkedCount = container.querySelectorAll('.export-multi-select-option:not(.select-all-option) input[type="checkbox"]:checked').length;
-            const allChecked = regularCheckboxes.length > 0 && checkedCount === regularCheckboxes.length;
-
-            // Ошибка только если ничего не выбрано И не все чекбоксы отмечены
-            if (values.length === 0 && !allChecked) {
-              showFieldError(field);
-              hasErrors = true;
-              errorMessages.push(`Выберите значение для поля "${fieldLabels[field] || field}"`);
-            }
-          }
-        }
-      });
-
-      if (hasErrors) {
-        // Показываем сообщения об ошибках
-        const errorMessage = document.getElementById('exportFieldsError');
-        if (errorMessage) {
-          errorMessage.textContent = errorMessages.join('. ');
-          errorMessage.style.display = 'inline-block';
-        }
-        return false;
-      }
-
-      return true;
-    }
-
-    // Обработчик "Экспортировать"
-    const exportBtn = document.getElementById('exportPdfConfirm');
-    if (exportBtn) {
-      exportBtn.addEventListener('click', async () => {
-        // Валидация перед экспортом
-        if (!validateExportFields()) {
-          return;
-        }
-
-        const selectedFields = {};
-        const filters = {};
-
-        // Собираем выбранные поля
-        document.querySelectorAll('#exportPdfModal input[type="checkbox"]').forEach(cb => {
-          const field = cb.getAttribute('data-field');
-          if (field) {
-            selectedFields[field] = cb.checked;
-          }
-        });
-
-        // Собираем значения фильтров
-        const multiSelectFields = ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'funcCover', 'priority'];
-        const textFields = ['description'];
-
-        // Множественный выбор
-        multiSelectFields.forEach(field => {
-          const container = document.getElementById(`filter_${field}_container`);
-          if (container && !container.classList.contains('disabled')) {
-            const values = getMultiSelectValues(`filter_${field}_container`);
-            if (values.length > 0) {
-              filters[field] = values;
-            }
-          }
-        });
-
-        // Текстовые поля
-        textFields.forEach(field => {
-          const filterElement = document.getElementById(`filter_${field}`);
-          if (filterElement && !filterElement.disabled && filterElement.value) {
-            filters[field] = filterElement.value;
-          }
-        });
-
-        hideModal('exportPdfModal');
-
-        // Показываем индикатор загрузки
-        showReportLoading();
-
-        try {
-          await performPdfExport(selectedFields, filters);
-          // Показываем успех
-          showReportSuccess();
-        } catch (error) {
-          // Показываем ошибку
-          showReportError(error.message || 'Произошла ошибка при генерации отчета');
-        }
-      });
-    }
-
-    // Обработчик "Отмена"
-    const cancelBtn = document.getElementById('cancelExportPdf');
-    if (cancelBtn) {
-      cancelBtn.addEventListener('click', () => {
-        hideModal('exportPdfModal');
-      });
-    }
-  })();
-
-  // Обработчик кнопки экспорта PDF
-  document.getElementById("exportPdfBtn").onclick = () => {
-    showExportPdfModal();
-  };
+  }
 
   // Позиционирование выпадающих списков
   function positionOptions(select) {
@@ -7717,11 +4685,170 @@ if (resetBtn) {
       dropdown.style.minWidth = `${select.offsetWidth}px`;
       dropdown.style.width = `${select.offsetWidth}px`;
     } else {
-      list.style.position = 'absolute';
-      list.style.left = '0';
-      list.style.top = 'calc(100% + 6px)';
-      list.style.minWidth = `${select.offsetWidth}px`;
-      list.style.width = `${select.offsetWidth}px`;
+      // Для обычного select-options позиционируем список
+      const selectRect = select.getBoundingClientRect();
+      const listRect = list.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const spaceBelow = viewportHeight - selectRect.bottom;
+      const spaceAbove = selectRect.top;
+
+      if (spaceBelow < listRect.height && spaceAbove > spaceBelow) {
+        // Показываем список сверху
+        list.style.bottom = `${select.offsetHeight}px`;
+        list.style.top = 'auto';
+      } else {
+        // Показываем список снизу (по умолчанию)
+        list.style.top = `${select.offsetHeight}px`;
+        list.style.bottom = 'auto';
+      }
+    }
+  }
+
+  // Позиционирование выпадающих списков
+  function positionOptions(select) {
+    if (!select) return;
+    // Для структуры с select-dropdown позиционируем dropdown, иначе позиционируем select-options
+    const dropdown = select.querySelector('.select-dropdown');
+    const list = dropdown || select.querySelector('.select-options');
+    if (!list) return;
+    // Простое и предсказуемое позиционирование: всегда позиционируем список относительно самого .custom-select
+    // требуется, чтобы .custom-select (и .custom-select-modal) имели position: relative (это задано в CSS)
+    if (dropdown) {
+      // Для select-dropdown позиционирование уже задано в CSS, но можно обновить ширину
+      dropdown.style.minWidth = `${select.offsetWidth}px`;
+      dropdown.style.width = `${select.offsetWidth}px`;
+    } else {
+      // Для обычного select-options позиционируем список
+      const selectRect = select.getBoundingClientRect();
+      const listRect = list.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const spaceBelow = viewportHeight - selectRect.bottom;
+      const spaceAbove = selectRect.top;
+
+      if (spaceBelow < listRect.height && spaceAbove > spaceBelow) {
+        // Показываем список сверху
+        list.style.bottom = `${select.offsetHeight}px`;
+        list.style.top = 'auto';
+      } else {
+        // Показываем список снизу (по умолчанию)
+        list.style.top = `${select.offsetHeight}px`;
+        list.style.bottom = 'auto';
+      }
+    }
+  }
+
+  // Все функции экспорта ПЕРЕМЕЩЕНЫ В МОДУЛЬ export.js
+  // Старый код экспорта удален
+
+  // Все функции экспорта ПЕРЕМЕЩЕНЫ В МОДУЛЬ export.js
+  // Старый код экспорта удален (функции populateMultiSelect, initMultiSelect, updateMultiSelectValue,
+  // getMultiSelectValues, populateExportFilters, setupExportFilterToggles, showExportPdfModal,
+  // validateExportFields, applyFiltersToTechnologies и все обработчики экспорта)
+
+  // Позиционирование выпадающих списков
+  function positionOptions(select) {
+    if (!select) return;
+    // Для структуры с select-dropdown позиционируем dropdown, иначе позиционируем select-options
+    const dropdown = select.querySelector('.select-dropdown');
+    const list = dropdown || select.querySelector('.select-options');
+    if (!list) return;
+    // Простое и предсказуемое позиционирование: всегда позиционируем список относительно самого .custom-select
+    // требуется, чтобы .custom-select (и .custom-select-modal) имели position: relative (это задано в CSS)
+    if (dropdown) {
+      // Для select-dropdown позиционирование уже задано в CSS, но можно обновить ширину
+      dropdown.style.minWidth = `${select.offsetWidth}px`;
+      dropdown.style.width = `${select.offsetWidth}px`;
+    } else {
+      // Для обычного select-options позиционируем список
+      const selectRect = select.getBoundingClientRect();
+      const listRect = list.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const spaceBelow = viewportHeight - selectRect.bottom;
+      const spaceAbove = selectRect.top;
+
+      if (spaceBelow < listRect.height && spaceAbove > spaceBelow) {
+        // Показываем список сверху
+        list.style.bottom = `${select.offsetHeight}px`;
+        list.style.top = 'auto';
+      } else {
+        // Показываем список снизу (по умолчанию)
+        list.style.top = `${select.offsetHeight}px`;
+        list.style.bottom = 'auto';
+      }
+    }
+  }
+
+  // Все функции экспорта ПЕРЕМЕЩЕНЫ В МОДУЛЬ export.js
+  // Старый код экспорта удален (функции populateMultiSelect, initMultiSelect, updateMultiSelectValue,
+  // getMultiSelectValues, populateExportFilters, setupExportFilterToggles, showExportPdfModal,
+  // validateExportFields, applyFiltersToTechnologies и все обработчики экспорта)
+
+  // Позиционирование выпадающих списков
+  function positionOptions(select) {
+    if (!select) return;
+    // Для структуры с select-dropdown позиционируем dropdown, иначе позиционируем select-options
+    const dropdown = select.querySelector('.select-dropdown');
+    const list = dropdown || select.querySelector('.select-options');
+    if (!list) return;
+    // Простое и предсказуемое позиционирование: всегда позиционируем список относительно самого .custom-select
+    // требуется, чтобы .custom-select (и .custom-select-modal) имели position: relative (это задано в CSS)
+    if (dropdown) {
+      // Для select-dropdown позиционирование уже задано в CSS, но можно обновить ширину
+      dropdown.style.minWidth = `${select.offsetWidth}px`;
+      dropdown.style.width = `${select.offsetWidth}px`;
+    } else {
+      // Для обычного select-options позиционируем список
+      const selectRect = select.getBoundingClientRect();
+      const listRect = list.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const spaceBelow = viewportHeight - selectRect.bottom;
+      const spaceAbove = selectRect.top;
+
+      if (spaceBelow < listRect.height && spaceAbove > spaceBelow) {
+        // Показываем список сверху
+        list.style.bottom = `${select.offsetHeight}px`;
+        list.style.top = 'auto';
+      } else {
+        // Показываем список снизу (по умолчанию)
+        list.style.top = `${select.offsetHeight}px`;
+        list.style.bottom = 'auto';
+      }
+    }
+  }
+
+  // Функции экспорта PDF вынесены в модуль export.js
+  // Используем функции из модуля через window.ExportModule или window
+
+  // Позиционирование выпадающих списков
+  function positionOptions(select) {
+    if (!select) return;
+    // Для структуры с select-dropdown позиционируем dropdown, иначе позиционируем select-options
+    const dropdown = select.querySelector('.select-dropdown');
+    const list = dropdown || select.querySelector('.select-options');
+    if (!list) return;
+    // Простое и предсказуемое позиционирование: всегда позиционируем список относительно самого .custom-select
+    // требуется, чтобы .custom-select (и .custom-select-modal) имели position: relative (это задано в CSS)
+    if (dropdown) {
+      // Для select-dropdown позиционирование уже задано в CSS, но можно обновить ширину
+      dropdown.style.minWidth = `${select.offsetWidth}px`;
+      dropdown.style.width = `${select.offsetWidth}px`;
+    } else {
+      // Для обычного select-options позиционируем список
+      const selectRect = select.getBoundingClientRect();
+      const listRect = list.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const spaceBelow = viewportHeight - selectRect.bottom;
+      const spaceAbove = selectRect.top;
+
+      if (spaceBelow < listRect.height && spaceAbove > spaceBelow) {
+        // Показываем список сверху
+        list.style.bottom = `${select.offsetHeight}px`;
+        list.style.top = 'auto';
+      } else {
+        // Показываем список снизу (по умолчанию)
+        list.style.top = `${select.offsetHeight}px`;
+        list.style.bottom = 'auto';
+      }
     }
     // Высоту и прокрутку списка оставляем на уровне CSS, чтобы размер выпадающего
     // списка был стабильным и не «прыгал» при открытии/фильтрации.

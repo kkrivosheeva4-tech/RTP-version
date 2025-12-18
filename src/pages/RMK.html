@@ -256,6 +256,7 @@
           <li>Технологическая готовность: <span id="panelTechRead"></span>/3</li>
           <li>Организационная готовность: <span id="panelOrganRead"></span>/3</li>
           <li>Покрытие функций: <span id="panelFuncCover"></span>/3</li>
+          <li>TRL (стадия готовности технологии): <span id="panelTrlStage"></span>/3</li>
         </ul>
       </div>
       <div class="info-section" id="panelPrioritySection">
@@ -418,6 +419,18 @@
             <div id="techTechReadGroup"><span>Технологическая готовность</span><input type="number" id="techTechRead" min="0" max="3" step="1" /></div>
             <div id="techOrganReadGroup"><span>Организационная готовность</span><input type="number" id="techOrganRead" min="0" max="3" step="1" /></div>
             <div><span>Покрытие функций</span><input type="number" id="techFuncCover" min="0" max="3" step="1" /></div>
+            <div><span>TRL (стадия готовности технологии)</span>
+              <div class="custom-select-modal" data-field="techTrlStage" tabindex="0">
+                <div class="select-trigger">
+                  <span class="selected-text">Выберите стадию</span>
+                  <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <ul class="select-options"></ul>
+              </div>
+              <input type="hidden" id="techTrlStage" name="techTrlStage" />
+            </div>
           </div>
           <div id="techRatingsWarning" style="display: none; margin-top: 8px; padding: 8px 12px; background: rgba(255, 193, 7, 0.1); border: 1px solid rgba(255, 193, 7, 0.3); border-radius: 6px; color: #856404; font-size: 13px;">
             При выборе нескольких предприятий поля "Технологическая готовность" и "Организационная готовность" недоступны. Не забудьте после добавления заполнить данные поля для каждого предприятия отдельно!
@@ -521,6 +534,18 @@
             <div id="editTechReadGroup"><span>Технологическая готовность</span><input type="number" id="editTechRead" min="0" max="3" step="1" /></div>
             <div id="editOrganReadGroup"><span>Организационная готовность</span><input type="number" id="editOrganRead" min="0" max="3" step="1" /></div>
             <div><span>Покрытие функций</span><input type="number" id="editFuncCover" min="0" max="3" step="1" /></div>
+            <div><span>TRL (стадия готовности технологии)</span>
+              <div class="custom-select-modal" data-field="editTrlStage" tabindex="0">
+                <div class="select-trigger">
+                  <span class="selected-text">Выберите стадию</span>
+                  <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <ul class="select-options"></ul>
+              </div>
+              <input type="hidden" id="editTrlStage" name="editTrlStage" />
+            </div>
           </div>
           <div id="editCompanyRatingsContainer" style="display: none; margin-top: 12px;">
             <!-- Динамические поля оценок для каждого предприятия будут добавлены здесь -->
@@ -1035,10 +1060,24 @@
 });
   </script>
   <script src="/src/js/script.js"></script>
+  <script src="/src/js/radar-utils.js"></script>
+  <script src="/src/js/modules/dom-cache.js"></script>
+  <script src="/src/js/modules/event-manager.js"></script>
+  <script src="/src/js/modules/render-queue.js"></script>
+  <script src="/src/js/modules/data-index.js"></script>
+  <script src="/src/js/modules/memoization.js"></script>
+  <script src="/src/js/modules/state-manager.js"></script>
+  <script src="/src/js/modules/error-handler.js"></script>
+  <script src="/src/js/modules/positioning.js"></script>
+  <script src="/src/js/modules/radar-renderer.js"></script>
+  <script src="/src/js/modules/filters.js"></script>
+  <script src="/src/js/modules/modals.js"></script>
+  <script src="/src/js/modules/prospects-chart.js"></script>
+  <script src="/src/js/modules/export.js"></script>
+  <script src="/src/js/modules/forms.js"></script>
+  <script src="/src/js/modules/auth.js"></script>
+  <script src="/src/js/modules/priorities.js"></script>
   <script src="/src/js/RMK2.js"></script>
-  <script>
-    (function(){
-      const SVG_NS = "http://www.w3.org/2000/svg";
       const toggleBtn = document.getElementById('toggleProspectsChartBtn');
       const modal = document.getElementById('prospectsModal');
       const closeBtn = document.getElementById('closeProspectsBtn');
@@ -2617,10 +2656,6 @@
         toggleBtn.setAttribute('aria-pressed', 'false');
       }
 
-      closeBtn.addEventListener('click', (e) => { e.preventDefault(); closeModal(); });
-      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal.style.display !== 'none') closeModal(); });
-    })();
-  </script>
 
 </body>
 </html>
