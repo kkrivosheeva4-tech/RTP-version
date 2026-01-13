@@ -1,797 +1,242 @@
 # Документация модулей проекта РТП-2.3
 
-## Обзор
+Актуально для текущей структуры `src/js/modules/` (обновлено: **2026‑01‑13**).
 
-Проект состоит из 27 модулей JavaScript, организованных в папке `src/js/modules/`. Все модули используют паттерн IIFE (Immediately Invoked Function Expression) и экспортируют свои функции в глобальный объект `window` для обеспечения обратной совместимости.
+## Обзор архитектуры
 
----
+Проект — статическое веб‑приложение (HTML/CSS/JS), без сборки и без обязательного Node.js.
 
-## Подробное описание модулей
+- Модули написаны в стиле **IIFE** и для совместимости **экспортируют API в `window`** (например, `window.DOMCache`, `window.DataLoader`, `window.updateRadar`).
+- Основная страница радара (`src/pages/RMK.html`) загружает модули **в строгом порядке** через `src/js/RMK2.js` (динамическая загрузка `<script>` с `async=false`).
+- Другие страницы используют свои скрипты:
+  - `src/pages/index.html` → `src/js/script.js` (+ `src/js/audit-logger.js`, части UI для моб.навигации/жестов)
+  - `src/pages/auth.html` → `src/js/auth.js`
+  - `src/pages/admin.html` → `src/js/admin.js` (+ Chart.js через CDN)
+  - `src/pages/help.html` → `src/js/help.js`
 
-### 🔧 Core (Ядро системы)
+## Порядок загрузки модулей (RMK.html)
 
-#### 1. `state-manager.js` (67 строк)
-**Назначение:** Централизованное управление состоянием приложения с поддержкой подписок.
+Источник истины: `src/js/RMK2.js` (массив `modules` внутри `loadAllModules()`).
 
-**Основные функции:**
-- `get(key)` - получение значения по ключу
-- `set(key, value)` - установка значения с уведомлением подписчиков
-- `subscribe(fn)` - подписка на все изменения состояния
-- `subscribeToKey(key, fn)` - подписка на изменения конкретного ключа
-- `clear()` - очистка всего состояния
+Коротко по слоям:
 
-**Использование:** Хранит глобальное состояние приложения (технологии, текущее предприятие, фильтры и т.д.)
+- **Base**: `audit-logger.js`, `script.js`, `radar-utils.js`
+- **Core**: `dom-utils.js` → `core-utils.js` → `state-manager.js` → `data-loader.js` → `state-utils.js` → `data-indexing.js`
+- **UI (раньше)**: `ui/detail-panel.js` (нужен до `radar-wrappers.js`)
+- **Radar**: `positioning.js` → `radar-renderer.js` → `quadrant-cache.js` → `quadrants.js` → `prospects-chart.js` → `radar-wrappers.js` → `radar-update.js`
+- **UI (остальные)**: `filters.js`, `modals.js`, `forms.js`, `sidebar.js`, `modal-forms.js`, `report-status.js`, `tooltips.js`, `form-management.js`, `loading.js`, `error-display.js`, `toast.js`, `skeleton.js`, `mobile-nav.js`, `touch-handlers.js`, `keyboard-nav.js`, `aria-manager.js`, `onboarding.js`, `contextual-hints.js`
+- **Business**: `export.js`, `auth.js`, `priorities.js`
+- **Handlers split**: `ui/select-events.js`, `radar/radar-events.js`
+- **Integration**: `integration/events.js` (после всех зависимостей)
+- **Init**: `core/app-init.js` (последним)
 
-**Зависимости:** Нет
+## Каталог модулей
 
----
+Ниже — список модулей, которые реально присутствуют в `src/js/modules/` в текущей версии проекта.
 
-#### 2. `data-loader.js` (1063 строки)
-**Назначение:** Загрузка и обработка данных из JSON файлов с поддержкой VFS (Virtual File System) через localStorage.
+### Core (`src/js/modules/core/`)
 
-**Основные функции:**
-- `loadData()` - основная функция загрузки всех данных
-- `loadJsonPreferVfs(filename)` - загрузка JSON с приоритетом VFS
-- `fetchJsonWithCache(url, options)` - загрузка с кэшированием и дедупликацией
-- `vfsRead(filename)` / `vfsWrite(filename, data)` - работа с виртуальной файловой системой
-- `switchEnterprise(enterpriseName)` - переключение между предприятиями
-- `ensureAndPersistNewTech(newTech)` - добавление и сохранение новой технологии
-- `initFilters()` - ручное заполнение фильтров
+#### `dom-utils.js`
+**Назначение:** объединённые утилиты DOM.
 
-**Особенности:**
-- Кэширование fetch-запросов (TTL 5 минут)
-- Дедупликация параллельных запросов
-- Слияние данных из VFS и диска
-- Нормализация данных технологий
-- Автоматическое заполнение фильтров
+- `window.DOMCache`: кэширование DOM‑узлов (`get/query/find/...`)
+- `window.DOMProxy`: безопасные Proxy‑объекты (`createDOMProxy/createElementProxy/...`)
 
-**Зависимости:** StateManager, DOMCache, EventManager, Filters, Positioning, DataIndex
+#### `core-utils.js`
+**Назначение:** «ядро» общих инфраструктурных утилит.
 
----
+- `window.ErrorHandler`: централизованная обработка ошибок (+ интеграция с `ErrorDisplay`, если он доступен)
+- `window.EventManager`: делегирование событий (`on/off/clear`)
+- `window.Memoization`: `memoize`, `memoizeWithTTL`, `FilterCache`
+- `window.ModuleLoader`: `requireGlobalModule`
+- `window.RenderQueue`: батчинг UI‑обновлений через `requestAnimationFrame`
 
-#### 3. `data-index.js` (60 строк)
-**Назначение:** Быстрый доступ к технологиям по различным ключам (индексация).
+#### `state-manager.js`
+**Назначение:** централизованное состояние приложения (pub/sub).
 
-**Основные функции:**
-- `build(list)` - построение индексов из списка технологий
-- `getById(id)` - получение технологии по ID
-- `getBy(predicate)` - поиск по предикату
-- `filter(fn)` - фильтрация массива
-- `byBlock(key)` - получение технологий по блоку
-- `byStatus(key)` - получение технологий по статусу
-- `byCompany(key)` - получение технологий по предприятию
+- `window.StateManager`: `get/set/subscribe/subscribeToKey/clear`
 
-**Использование:** Оптимизация поиска технологий без полного перебора массива
+#### `data-loader.js`
+**Назначение:** загрузка JSON‑данных и их нормализация, переключение предприятия.
 
-**Зависимости:** Нет
+Ключевые особенности:
+- чтение `src/data/ru/*.json` с сетевым кешом/дедупликацией fetch
+- работа с «виртуальной ФС» (VFS) в `localStorage` (`vfs:*`)
+- запись данных в `StateManager` и синхронизация ряда ключей в `window` (для обратной совместимости)
 
----
+Экспорт: `window.DataLoader` (включая `loadData()`, `switchEnterprise()`, VFS‑хелперы и т.п.).
 
-#### 4. `dom-cache.js` (68 строк)
-**Назначение:** Кэширование DOM-элементов для снижения количества запросов к DOM.
+#### `state-utils.js`
+**Назначение:** удобные геттеры/сеттеры и подписки на изменения состояния.
 
-**Основные функции:**
-- `get(id)` - получение элемента по ID с кэшированием
-- `query(selector)` - поиск элемента по селектору с кэшированием
-- `queryAll(selector, context)` - поиск всех элементов
-- `find(parent, selector)` - поиск внутри родителя с кэшированием
-- `findAll(parent, selector)` - поиск всех внутри родителя
-- `clear(key)` / `clearAll()` - очистка кэша
-- `refresh(id|selector)` - обновление кэша
+- `window.StateAccessors`: типизированные accessors (например `getTechnologies`, `setCurrentEnterprise`, …)
+- `window.StateSubscriptions`: `initStateSubscriptions()` (авто‑подписки, автоперерисовка и синхронизация)
 
-**Использование:** Оптимизация производительности при частых обращениях к DOM
+#### `data-indexing.js`
+**Назначение:** индексы для быстрого доступа к технологиям.
 
-**Зависимости:** Нет
+- `window.DataIndex`: индексация и фильтрация (быстрый `filter/getById/byBlock/byStatus/byCompany`)
+- `window.TechIndex`: `rebuildTechnologiesIndex()`, `getTechById()` (+ алиасы `window.getTechById`)
 
----
+#### `app-init.js`
+**Назначение:** оркестратор инициализации RMK‑страницы.
 
-#### 5. `dom-proxy.js` (100 строк)
-**Назначение:** Создание Proxy-объектов для безопасной работы с DOM-элементами.
-
-**Основные функции:**
-- `createDOMGetter(id)` - создание геттера для элемента
-- `createDOMProxy(id)` - создание Proxy для элемента
-- `createElementProxy(id)` - создание безопасного Proxy с обработкой отсутствующих элементов
-
-**Использование:** Безопасный доступ к DOM-элементам с fallback-значениями
-
-**Зависимости:** DOMCache
+Содержит `initApp()`:
+- тема (базовая инициализация)
+- `DataLoader.loadData()` + `switchEnterprise()`
+- первый `renderRadar()`
+- инициализация обработчиков форм/удалений/помощи, мобильной навигации, ARIA, onboarding и т.д.
 
 ---
 
-#### 6. `error-handler.js` (34 строки)
-**Назначение:** Единая точка обработки ошибок приложения.
+### Radar (`src/js/modules/radar/`)
 
-**Основные функции:**
-- `handle(error, context)` - обработка ошибки
-- `setReporter(fn)` - установка функции отправки ошибок на сервер
-- `setNotifier(fn)` - установка функции уведомления пользователя
+#### `positioning.js`
+**Назначение:** вычисление координат/раскладка blip’ов, сопоставление блок → квадрант.
 
-**Использование:** Централизованная обработка и логирование ошибок
+Экспорт: `window.Positioning` + алиасы (например `window.getQuadrantIdForBlock`, `window.getAllQuadrantsForTech`).
 
-**Зависимости:** Нет
+#### `radar-renderer.js`
+**Назначение:** отрисовка SVG радара (фон, легенда, blip’ы) и связанная визуальная логика.
 
----
+Экспорт: `window.RadarRenderer`.
 
-#### 7. `event-manager.js` (48 строк)
-**Назначение:** Централизованное делегирование событий и управление подписками.
+#### `quadrant-cache.js`
+**Назначение:** кеширование SVG‑групп квадрантов для ускорения доступа.
 
-**Основные функции:**
-- `on(selector, event, handler)` - подписка на событие с делегированием
-- `off(selector, event, handler)` - отписка от события
-- `clear()` - очистка всех подписок
+Экспорт: `window.QuadrantCache` (например `getQuadrantGroup`, `clearQuadrantGroupsCache`).
 
-**Использование:** Оптимизация обработки событий через делегирование
+#### `quadrants.js`
+**Назначение:** логика квадрантов (получение технологий сектора, zoom/unzoom, имена/статусы).
 
-**Зависимости:** Нет
+Экспорт: `window.Quadrants` + алиасы (`window.zoomQuadrant`, `window.unzoom`, и т.п.).
 
----
+#### `radar-wrappers.js`
+**Назначение:** обёртки ради обратной совместимости: прокидывают «старые» глобальные функции на реализацию в `RadarRenderer`.
 
-#### 8. `memoization.js` (49 строк)
-**Назначение:** Вспомогательные функции для мемоизации и кэширования результатов.
+Экспорт/алиасы: `window.renderRadar`, `window.createBlip`, `window.renderLegend`, …
 
-**Основные функции:**
-- `memoize(fn)` - мемоизация функции
-- `memoizeWithTTL(fn, ttlMs)` - мемоизация с временем жизни
-- `FilterCache` - кэш для отфильтрованных результатов
+#### `radar-update.js`
+**Назначение:** обновление радара по фильтрам/поиску (использует `Filters`, `DataIndex`, `RenderQueue`).
 
-**Использование:** Оптимизация вычислений через кэширование
+Экспорт/алиас: `window.updateRadar`.
 
-**Зависимости:** Нет
+#### `radar-events.js`
+**Назначение:** обработчики событий, специфичные для SVG‑радара (hover/click по blip’ам, зум по секторам и т.п.).
 
----
+Экспорт: `window.initRadarEvents()` и/или функции, используемые `integration/events.js`.
 
-#### 9. `render-queue.js` (40 строк)
-**Назначение:** Батчинг обновлений через requestAnimationFrame.
+#### `prospects-chart.js`
+**Назначение:** модуль «Перспективные» (график + таблица + экспорт).
 
-**Основные функции:**
-- `schedule(fn)` - добавление функции в очередь рендеринга
-- `flush()` - немедленное выполнение очереди
-- `clear()` - очистка очереди
+Примечание: экспорт PDF в этом модуле реализован через canvas/`jsPDF` (в комментариях отмечено «без html2canvas»), но на странице `RMK.html` библиотека `html2canvas` подключена для общего PDF‑экспорта.
 
-**Использование:** Оптимизация производительности через батчинг обновлений
-
-**Зависимости:** Нет
+Экспорт: `window.ProspectsChart.init()` (и сопутствующие функции).
 
 ---
 
-### 🎨 UI Components (Компоненты интерфейса)
+### UI (`src/js/modules/ui/`)
 
-#### 10. `modals.js` (107 строк)
-**Назначение:** Управление модальными окнами приложения.
+#### `filters.js`
+**Назначение:** логика фильтров (custom select), чтение выбранных значений и наполнение опций.
 
-**Основные функции:**
-- `showModal(panelId)` - показ модального окна
-- `hideModal(panelIdOrEl)` - скрытие модального окна
-- `showInternalConfirm(message, onCloseConfirmed)` - показ подтверждения
+Экспорт/алиасы: `window.Filters`, `window.getFilterValues`, `window.populateSelect`, `window.updateFunctionFilterForBlock`, …
 
-**Особенности:**
-- Поддержка анимаций открытия/закрытия
-- Защита от закрытия при открытии (ignoreOutsideClickUntil)
-- Автоматическое создание snapshot формы
+#### `select-events.js`
+**Назначение:** вынесенные из `events.js` обработчики кликов/изменений для custom‑select (sidebar и модалки).
 
-**Зависимости:** Нет (но использует window.isFormDirty, window.snapshotFormInitial)
+Экспорт/алиас: `window.initSelectEvents()`.
 
----
+#### `modals.js`
+**Назначение:** базовые операции с модальными окнами (show/hide/confirm), защита от «мгновенного закрытия», сброс форм.
 
-#### 11. `forms.js` (265 строк)
-**Назначение:** Работа с формами добавления/редактирования технологий.
+Экспорт/алиасы: `window.showModal`, `window.hideModal`, `window.showInternalConfirm`.
 
-**Основные функции:**
-- `isFormDirty(formEl)` - проверка изменений формы
-- `snapshotFormInitial(formEl)` - сохранение начального состояния формы
-- `createCompanyRatingsFields(companies, containerId, prefix)` - создание динамических полей оценок
-- `updateTechRatingsVisibility()` - обновление видимости полей оценок в форме добавления
-- `updateEditTechRatingsVisibility(tech)` - обновление видимости полей оценок в форме редактирования
+#### `forms.js`
+**Назначение:** утилиты форм (dirty‑check, snapshot, динамические поля оценок предприятий и т.д.).
 
-**Особенности:**
-- Поддержка индивидуальных оценок для каждого предприятия
-- Динамическое создание полей при выборе нескольких предприятий
+Экспорт: функции через `window` (используются модалками и форм‑менеджментом).
 
-**Зависимости:** Нет
+#### `form-management.js`
+**Назначение:** обработчики сабмитов/кнопок для добавления/редактирования/удаления сущностей (технологии/блоки/функции) и связанная логика.
 
----
+#### `modal-forms.js`
+**Назначение:** синхронизация опций в модальных custom‑select (блоки по секторам, функции по блокам).
 
-#### 12. `modal-forms.js` (254 строки)
-**Назначение:** Работа с формами в модальных окнах (обновление списков блоков и функций).
+#### `detail-panel.js`
+**Назначение:** панель детальной информации о технологии, выделение blip’ов, логика открытия из разных источников.
 
-**Основные функции:**
-- `updateModalBlocksForSectors(sectorNames)` - обновление списка блоков по выбранным секторам
-- `updateModalFunctionsForBlocks(blockNames, fieldId)` - обновление списка функций по выбранным блокам
+Экспорт/алиас: `window.showDetail` (+ функции для экспорта полей/лейблов, если присутствуют).
 
-**Особенности:**
-- Динамическая фильтрация опций в зависимости от выбранных значений
-- Сохранение выбранных значений при фильтрации
+#### `sidebar.js`
+**Назначение:** списки технологий по секторам в боковой панели, синхронизация с радаром.
 
-**Зависимости:** DOMCache, Filters
+Экспорт/алиас: `window.updateSidebarLists` (+ функции создания/обновления списков).
 
----
+#### `report-status.js`
+**Назначение:** индикаторы статуса подготовки отчёта/экспорта (loading/success/error).
 
-#### 13. `filters.js` (597 строк)
-**Назначение:** Модуль фильтрации технологий через кастомные селекты.
+#### `tooltips.js`
+**Назначение:** тултипы и hover‑подсказки (единая реализация для UI).
 
-**Основные функции:**
-- `getFilterValues(key)` - получение значений фильтра
-- `populateSelect(filterKey, items, placeholderText)` - заполнение селекта фильтра
-- `populateSelectForModal(selectId, items, placeholder)` - заполнение модального селекта
-- `renderMultiSelectTags(customSelect)` - визуализация выбранных элементов
-- `updateFunctionFilterForBlock(blockNames)` - обновление фильтра функций по блокам
-- `updateBlockFilterForZoomedQuadrant(quadrantId)` - обновление фильтра блоков по квадранту
-- `setCustomSelectValue(fieldId, value)` - установка значения селекта
-- `resetCustomSelects(prefix)` - сброс селектов
+#### `loading.js`
+**Назначение:** менеджер загрузки/оверлеи (используется при загрузке данных и тяжёлых операциях).
 
-**Особенности:**
-- Поддержка множественного выбора с чекбоксами
-- Опция "Выбрать все"
-- Поиск в списках блоков и функций
-- Автоматическая синхронизация зависимых фильтров
+#### `error-display.js`
+**Назначение:** UI‑отображение ошибок (используется `ErrorHandler`, если модуль доступен).
 
-**Зависимости:** Positioning (для getQuadrantIdForBlock)
+#### `toast.js`
+**Назначение:** всплывающие уведомления (используется как современный канал уведомлений вместо legacy‑панели).
+
+#### `skeleton.js`
+**Назначение:** skeleton‑заглушки для списков/панелей/графиков на время загрузки.
+
+#### `mobile-nav.js`, `touch-handlers.js`
+**Назначение:** адаптивная навигация и поддержка touch‑жестов.
+
+#### `keyboard-nav.js`, `aria-manager.js`
+**Назначение:** улучшения доступности и управление фокусом/клавиатурой.
+
+#### `onboarding.js`
+**Назначение:** интерактивный тур/обучение по интерфейсу (запускается из меню помощи).
+
+#### `contextual-hints.js`
+**Назначение:** контекстные подсказки (в `app-init.js` отмечены как отключенные).
 
 ---
 
-#### 14. `sidebar.js` (306 строк)
-**Назначение:** Работа с боковой панелью (сайдбаром) - списки технологий по секторам.
+### Business (`src/js/modules/business/`)
 
-**Основные функции:**
-- `updateSidebarLists(filteredTechs)` - обновление списков технологий в сайдбаре
-- `createTechListForSector(sectorItem, quadrantId, allTechnologies)` - создание списка технологий для сектора
-- `updateTechListItems(quadrantId, matchedTechs)` - обновление элементов списка
-- `renderSectorTechListFilteredByCurrentFilters(quadrantId)` - рендеринг отфильтрованного списка
+#### `auth.js`
+**Назначение:** «права» и рендер UI‑авторизации на страницах радара.
 
-**Особенности:**
-- Группировка технологий по квадрантам
-- Поддержка hover и кликов на элементы списка
-- Синхронизация с blip'ами на радаре
+Экспорт/алиасы: `window.checkArchitectRole()`, `window.renderAuth()`.
 
-**Зависимости:** Positioning, StateManager, DetailPanel, Hover
+#### `priorities.js`
+**Назначение:** расчет приоритета технологии (модели `avg/min/mult`), «слабое звено», панель приоритетов сектора.
 
----
+Экспорт/алиасы: `window.computePriority`, `window.getPriorityCategory`, `window.openQuadrantPriorityPanel`, …
 
-#### 15. `detail-panel.js` (627 строк)
-**Назначение:** Работа с панелью подробной информации о технологии.
+#### `export.js`
+**Назначение:** экспорт PDF отчета (полевая выборка, фильтры экспорта, генерация PDF через `jsPDF` + `autoTable`).
 
-**Основные функции:**
-- `showDetail(t, source, sourceQuadrant)` - показ панели деталей
-- `getFieldValue(tech, fieldName, options)` - получение значения поля для экспорта
-- `getFieldLabel(fieldName)` - получение заголовка поля для экспорта
-
-**Особенности:**
-- Поддержка индивидуальных оценок по предприятиям
-- Вычисление и отображение приоритета технологии
-- Подсветка незаполненных полей
-- Синхронизация с радаром и сайдбаром
-
-**Зависимости:** StateManager, Positioning, Priorities, Utils, Sidebar, Quadrants
+Экспорт/алиасы: `window.performPdfExport`, `window.showExportPdfModal`, …
 
 ---
 
-#### 16. `hover.js` (92 строки)
-**Назначение:** Работа с hover-подсказками для технологий на радаре.
+### Integration (`src/js/modules/integration/`)
 
-**Основные функции:**
-- `getHoverText(tech)` - получение текста подсказки
-- `createDebouncedHover()` - создание debounced функции для hover
+#### `events.js`
+**Назначение:** центральные обработчики событий интерфейса (тема, фильтры, поиск, предприятия, модалки, и т.д.).
 
-**Особенности:**
-- Многострочные подсказки с информацией о приоритете
-- Предупреждения о незаполненных полях
-- Debounce для оптимизации производительности
+Важно:
+- модуль ожидает, что зависимости (например `DOMCache`, `EventManager`) уже загружены;
+- часть логики вынесена в специализированные модули (`ui/select-events.js`, `radar/radar-events.js`).
 
-**Зависимости:** DOMCache, Priorities, Utils
+## Примечания по внешним библиотекам
 
----
+- На `RMK.html` подключены через CDN:
+  - `jsPDF` + `jsPDF AutoTable` (экспорт PDF)
+  - `html2canvas` (снимки HTML для PDF в части сценариев экспорта)
+- На `admin.html` подключён `Chart.js` (графики админ‑панели).
 
-#### 17. `select-positioning.js` (39 строк)
-**Назначение:** Позиционирование выпадающих списков селектов.
-
-**Основные функции:**
-- `positionOptions(select)` - позиционирование выпадающего списка
-
-**Особенности:**
-- Автоматическое определение направления открытия (вверх/вниз)
-- Учет доступного пространства на экране
-
-**Зависимости:** Нет
-
----
-
-#### 18. `report-status.js` (103 строки)
-**Назначение:** Управление индикатором загрузки отчета.
-
-**Основные функции:**
-- `showReportLoading()` - показ индикатора загрузки
-- `showReportSuccess()` - показ успешного завершения
-- `showReportError(message)` - показ ошибки
-
-**Особенности:**
-- Автоматическое закрытие через 2-5 секунд
-- Визуальные индикаторы (спиннер, галочка, крестик)
-
-**Зависимости:** Modals
-
----
-
-### 🎯 Radar & Visualization (Радар и визуализация)
-
-#### 19. `radar-renderer.js` (470 строк)
-**Назначение:** Рендеринг радара технологий (SVG).
-
-**Основные функции:**
-- `renderRadarBackground(config)` - отрисовка фона радара (секторы, кольца, подписи)
-- `renderLegend(config)` - отрисовка легенды фигур
-- `createBlip(tech, pos, quadrant, config)` - создание blip'а (точки технологии)
-- `renderRadar(data, config)` - основная функция рендеринга радара
-- `resetRadarBackground()` - сброс флага отрисовки фона
-
-**Особенности:**
-- Отрисовка фона один раз за сессию
-- Поддержка различных форм blip'ов (круг, квадрат, треугольник, звезда)
-- Визуальные индикаторы незаполненных оценок
-- Разведение точек для избежания перекрытий
-
-**Зависимости:** Positioning, Quadrants, Utils, DOMCache, Hover
-
----
-
-#### 20. `positioning.js` (345 строк)
-**Назначение:** Позиционирование blip'ов на радаре.
-
-**Основные функции:**
-- `getQuadrantIdForBlock(blockKey)` - получение ID квадранта для блока
-- `getQuadrantsForBlock(blockKey)` - получение всех квадрантов для блока
-- `getAllQuadrantsForTech(tech)` - получение всех квадрантов для технологии
-- `assignFixedPosition(tech)` - расчет позиции технологии
-- `assignFixedPositionForQuadrant(tech, targetQuadrant)` - расчет позиции для конкретного квадранта
-- `computeCoordinates(tech)` - вычисление и запись координат
-- `applyNonOverlappingLayout(renderData)` - разведение точек для избежания перекрытий
-- `avoidRingLabelOverlap(renderData)` - избежание перекрытия с подписями колец
-
-**Особенности:**
-- Использование золотого угла для распределения точек
-- Алгоритм разведения перекрывающихся точек
-- Учет границ секторов и колец
-
-**Зависимости:** radar-utils.js (polarToCartesian, cartesianToPolar), blockToQuadrant
-
----
-
-#### 21. `quadrants.js` (218 строк)
-**Назначение:** Работа с квадрантами (секторами) радара.
-
-**Основные функции:**
-- `getTechStatus(tech)` - получение статуса технологии
-- `getQuadrantName(qId)` - получение названия квадранта
-- `getTechnologiesForQuadrant(qId)` - получение технологий для квадранта
-- `zoomQuadrant(qId, opts)` - увеличение масштаба квадранта
-- `unzoom()` - сброс зума (показ всех квадрантов)
-
-**Особенности:**
-- Управление зумом секторов
-- Синхронизация с фильтрами и сайдбаром
-- Открытие панели приоритетов при зуме
-
-**Зависимости:** StateManager, Filters, Priorities, Sidebar
-
----
-
-#### 22. `quadrant-cache.js` (50 строк)
-**Назначение:** Кэширование групп квадрантов для оптимизации DOM-запросов.
-
-**Основные функции:**
-- `getQuadrantGroup(quadrantId)` - получение группы квадранта с кэшированием
-- `clearQuadrantGroupsCache()` - очистка кэша
-
-**Использование:** Оптимизация доступа к SVG-группам квадрантов
-
-**Зависимости:** DOMCache
-
----
-
-#### 23. `prospects-chart.js` (1606 строк)
-**Назначение:** Модуль графика «Перспективные» технологии.
-
-**Основные функции:**
-- `initProspectsChart()` - инициализация графика
-- `loadData()` - загрузка данных для графика
-- `drawChart(data)` - отрисовка графика (SVG)
-- `updateTable(data)` - обновление таблицы технологий
-- `drawProspectsChartOnCanvas(ctx, data, width, height)` - отрисовка на canvas для PDF
-- `renderProspectsTablePages(sortedData, ...)` - рендеринг таблицы для PDF
-
-**Особенности:**
-- График ABC-оценка vs Стоимость внедрения
-- Фильтрация по предприятиям
-- Подсветка технологий при клике
-- Экспорт в PDF (график + таблица)
-- Поддержка нескольких предприятий с цветовой кодировкой
-
-**Зависимости:** Positioning, Priorities, blockToQuadrant, enterpriseData
-
----
-
-### 📊 Business Logic (Бизнес-логика)
-
-#### 24. `priorities.js` (501 строка)
-**Назначение:** Модуль работы с приоритетами технологий.
-
-**Основные функции:**
-- `computePriority(tech, model, company)` - вычисление приоритета (0-1)
-- `getPriorityCategory(priority)` - получение категории приоритета (low/medium/high)
-- `getPriorityWeakLinkComment(tech, company)` - определение "слабого звена"
-- `getNormalizedReadinessAndTrl(tech, company)` - нормализация оценок готовности
-- `recomputeQuadrantPriorityList(qId)` - пересчет списка приоритетов для квадранта
-- `openQuadrantPriorityPanel(qId)` - открытие панели приоритетов
-- `closeQuadrantPriorityPanel()` - закрытие панели приоритетов
-
-**Модели вычисления приоритета:**
-- `'avg'` - среднее трех нормализованных показателей
-- `'min'` - минимум (слабое звено)
-- `'mult'` - мультипликативная модель (по умолчанию)
-
-**Особенности:**
-- Поддержка индивидуальных оценок по предприятиям
-- Категоризация: низкий (0-30%), средний (30-60%), высокий (60-100%)
-- Определение "слабого звена" для рекомендаций
-
-**Зависимости:** StateManager, Filters, Positioning, Quadrants, DetailPanel
-
----
-
-#### 25. `export.js` (1867 строк)
-**Назначение:** Модуль экспорта PDF отчетов с выбором полей.
-
-**Основные функции:**
-- `performPdfExport(selectedFields, filters)` - основная функция экспорта
-- `showExportPdfModal()` - показ модального окна выбора полей
-- `populateExportFilters()` - заполнение списков фильтров
-- `validateExportFields()` - валидация выбранных полей
-- `applyFiltersToTechnologies(sourceList, filters)` - применение фильтров к технологиям
-- `populateMultiSelect(containerId, items, placeholder)` - заполнение множественного выбора
-- `initMultiSelect(container, placeholder)` - инициализация множественного выбора
-
-**Особенности:**
-- Выбор полей для экспорта через чекбоксы
-- Множественные фильтры с поддержкой "Выбрать все"
-- Автоматическое определение ориентации страницы (portrait/landscape)
-- Рендеринг через canvas для поддержки русского текста
-- Автоматический расчет ширины колонок
-- Поддержка переноса страниц
-
-**Зависимости:** Priorities, DetailPanel, Filters, Modals, ReportStatus
-
----
-
-#### 26. `auth.js` (121 строка)
-**Назначение:** Модуль аутентификации и управления ролями пользователей.
-
-**Основные функции:**
-- `checkArchitectRole()` - проверка роли архитектора/администратора
-- `renderAuth()` - рендеринг интерфейса аутентификации
-
-**Роли:**
-- `architect` - архитектор (доступ к редактированию)
-- `admin` - администратор (полный доступ, переход на admin.html)
-- Неавторизованный пользователь (только просмотр, кнопка входа)
-
-**Особенности:**
-- Управление видимостью кнопок в зависимости от роли
-- Сохранение темы при выходе
-- Переходы на страницы аналитики и админ-панели
-
-**Зависимости:** Нет
-
----
-
-### 🔗 Events & Integration (События и интеграция)
-
-#### 27. `events.js` (2406 строк)
-**Назначение:** Централизованная обработка всех событий интерфейса.
-
-**Обрабатываемые события:**
-- Переключение темы (светлая/темная)
-- Поиск по технологиям
-- Фильтры (блоки, функции, типы, статусы)
-- Кастомные селекты (sidebar и модальные)
-- Клавиатурная навигация
-- Предприятия (переключение)
-- Сброс фильтров
-- Анимации кнопок
-- Hover на blip'ах
-- Клики по радару
-- Секторы (зум, выделение)
-- Модальные окна (открытие/закрытие)
-- Формы (добавление/редактирование/удаление технологий и блоков)
-- Панель приоритетов
-
-**Особенности:**
-- Использование EventManager для делегирования
-- Обработка множественного выбора с чекбоксами
-- Синхронизация состояния между компонентами
-- Защита от закрытия модалок при открытии
-- Проверка изменений формы перед закрытием
-
-**Зависимости:** EventManager, DOMCache, все остальные модули
-
----
-
-#### 28. `utils.js` (57 строк)
-**Назначение:** Вспомогательные утилиты.
-
-**Основные функции:**
-- `isRatingFilled(rating)` - проверка заполненности оценки
-- `isNumericField(fieldName)` - проверка числового поля
-- `getReadinessColor(value)` - получение цвета по значению готовности (0-3)
-- `isReadinessField(fieldName)` - проверка поля готовности
-
-**Использование:** Общие вспомогательные функции для работы с данными
-
-**Зависимости:** Нет
-
----
-
-## Предложения по реорганизации структуры папок
-
-Текущая структура имеет все модули в одной папке `src/js/modules/`. Для улучшения навигации и понимания архитектуры предлагается следующая структура:
-
-### Вариант 1: По функциональности (рекомендуемый)
-
-```
-src/js/modules/
-├── core/                          # Ядро системы
-│   ├── state-manager.js
-│   ├── data-loader.js
-│   ├── data-index.js
-│   ├── dom-cache.js
-│   ├── dom-proxy.js
-│   ├── error-handler.js
-│   ├── event-manager.js
-│   ├── memoization.js
-│   └── render-queue.js
-│
-├── ui/                            # Компоненты интерфейса
-│   ├── modals.js
-│   ├── forms.js
-│   ├── modal-forms.js
-│   ├── filters.js
-│   ├── sidebar.js
-│   ├── detail-panel.js
-│   ├── hover.js
-│   ├── select-positioning.js
-│   └── report-status.js
-│
-├── radar/                         # Радар и визуализация
-│   ├── radar-renderer.js
-│   ├── positioning.js
-│   ├── quadrants.js
-│   ├── quadrant-cache.js
-│   └── prospects-chart.js
-│
-├── business/                      # Бизнес-логика
-│   ├── priorities.js
-│   ├── export.js
-│   └── auth.js
-│
-└── integration/                   # Интеграция и события
-    ├── events.js
-    └── utils.js
-```
-
-**Преимущества:**
-- Четкое разделение по назначению
-- Легко найти нужный модуль
-- Понятная иерархия зависимостей
-
----
-
-### Вариант 2: По слоям архитектуры
-
-```
-src/js/modules/
-├── infrastructure/                # Инфраструктурный слой
-│   ├── state-manager.js
-│   ├── dom-cache.js
-│   ├── dom-proxy.js
-│   ├── error-handler.js
-│   ├── event-manager.js
-│   ├── memoization.js
-│   └── render-queue.js
-│
-├── data/                          # Слой данных
-│   ├── data-loader.js
-│   └── data-index.js
-│
-├── presentation/                  # Слой представления
-│   ├── ui/
-│   │   ├── modals.js
-│   │   ├── forms.js
-│   │   ├── modal-forms.js
-│   │   ├── filters.js
-│   │   ├── sidebar.js
-│   │   ├── detail-panel.js
-│   │   ├── hover.js
-│   │   ├── select-positioning.js
-│   │   └── report-status.js
-│   │
-│   └── visualization/
-│       ├── radar-renderer.js
-│       ├── positioning.js
-│       ├── quadrants.js
-│       ├── quadrant-cache.js
-│       └── prospects-chart.js
-│
-├── domain/                        # Доменный слой
-│   ├── priorities.js
-│   ├── export.js
-│   └── auth.js
-│
-└── application/                   # Слой приложения
-    ├── events.js
-    └── utils.js
-```
-
-**Преимущества:**
-- Соответствие принципам чистой архитектуры
-- Четкое разделение ответственности
-- Легко тестировать каждый слой отдельно
-
----
-
-### Вариант 3: Гибридный (компромиссный)
-
-```
-src/js/modules/
-├── core/                          # Ядро (инфраструктура)
-│   ├── state-manager.js
-│   ├── data-loader.js
-│   ├── data-index.js
-│   ├── dom-cache.js
-│   ├── dom-proxy.js
-│   ├── error-handler.js
-│   ├── event-manager.js
-│   ├── memoization.js
-│   └── render-queue.js
-│
-├── components/                    # UI компоненты
-│   ├── modals.js
-│   ├── forms.js
-│   ├── modal-forms.js
-│   ├── filters.js
-│   ├── sidebar.js
-│   ├── detail-panel.js
-│   ├── hover.js
-│   ├── select-positioning.js
-│   └── report-status.js
-│
-├── radar/                         # Радар
-│   ├── radar-renderer.js
-│   ├── positioning.js
-│   ├── quadrants.js
-│   ├── quadrant-cache.js
-│   └── prospects-chart.js
-│
-├── features/                      # Функциональность
-│   ├── priorities.js
-│   ├── export.js
-│   └── auth.js
-│
-└── events.js                      # Централизованные события
-utils.js                           # Утилиты (можно оставить в корне)
-```
-
-**Преимущества:**
-- Баланс между простотой и структурой
-- Не слишком глубокая вложенность
-- Легко расширять новыми модулями
-
----
-
-## Рекомендации по миграции
-
-### Шаг 1: Обновление путей импорта
-После перемещения модулей необходимо обновить пути в HTML файлах:
-
-```html
-<!-- Было -->
-<script src="src/js/modules/state-manager.js"></script>
-
-<!-- Станет (для варианта 1) -->
-<script src="src/js/modules/core/state-manager.js"></script>
-```
-
-### Шаг 2: Проверка зависимостей
-Убедиться, что все модули корректно загружаются в правильном порядке (зависимости должны загружаться раньше).
-
-### Шаг 3: Обновление документации
-Обновить README и другую документацию с новыми путями.
-
----
-
-## Статистика модулей
-
-| Категория | Количество модулей | Строк кода |
-|-----------|-------------------|------------|
-| Core | 9 | ~1,500 |
-| UI Components | 9 | ~2,200 |
-| Radar & Visualization | 5 | ~2,700 |
-| Business Logic | 3 | ~2,500 |
-| Integration | 2 | ~2,500 |
-| **Всего** | **28** | **~11,400** |
-
----
-
-## Зависимости между модулями
-
-### Граф зависимостей (упрощенный):
-
-```
-Core Layer:
-  state-manager.js (независим)
-  dom-cache.js (независим)
-  event-manager.js (независим)
-  data-index.js (независим)
-  memoization.js (независим)
-  render-queue.js (независим)
-  error-handler.js (независим)
-  dom-proxy.js → dom-cache.js
-  data-loader.js → state-manager, dom-cache, event-manager, data-index, filters, positioning
-
-UI Layer:
-  modals.js (независим)
-  forms.js (независим)
-  utils.js (независим)
-  select-positioning.js (независим)
-  report-status.js → modals
-  modal-forms.js → dom-cache, filters
-  filters.js → positioning
-  sidebar.js → positioning, state-manager, detail-panel, hover
-  detail-panel.js → state-manager, positioning, priorities, utils, sidebar, quadrants
-  hover.js → dom-cache, priorities, utils
-
-Radar Layer:
-  positioning.js → radar-utils.js
-  quadrant-cache.js → dom-cache
-  quadrants.js → state-manager, filters, priorities, sidebar
-  radar-renderer.js → positioning, quadrants, utils, dom-cache, hover
-  prospects-chart.js → positioning, priorities
-
-Business Layer:
-  priorities.js → state-manager, filters, positioning, quadrants, detail-panel
-  export.js → priorities, detail-panel, filters, modals, report-status
-  auth.js (независим)
-
-Integration:
-  events.js → все модули
-```
-
----
-
-## Примечания
-
-1. **Обратная совместимость:** Все модули экспортируют функции в `window` для обеспечения обратной совместимости с существующим кодом.
-
-2. **Ленивая загрузка:** Многие модули используют ленивую загрузку зависимостей через проверку наличия в `window`.
-
-3. **Глобальные переменные:** Модули также используют глобальные переменные из `RMK2.js` (например, `window.QUADRANTS`, `window.RINGS`, `window.blockToQuadrant`).
-
-4. **Оптимизация:** Модули используют различные техники оптимизации:
-   - Кэширование DOM-элементов
-   - Мемоизация вычислений
-   - Делегирование событий
-   - Батчинг обновлений
-   - Дедупликация запросов
-
-5. **Расширяемость:** Архитектура позволяет легко добавлять новые модули в соответствующие папки.
-
----
-
-## Заключение
-
-Текущая архитектура проекта хорошо структурирована, но все модули находятся в одной папке. Предложенные варианты реорганизации помогут:
-
-- Улучшить навигацию по коду
-- Понять архитектуру с первого взгляда
-- Упростить добавление новых модулей
-- Улучшить поддержку проекта
-
-**Рекомендуется использовать Вариант 1 (по функциональности)** как наиболее простой и понятный для команды разработчиков.
