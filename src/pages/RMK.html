@@ -9,32 +9,33 @@
   <link rel="stylesheet" href="/src/css/common.css" />
   <link rel="stylesheet" href="/src/css/RMK.css" />
   <link rel="stylesheet" href="/src/css/about.css" />
+  <link rel="stylesheet" href="/src/css/rmk-inline-styles.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body class="light">
-  <header>
-    <a class="logo" href="index.html" data-tooltip="На главную">
+  <header role="banner">
+    <a class="logo" href="index.html" data-tooltip="На главную" aria-label="Радар технологий - на главную">
       <img src="/assets/images/icon.png" alt="Logo" class="logo-img" />
       <span>Радар технологий</span>
     </a>
-    <nav class="enterprise-nav">
-      <button>РМК</button>
-      <button>ТГОК</button>
-      <button>МГОК</button>
-      <button>КБМ</button>
-      <button>КМЭЗ</button>
-      <button>АМК</button>
+    <nav class="enterprise-nav" role="tablist" aria-label="Навигация по предприятиям">
+      <button role="tab" aria-selected="false" aria-label="Переключить на предприятие РМК">РМК</button>
+      <button role="tab" aria-selected="false" aria-label="Переключить на предприятие ТГОК">ТГОК</button>
+      <button role="tab" aria-selected="false" aria-label="Переключить на предприятие МГОК">МГОК</button>
+      <button role="tab" aria-selected="false" aria-label="Переключить на предприятие КБМ">КБМ</button>
+      <button role="tab" aria-selected="false" aria-label="Переключить на предприятие КМЭЗ">КМЭЗ</button>
+      <button role="tab" aria-selected="false" aria-label="Переключить на предприятие АМК">АМК</button>
     </nav>
     <div class="controls">
-      <button class="about-btn" id="aboutBtn" data-tooltip="О проекте" aria-label="О проекте">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 26" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
-          <circle cx="12" cy="14" r="10"></circle>
-          <line x1="12" y1="7" x2="12" y2="14"></line>
-          <circle cx="12" cy="18" r="1"></circle>
+      <button class="help-btn" id="helpBtn" data-tooltip="Помощь" aria-label="Помощь">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
         </svg>
-        <span class="about-btn__text">О проекте</span>
+        <span class="help-btn__text">Помощь</span>
       </button>
       <label class="theme-switch" data-tooltip="Переключить тему" aria-label="Переключить тему">
         <input type="checkbox" id="themeToggle" />
@@ -79,7 +80,7 @@
             </g>
           </g>
         </svg>
-        <span class="reset-button-text" style="display: none;">Сбросить выбор</span>
+        <span class="reset-button-text hidden">Сбросить выбор</span>
       </button>
       <button id="chartIconBtn" class="sidebar-icon-btn" data-tooltip="График" aria-label="График">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
@@ -91,12 +92,12 @@
         </svg>
       </button>
 
-      <button id="reportIconBtn" class="sidebar-icon-btn" data-tooltip="Отчет" aria-label="Отчет" style="display: none">
+      <button id="reportIconBtn" class="sidebar-icon-btn hidden" data-tooltip="Отчет" aria-label="Отчет">
         <svg class="icon-pdf" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 512 512">
           <path fill="currentColor" d="M64 464h48v48H64c-35.3 0-64-28.7-64-64V64C0 28.7 28.7 0 64 0h165.5c17 0 33.3 6.7 45.3 18.7l90.5 90.5c12 12 18.7 28.3 18.7 45.3V304h-48V160h-80c-17.7 0-32-14.3-32-32V48H64c-8.8 0-16 7.2-16 16v384c0 8.8 7.2 16 16 16m112-112h32c30.9 0 56 25.1 56 56s-25.1 56-56 56h-16v32c0 8.8-7.2 16-16 16s-16-7.2-16-16V368c0-8.8 7.2-16 16-16m32 80c13.3 0 24-10.7 24-24s-10.7-24-24-24h-16v48zm96-80h32c26.5 0 48 21.5 48 48v64c0 26.5-21.5 48-48 48h-32c-8.8 0-16-7.2-16-16V368c0-8.8 7.2-16 16-16m32 128c8.8 0 16-7.2 16-16v-64c0-8.8-7.2-16-16-16h-16v96zm80-112c0-8.8 7.2-16 16-16h48c8.8 0 16 7.2 16 16s-7.2 16-16 16h-32v32h32c8.8 0 16 7.2 16 16s-7.2 16-16 16h-32v48c0 8.8-7.2 16-16 16s-16-7.2-16-16v-64z"/>
         </svg>
       </button>
-      <button id="addIconBtn" class="sidebar-icon-btn" data-tooltip="Добавить" aria-label="Добавить" style="display: none">
+      <button id="addIconBtn" class="sidebar-icon-btn hidden" data-tooltip="Добавить" aria-label="Добавить">
         <svg class="icon-add" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <line class="add-line" x1="12" y1="5" x2="12" y2="19" />
           <line class="add-line" x1="5" y1="12" x2="19" y2="12" />
@@ -105,10 +106,11 @@
     </div>
 
     <!-- Основная боковая панель -->
-    <div class="sidebar" id="sidebar">
+    <div class="sidebar" id="sidebar" role="complementary" aria-label="Боковая панель" aria-expanded="false">
       <div class="search-container">
         <div class="search-box">
-          <input type="text" id="searchInput" placeholder="Поиск по технологиям..." />
+          <label for="searchInput" class="sr-only">Поиск по технологиям</label>
+          <input type="text" id="searchInput" placeholder="Поиск по технологиям..." aria-label="Поиск по технологиям" autocomplete="off" />
         </div>
       </div>
       <div class="sidebar-content">
@@ -172,26 +174,26 @@
   </div>
 
   <!-- Скрытые кнопки для сохранения функциональности -->
-  <div style="display: none;">
+  <div class="hidden">
     <button id="toggleProspectsChartBtn" data-tooltip="График «Перспективные»" aria-label="График «Перспективные»" aria-pressed="false"></button>
     <button id="resetSectorBtn" data-tooltip="Сбросить выбор" aria-label="Сбросить выбор"></button>
     <button id="exportPdfBtn" data-tooltip="Экспорт в PDF"></button>
-    <button id="addTechBtn" data-tooltip="Добавить технологию" style="display: none; position: relative;"></button>
+    <button id="addTechBtn" data-tooltip="Добавить технологию" class="hidden position-relative"></button>
   </div>
 
-  <main class="main-content">
+  <main class="main-content" role="main">
     <div class="radar-container">
-      <svg id="techRadar" viewBox="0 0 1000 1000"></svg>
-      <div id="hoverLabel"></div>
+      <svg id="techRadar" viewBox="0 0 1000 1000" role="img" aria-label="Интерактивный радар технологий"></svg>
+      <div id="hoverLabel" role="status" aria-live="polite" aria-atomic="true"></div>
     </div>
   </main>
 
   <div class="legend"></div>
 
   <!-- Модальные окна -->
-  <div class="detail-panel" id="detailPanel">
+  <div class="detail-panel" id="detailPanel" role="dialog" aria-modal="true" aria-labelledby="panelTitle" aria-label="Детальная информация о технологии">
     <div class="detail-header">
-      <h2 id="panelTitle"></h2>
+      <h2 id="panelTitle" role="heading" aria-level="2"></h2>
       <button class="close-btn" id="closeDetailPanel" aria-label="Закрыть">
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" class="close-icon">
           <path d="M15 5L5 15M5 5L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -251,7 +253,7 @@
             </svg>
           </span>
         </h3>
-        <div id="panelRatingsHint" class="ratings-hint" style="display: none;"></div>
+        <div id="panelRatingsHint" class="ratings-hint hidden"></div>
         <ul class="ratings">
           <li>Технологическая готовность: <span id="panelTechRead"></span>/3</li>
           <li>Организационная готовность: <span id="panelOrganRead"></span>/3</li>
@@ -416,9 +418,45 @@
         <div class="form-group" id="techRatingsGroup">
           <label>Оценки (0–3)</label>
           <div class="ratings-row">
-            <div id="techTechReadGroup"><span>Технологическая готовность</span><input type="number" id="techTechRead" min="0" max="3" step="1" /></div>
-            <div id="techOrganReadGroup"><span>Организационная готовность</span><input type="number" id="techOrganRead" min="0" max="3" step="1" /></div>
-            <div><span>Покрытие функций</span><input type="number" id="techFuncCover" min="0" max="3" step="1" /></div>
+            <div id="techTechReadGroup">
+              <span>Технологическая готовность</span>
+              <div class="custom-select-modal" data-field="techTechRead" tabindex="0">
+                <div class="select-trigger">
+                  <span class="selected-text">Выберите оценку</span>
+                  <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <ul class="select-options"></ul>
+              </div>
+              <input type="hidden" id="techTechRead" name="techTechRead" />
+            </div>
+            <div id="techOrganReadGroup">
+              <span>Организационная готовность</span>
+              <div class="custom-select-modal" data-field="techOrganRead" tabindex="0">
+                <div class="select-trigger">
+                  <span class="selected-text">Выберите оценку</span>
+                  <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <ul class="select-options"></ul>
+              </div>
+              <input type="hidden" id="techOrganRead" name="techOrganRead" />
+            </div>
+            <div>
+              <span>Покрытие функций</span>
+              <div class="custom-select-modal" data-field="techFuncCover" tabindex="0">
+                <div class="select-trigger">
+                  <span class="selected-text">Выберите оценку</span>
+                  <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <ul class="select-options"></ul>
+              </div>
+              <input type="hidden" id="techFuncCover" name="techFuncCover" />
+            </div>
             <div><span>TRL (стадия готовности технологии)</span>
               <div class="custom-select-modal" data-field="techTrlStage" tabindex="0">
                 <div class="select-trigger">
@@ -432,10 +470,10 @@
               <input type="hidden" id="techTrlStage" name="techTrlStage" />
             </div>
           </div>
-          <div id="techRatingsWarning" style="display: none; margin-top: 8px; padding: 8px 12px; background: rgba(255, 193, 7, 0.1); border: 1px solid rgba(255, 193, 7, 0.3); border-radius: 6px; color: #856404; font-size: 13px;">
+          <div id="techRatingsWarning" class="warning-box">
             При выборе нескольких предприятий поля "Технологическая готовность" и "Организационная готовность" недоступны. Не забудьте после добавления заполнить данные поля для каждого предприятия отдельно!
           </div>
-          <div id="techCompanyRatingsContainer" style="display: none; margin-top: 12px;">
+          <div id="techCompanyRatingsContainer" class="ratings-container">
             <!-- Динамические поля оценок для каждого предприятия будут добавлены здесь -->
           </div>
         </div>
@@ -524,6 +562,19 @@
           </div>
           <input type="hidden" id="editStatus" name="editStatus" />
         </div>
+        <div class="form-group">
+          <label>Предприятия</label>
+          <div class="custom-select-modal" data-field="editCompany" tabindex="0">
+            <div class="select-trigger">
+              <span class="selected-text">Выберите</span>
+              <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <ul class="select-options"></ul>
+          </div>
+          <input type="hidden" id="editCompany" name="editCompany" />
+        </div>
         <div class="form-group" id="editCostGroup">
           <label>Стоимость внедрения</label>
           <input type="number" id="editCostProm" min="0" step="1" />
@@ -531,9 +582,45 @@
         <div class="form-group">
           <label>Оценки (0–3)</label>
           <div class="ratings-row">
-            <div id="editTechReadGroup"><span>Технологическая готовность</span><input type="number" id="editTechRead" min="0" max="3" step="1" /></div>
-            <div id="editOrganReadGroup"><span>Организационная готовность</span><input type="number" id="editOrganRead" min="0" max="3" step="1" /></div>
-            <div><span>Покрытие функций</span><input type="number" id="editFuncCover" min="0" max="3" step="1" /></div>
+            <div id="editTechReadGroup">
+              <span>Технологическая готовность</span>
+              <div class="custom-select-modal" data-field="editTechRead" tabindex="0">
+                <div class="select-trigger">
+                  <span class="selected-text">Выберите оценку</span>
+                  <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <ul class="select-options"></ul>
+              </div>
+              <input type="hidden" id="editTechRead" name="editTechRead" />
+            </div>
+            <div id="editOrganReadGroup">
+              <span>Организационная готовность</span>
+              <div class="custom-select-modal" data-field="editOrganRead" tabindex="0">
+                <div class="select-trigger">
+                  <span class="selected-text">Выберите оценку</span>
+                  <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <ul class="select-options"></ul>
+              </div>
+              <input type="hidden" id="editOrganRead" name="editOrganRead" />
+            </div>
+            <div>
+              <span>Покрытие функций</span>
+              <div class="custom-select-modal" data-field="editFuncCover" tabindex="0">
+                <div class="select-trigger">
+                  <span class="selected-text">Выберите оценку</span>
+                  <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <ul class="select-options"></ul>
+              </div>
+              <input type="hidden" id="editFuncCover" name="editFuncCover" />
+            </div>
             <div><span>TRL (стадия готовности технологии)</span>
               <div class="custom-select-modal" data-field="editTrlStage" tabindex="0">
                 <div class="select-trigger">
@@ -547,8 +634,12 @@
               <input type="hidden" id="editTrlStage" name="editTrlStage" />
             </div>
           </div>
-          <div id="editCompanyRatingsContainer" style="display: none; margin-top: 12px;">
+          <div id="editCompanyRatingsContainer" class="ratings-container">
             <!-- Динамические поля оценок для каждого предприятия будут добавлены здесь -->
+          </div>
+          <div id="editPriorityPreview" class="edit-priority-preview" aria-live="polite">
+            <div class="priority-value" id="editPriorityValue">Приоритет: —</div>
+            <div class="priority-comment" id="editPriorityComment">Недостаточно данных для расчёта приоритета.</div>
           </div>
         </div>
         <div class="form-group"><label>Описание</label><textarea id="editDesc" rows="3" required></textarea></div>
@@ -571,7 +662,7 @@
     </div>
   </div>
 
-  <div id="addChoicePopover" class="popover-menu" style="display:none">
+  <div id="addChoicePopover" class="popover-menu hidden">
     <button id="chooseAddTech" class="btn-primary btn-with-icon">
       <svg class="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -624,7 +715,7 @@
         <div class="form-group">
           <label>Добавить новые функции (до 20)</label>
           <div id="functionsContainer"></div>
-          <button type="button" id="addFunctionRow" class="btn-secondary btn-with-icon" style="margin-top: 8px">
+          <button type="button" id="addFunctionRow" class="btn-secondary btn-with-icon form-button-margin">
             <svg class="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
@@ -649,7 +740,7 @@
     </div>
   </div>
 
-  <div id="prospectsModal" class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="prospectsTitle" style="display:none; width:60vw; max-width:1000px; height:72vh; max-height:72vh;">
+  <div id="prospectsModal" class="modal-panel hidden" role="dialog" aria-modal="true" aria-labelledby="prospectsTitle">
     <div class="modal-header">
       <h2 id="prospectsTitle">График «Перспективные»</h2>
       <div class="prospects-header-controls">
@@ -677,17 +768,17 @@
         </svg>
       </button>
     </div>
-    <div class="modal-body" style="display:flex; flex-direction:column; max-height: 63vh;">
-      <div id="prospectsChartContainer" style="width:100%;height:50vh; flex-shrink:0; min-height:400px;">
-        <svg id="prospectsChartSvg" viewBox="0 0 1200 680" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;"></svg>
+    <div class="modal-body flex-column">
+      <div id="prospectsChartContainer">
+        <svg id="prospectsChartSvg" viewBox="0 0 1200 680" preserveAspectRatio="xMidYMid meet"></svg>
       </div>
-      <div id="prospectsTableContainer" style="width:100%; margin-top:16px; border-top:1px solid var(--input-border); padding-top:16px;">
-        <div style="margin-bottom:12px; position:relative;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); pointer-events:none; color:var(--text, #666); opacity:0.6;">
+      <div id="prospectsTableContainer">
+        <div class="table-search-container">
+          <svg class="table-search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="11" cy="11" r="8"></circle>
             <path d="m21 21-4.35-4.35"></path>
           </svg>
-          <input type="text" id="prospectsTableSearch" placeholder="Поиск по технологиям..." style="width:100%; padding:8px 12px 8px 36px; border:1px solid var(--input-border, #ddd); border-radius:4px; font-size:14px; background:var(--input-bg, #fff); color:var(--text, #000);" />
+          <input type="text" id="prospectsTableSearch" class="table-search-input" placeholder="Поиск по технологиям..." />
         </div>
         <table id="prospectsTable" class="prospects-tech-table">
           <thead>
@@ -708,7 +799,7 @@
     </div>
   </div>
 
-  <div id="exportPdfModal" class="modal-panel" style="display: none;">
+  <div id="exportPdfModal" class="modal-panel hidden">
     <div class="modal-header">
       <h2>Выбор полей для экспорта</h2>
       <button class="close-btn" data-close="exportPdfModal" aria-label="Закрыть">
@@ -720,7 +811,7 @@
     <div class="modal-body">
       <div class="export-fields-container">
         <div class="export-fields-controls">
-          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+          <div class="flex-row">
             <button type="button" id="toggleAllFields" class="btn-secondary toggle-all-btn">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toggle-all-icon">
                 <path d="M9 11l3 3L22 4"></path>
@@ -728,7 +819,7 @@
               </svg>
               <span class="toggle-all-text">Выбрать все</span>
             </button>
-            <span id="exportFieldsError" class="export-error-message" style="display: none; color: #e74c3c; font-size: 14px; font-weight: 500;">Выберите хотя бы одно поле для экспорта</span>
+            <span id="exportFieldsError" class="export-error-message error-message">Выберите хотя бы одно поле для экспорта</span>
           </div>
         </div>
           <div class="export-fields-list">
@@ -967,7 +1058,7 @@
   </div>
 
   <!-- Модальное окно загрузки отчета -->
-  <div id="reportLoadingModal" class="modal-panel loading-modal" style="display: none;">
+  <div id="reportLoadingModal" class="modal-panel loading-modal hidden">
     <div class="loading-modal-content">
       <div class="loading-spinner-container">
         <div class="loading-spinner" id="loadingSpinner">
@@ -975,13 +1066,13 @@
             <circle class="spinner-path" cx="30" cy="30" r="25" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
           </svg>
         </div>
-        <div class="loading-success" id="loadingSuccess" style="display: none;">
+        <div class="loading-success hidden" id="loadingSuccess">
           <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
             <circle cx="30" cy="30" r="25" fill="#28a745" stroke="#28a745" stroke-width="2"/>
             <path d="M20 30 L27 37 L40 24" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
-        <div class="loading-error" id="loadingError" style="display: none;">
+        <div class="loading-error hidden" id="loadingError">
           <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
             <circle cx="30" cy="30" r="25" fill="#dc3545" stroke="#dc3545" stroke-width="2"/>
             <path d="M20 20 L40 40 M40 20 L20 40" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
@@ -989,7 +1080,7 @@
         </div>
       </div>
       <div class="loading-text" id="loadingText">Загрузка...</div>
-      <div class="loading-error-message" id="loadingErrorMessage" style="display: none;"></div>
+      <div class="loading-error-message hidden" id="loadingErrorMessage"></div>
     </div>
   </div>
 
@@ -1003,7 +1094,7 @@
       </button>
     </div>
     <div class="modal-body">
-      <p id="deleteConfirmMessage" style="margin: 0; font-size: 16px; line-height: 1.5;"></p>
+      <p id="deleteConfirmMessage" class="confirm-message"></p>
     </div>
     <div class="form-actions">
       <button type="button" id="confirmDeleteBtn" class="delete-btn btn-with-icon">
@@ -1022,1641 +1113,7 @@
   </div>
 
   <div id="notificationPanel" class="notification-panel"></div>
-  <script>
-  document.addEventListener('DOMContentLoaded', () => {
-  let tooltip;
-
-  document.querySelectorAll('.required-star').forEach(star => {
-    star.addEventListener('mouseenter', () => {
-      const text = star.dataset.tooltip;
-      if (!text) return;
-
-      tooltip = document.createElement('div');
-      tooltip.className = 'tooltip-global';
-      tooltip.textContent = text;
-      document.body.appendChild(tooltip);
-
-      // позиционируем над звездочкой
-      const rect = star.getBoundingClientRect();
-      const ttRect = tooltip.getBoundingClientRect();
-      const top = rect.top - ttRect.height - 10;
-      const left = rect.left + rect.width / 2 - ttRect.width / 2;
-
-      tooltip.style.top = `${Math.max(top, 5)}px`; // не вылезает за край
-      tooltip.style.left = `${Math.max(left, 5)}px`;
-      requestAnimationFrame(() => {
-        tooltip.style.opacity = '1';
-        tooltip.style.transform = 'translateY(0)';
-      });
-    });
-
-    star.addEventListener('mouseleave', () => {
-      if (tooltip) {
-        tooltip.style.opacity = '0';
-        tooltip.remove();
-      }
-    });
-  });
-});
-  </script>
-  <script src="/src/js/script.js"></script>
-  <script src="/src/js/radar-utils.js"></script>
-  <script src="/src/js/modules/dom-cache.js"></script>
-  <script src="/src/js/modules/event-manager.js"></script>
-  <script src="/src/js/modules/render-queue.js"></script>
-  <script src="/src/js/modules/data-index.js"></script>
-  <script src="/src/js/modules/memoization.js"></script>
-  <script src="/src/js/modules/state-manager.js"></script>
-  <script src="/src/js/modules/error-handler.js"></script>
-  <script src="/src/js/modules/positioning.js"></script>
-  <script src="/src/js/modules/radar-renderer.js"></script>
-  <script src="/src/js/modules/filters.js"></script>
-  <script src="/src/js/modules/modals.js"></script>
-  <script src="/src/js/modules/prospects-chart.js"></script>
-  <script src="/src/js/modules/export.js"></script>
-  <script src="/src/js/modules/forms.js"></script>
-  <script src="/src/js/modules/auth.js"></script>
-  <script src="/src/js/modules/priorities.js"></script>
-  <script src="/src/js/modules/sidebar.js"></script>
+  <!-- Все модули загружаются динамически через RMK2.js -->
   <script src="/src/js/RMK2.js"></script>
-      const toggleBtn = document.getElementById('toggleProspectsChartBtn');
-      const modal = document.getElementById('prospectsModal');
-      const closeBtn = document.getElementById('closeProspectsBtn');
-      const svg = document.getElementById('prospectsChartSvg');
-      const exportBtn = document.getElementById('exportProspectsChartBtn');
-      const companySelect = document.querySelector('.prospects-company-select');
-      const selectTrigger = document.querySelector('.prospects-select-trigger');
-      const selectOptions = document.querySelector('.prospects-select-options');
-      const selectText = document.querySelector('.prospects-select-text');
-      const hiddenInput = document.getElementById('prospectsSelectedCompany');
-
-      if (!toggleBtn || !modal || !svg || !closeBtn || !exportBtn || !companySelect) return;
-
-      let cachedData = null;
-      let allData = null;
-      let renderedOnce = false;
-      let selectedCompanies = []; // Массив выбранных предприятий
-      let syncCheckboxesFn = null; // Функция синхронизации чекбоксов
-      let companyColors = {}; // Карта цветов для компаний
-      let allCompaniesList = []; // Полный список предприятий для детерминированных цветов
-
-      // Генерация насыщенных, различимых цветов по индексу
-      function generateCompanyColorByIndex(index, totalCount) {
-        const safeTotal = Math.max(1, totalCount || 1);
-        const hue = Math.round((index * 360) / safeTotal);
-        const saturation = 65;
-        const lightness = 50;
-        return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-      }
-
-      // Функция для получения цвета компании
-      function getCompanyColor(company) {
-        if (!company) return '#808080';
-        if (companyColors[company]) return companyColors[company];
-
-        // Если уже известен полный список предприятий, используем его индекс,
-        // чтобы цвет был стабильным и не пересекался с другими.
-        if (Array.isArray(allCompaniesList) && allCompaniesList.length > 0) {
-          const idx = allCompaniesList.indexOf(company);
-          if (idx !== -1) {
-            const color = generateCompanyColorByIndex(idx, allCompaniesList.length);
-            companyColors[company] = color;
-            return color;
-          }
-        }
-
-        // Fallback: если по какой-то причине список ещё не инициализирован,
-        // назначаем новый цвет по следующему свободному индексу.
-        const idx = Object.keys(companyColors).length;
-        const color = generateCompanyColorByIndex(idx, idx + 1);
-        companyColors[company] = color;
-        return color;
-      }
-
-      // Анимация SVG при клике на кнопку
-      toggleBtn.addEventListener('click', function(e) {
-        e.preventDefault();
-        toggleBtn.classList.add('animating');
-        setTimeout(() => {
-          toggleBtn.classList.remove('animating');
-        }, 600);
-        openModal();
-      });
-
-      // Обновление текста в триггере
-      function updateSelectText() {
-        if (selectedCompanies.length === 0) {
-          selectText.textContent = 'Все предприятия';
-        } else if (selectedCompanies.length === 1) {
-          selectText.textContent = selectedCompanies[0];
-        } else {
-          selectText.textContent = `Выбрано: ${selectedCompanies.length}`;
-        }
-        hiddenInput.value = JSON.stringify(selectedCompanies);
-      }
-
-      // Инициализация выпадающего списка предприятий
-      async function initCompanySelect() {
-        if (!allData) {
-          const res = await fetch('/src/data/ru/enterpriseData.json', { cache: 'no-store' });
-          allData = await res.json();
-        }
-
-        // Собираем ВСЕ предприятия из всех данных, не только перспективные
-        const companies = new Set();
-        allData.forEach(item => {
-          if (item && item.company) {
-            const company = Array.isArray(item.company) ? item.company[0] : item.company;
-            if (company && company.trim()) {
-              companies.add(company.trim());
-            }
-          }
-        });
-
-        const companiesList = Array.from(companies).sort();
-        selectOptions.innerHTML = '';
-
-        // Добавляем опцию "Выбрать все"
-        const selectAllLi = document.createElement('li');
-        selectAllLi.className = 'prospects-select-all';
-        selectAllLi.innerHTML = `
-          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; width: 100%; padding: 4px 0;">
-            <input type="checkbox" id="prospects-select-all-checkbox" style="cursor: pointer;">
-            <span>Выбрать все</span>
-          </label>
-        `;
-        const selectAllCheckbox = selectAllLi.querySelector('input[type="checkbox"]');
-        selectAllCheckbox.addEventListener('change', (e) => {
-          const isChecked = e.target.checked;
-          const checkboxes = selectOptions.querySelectorAll('li:not(.prospects-select-all) input[type="checkbox"]');
-          checkboxes.forEach(cb => {
-            cb.checked = isChecked;
-            const company = cb.value;
-            if (isChecked) {
-              if (!selectedCompanies.includes(company)) {
-                selectedCompanies.push(company);
-              }
-            } else {
-              selectedCompanies = selectedCompanies.filter(c => c !== company);
-            }
-          });
-          updateSelectText();
-          updateChart();
-        });
-        selectOptions.appendChild(selectAllLi);
-
-        // Добавляем предприятия с чекбоксами
-        companiesList.forEach(company => {
-          const li = document.createElement('li');
-          const checkboxId = `prospects-company-${company.replace(/\s+/g, '-')}`;
-          li.innerHTML = `
-            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; width: 100%; padding: 4px 0;">
-              <input type="checkbox" id="${checkboxId}" value="${company}" style="cursor: pointer;">
-              <span>${company}</span>
-            </label>
-          `;
-          const checkbox = li.querySelector('input[type="checkbox"]');
-          checkbox.addEventListener('change', (e) => {
-            const company = e.target.value;
-            if (e.target.checked) {
-              if (!selectedCompanies.includes(company)) {
-                selectedCompanies.push(company);
-              }
-            } else {
-              selectedCompanies = selectedCompanies.filter(c => c !== company);
-            }
-
-            // Обновляем состояние "Выбрать все"
-            const allCheckboxes = selectOptions.querySelectorAll('li:not(.prospects-select-all) input[type="checkbox"]');
-            const allChecked = Array.from(allCheckboxes).every(cb => cb.checked);
-            const someChecked = Array.from(allCheckboxes).some(cb => cb.checked);
-            selectAllCheckbox.checked = allChecked;
-            selectAllCheckbox.indeterminate = someChecked && !allChecked;
-
-            updateSelectText();
-            updateChart();
-          });
-          selectOptions.appendChild(li);
-        });
-
-        // Инициализируем состояние "Выбрать все" как не выбранное
-        selectAllCheckbox.checked = false;
-        selectedCompanies = [];
-        updateSelectText();
-
-        // Синхронизируем состояние чекбоксов при открытии модального окна
-        syncCheckboxesFn = () => {
-          const checkboxes = selectOptions.querySelectorAll('li:not(.prospects-select-all) input[type="checkbox"]');
-          checkboxes.forEach(cb => {
-            cb.checked = selectedCompanies.includes(cb.value);
-          });
-          const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-          const someChecked = Array.from(checkboxes).some(cb => cb.checked);
-          selectAllCheckbox.checked = allChecked;
-          selectAllCheckbox.indeterminate = someChecked && !allChecked;
-        };
-      }
-
-      // Открытие/закрытие выпадающего списка
-      selectTrigger.addEventListener('click', (e) => {
-        e.stopPropagation();
-        companySelect.classList.toggle('open');
-      });
-
-      document.addEventListener('click', (e) => {
-        if (!companySelect.contains(e.target)) {
-          companySelect.classList.remove('open');
-        }
-      });
-
-      // Загружаем blockToQuadrant для преобразования чисел блоков в названия
-      let blockToQuadrantMap = null;
-      let blockIdToNameMap = null;
-      async function loadBlockMappings() {
-        if (blockToQuadrantMap && blockIdToNameMap) return;
-        try {
-          const res = await fetch('/src/data/ru/blockToQuadrant.json', { cache: 'no-store' });
-          blockToQuadrantMap = await res.json();
-
-          // Пытаемся получить маппинг из RMK2.js, если доступен
-          blockIdToNameMap = {};
-          if (typeof window.blockIdToName !== 'undefined' && window.blockIdToName) {
-            Object.assign(blockIdToNameMap, window.blockIdToName);
-          } else if (typeof blockIdToName !== 'undefined' && blockIdToName) {
-            Object.assign(blockIdToNameMap, blockIdToName);
-          }
-
-          // Если маппинг не получен из RMK2.js, создаем его на основе порядка блоков в blockToQuadrant.json
-          if (Object.keys(blockIdToNameMap).length === 0) {
-            // Создаем маппинг на основе порядка блоков в blockToQuadrant.json
-            // Предполагаем, что ID блоков соответствуют порядку в файле (начиная с 1)
-            const blockNames = Object.keys(blockToQuadrantMap);
-            blockNames.forEach((name, index) => {
-              blockIdToNameMap[index + 1] = name;
-            });
-          }
-        } catch (e) {
-          console.warn('Не удалось загрузить blockToQuadrant.json:', e);
-        }
-      }
-
-      // Функция для преобразования числа блока в название блока
-      function getBlockName(blockId) {
-        if (typeof blockId === 'string') return blockId;
-        if (typeof blockId === 'number') {
-          // Сначала пытаемся использовать маппинг из RMK2.js
-          if (blockIdToNameMap && blockIdToNameMap[blockId]) {
-            return blockIdToNameMap[blockId];
-          }
-          // Если маппинг не доступен, пытаемся использовать порядок из blockToQuadrant
-          if (blockToQuadrantMap) {
-            const blockNames = Object.keys(blockToQuadrantMap);
-            if (blockId > 0 && blockId <= blockNames.length) {
-              return blockNames[blockId - 1];
-            }
-          }
-        }
-        return null;
-      }
-
-      async function loadData() {
-        // Загружаем маппинги блоков
-        await loadBlockMappings();
-
-        if (!allData) {
-          const res = await fetch('/src/data/ru/enterpriseData.json', { cache: 'no-store' });
-          allData = await res.json();
-        }
-
-        // Получаем список всех предприятий для проверки "все выбраны"
-        const allCompanies = new Set();
-        allData.forEach(item => {
-          if (item && item.company) {
-            const company = Array.isArray(item.company) ? item.company[0] : item.company;
-            if (company && company.trim()) {
-              allCompanies.add(company.trim());
-            }
-          }
-        });
-        // Сохраняем полный список предприятий в глобальную переменную и сортируем,
-        // чтобы цвета были детерминированными и закреплёнными за каждым предприятием.
-        allCompaniesList = Array.from(allCompanies).sort();
-        // Переинициализируем карту цветов и назначаем уникальный цвет каждому предприятию.
-        companyColors = {};
-        allCompaniesList.forEach((company, index) => {
-          companyColors[company] = generateCompanyColorByIndex(index, allCompaniesList.length);
-        });
-
-        // Получаем фильтры из RMK2.js (если доступны)
-        let currentEnt = null;
-        let zoomedQuadrant = null;
-        let getFilterValuesFn = () => [];
-        let getQuadrantIdForBlockFn = () => null;
-
-        try {
-          if (typeof window.currentEnterprise !== 'undefined') {
-            currentEnt = window.currentEnterprise;
-          } else if (typeof currentEnterprise !== 'undefined') {
-            currentEnt = currentEnterprise;
-          }
-
-          if (typeof window.currentZoomedQuadrant !== 'undefined') {
-            zoomedQuadrant = window.currentZoomedQuadrant;
-          } else if (typeof currentZoomedQuadrant !== 'undefined') {
-            zoomedQuadrant = currentZoomedQuadrant;
-          }
-
-          if (typeof window.getFilterValues === 'function') {
-            getFilterValuesFn = window.getFilterValues;
-          } else if (typeof getFilterValues === 'function') {
-            getFilterValuesFn = getFilterValues;
-          }
-
-          if (typeof window.getQuadrantIdForBlock === 'function') {
-            getQuadrantIdForBlockFn = window.getQuadrantIdForBlock;
-          } else if (typeof getQuadrantIdForBlock === 'function') {
-            getQuadrantIdForBlockFn = getQuadrantIdForBlock;
-          }
-        } catch (e) {
-          console.warn('Не удалось получить фильтры из RMK2.js:', e);
-        }
-
-        // Для графика «Перспективные» учитываем только фильтрацию по предприятиям,
-        // остальные фильтры и зум радара игнорируем, чтобы всегда можно было
-        // увидеть все технологии по выбранным предприятиям.
-        // hasFilters здесь отражает только выбор предприятия в enterprise‑nav.
-        const hasFilters = (currentEnt && currentEnt !== "all");
-
-        const allSelected = selectedCompanies.length === 0 ||
-          (selectedCompanies.length === allCompaniesList.length &&
-           allCompaniesList.every(c => selectedCompanies.includes(c)));
-
-        if (cachedData && allSelected && !hasFilters) {
-          return cachedData;
-        }
-
-        // Базовый фильтр: только перспективные технологии (статус «Перспективные»)
-        let filtered = allData.filter(item => {
-          if (!item) return false;
-          return (item.status === 'Перспективные' || item.level === 'Перспективные');
-        });
-
-        // Фильтрация по выбранным предприятиям:
-        // 1) если в селекте графика выбраны предприятия — используем именно их;
-        // 2) если селект пуст, но в enterprise‑nav выбрано конкретное предприятие —
-        //    показываем технологии только этого предприятия;
-        if (selectedCompanies.length > 0) {
-          filtered = filtered.filter(item => {
-            const itemCompanies = Array.isArray(item.company) ? item.company : (item.company ? [item.company] : []);
-            return itemCompanies.some(comp => selectedCompanies.includes(comp));
-          });
-        } else if (currentEnt && currentEnt !== "all") {
-          filtered = filtered.filter(item => {
-            const itemCompanies = Array.isArray(item.company) ? item.company : (item.company ? [item.company] : []);
-            return itemCompanies.includes(currentEnt);
-          });
-        }
-
-        const processed = filtered.map(t => {
-          const a = Number(t.techRead) || 0;
-          const b = Number(t.organRead) || 0;
-          const c = Number(t.funcCover) || 0;
-          // Определяем отображаемое название предприятия
-          // Если явно выбран фильтр по предприятиям в селекте, используем фактическую компанию технологии,
-          // иначе (когда селект пуст, но выбрано предприятие в enterprise‑nav) показываем это предприятие.
-          let company;
-          if (selectedCompanies.length > 0) {
-            company = Array.isArray(t.company) ? t.company[0] : t.company;
-          } else if (currentEnt && currentEnt !== "all") {
-            company = currentEnt;
-          } else {
-            company = Array.isArray(t.company) ? t.company[0] : t.company;
-          }
-          // Приоритет по тем же правилам, что и на радаре: используем функцию computePriority,
-          // если она доступна в глобальной области видимости.
-          let priority = null;
-          try {
-            if (typeof window.computePriority === 'function') {
-              priority = window.computePriority(t, 'mult');
-            }
-          } catch (e) {
-            // если не удалось посчитать приоритет — просто игнорируем, для этого графика он не критичен
-            priority = null;
-          }
-
-          // Интегральная метрика ABC: A*B*C (0–27) и её нормализация в [0,1]
-          const abc = a * b * c;
-          const abcNormalized = abc / 27;
-
-          // Для графика и сортировки используем именно ABC‑оценку по оси X
-          const score = abc;
-
-          return {
-            id: t.id,
-            name: t.name,
-            company: company,
-            // score используется как значение по оси X (ABC)
-            score: score,
-            cost: typeof t.costProm === 'number' ? t.costProm : 0,
-            a,
-            b,
-            c,
-            abc,
-            abcNormalized,
-            priority
-          };
-        });
-
-        // Кэшируем только если выбраны все предприятия и нет других фильтров
-        if (allSelected && !hasFilters) cachedData = processed;
-        return processed;
-      }
-
-      function clearSvg() {
-        while (svg.firstChild) svg.removeChild(svg.firstChild);
-      }
-
-      function drawChart(data) {
-        clearSvg();
-        if (!data || data.length === 0) {
-          const noDataText = document.createElementNS(SVG_NS, 'text');
-          noDataText.setAttribute('x', 500);
-          noDataText.setAttribute('y', 340);
-          noDataText.setAttribute('text-anchor', 'middle');
-          noDataText.setAttribute('fill', 'currentColor');
-          noDataText.setAttribute('font-size', '24');
-          noDataText.textContent = 'Нет данных для отображения';
-          svg.appendChild(noDataText);
-          return;
-        }
-
-        const margin = { top: 60, right: 200, bottom: 80, left: 90 }; // Увеличили right для легенды
-        const width = 1200; // Увеличили ширину для легенды
-        const height = 680;
-        const ix0 = margin.left;
-        const iy0 = height - margin.bottom;
-        const ix1 = width - margin.right;
-        const iy1 = margin.top;
-
-        // Ось X отображает интегральную оценку ABC = A*B*C
-        const abcValues = data.map(d =>
-          typeof d.abc === 'number' && !Number.isNaN(d.abc)
-            ? d.abc
-            : (typeof d.score === 'number' && !Number.isNaN(d.score) ? d.score : 0)
-        );
-        let xMin = 0;
-        let xMax = Math.max(3, ...abcValues);
-        if (!Number.isFinite(xMax) || xMax <= xMin) {
-          xMax = xMin + 3; // защита от деления на ноль
-        }
-
-        const costs = data.map(d => d.cost);
-        const yMinRaw = Math.min(...costs);
-        const yMaxRaw = Math.max(...costs);
-        // Если все стоимости равны 0, устанавливаем разумные значения для отображения
-        const pad = yMaxRaw === 0 && yMinRaw === 0 ? 10 : Math.max(2, Math.round((yMaxRaw - yMinRaw) * 0.08));
-        const yMin = Math.max(0, yMinRaw - pad);
-        const yMax = yMaxRaw === 0 && yMinRaw === 0 ? 50 : yMaxRaw + pad;
-
-        const xMap = (val) => ix0 + (val - xMin) / (xMax - xMin) * (ix1 - ix0);
-        const yMap = (val) => iy0 - (val - yMin) / (yMax - yMin) * (iy0 - iy1);
-
-        // Axes
-        const xAxis = document.createElementNS(SVG_NS, 'line');
-        xAxis.setAttribute('x1', ix0); xAxis.setAttribute('y1', iy0);
-        xAxis.setAttribute('x2', ix1); xAxis.setAttribute('y2', iy0);
-        xAxis.setAttribute('stroke', 'currentColor');
-        xAxis.setAttribute('stroke-opacity', '0.6');
-        svg.appendChild(xAxis);
-
-        const yAxis = document.createElementNS(SVG_NS, 'line');
-        yAxis.setAttribute('x1', ix0); yAxis.setAttribute('y1', iy0);
-        yAxis.setAttribute('x2', ix0); yAxis.setAttribute('y2', iy1);
-        yAxis.setAttribute('stroke', 'currentColor');
-        yAxis.setAttribute('stroke-opacity', '0.6');
-        svg.appendChild(yAxis);
-
-        // Grid lines
-        const xTicksVals = [];
-        const xTickCount = 6;
-        const xStep = (xMax - xMin) / xTickCount;
-        for (let i = 0; i <= xTickCount; i++) {
-          const v = xMin + xStep * i;
-          xTicksVals.push(Math.round(v));
-        }
-        xTicksVals.forEach(val => {
-          const x = xMap(val);
-          const grid = document.createElementNS(SVG_NS, 'line');
-          grid.setAttribute('x1', x); grid.setAttribute('y1', iy0);
-          grid.setAttribute('x2', x); grid.setAttribute('y2', iy1);
-          grid.setAttribute('stroke', 'currentColor');
-          grid.setAttribute('stroke-opacity', '0.1');
-          svg.appendChild(grid);
-          const tick = document.createElementNS(SVG_NS, 'line');
-          tick.setAttribute('x1', x); tick.setAttribute('y1', iy0);
-          tick.setAttribute('x2', x); tick.setAttribute('y2', iy0 + 6);
-          tick.setAttribute('stroke', 'currentColor');
-          tick.setAttribute('stroke-opacity', '0.6');
-          svg.appendChild(tick);
-          const lbl = document.createElementNS(SVG_NS, 'text');
-          lbl.setAttribute('x', x);
-          lbl.setAttribute('y', iy0 + 24);
-          lbl.setAttribute('text-anchor', 'middle');
-          lbl.setAttribute('fill', 'currentColor');
-          lbl.setAttribute('font-size', '24');
-          lbl.textContent = String(val);
-          svg.appendChild(lbl);
-        });
-
-        // Y ticks
-        const yTickCount = 6;
-        const yTicksVals = Array.from({ length: yTickCount }, (_, i) =>
-          Math.round(yMin + (i * (yMax - yMin)) / (yTickCount - 1))
-        );
-        yTicksVals.forEach(val => {
-          const y = yMap(val);
-          const grid = document.createElementNS(SVG_NS, 'line');
-          grid.setAttribute('x1', ix0); grid.setAttribute('y1', y);
-          grid.setAttribute('x2', ix1); grid.setAttribute('y2', y);
-          grid.setAttribute('stroke', 'currentColor');
-          grid.setAttribute('stroke-opacity', '0.1');
-          svg.appendChild(grid);
-          const tick = document.createElementNS(SVG_NS, 'line');
-          tick.setAttribute('x1', ix0 - 6); tick.setAttribute('y1', y);
-          tick.setAttribute('x2', ix0); tick.setAttribute('y2', y);
-          tick.setAttribute('stroke', 'currentColor');
-          tick.setAttribute('stroke-opacity', '0.6');
-          svg.appendChild(tick);
-          const lbl = document.createElementNS(SVG_NS, 'text');
-          lbl.setAttribute('x', ix0 - 10);
-          lbl.setAttribute('y', y + 4);
-          lbl.setAttribute('text-anchor', 'end');
-          lbl.setAttribute('fill', 'currentColor');
-          lbl.setAttribute('font-size', '22');
-          lbl.textContent = String(val);
-          svg.appendChild(lbl);
-        });
-
-        // Labels
-        const xLabel = document.createElementNS(SVG_NS, 'text');
-        xLabel.setAttribute('x', (ix0 + ix1) / 2);
-        xLabel.setAttribute('y', iy0 + 48);
-        xLabel.setAttribute('text-anchor', 'middle');
-        xLabel.setAttribute('fill', 'currentColor');
-        xLabel.setAttribute('font-size', '22');
-        xLabel.textContent = 'Оценка';
-        svg.appendChild(xLabel);
-
-        const yLabel = document.createElementNS(SVG_NS, 'text');
-        yLabel.setAttribute('x', ix0 - 60);
-        yLabel.setAttribute('y', (iy0 + iy1) / 2);
-        yLabel.setAttribute('text-anchor', 'middle');
-        yLabel.setAttribute('fill', 'currentColor');
-        yLabel.setAttribute('font-size', '24');
-        yLabel.setAttribute('transform', `rotate(-90 ${ix0 - 60} ${(iy0 + iy1) / 2})`);
-        yLabel.textContent = 'Стоимость внедрения';
-        svg.appendChild(yLabel);
-
-        // Получаем уникальные компании для легенды
-        const uniqueCompanies = [...new Set(data.map(d => d.company))].sort();
-        // Кольца-подсветки для совпадающих точек показываем только,
-        // если на графике одновременно отображаются данные более чем по одному предприятию.
-        const enableOverlapHalo = uniqueCompanies.length > 1;
-
-        // Легенда компаний (размещаем справа от графика, но не перекрывая его)
-        if (uniqueCompanies.length > 0) {
-          const legendGroup = document.createElementNS(SVG_NS, 'g');
-          legendGroup.setAttribute('class', 'company-legend');
-          // Размещаем легенду справа от графика, но не перекрывая область данных
-          const legendX = ix1 + 20;
-          const legendY = iy1;
-          const legendItemHeight = 24;
-          const maxLegendHeight = iy0 - iy1;
-          const maxItems = Math.floor(maxLegendHeight / legendItemHeight);
-
-          // Если компаний много, ограничиваем количество отображаемых
-          const companiesToShow = uniqueCompanies.slice(0, maxItems);
-
-          companiesToShow.forEach((company, idx) => {
-            const color = getCompanyColor(company);
-            const y = legendY + idx * legendItemHeight;
-
-            // Цветной квадрат
-            const rect = document.createElementNS(SVG_NS, 'rect');
-            rect.setAttribute('x', legendX);
-            rect.setAttribute('y', y - 10);
-            rect.setAttribute('width', 14);
-            rect.setAttribute('height', 14);
-            rect.setAttribute('fill', color);
-            rect.setAttribute('stroke', 'currentColor');
-            rect.setAttribute('stroke-opacity', '0.3');
-            rect.setAttribute('stroke-width', '1');
-            legendGroup.appendChild(rect);
-
-            // Текст компании
-            const text = document.createElementNS(SVG_NS, 'text');
-            text.setAttribute('x', legendX + 20);
-            text.setAttribute('y', y + 2);
-            text.setAttribute('fill', 'currentColor');
-            text.setAttribute('font-size', '16');
-            text.textContent = company;
-            legendGroup.appendChild(text);
-          });
-
-          // Если есть скрытые компании, показываем подсказку
-          if (uniqueCompanies.length > maxItems) {
-            const moreText = document.createElementNS(SVG_NS, 'text');
-            moreText.setAttribute('x', legendX);
-            moreText.setAttribute('y', legendY + companiesToShow.length * legendItemHeight + 4);
-            moreText.setAttribute('fill', 'currentColor');
-            moreText.setAttribute('font-size', '14');
-            moreText.setAttribute('opacity', '0.7');
-            moreText.textContent = `...и ещё ${uniqueCompanies.length - maxItems}`;
-            legendGroup.appendChild(moreText);
-          }
-
-          svg.appendChild(legendGroup);
-        }
-
-        // Линии, соединяющие точки одной компании
-        const companyLines = new Map();
-        data.forEach(d => {
-          const xVal = (typeof d.abc === 'number' && !Number.isNaN(d.abc)) ? d.abc : d.score;
-          const cx = xMap(xVal);
-          const cy = yMap(d.cost);
-          if (!companyLines.has(d.company)) {
-            companyLines.set(d.company, []);
-          }
-          companyLines.get(d.company).push({ cx, cy });
-        });
-
-        companyLines.forEach((points, company) => {
-          if (!company || points.length < 2) return;
-          // Соединяем точки компании по возрастанию X (от меньшей оценки к большей)
-          points.sort((a, b) => a.cx - b.cx);
-          const polyline = document.createElementNS(SVG_NS, 'polyline');
-          polyline.setAttribute('points', points.map(p => `${p.cx},${p.cy}`).join(' '));
-          const color = getCompanyColor(company);
-          polyline.setAttribute('fill', 'none');
-          polyline.setAttribute('stroke', color);
-          polyline.setAttribute('stroke-width', '1.5');
-          polyline.setAttribute('stroke-opacity', '0.6');
-          polyline.setAttribute('class', 'prospects-company-line');
-          // Линии не перехватывают события, чтобы точки оставались кликабельными
-          polyline.style.pointerEvents = 'none';
-          svg.appendChild(polyline);
-        });
-
-        // Определяем позиции, на которых находятся несколько технологий одновременно
-        const positionCounts = new Map();
-        const positionTechIds = new Map();
-        const positionEntries = new Map();
-        data.forEach(d => {
-          const xValRaw = (typeof d.abc === 'number' && !Number.isNaN(d.abc)) ? d.abc : d.score;
-          const key = `${xValRaw}|${d.cost}`;
-          positionCounts.set(key, (positionCounts.get(key) || 0) + 1);
-
-          if (!positionTechIds.has(key)) {
-            positionTechIds.set(key, []);
-          }
-          positionTechIds.get(key).push(d.id);
-
-          if (!positionEntries.has(key)) {
-            positionEntries.set(key, []);
-          }
-          positionEntries.get(key).push(d);
-        });
-
-        // Points
-        data.forEach(d => {
-          const xVal = (typeof d.abc === 'number' && !Number.isNaN(d.abc)) ? d.abc : d.score;
-          const cx = xMap(xVal);
-          const cy = yMap(d.cost);
-          const key = `${xVal}|${d.cost}`;
-          const hasOverlap = (positionCounts.get(key) || 0) > 1;
-
-          const g = document.createElementNS(SVG_NS, 'g');
-          const companyColor = getCompanyColor(d.company);
-
-          // Если в этой точке несколько технологий и на графике несколько предприятий,
-          // рисуем дополнительное кольцо‑подсветку
-          if (hasOverlap && enableOverlapHalo) {
-            const halo = document.createElementNS(SVG_NS, 'circle');
-            halo.setAttribute('cx', cx);
-            halo.setAttribute('cy', cy);
-            halo.setAttribute('r', 9);
-            halo.setAttribute('fill', 'none');
-            halo.setAttribute('class', 'prospects-chart-point-overlap-halo');
-            halo.style.pointerEvents = 'none';
-            g.appendChild(halo);
-          }
-
-          const c = document.createElementNS(SVG_NS, 'circle');
-          c.setAttribute('cx', cx);
-          c.setAttribute('cy', cy);
-          c.setAttribute('r', 6);
-          c.setAttribute('fill', companyColor);
-          c.setAttribute('fill-opacity', '0.9');
-          c.setAttribute('stroke', companyColor);
-          c.setAttribute('stroke-opacity', '0.8');
-          c.setAttribute('stroke-width', '1.5');
-          // Текст подсказки:
-          //  - для обычной точки — подробная информация по технологии;
-          //  - для точки с несколькими технологиями (и включёнными кольцами) —
-          //    только список предприятий, к которым относятся технологии в этой точке.
-          let tooltipText;
-          if (hasOverlap && enableOverlapHalo) {
-            const entriesAtPos = positionEntries.get(key) || [d];
-            const companiesAtPos = Array.from(
-              new Set(entriesAtPos.map(e => e.company).filter(Boolean))
-            );
-            if (companiesAtPos.length === 1) {
-              tooltipText = `Предприятие: ${companiesAtPos[0]}`;
-            } else {
-              tooltipText = `Предприятия:\n${companiesAtPos.join('\n')}`;
-            }
-          } else {
-            tooltipText = `${d.name} (${d.company}) — A=${d.a}, B=${d.b}, C=${d.c}, A×B×C=${d.abc}; стоимость: ${d.cost}`;
-          }
-          c.setAttribute('data-tooltip', tooltipText);
-          c.setAttribute('data-company', d.company);
-          c.setAttribute('data-tech-id', d.id);
-          c.setAttribute('class', 'prospects-chart-point');
-          c.style.transition = 'transform 140ms ease, filter 140ms ease, opacity 140ms ease';
-          c.style.transformOrigin = '50% 50%';
-          c.style.transformBox = 'fill-box';
-          c.addEventListener('mouseenter', () => {
-            c.style.cursor = 'pointer';
-            const currentClass = c.getAttribute('class') || '';
-            if (!currentClass.includes('highlighted')) {
-              c.style.transform = 'scale(1.4)';
-              c.setAttribute('stroke-opacity', '1');
-              c.setAttribute('stroke-width', '2.5');
-              c.style.filter = `drop-shadow(0 0 8px ${companyColor})`;
-            }
-          });
-          c.addEventListener('mouseleave', () => {
-            const currentClass = c.getAttribute('class') || '';
-            if (!currentClass.includes('highlighted')) {
-              c.style.transform = 'scale(1)';
-              c.setAttribute('stroke-opacity', '0.8');
-              c.setAttribute('stroke-width', '1.5');
-              c.style.filter = 'none';
-            }
-          });
-          c.addEventListener('click', () => {
-            if (hasOverlap && enableOverlapHalo) {
-              const idsAtPos = positionTechIds.get(key) || [d.id];
-              highlightTechs(idsAtPos);
-            } else {
-              toggleTechHighlight(d.id);
-            }
-          });
-          g.appendChild(c);
-          svg.appendChild(g);
-        });
-      }
-
-      // Функция для заполнения таблицы
-      function updateTable(data) {
-        const tbody = document.getElementById('prospectsTableBody');
-        if (!tbody) return;
-
-        tbody.innerHTML = '';
-
-        if (!data || data.length === 0) {
-          const tr = document.createElement('tr');
-          tr.innerHTML = '<td colspan="7" style="text-align:center; padding:20px;">Нет данных для отображения</td>';
-          tbody.appendChild(tr);
-          return;
-        }
-
-        // Сортируем данные по интегральной ABC‑оценке (по убыванию)
-        const sortedData = [...data].sort((a, b) => {
-          const aVal = typeof a.abc === 'number' ? a.abc : (typeof a.score === 'number' ? a.score : 0);
-          const bVal = typeof b.abc === 'number' ? b.abc : (typeof b.score === 'number' ? b.score : 0);
-          return bVal - aVal;
-        });
-
-        sortedData.forEach(d => {
-          const tr = document.createElement('tr');
-          const companyColor = getCompanyColor(d.company);
-          tr.setAttribute('data-tech-id', d.id);
-          tr.setAttribute('class', 'prospects-table-row');
-          tr.style.cursor = 'pointer';
-
-          // Ячейка с названием технологии
-          const tdName = document.createElement('td');
-          tdName.textContent = d.name;
-          tr.appendChild(tdName);
-
-          // Ячейка с предприятием (с цветным индикатором)
-          const tdCompany = document.createElement('td');
-          const companyIndicator = document.createElement('span');
-          companyIndicator.style.display = 'inline-block';
-          companyIndicator.style.width = '12px';
-          companyIndicator.style.height = '12px';
-          companyIndicator.style.borderRadius = '2px';
-          companyIndicator.style.backgroundColor = companyColor;
-          companyIndicator.style.marginRight = '8px';
-          companyIndicator.style.verticalAlign = 'middle';
-          tdCompany.appendChild(companyIndicator);
-          tdCompany.appendChild(document.createTextNode(d.company));
-          tr.appendChild(tdCompany);
-
-          // Ячейки с отдельными оценками A, B, C
-          const tdA = document.createElement('td');
-          tdA.textContent = (d.a != null && !Number.isNaN(d.a)) ? d.a : '—';
-          tr.appendChild(tdA);
-
-          const tdB = document.createElement('td');
-          tdB.textContent = (d.b != null && !Number.isNaN(d.b)) ? d.b : '—';
-          tr.appendChild(tdB);
-
-          const tdC = document.createElement('td');
-          tdC.textContent = (d.c != null && !Number.isNaN(d.c)) ? d.c : '—';
-          tr.appendChild(tdC);
-
-          // Ячейка с общей оценкой A*B*C
-          const tdAbc = document.createElement('td');
-          tdAbc.textContent = (d.abc != null && !Number.isNaN(d.abc)) ? d.abc : '—';
-          tr.appendChild(tdAbc);
-
-          // Ячейка со стоимостью
-          const tdCost = document.createElement('td');
-          tdCost.textContent = d.cost > 0 ? d.cost.toLocaleString('ru-RU') : '—';
-          tr.appendChild(tdCost);
-
-          // Добавляем обработчик клика
-          tr.addEventListener('click', () => {
-            toggleTechHighlight(d.id);
-          });
-
-          tbody.appendChild(tr);
-        });
-      }
-
-      // Функция фильтрации таблицы по поисковому запросу
-      function filterTable(searchValue) {
-        const tbody = document.getElementById('prospectsTableBody');
-        if (!tbody) return;
-
-        const rows = tbody.querySelectorAll('tr');
-        const searchLower = searchValue.toLowerCase().trim();
-
-        rows.forEach(row => {
-          if (searchLower === '') {
-            row.style.display = '';
-            return;
-          }
-
-          // Получаем текст из всех ячеек строки
-          const cells = row.querySelectorAll('td');
-          let rowText = '';
-          cells.forEach(cell => {
-            rowText += cell.textContent.toLowerCase() + ' ';
-          });
-
-          // Показываем строку, если она содержит поисковый запрос
-          if (rowText.includes(searchLower)) {
-            row.style.display = '';
-          } else {
-            row.style.display = 'none';
-          }
-        });
-      }
-
-      // Инициализация обработчика поиска (используем делегирование событий)
-      modal.addEventListener('input', (e) => {
-        if (e.target && e.target.id === 'prospectsTableSearch') {
-          filterTable(e.target.value);
-        }
-      });
-
-      // Функция для переключения подсветки технологии (одиночный выбор)
-      function toggleTechHighlight(techId) {
-        if (!techId) return;
-
-        // Находим точку на графике и строку в таблице
-        const chartPoint = svg.querySelector(`circle[data-tech-id="${techId}"]`);
-        const tableRow = document.querySelector(`tr[data-tech-id="${techId}"]`);
-
-        const currentClass = chartPoint ? (chartPoint.getAttribute('class') || '') : '';
-        const isHighlighted = currentClass.includes('highlighted');
-
-        // Снимаем подсветку со всех элементов
-        svg.querySelectorAll('circle[data-tech-id]').forEach(point => {
-          const pointClass = point.getAttribute('class') || '';
-          if (pointClass.includes('highlighted')) {
-            const newClass = pointClass.replace(/\s*highlighted\s*/g, ' ').trim();
-            point.setAttribute('class', newClass || 'prospects-chart-point');
-            const companyColor = point.getAttribute('fill');
-            point.setAttribute('stroke-opacity', '0.8');
-            point.setAttribute('stroke-width', '1.5');
-            point.setAttribute('r', '6');
-            point.style.filter = 'none';
-            point.style.transform = 'scale(1)';
-          }
-        });
-
-        document.querySelectorAll('tr[data-tech-id]').forEach(row => {
-          row.classList.remove('highlighted');
-        });
-
-        // Если элемент был не подсвечен, подсвечиваем его
-        if (!isHighlighted) {
-          if (chartPoint) {
-            const companyColor = chartPoint.getAttribute('fill');
-            const currentClass = chartPoint.getAttribute('class') || 'prospects-chart-point';
-            chartPoint.setAttribute('class', currentClass + ' highlighted');
-            chartPoint.setAttribute('stroke-opacity', '1');
-            chartPoint.setAttribute('stroke-width', '3');
-            chartPoint.setAttribute('r', '8');
-            chartPoint.style.filter = `drop-shadow(0 0 12px ${companyColor})`;
-            chartPoint.style.transform = 'scale(1.5)';
-          }
-
-          if (tableRow) {
-            tableRow.classList.add('highlighted');
-            // Прокручиваем строку в видимую область
-            tableRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-          }
-        }
-      }
-
-      // Функция для подсветки всех технологий, относящихся к одной точке на графике
-      function highlightTechs(techIds) {
-        if (!Array.isArray(techIds) || techIds.length === 0) return;
-
-        // Снимаем подсветку со всех элементов
-        svg.querySelectorAll('circle[data-tech-id]').forEach(point => {
-          const pointClass = point.getAttribute('class') || '';
-          if (pointClass.includes('highlighted')) {
-            const newClass = pointClass.replace(/\s*highlighted\s*/g, ' ').trim();
-            point.setAttribute('class', newClass || 'prospects-chart-point');
-            const companyColor = point.getAttribute('fill');
-            point.setAttribute('stroke-opacity', '0.8');
-            point.setAttribute('stroke-width', '1.5');
-            point.setAttribute('r', '6');
-            point.style.filter = 'none';
-            point.style.transform = 'scale(1)';
-          }
-        });
-
-        document.querySelectorAll('tr[data-tech-id]').forEach(row => {
-          row.classList.remove('highlighted');
-        });
-
-        // Подсвечиваем все технологии из переданного списка
-        let firstRow = null;
-        techIds.forEach(id => {
-          const chartPoint = svg.querySelector(`circle[data-tech-id="${id}"]`);
-          const tableRow = document.querySelector(`tr[data-tech-id="${id}"]`);
-
-          if (chartPoint) {
-            const companyColor = chartPoint.getAttribute('fill');
-            const currentClass = chartPoint.getAttribute('class') || 'prospects-chart-point';
-            chartPoint.setAttribute('class', currentClass + ' highlighted');
-            chartPoint.setAttribute('stroke-opacity', '1');
-            chartPoint.setAttribute('stroke-width', '3');
-            chartPoint.setAttribute('r', '8');
-            chartPoint.style.filter = `drop-shadow(0 0 12px ${companyColor})`;
-            chartPoint.style.transform = 'scale(1.5)';
-          }
-
-          if (tableRow) {
-            tableRow.classList.add('highlighted');
-            if (!firstRow) {
-              firstRow = tableRow;
-            }
-          }
-        });
-
-        // Прокручиваем к первой строке из группы
-        if (firstRow) {
-          firstRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
-      }
-
-      async function updateChart() {
-        const data = await loadData();
-        drawChart(data);
-        updateTable(data);
-        // Сбрасываем поле поиска при обновлении данных
-        const searchInput = document.getElementById('prospectsTableSearch');
-        if (searchInput) {
-          searchInput.value = '';
-          filterTable('');
-        }
-      }
-
-      // Функция для обновления графика при изменении фильтров (если модальное окно открыто)
-      function checkAndUpdateChart() {
-        if (modal && modal.style.display !== 'none' && modal.classList.contains('open')) {
-          updateChart();
-        }
-      }
-
-      // Добавляем слушатели на изменения фильтров (если они доступны)
-      // Используем MutationObserver для отслеживания изменений в скрытых полях фильтров
-      if (typeof MutationObserver !== 'undefined') {
-        const filterObserver = new MutationObserver(() => {
-          checkAndUpdateChart();
-        });
-
-        // Наблюдаем за изменениями в скрытых полях фильтров
-        ['filter_block', 'filter_function', 'filter_techType'].forEach(filterId => {
-          const filterInput = document.getElementById(filterId);
-          if (filterInput) {
-            filterObserver.observe(filterInput, { attributes: true, attributeFilter: ['value'] });
-            filterInput.addEventListener('change', checkAndUpdateChart);
-          }
-        });
-
-        // Также слушаем изменения в enterprise-nav
-        const enterpriseNav = document.querySelector('.enterprise-nav');
-        if (enterpriseNav) {
-          enterpriseNav.addEventListener('click', (e) => {
-            if (e.target.tagName === 'BUTTON') {
-              setTimeout(checkAndUpdateChart, 100); // Небольшая задержка для обновления currentEnterprise
-            }
-          });
-        }
-      }
-
-      // Функция для рендеринга русского текста на canvas
-      function renderTextToCanvas(text, fontSize, fontWeight, maxWidthPx) {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const scale = 2; // Для лучшего качества
-
-        // Устанавливаем стили текста
-        ctx.font = `${fontWeight} ${fontSize * scale}px Arial, sans-serif`;
-        ctx.fillStyle = '#000000';
-        ctx.textBaseline = 'top';
-
-        // Измеряем текст
-        const lines = [];
-        const words = String(text || '').split(' ');
-        let currentLine = '';
-
-        words.forEach(word => {
-          const testLine = currentLine ? currentLine + ' ' + word : word;
-          const metrics = ctx.measureText(testLine);
-
-          if (metrics.width > maxWidthPx * scale && currentLine) {
-            lines.push(currentLine);
-            currentLine = word;
-          } else {
-            currentLine = testLine;
-          }
-        });
-        if (currentLine) lines.push(currentLine);
-
-        // Вычисляем размеры canvas
-        const lineHeight = fontSize * scale * 1.2;
-        const padding = 4 * scale;
-        const width = Math.max(...lines.map(line => ctx.measureText(line).width)) + padding * 2;
-        const height = lines.length * lineHeight + padding * 2;
-
-        canvas.width = width;
-        canvas.height = height;
-
-        // Перерисовываем с учетом нового размера
-        ctx.font = `${fontWeight} ${fontSize * scale}px Arial, sans-serif`;
-        ctx.fillStyle = '#000000';
-        ctx.textBaseline = 'top';
-
-        // Рисуем текст
-        lines.forEach((line, index) => {
-          ctx.fillText(line, padding, padding + index * lineHeight);
-        });
-
-        return { canvas, scale };
-      }
-
-      // НОВОЕ: отрисовка графика «Перспективные» на canvas (для PDF, без html2canvas)
-      function drawProspectsChartOnCanvas(ctx, data, width, height) {
-        // Фон
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, width, height);
-        ctx.textBaseline = 'top';
-
-        const margin = { top: 60, right: 200, bottom: 80, left: 90 };
-        const ix0 = margin.left;
-        const iy0 = height - margin.bottom;
-        const ix1 = width - margin.right;
-        const iy1 = margin.top;
-
-        // X: ABC-оценка
-        const abcValues = data.map(d =>
-          typeof d.abc === 'number' && !Number.isNaN(d.abc)
-            ? d.abc
-            : (typeof d.score === 'number' && !Number.isNaN(d.score) ? d.score : 0)
-        );
-        let xMin = 0;
-        let xMax = Math.max(3, ...abcValues);
-        if (!Number.isFinite(xMax) || xMax <= xMin) {
-          xMax = xMin + 3;
-        }
-
-        // Y: стоимость
-        const costs = data.map(d => d.cost);
-        const yMinRaw = Math.min(...costs);
-        const yMaxRaw = Math.max(...costs);
-        const pad = yMaxRaw === 0 && yMinRaw === 0 ? 10 : Math.max(2, Math.round((yMaxRaw - yMinRaw) * 0.08));
-        const yMin = Math.max(0, yMinRaw - pad);
-        const yMax = (yMaxRaw === 0 && yMinRaw === 0) ? 50 : yMaxRaw + pad;
-
-        const xMap = (val) => ix0 + (val - xMin) / (xMax - xMin || 1) * (ix1 - ix0);
-        const yMap = (val) => iy0 - (val - yMin) / (yMax - yMin || 1) * (iy0 - iy1);
-
-        // Оси
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 1;
-        ctx.globalAlpha = 0.6;
-        ctx.beginPath();
-        ctx.moveTo(ix0, iy0);
-        ctx.lineTo(ix1, iy0);
-        ctx.moveTo(ix0, iy0);
-        ctx.lineTo(ix0, iy1);
-        ctx.stroke();
-
-        // Сетка и подписи по X
-        const xTicksVals = [];
-        const xTickCount = 6;
-        const xStep = (xMax - xMin) / xTickCount;
-        for (let i = 0; i <= xTickCount; i++) {
-          xTicksVals.push(Math.round(xMin + xStep * i));
-        }
-        ctx.globalAlpha = 1;
-        ctx.fillStyle = '#000000';
-        ctx.textAlign = 'center';
-
-        xTicksVals.forEach(val => {
-          const x = xMap(val);
-          // вертикальная сетка
-          ctx.strokeStyle = 'rgba(0,0,0,0.1)';
-          ctx.beginPath();
-          ctx.moveTo(x, iy0);
-          ctx.lineTo(x, iy1);
-          ctx.stroke();
-          // засечка
-          ctx.strokeStyle = 'rgba(0,0,0,0.6)';
-          ctx.beginPath();
-          ctx.moveTo(x, iy0);
-          ctx.lineTo(x, iy0 + 6);
-          ctx.stroke();
-          // подпись
-          ctx.font = '16px Arial';
-          ctx.fillText(String(val), x, iy0 + 10);
-        });
-
-        // Сетка и подписи по Y
-        const yTickCount = 6;
-        const yTicksVals = Array.from({ length: yTickCount }, (_, i) =>
-          Math.round(yMin + (i * (yMax - yMin)) / (yTickCount - 1 || 1))
-        );
-        ctx.textAlign = 'right';
-
-        yTicksVals.forEach(val => {
-          const y = yMap(val);
-          ctx.strokeStyle = 'rgba(0,0,0,0.1)';
-          ctx.beginPath();
-          ctx.moveTo(ix0, y);
-          ctx.lineTo(ix1, y);
-          ctx.stroke();
-
-          ctx.strokeStyle = 'rgba(0,0,0,0.6)';
-          ctx.beginPath();
-          ctx.moveTo(ix0 - 6, y);
-          ctx.lineTo(ix0, y);
-          ctx.stroke();
-
-          ctx.font = '16px Arial';
-          ctx.fillText(String(val), ix0 - 8, y - 8);
-        });
-
-        // Подписи осей
-        ctx.textAlign = 'center';
-        ctx.font = '18px Arial';
-        ctx.fillText('Оценка', (ix0 + ix1) / 2, iy0 + 36);
-
-        ctx.save();
-        ctx.translate(ix0 - 60, (iy0 + iy1) / 2);
-        ctx.rotate(-Math.PI / 2);
-        ctx.textAlign = 'center';
-        ctx.fillText('Стоимость внедрения', 0, -12);
-        ctx.restore();
-
-        // Легенда по предприятиям
-        const uniqueCompanies = [...new Set(data.map(d => d.company))].sort();
-        const legendX = ix1 + 20;
-        const legendY = iy1;
-        const legendItemHeight = 22;
-        const maxLegendHeight = iy0 - iy1;
-        const maxItems = Math.floor(maxLegendHeight / legendItemHeight);
-        const companiesToShow = uniqueCompanies.slice(0, maxItems);
-
-        ctx.textAlign = 'left';
-        ctx.font = '14px Arial';
-
-        companiesToShow.forEach((company, idx) => {
-          const color = getCompanyColor(company);
-          const y = legendY + idx * legendItemHeight;
-
-          // квадрат
-          ctx.fillStyle = color || '#808080';
-          ctx.fillRect(legendX, y - 8, 14, 14);
-          ctx.strokeStyle = 'rgba(0,0,0,0.3)';
-          ctx.strokeRect(legendX, y - 8, 14, 14);
-
-          // текст
-          ctx.fillStyle = '#000000';
-          ctx.fillText(company, legendX + 20, y - 10);
-        });
-
-        if (uniqueCompanies.length > maxItems) {
-          ctx.fillStyle = '#000000';
-          ctx.globalAlpha = 0.7;
-          ctx.fillText(`...и ещё ${uniqueCompanies.length - maxItems}`, legendX, legendY + companiesToShow.length * legendItemHeight);
-          ctx.globalAlpha = 1;
-        }
-
-        // Линии между точками компании
-        const companyLines = new Map();
-        data.forEach(d => {
-          const xVal = (typeof d.abc === 'number' && !Number.isNaN(d.abc)) ? d.abc : d.score;
-          const cx = xMap(xVal);
-          const cy = yMap(d.cost);
-          if (!companyLines.has(d.company)) companyLines.set(d.company, []);
-          companyLines.get(d.company).push({ cx, cy });
-        });
-
-        companyLines.forEach((points, company) => {
-          if (!company || points.length < 2) return;
-          points.sort((a, b) => a.cx - b.cx);
-          const color = getCompanyColor(company) || '#808080';
-          ctx.strokeStyle = color;
-          ctx.globalAlpha = 0.6;
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          points.forEach((p, idx) => {
-            if (idx === 0) ctx.moveTo(p.cx, p.cy);
-            else ctx.lineTo(p.cx, p.cy);
-          });
-          ctx.stroke();
-          ctx.globalAlpha = 1;
-        });
-
-        // Точки
-        data.forEach(d => {
-          const xVal = (typeof d.abc === 'number' && !Number.isNaN(d.abc)) ? d.abc : d.score;
-          const cx = xMap(xVal);
-          const cy = yMap(d.cost);
-          const color = getCompanyColor(d.company) || '#3366cc';
-
-          ctx.beginPath();
-          ctx.arc(cx, cy, 6, 0, Math.PI * 2);
-          ctx.fillStyle = color;
-          ctx.globalAlpha = 0.9;
-          ctx.fill();
-          ctx.strokeStyle = color;
-          ctx.globalAlpha = 0.8;
-          ctx.lineWidth = 1.5;
-          ctx.stroke();
-          ctx.globalAlpha = 1;
-        });
-      }
-
-      // Вспомогательная функция переноса текста в ячейках таблицы
-      function wrapProspectsTableText(ctx, text, maxWidthPx) {
-        const words = String(text || '').split(/\s+/);
-        const lines = [];
-        let line = '';
-
-        for (let i = 0; i < words.length; i++) {
-          const word = words[i];
-          const testLine = line ? line + ' ' + word : word;
-          const testWidth = ctx.measureText(testLine).width;
-          if (testWidth > maxWidthPx && line) {
-            lines.push(line);
-            line = word;
-          } else {
-            line = testLine;
-          }
-        }
-
-        if (line) lines.push(line);
-        return lines;
-      }
-
-      // Рендеринг таблицы «Перспективные» в несколько страниц canvas (для PDF, без html2canvas)
-      function renderProspectsTablePages(sortedData, pageWidthMm, pageHeightMm, marginMm) {
-        const images = [];
-
-        const DPI = 150;
-        const pxPerMM = DPI / 25.4;
-        const mmToPx = (mm) => Math.round(mm * pxPerMM);
-
-        const cw = mmToPx(pageWidthMm);
-        const ch = mmToPx(pageHeightMm);
-        const marginPx = mmToPx(marginMm);
-        const tableWidthPx = cw - 2 * marginPx;
-
-        const headers = [
-          'Технология',
-          'Предприятие',
-          'Технологическая готовность',
-          'Организационная готовность',
-          'Покрытие функций',
-          'Общая оценка',
-          'Стоимость внедрения'
-        ];
-
-        // Пропорции ширин колонок:
-        //  - "Предприятие" и "Стоимость внедрения" сделаны уже;
-        //  - колонки готовности A/B/C расширены под длинные подписи.
-        const colFractions = [0.25, 0.10, 0.14, 0.14, 0.14, 0.08, 0.15];
-        const colWidths = colFractions.map(f => tableWidthPx * f);
-
-        const fontFamily = 'Segoe UI, Roboto, Arial, sans-serif';
-        const headerFontSize = 20;
-        const cellFontSize = 18;
-        const lineHeight = Math.round(cellFontSize * 1.3);
-        const headerLineHeight = Math.round(headerFontSize * 1.2);
-        const cellPadding = 4;
-
-        let rowIndex = 0;
-        let globalRowIndex = 0;
-
-        while (rowIndex < sortedData.length) {
-          const canvas = document.createElement('canvas');
-          canvas.width = cw;
-          canvas.height = ch;
-          const ctx = canvas.getContext('2d');
-
-          // Фон страницы
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(0, 0, cw, ch);
-          ctx.textBaseline = 'top';
-
-          let y = marginPx;
-
-          // Заголовок таблицы с переносом слов в ячейках заголовков
-          ctx.fillStyle = '#000000';
-          ctx.font = `${headerFontSize}px ${fontFamily}`;
-          ctx.textAlign = 'left';
-
-          // Сначала рассчитываем перенос строк и высоту заголовка
-          const headerLinesByCol = headers.map((h, i) => {
-            const maxWidth = colWidths[i] - cellPadding * 2;
-            return wrapProspectsTableText(ctx, h, maxWidth);
-          });
-          let maxHeaderLines = 1;
-          headerLinesByCol.forEach(lines => {
-            if (lines.length > maxHeaderLines) maxHeaderLines = lines.length;
-          });
-          const headerHeight = maxHeaderLines * headerLineHeight + cellPadding * 2;
-
-          // Фон заголовка
-          ctx.fillStyle = '#e0e0e0';
-          ctx.fillRect(marginPx, y, tableWidthPx, headerHeight);
-          ctx.fillStyle = '#000000';
-
-          // Рисуем текст заголовков по строкам внутри своих столбцов
-          let x = marginPx;
-          headers.forEach((h, i) => {
-            const colWidth = colWidths[i];
-            const lines = headerLinesByCol[i];
-            const totalTextHeight = lines.length * headerLineHeight;
-            let textY = y + Math.max(0, (headerHeight - totalTextHeight) / 2);
-
-            lines.forEach(line => {
-              ctx.fillText(line, x + cellPadding, textY);
-              textY += headerLineHeight;
-            });
-
-            x += colWidth;
-          });
-
-          y += headerHeight;
-
-          ctx.font = `${cellFontSize}px ${fontFamily}`;
-          ctx.textBaseline = 'top';
-
-          while (rowIndex < sortedData.length) {
-            const d = sortedData[rowIndex];
-            const values = [
-              d.name || '',
-              d.company || '',
-              (d.a != null && !Number.isNaN(d.a)) ? String(d.a) : '—',
-              (d.b != null && !Number.isNaN(d.b)) ? String(d.b) : '—',
-              (d.c != null && !Number.isNaN(d.c)) ? String(d.c) : '—',
-              (d.abc != null && !Number.isNaN(d.abc)) ? String(d.abc) : '—',
-              d.cost > 0 ? d.cost.toLocaleString('ru-RU') : '—'
-            ];
-
-            const cellLines = [];
-            let maxLines = 1;
-
-            for (let colIdx = 0; colIdx < values.length; colIdx++) {
-              const text = String(values[colIdx] || '');
-              const maxWidth = colWidths[colIdx] - cellPadding * 2;
-              const lines = wrapProspectsTableText(ctx, text, maxWidth);
-              cellLines[colIdx] = lines;
-              if (lines.length > maxLines) maxLines = lines.length;
-            }
-
-            const rowHeight = maxLines * lineHeight + cellPadding * 2;
-
-            // Если строка не помещается на текущей странице — выходим, она уйдёт на следующую
-            if (y + rowHeight > ch - marginPx) {
-              break;
-            }
-
-            // Зебра-строки
-            if (globalRowIndex % 2 === 0) {
-              ctx.fillStyle = '#f9f9f9';
-              ctx.fillRect(marginPx, y, tableWidthPx, rowHeight);
-            }
-
-            // Текст и границы ячеек
-              let cx = marginPx;
-            for (let colIdx = 0; colIdx < values.length; colIdx++) {
-              const colWidth = colWidths[colIdx];
-
-              // Граница ячейки
-              ctx.strokeStyle = '#d0d0d0';
-              ctx.lineWidth = 0.5;
-              ctx.strokeRect(cx, y, colWidth, rowHeight);
-
-              // Текст
-              const lines = cellLines[colIdx];
-              const isNumeric = colIdx >= 2; // A,B,C,ABC,Стоимость
-              ctx.fillStyle = '#000000';
-              ctx.textAlign = isNumeric ? 'right' : 'left';
-              const textX = isNumeric ? cx + colWidth - cellPadding : cx + cellPadding;
-              let textY = y + cellPadding;
-              lines.forEach(line => {
-                ctx.fillText(line, textX, textY);
-                textY += lineHeight;
-              });
-
-              cx += colWidth;
-            }
-
-            y += rowHeight;
-            rowIndex++;
-            globalRowIndex++;
-          }
-
-          images.push(canvas.toDataURL('image/png'));
-        }
-
-        return images;
-      }
-
-      // Экспорт графика и таблицы в PDF (без html2canvas)
-      exportBtn.addEventListener('click', async () => {
-        try {
-          const data = await loadData();
-          if (!data || data.length === 0) {
-            if (typeof showNotification === 'function') {
-              showNotification('Нет данных для экспорта', false);
-            }
-            return;
-          }
-
-          // Сортируем данные по ABC‑оценке, как в updateTable
-          const sortedData = [...data].sort((a, b) => {
-            const aVal = typeof a.abc === 'number' ? a.abc : (typeof a.score === 'number' ? a.score : 0);
-            const bVal = typeof b.abc === 'number' ? b.abc : (typeof b.score === 'number' ? b.score : 0);
-            return bVal - aVal;
-          });
-
-          const { jsPDF } = window.jspdf;
-          const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' });
-          const pageWidth = pdf.internal.pageSize.getWidth();
-          const pageHeight = pdf.internal.pageSize.getHeight();
-
-          const margin = 10;
-          let yPos = margin;
-
-          // Заголовок отчёта
-          const maxWidthPx = (pageWidth - 2 * margin) * 3.779527559;
-          const titleText = 'График «Перспективные»';
-          const titleResult = renderTextToCanvas(titleText, 18, 'bold', maxWidthPx);
-          const titleHeight = titleResult.canvas.height / titleResult.scale / 3.779527559;
-          const titleWidth = titleResult.canvas.width / titleResult.scale / 3.779527559;
-          pdf.addImage(
-            titleResult.canvas.toDataURL('image/png'),
-            'PNG',
-            (pageWidth - titleWidth) / 2,
-            yPos,
-            titleWidth,
-            titleHeight
-          );
-          yPos += titleHeight + 4;
-
-          // График — рисуем на canvas вручную и вставляем как изображение
-          const chartCanvas = document.createElement('canvas');
-          chartCanvas.width = 1200;
-          chartCanvas.height = 680;
-          const chartCtx = chartCanvas.getContext('2d');
-          drawProspectsChartOnCanvas(chartCtx, data, chartCanvas.width, chartCanvas.height);
-
-          const availableHeightForChart = pageHeight - yPos - margin - 8; // немного места под отступ
-          const chartImgWidth = pageWidth - 2 * margin;
-          const chartImgHeight = (chartCanvas.height * chartImgWidth) / chartCanvas.width;
-
-          let finalChartHeight = chartImgHeight;
-          let finalChartWidth = chartImgWidth;
-
-          if (chartImgHeight > availableHeightForChart) {
-            const ratio = availableHeightForChart / chartImgHeight;
-            finalChartHeight = availableHeightForChart;
-            finalChartWidth = chartImgWidth * ratio;
-          }
-
-          pdf.addImage(
-            chartCanvas.toDataURL('image/png'),
-            'PNG',
-            margin + (chartImgWidth - finalChartWidth) / 2,
-            yPos,
-            finalChartWidth,
-            finalChartHeight
-          );
-
-          // Таблица — отдельные страницы, отрисованные на canvas
-          const tableImages = renderProspectsTablePages(sortedData, pageWidth, pageHeight, margin);
-          tableImages.forEach((img, idx) => {
-            // Для первой таблицы добавляем новую страницу,
-            // так как первая уже занята графиком.
-            pdf.addPage();
-            pdf.addImage(img, 'PNG', 0, 0, pageWidth, pageHeight);
-          });
-
-          // Дата формирования на последней странице
-          const dateText = 'Дата формирования: ' + new Date().toLocaleDateString('ru-RU');
-          const dateResult = renderTextToCanvas(dateText, 10, 'normal', maxWidthPx);
-          const dateHeight = dateResult.canvas.height / dateResult.scale / 3.779527559;
-          const dateWidth = dateResult.canvas.width / dateResult.scale / 3.779527559;
-          const lastPageHeight = pdf.internal.pageSize.getHeight();
-          pdf.addImage(
-            dateResult.canvas.toDataURL('image/png'),
-            'PNG',
-            pageWidth - margin - dateWidth,
-            lastPageHeight - margin - dateHeight,
-            dateWidth,
-            dateHeight
-          );
-
-          const companyName = selectedCompanies.length === 0
-            ? 'Все_предприятия'
-            : selectedCompanies.length === 1
-              ? selectedCompanies[0]
-              : `${selectedCompanies.length}_предприятий`;
-          const filename = `График_Перспективные_${companyName.replace(/\s+/g, '_')}.pdf`;
-          pdf.save(filename);
-
-          if (typeof showNotification === 'function') {
-            showNotification('График и таблица успешно экспортированы в PDF', true);
-          }
-        } catch (error) {
-          console.error('Ошибка при экспорте графика/таблицы:', error);
-          if (typeof showNotification === 'function') {
-            showNotification('Ошибка при экспорте графика', false);
-          }
-        }
-      });
-
-      function openModal() {
-        modal.style.display = 'block';
-        requestAnimationFrame(() => modal.classList.add('open'));
-        document.body.style.overflow = 'hidden';
-        toggleBtn.setAttribute('aria-pressed', 'true');
-        if (!renderedOnce) {
-          initCompanySelect().then(() => {
-            updateChart();
-            renderedOnce = true;
-          }).catch(e => console.error('Не удалось инициализировать график «Перспективные»', e));
-        } else {
-          // Синхронизируем чекбоксы при повторном открытии
-          if (syncCheckboxesFn) {
-            syncCheckboxesFn();
-          }
-          updateChart();
-        }
-      }
-
-      function closeModal() {
-        modal.classList.remove('open');
-        setTimeout(() => { modal.style.display = 'none'; }, 200);
-        document.body.style.overflow = '';
-        toggleBtn.setAttribute('aria-pressed', 'false');
-      }
-
-
 </body>
 </html>

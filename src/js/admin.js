@@ -4,25 +4,269 @@ let auditLogs = [];
 let backups = [];
 let currentUserId = null;
 let currentSection = 'dashboard';
-// Mock данные
-const mockUsers = [
-  { id: 1, name: "Иван Петров", email: "ivan@example.com", role: "admin", status: "active", createdAt: "2024-01-15" },
-  { id: 2, name: "Мария Сидорова", email: "maria@example.com", role: "architect", status: "active", createdAt: "2024-01-20" },
-  { id: 3, name: "Алексей Козлов", email: "alexey@example.com", role: "user", status: "active", createdAt: "2024-02-01" },
-  { id: 4, name: "Елена Новикова", email: "elena@example.com", role: "user", status: "inactive", createdAt: "2024-02-10" }
-];
-const mockAuditLogs = [
-  { id: 1, date: "2024-03-15 10:30:00", user: "Иван Петров", action: "login", details: "Успешный вход в систему", ip: "192.168.1.100" },
-  { id: 2, date: "2024-03-16 10:35:00", user: "Мария Сидорова", action: "create", details: "Создан новый пользователь", ip: "192.168.1.101" },
-  { id: 3, date: "2024-03-17 11:00:00", user: "Алексей Козлов", action: "update", details: "Изменены настройки профиля", ip: "192.168.1.102" },
-  { id: 4, date: "2024-03-18 11:15:00", user: "Иван Петров", action: "delete", details: "Удален пользователь #5", ip: "192.168.1.100" },
-  { id: 5, date: "2024-03-19 11:30:00", user: "Елена Новикова", action: "logout", details: "Выход из системы", ip: "192.168.1.103" }
-];
-const mockBackups = [
-  { id: 1, name: "backup_2024_03_15_120000", date: "2024-03-15 12:00:00", size: "2.5 MB" },
-  { id: 2, name: "backup_2024_03_14_120000", date: "2024-03-14 12:00:00", size: "2.3 MB" },
-  { id: 3, name: "backup_2024_03_13_120000", date: "2024-03-13 12:00:00", size: "2.1 MB" }
-];
+
+// ===== Пагинация журнала аудита =====
+const AUDIT_PAGE_SIZE = 30;
+let auditCurrentPage = 1;
+
+// Хранилище данных админ-панели (без моков)
+const ADMIN_STORAGE = {
+  USERS: 'adminUsers',
+  AUDIT: 'adminAuditLogs',
+  BACKUPS: 'adminBackups',
+  INSTALL_DATE: 'appInstallDate'
+};
+
+function safeJsonParse(raw, fallback) {
+  try {
+    if (raw == null || raw === '') return fallback;
+    const parsed = JSON.parse(raw);
+    return parsed == null ? fallback : parsed;
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function readStorageJson(key, fallback) {
+  try {
+    return safeJsonParse(localStorage.getItem(key), fallback);
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function writeStorageJson(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch (e) {
+    console.warn('writeStorageJson failed', key, e);
+    return false;
+  }
+}
+
+function ensureInstallDate() {
+  let date = null;
+  try { date = localStorage.getItem(ADMIN_STORAGE.INSTALL_DATE); } catch (_) {}
+  if (!date) {
+    date = new Date().toISOString().split('T')[0];
+    try { localStorage.setItem(ADMIN_STORAGE.INSTALL_DATE, date); } catch (_) {}
+  }
+  return date;
+}
+
+function getDefaultUsers() {
+  // "Реальные" системные учётки, которые используются на странице авторизации (auth.js)
+  const createdAt = ensureInstallDate();
+  const base = [
+    { username: 'admin', role: 'admin' },
+    { username: 'architect', role: 'architect' },
+    { username: 'guest', role: 'guest' }
+  ];
+  return base.map((u, idx) => ({
+    id: idx + 1,
+    name: u.username,
+    email: `${u.username}@local`,
+    role: u.role,
+    status: 'active',
+    createdAt
+  }));
+}
+
+function normalizeUsers(list) {
+  if (!Array.isArray(list)) return [];
+  let nextId = 1;
+  const used = new Set();
+  return list
+    .filter(Boolean)
+    .map((u) => {
+      const createdAt = (u.createdAt && String(u.createdAt).trim()) || ensureInstallDate();
+      let id = Number(u.id);
+      if (!Number.isFinite(id) || id <= 0 || used.has(id)) {
+        while (used.has(nextId)) nextId += 1;
+        id = nextId++;
+      }
+      used.add(id);
+      return {
+        id,
+        name: (u.name != null ? String(u.name) : '').trim() || `user-${id}`,
+        email: (u.email != null ? String(u.email) : '').trim() || `user-${id}@local`,
+        role: (u.role != null ? String(u.role) : '').trim() || 'guest',
+        status: (u.status === 'inactive' ? 'inactive' : 'active'),
+        createdAt
+      };
+    });
+}
+
+function normalizeAuditLogs(list) {
+  if (!Array.isArray(list)) return [];
+  let didMigrate = false;
+  let nextId = 1;
+  const used = new Set();
+
+  function pad2(n) {
+    const v = Number(n) || 0;
+    return v < 10 ? `0${v}` : String(v);
+  }
+
+  function formatLocalAuditTimestamp(d) {
+    try {
+      const y = d.getFullYear();
+      const m = pad2(d.getMonth() + 1);
+      const day = pad2(d.getDate());
+      const hh = pad2(d.getHours());
+      const mm = pad2(d.getMinutes());
+      const ss = pad2(d.getSeconds());
+      return `${y}-${m}-${day} ${hh}:${mm}:${ss}`;
+    } catch (_) {
+      return '';
+    }
+  }
+
+  // Старый формат логов был UTC, но записан как "YYYY-MM-DD HH:mm:ss" (без таймзоны).
+  // Если tz не указан — считаем, что это старый лог и конвертируем UTC -> local.
+  function normalizeAuditDate(raw, tz) {
+    const s = (raw != null ? String(raw) : '').trim();
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/);
+    if (m) {
+      const y = Number(m[1]);
+      const mo = Number(m[2]);
+      const d = Number(m[3]);
+      const hh = Number(m[4]);
+      const mm = Number(m[5]);
+      const ss = Number(m[6]);
+
+      if (tz === 'local') {
+        // Уже локальное время — просто возвращаем как есть
+        return s;
+      }
+
+      // Миграция: старые значения трактуем как UTC и переводим в локальное
+      const dt = new Date(Date.UTC(y, mo - 1, d, hh, mm, ss));
+      const out = formatLocalAuditTimestamp(dt);
+      if (out) didMigrate = true;
+      return out || s;
+    }
+
+    // Если пришёл ISO/другой формат — пробуем распарсить и привести к локальному audit-формату
+    const dt = new Date(s);
+    if (Number.isFinite(dt.getTime())) {
+      const out = formatLocalAuditTimestamp(dt);
+      if (out && out !== s) didMigrate = true;
+      return out || s;
+    }
+
+    // Fallback: текущее локальное время
+    return formatLocalAuditTimestamp(new Date()) || s || '';
+  }
+
+  return list
+    .filter(Boolean)
+    .map((l) => {
+      let id = Number(l.id);
+      if (!Number.isFinite(id) || id <= 0 || used.has(id)) {
+        while (used.has(nextId)) nextId += 1;
+        id = nextId++;
+      }
+      used.add(id);
+      const tz = (l && l.tz != null ? String(l.tz) : '').trim() || null;
+      return {
+        id,
+        date: normalizeAuditDate(l && l.date, tz),
+        user: (l.user != null ? String(l.user) : '').trim() || 'system',
+        action: (l.action != null ? String(l.action) : '').trim() || 'update',
+        details: (l.details != null ? String(l.details) : '').trim() || '',
+        tz: 'local',
+        ip: (l.ip != null ? String(l.ip) : '').trim() || 'local'
+      };
+    });
+}
+
+function normalizeBackups(list) {
+  if (!Array.isArray(list)) return [];
+  let nextId = 1;
+  const used = new Set();
+  return list
+    .filter(Boolean)
+    .map((b) => {
+      let id = Number(b.id);
+      if (!Number.isFinite(id) || id <= 0 || used.has(id)) {
+        while (used.has(nextId)) nextId += 1;
+        id = nextId++;
+      }
+      used.add(id);
+      return {
+        id,
+        name: (b.name != null ? String(b.name) : '').trim() || `backup_${id}`,
+        date: (b.date != null ? String(b.date) : '').trim() || (typeof window.getAuditTimestamp === 'function' ? window.getAuditTimestamp() : new Date().toISOString().slice(0, 19).replace('T', ' ')),
+        size: (b.size != null ? String(b.size) : '').trim() || '',
+        sizeBytes: Number.isFinite(Number(b.sizeBytes)) ? Number(b.sizeBytes) : null,
+        snapshot: (b.snapshot && typeof b.snapshot === 'object') ? b.snapshot : null
+      };
+    });
+}
+
+function persistUsers() {
+  writeStorageJson(ADMIN_STORAGE.USERS, users);
+}
+
+function persistAuditLogs() {
+  writeStorageJson(ADMIN_STORAGE.AUDIT, auditLogs);
+}
+
+function persistBackups() {
+  writeStorageJson(ADMIN_STORAGE.BACKUPS, backups);
+}
+
+function loadAdminDataFromStorage() {
+  users = normalizeUsers(readStorageJson(ADMIN_STORAGE.USERS, null));
+  if (!users.length) {
+    users = normalizeUsers(getDefaultUsers());
+    persistUsers();
+  }
+
+  auditLogs = normalizeAuditLogs(readStorageJson(ADMIN_STORAGE.AUDIT, []));
+  backups = normalizeBackups(readStorageJson(ADMIN_STORAGE.BACKUPS, []));
+}
+
+function getLoggedInUserName() {
+  // Основной ключ в auth.js / приложении — username. Поддержим и legacy userName.
+  const u1 = localStorage.getItem('username');
+  const u2 = localStorage.getItem('userName');
+  return (u1 || u2 || '').trim() || 'system';
+}
+
+function safeLogout() {
+  // Не делаем localStorage.clear() — иначе стираются данные админ-панели и настройки приложения.
+  try { localStorage.removeItem('isLoggedIn'); } catch (_) {}
+  try { localStorage.removeItem('username'); } catch (_) {}
+  try { localStorage.removeItem('userName'); } catch (_) {}
+  try { localStorage.removeItem('role'); } catch (_) {}
+}
+
+function computeBytes(str) {
+  try {
+    if (typeof TextEncoder !== 'undefined') {
+      return new TextEncoder().encode(String(str)).length;
+    }
+  } catch (_) {}
+  return String(str || '').length;
+}
+
+function formatBytes(bytes) {
+  const b = Number(bytes) || 0;
+  if (b >= 1024 * 1024) return `${(b / (1024 * 1024)).toFixed(2)} MB`;
+  if (b >= 1024) return `${(b / 1024).toFixed(1)} KB`;
+  return `${b} B`;
+}
+
+function deepCloneJson(value) {
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch (_) {
+    return null;
+  }
+}
 // ===== ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ =====
 document.addEventListener('DOMContentLoaded', function() {
   initializeApp();
@@ -33,14 +277,47 @@ function initializeApp() {
   checkAdminAccess();
   // Инициализация темы
   initializeTheme();
+  // Инициализация оболочки (сайдбар/топбар)
+  initializeAdminShell();
+  // Кастомные селекты (под стилистику приложения)
+  initializeEnhancedSelects();
   // Инициализация навигации
   initializeNavigation();
   // Инициализация модальных окон
   initializeModals();
   // Инициализация уведомлений
   initializeNotifications();
-  // Загрузка данных
-  loadMockData();
+
+  // Инициализация мобильной навигации
+  if (window.MobileNav && typeof window.MobileNav.init === 'function') {
+    window.MobileNav.init();
+    window.addEventListener('resize', () => {
+      if (window.MobileNav && typeof window.MobileNav.handleResize === 'function') {
+        window.MobileNav.handleResize();
+      }
+    });
+  }
+
+  // Загрузка данных (реальные данные из localStorage)
+  loadAdminDataFromStorage();
+
+  // Переопределяем appendAdminAudit, чтобы она обновляла локальную переменную auditLogs
+  if (typeof window.appendAdminAudit === 'function') {
+    const originalAppendAdminAudit = window.appendAdminAudit;
+    window.appendAdminAudit = function(action, details) {
+      // Вызываем оригинальную функцию для записи в localStorage
+      originalAppendAdminAudit(action, details);
+      // Обновляем локальную переменную auditLogs
+      auditLogs = normalizeAuditLogs(readStorageJson(ADMIN_STORAGE.AUDIT, []));
+      // Обновляем журнал аудита если он открыт
+      if (currentSection === 'audit') {
+        loadAuditLogs();
+      }
+      // Обновляем статистику дашборда
+      updateDashboardStats();
+    };
+  }
+
   // Инициализация всех секций
   initializeDashboard();
   initializeUsers();
@@ -66,23 +343,92 @@ function checkAdminAccess() {
 function initializeTheme() {
   const themeToggle = document.getElementById("themeToggle");
   const savedTheme = localStorage.getItem("theme") || "light";
-  document.body.className = savedTheme;
+  document.body.classList.remove('light', 'dark');
+  document.body.classList.add(savedTheme);
   if (themeToggle) {
     themeToggle.checked = savedTheme === "dark";
     themeToggle.addEventListener("change", () => {
       const theme = themeToggle.checked ? "dark" : "light";
-      document.body.className = theme;
+      document.body.classList.remove('light', 'dark');
+      document.body.classList.add(theme);
       localStorage.setItem("theme", theme);
       // Обновляем графики при смене темы
       setTimeout(() => {
-        if (usersChart) usersChart.update();
-        if (auditChart) auditChart.update();
-        if (rolesChart) rolesChart.update();
+        applyChartsTheme();
       }, 100);
     });
   }
   // Рендер информации об авторизации
   renderAuth();
+}
+
+function initializeAdminShell() {
+  // Заголовок текущего раздела в топбаре
+  updatePageTitle(currentSection);
+
+  // На узких экранах — по умолчанию компактная боковая панель
+  try {
+    if (window.matchMedia && window.matchMedia('(max-width: 820px)').matches) {
+      document.body.classList.add('admin-sidebar-collapsed');
+    }
+  } catch (_) {}
+
+  // Прокрутка вверх
+  const scrollTopBtn = document.getElementById('adminScrollTop');
+  if (scrollTopBtn) {
+    scrollTopBtn.addEventListener('click', () => {
+      const content = document.querySelector('.admin-content');
+      if (content) content.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+
+  // Сворачивание сайдбара (с сохранением)
+  const sidebarToggle = document.getElementById('adminSidebarToggle');
+  if (sidebarToggle) {
+    const saved = localStorage.getItem('adminSidebarCollapsed') === '1';
+    document.body.classList.toggle('admin-sidebar-collapsed', saved);
+    sidebarToggle.setAttribute('data-tooltip', saved ? 'Раскрыть меню' : 'Свернуть меню');
+    updateCollapsedSidebarTooltips(document.body.classList.contains('admin-sidebar-collapsed'));
+
+    sidebarToggle.addEventListener('click', () => {
+      const next = !document.body.classList.contains('admin-sidebar-collapsed');
+      document.body.classList.toggle('admin-sidebar-collapsed', next);
+      localStorage.setItem('adminSidebarCollapsed', next ? '1' : '0');
+      sidebarToggle.setAttribute('data-tooltip', next ? 'Раскрыть меню' : 'Свернуть меню');
+      updateCollapsedSidebarTooltips(next);
+    });
+  }
+
+  // Обновить текущий раздел
+  const refreshCurrent = document.getElementById('adminRefreshCurrent');
+  if (refreshCurrent) {
+    refreshCurrent.addEventListener('click', () => {
+      const icon = refreshCurrent.querySelector('.refresh-icon');
+      if (icon) icon.classList.add('spin');
+      setTimeout(() => {
+        if (currentSection === 'users') loadUsers();
+        if (currentSection === 'audit') loadAuditLogs();
+        if (currentSection === 'backup') loadBackups();
+        if (currentSection === 'dashboard') updateDashboardStats();
+        if (icon) icon.classList.remove('spin');
+        showNotification('Обновлено', 'Раздел обновлён', 'success');
+      }, 600);
+    });
+  }
+}
+
+function updateCollapsedSidebarTooltips(isCollapsed) {
+  // Подсказки для иконок меню при свернутом сайдбаре
+  document.querySelectorAll('.admin-sidebar .menu-item[data-section]').forEach((btn) => {
+    const label = btn.querySelector('.menu-item__label');
+    const tooltipText = (label && label.textContent) ? label.textContent.trim() : '';
+    if (isCollapsed) {
+      if (tooltipText) btn.setAttribute('data-tooltip', tooltipText);
+    } else {
+      // Убираем, чтобы не мелькало в раскрытом виде
+      btn.removeAttribute('data-tooltip');
+    }
+  });
 }
 function renderAuth() {
   const authInfo = document.getElementById("authInfo");
@@ -101,14 +447,175 @@ function renderAuth() {
         <line x1="21" y1="12" x2="9" y2="12"/>
       </svg>
     </button>`;
-      logoutContainer.querySelector(".logout").onclick = () => {
-        const theme = localStorage.getItem('theme');
-        localStorage.clear();
-        if (theme) localStorage.setItem('theme', theme);
-        window.location.href = "index.html";
-      };
     }
   }
+}
+
+// ===== КАСТОМНЫЕ СЕЛЕКТЫ (для админ-панели) =====
+const enhancedSelects = new Map();
+
+function initializeEnhancedSelects() {
+  enhanceSelect(document.getElementById('roleFilter'));
+  enhanceSelect(document.getElementById('auditActionFilter'));
+
+  // Закрытие по клику вне
+  document.addEventListener('click', () => {
+    closeAllEnhancedSelects();
+  });
+  // Закрытие по Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeAllEnhancedSelects();
+  });
+}
+
+function closeAllEnhancedSelects() {
+  enhancedSelects.forEach((api) => api.close());
+}
+
+function rebuildEnhancedSelect(selectId) {
+  const api = enhancedSelects.get(selectId);
+  if (api) api.rebuild();
+}
+
+function enhanceSelect(selectEl) {
+  if (!selectEl) return;
+  if (enhancedSelects.has(selectEl.id)) return;
+
+  // Оборачиваем select и прячем нативный
+  const host = selectEl.parentElement;
+  if (!host) return;
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'app-select';
+  wrapper.setAttribute('data-select-id', selectEl.id || '');
+
+  const trigger = document.createElement('button');
+  trigger.type = 'button';
+  trigger.className = 'app-select__trigger';
+  trigger.setAttribute('aria-haspopup', 'listbox');
+  trigger.setAttribute('aria-expanded', 'false');
+
+  const valueEl = document.createElement('span');
+  valueEl.className = 'app-select__value';
+  valueEl.textContent = '';
+
+  const arrow = document.createElement('span');
+  arrow.className = 'app-select__arrow';
+  arrow.innerHTML = `
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <polyline points="6 9 12 15 18 9"></polyline>
+    </svg>
+  `;
+
+  trigger.appendChild(valueEl);
+  trigger.appendChild(arrow);
+
+  const menu = document.createElement('div');
+  menu.className = 'app-select__menu';
+  menu.setAttribute('role', 'listbox');
+  menu.tabIndex = -1;
+
+  function setOpen(next) {
+    wrapper.classList.toggle('open', next);
+    trigger.setAttribute('aria-expanded', next ? 'true' : 'false');
+    if (next) {
+      // Подсветим текущий выбранный элемент
+      const active = menu.querySelector(`[data-value="${cssEscape(selectEl.value)}"]`);
+      if (active) active.scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  function close() { setOpen(false); }
+
+  function syncValue() {
+    const opt = selectEl.selectedOptions && selectEl.selectedOptions[0];
+    valueEl.textContent = (opt && opt.textContent) ? opt.textContent : '';
+    // Плейсхолдер (пустое значение) отображаем приглушенно
+    wrapper.classList.toggle('is-placeholder', !selectEl.value);
+  }
+
+  function rebuild() {
+    menu.innerHTML = '';
+    Array.from(selectEl.options).forEach((opt) => {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'app-select__option';
+      item.setAttribute('role', 'option');
+      item.dataset.value = opt.value;
+      item.textContent = opt.textContent;
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectEl.value = opt.value;
+        selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+        syncValue();
+        close();
+      });
+      menu.appendChild(item);
+    });
+    syncValue();
+  }
+
+  trigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    // Закрываем остальные
+    enhancedSelects.forEach((api) => {
+      if (api.select !== selectEl) api.close();
+    });
+    setOpen(!wrapper.classList.contains('open'));
+  });
+
+  // Клавиатура
+  trigger.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      e.stopPropagation();
+      setOpen(true);
+      const first = menu.querySelector('.app-select__option');
+      if (first) first.focus();
+    }
+  });
+
+  menu.addEventListener('keydown', (e) => {
+    const options = Array.from(menu.querySelectorAll('.app-select__option'));
+    const idx = options.indexOf(document.activeElement);
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      close();
+      trigger.focus();
+      return;
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      const next = options[Math.min(options.length - 1, idx + 1)] || options[0];
+      if (next) next.focus();
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      const prev = options[Math.max(0, idx - 1)] || options[options.length - 1];
+      if (prev) prev.focus();
+    }
+    if (e.key === 'Tab') {
+      close();
+    }
+  });
+
+  // Слушаем изменение нативного select (например, при обновлении списка пользователей)
+  selectEl.addEventListener('change', () => syncValue());
+
+  // Вставляем в DOM: wrapper перед select, затем select внутрь wrapper (скрытый)
+  host.insertBefore(wrapper, selectEl);
+  wrapper.appendChild(selectEl);
+  wrapper.appendChild(trigger);
+  wrapper.appendChild(menu);
+
+  rebuild();
+
+  enhancedSelects.set(selectEl.id, { select: selectEl, rebuild, close });
+}
+
+function cssEscape(value) {
+  // Небольшой safe-escape для использования в querySelector
+  return String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 // ===== НАВИГАЦИЯ =====
 function initializeNavigation() {
@@ -120,6 +627,9 @@ function initializeNavigation() {
       // Обновляем активный элемент меню
       menuItems.forEach(mi => mi.classList.remove('active'));
       item.classList.add('active');
+      menuItems.forEach(mi => mi.removeAttribute('aria-current'));
+      item.setAttribute('aria-current', 'page');
+      updatePageTitle(section);
     });
   });
   // Навигация по предприятиям
@@ -145,14 +655,33 @@ function showSection(sectionId) {
   if (targetSection) {
     targetSection.classList.add('active');
     currentSection = sectionId;
+
+    // При открытии раздела аудита перезагружаем данные из localStorage
+    if (sectionId === 'audit') {
+      auditLogs = normalizeAuditLogs(readStorageJson(ADMIN_STORAGE.AUDIT, []));
+      loadAuditLogs();
+    }
+    // При открытии дашборда обновляем статистику
+    if (sectionId === 'dashboard') {
+      updateDashboardStats();
+    }
   }
 }
-// ===== ЗАГРУЗКА ДАННЫХ =====
-function loadMockData() {
-  users = [...mockUsers];
-  auditLogs = [...mockAuditLogs];
-  backups = [...mockBackups];
+
+function updatePageTitle(sectionId) {
+  const titleEl = document.getElementById('adminPageTitle');
+  if (!titleEl) return;
+  const titles = {
+    dashboard: 'Обзор',
+    users: 'Пользователи',
+    audit: 'Аудит',
+    export: 'Экспорт',
+    backup: 'Бэкапы'
+  };
+  titleEl.textContent = titles[sectionId] || 'Админ‑панель';
 }
+// ===== ЗАГРУЗКА ДАННЫХ =====
+// (реализовано через loadAdminDataFromStorage)
 // ===== ДАШБОРД =====
 let usersChart, auditChart, rolesChart;
 function initializeDashboard() {
@@ -160,11 +689,28 @@ function initializeDashboard() {
   initializeCharts();
 }
 function updateDashboardStats() {
+  // Перезагружаем данные из localStorage для актуальной статистики
+  auditLogs = normalizeAuditLogs(readStorageJson(ADMIN_STORAGE.AUDIT, []));
+
   document.getElementById('totalUsers').textContent = users.length;
-  document.getElementById('activeSessions').textContent = Math.floor(Math.random() * 50) + 10;
+  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+  const username = localStorage.getItem('username');
+  document.getElementById('activeSessions').textContent = (isLoggedIn && username) ? 1 : 0;
   document.getElementById('auditEvents').textContent = auditLogs.length;
   document.getElementById('backupCount').textContent = backups.length;
   // Обновляем графики если они существуют
+  if (usersChart) {
+    const usersData = generateUserRegistrationData();
+    usersChart.data.labels = usersData.labels;
+    usersChart.data.datasets[0].data = usersData.values;
+    usersChart.update();
+  }
+  if (auditChart) {
+    const auditData = generateAuditData();
+    auditChart.data.labels = auditData.labels;
+    auditChart.data.datasets[0].data = auditData.values;
+    auditChart.update();
+  }
   if (rolesChart) {
     const rolesData = generateRolesData();
     rolesChart.data.labels = rolesData.labels;
@@ -173,10 +719,16 @@ function updateDashboardStats() {
   }
 }
 function initializeCharts() {
-  // Получаем цвета из CSS переменных
-  const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
-  const textColor = getComputedStyle(document.documentElement).getPropertyValue('--text-color').trim();
-  const textSecondary = getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim();
+  // Цвета из common.css
+  const accent = (getComputedStyle(document.documentElement).getPropertyValue('--accent') || '').trim() || '#ce9068';
+  // Важно: --text объявлен на body.light/body.dark (а не на :root),
+  // поэтому читаем переменную именно с body. Иначе в тёмной теме получаем пусто
+  // и Chart.js рисует подписи чёрным по умолчанию.
+  const bodyStyles = getComputedStyle(document.body);
+  const textColor = (bodyStyles.getPropertyValue('--text') || bodyStyles.color || '').trim()
+    || (document.body.classList.contains('dark') ? '#ffffff' : '#000000');
+  const gridColor = withAlpha(textColor, 0.12);
+  const dpr = Math.max(1, Math.min(3, (window.devicePixelRatio || 1)));
   // График динамики регистрации пользователей
   const usersCtx = document.getElementById('usersChart');
   if (usersCtx) {
@@ -188,8 +740,8 @@ function initializeCharts() {
         datasets: [{
           label: 'Новые пользователи',
           data: usersData.values,
-          borderColor: primaryColor,
-          backgroundColor: primaryColor + '20',
+          borderColor: accent,
+          backgroundColor: withAlpha(accent, 0.12),
           borderWidth: 2,
           fill: true,
           tension: 0.4
@@ -197,8 +749,8 @@ function initializeCharts() {
       },
       options: {
         responsive: true,
-        maintainAspectRatio: true,
-        aspectRatio: 2,
+        maintainAspectRatio: false,
+        devicePixelRatio: dpr,
         plugins: {
           legend: {
             labels: {
@@ -209,18 +761,18 @@ function initializeCharts() {
         scales: {
           x: {
             ticks: {
-              color: textSecondary
+              color: textColor
             },
             grid: {
-              color: textSecondary + '20'
+              color: gridColor
             }
           },
           y: {
             ticks: {
-              color: textSecondary
+              color: textColor
             },
             grid: {
-              color: textSecondary + '20'
+              color: gridColor
             }
           }
         }
@@ -238,15 +790,15 @@ function initializeCharts() {
         datasets: [{
           label: 'Количество действий',
           data: auditData.values,
-          backgroundColor: primaryColor + '80',
-          borderColor: primaryColor,
+          backgroundColor: withAlpha(accent, 0.55),
+          borderColor: accent,
           borderWidth: 1
         }]
       },
       options: {
         responsive: true,
-        maintainAspectRatio: true,
-        aspectRatio: 2,
+        maintainAspectRatio: false,
+        devicePixelRatio: dpr,
         plugins: {
           legend: {
             labels: {
@@ -257,18 +809,18 @@ function initializeCharts() {
         scales: {
           x: {
             ticks: {
-              color: textSecondary
+              color: textColor
             },
             grid: {
-              color: textSecondary + '20'
+              color: gridColor
             }
           },
           y: {
             ticks: {
-              color: textSecondary
+              color: textColor
             },
             grid: {
-              color: textSecondary + '20'
+              color: gridColor
             }
           }
         }
@@ -286,24 +838,24 @@ function initializeCharts() {
         datasets: [{
           data: rolesData.values,
           backgroundColor: [
-            primaryColor,
-            primaryColor + '80',
-            primaryColor + '60',
-            primaryColor + '40'
+            accent,
+            withAlpha(accent, 0.70),
+            withAlpha(accent, 0.55),
+            withAlpha(accent, 0.40)
           ],
           borderColor: [
-            primaryColor,
-            primaryColor,
-            primaryColor,
-            primaryColor
+            accent,
+            accent,
+            accent,
+            accent
           ],
           borderWidth: 2
         }]
       },
       options: {
         responsive: true,
-        maintainAspectRatio: true,
-        aspectRatio: 2,
+        maintainAspectRatio: false,
+        devicePixelRatio: dpr,
         plugins: {
           legend: {
             position: 'bottom',
@@ -316,22 +868,124 @@ function initializeCharts() {
       }
     });
   }
+
+  // Применяем цвета (важно для светлой темы и при будущих переключениях)
+  applyChartsTheme();
+}
+
+function withAlpha(color, alpha) {
+  // Supports: #rgb, #rrggbb, rgb(), rgba()
+  const c = String(color || '').trim();
+  if (!c) return `rgba(0,0,0,${alpha})`;
+  if (c.startsWith('rgba(')) {
+    const inner = c.slice(5, -1).split(',').map(s => s.trim());
+    if (inner.length >= 3) return `rgba(${inner[0]}, ${inner[1]}, ${inner[2]}, ${alpha})`;
+  }
+  if (c.startsWith('rgb(')) {
+    const inner = c.slice(4, -1).split(',').map(s => s.trim());
+    if (inner.length >= 3) return `rgba(${inner[0]}, ${inner[1]}, ${inner[2]}, ${alpha})`;
+  }
+  if (c.startsWith('#')) {
+    let hex = c.slice(1);
+    if (hex.length === 3) hex = hex.split('').map(ch => ch + ch).join('');
+    if (hex.length === 6) {
+      const r = parseInt(hex.slice(0, 2), 16);
+      const g = parseInt(hex.slice(2, 4), 16);
+      const b = parseInt(hex.slice(4, 6), 16);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+  }
+  // Fallback: let browser parse into rgb via temporary element
+  const tmp = document.createElement('span');
+  tmp.style.color = c;
+  document.body.appendChild(tmp);
+  const resolved = getComputedStyle(tmp).color;
+  document.body.removeChild(tmp);
+  if (resolved && resolved.startsWith('rgb(')) {
+    const inner = resolved.slice(4, -1).split(',').map(s => s.trim());
+    if (inner.length >= 3) return `rgba(${inner[0]}, ${inner[1]}, ${inner[2]}, ${alpha})`;
+  }
+  return `rgba(0,0,0,${alpha})`;
+}
+
+function getChartsThemeColors() {
+  const accent = (getComputedStyle(document.documentElement).getPropertyValue('--accent') || '').trim() || '#ce9068';
+  // --text задаётся на body.light/body.dark → читаем с body, иначе на тёмной теме будет пусто
+  // и все подписи/оси станут чёрными.
+  const bodyStyles = getComputedStyle(document.body);
+  const text = (bodyStyles.getPropertyValue('--text') || bodyStyles.color || '').trim()
+    || (document.body.classList.contains('dark') ? '#ffffff' : '#000000');
+  const grid = withAlpha(text, 0.12);
+  return { accent, text, grid };
+}
+
+function applyChartsTheme() {
+  const { accent, text, grid } = getChartsThemeColors();
+
+  if (usersChart) {
+    usersChart.data.datasets[0].borderColor = accent;
+    usersChart.data.datasets[0].backgroundColor = withAlpha(accent, 0.12);
+    if (usersChart.options?.plugins?.legend?.labels) usersChart.options.plugins.legend.labels.color = text;
+    if (usersChart.options?.scales?.x?.ticks) usersChart.options.scales.x.ticks.color = text;
+    if (usersChart.options?.scales?.y?.ticks) usersChart.options.scales.y.ticks.color = text;
+    if (usersChart.options?.scales?.x?.grid) usersChart.options.scales.x.grid.color = grid;
+    if (usersChart.options?.scales?.y?.grid) usersChart.options.scales.y.grid.color = grid;
+    usersChart.update();
+  }
+
+  if (auditChart) {
+    auditChart.data.datasets[0].backgroundColor = withAlpha(accent, 0.55);
+    auditChart.data.datasets[0].borderColor = accent;
+    if (auditChart.options?.plugins?.legend?.labels) auditChart.options.plugins.legend.labels.color = text;
+    if (auditChart.options?.scales?.x?.ticks) auditChart.options.scales.x.ticks.color = text;
+    if (auditChart.options?.scales?.y?.ticks) auditChart.options.scales.y.ticks.color = text;
+    if (auditChart.options?.scales?.x?.grid) auditChart.options.scales.x.grid.color = grid;
+    if (auditChart.options?.scales?.y?.grid) auditChart.options.scales.y.grid.color = grid;
+    auditChart.update();
+  }
+
+  if (rolesChart) {
+    rolesChart.data.datasets[0].backgroundColor = [
+      accent,
+      withAlpha(accent, 0.70),
+      withAlpha(accent, 0.55),
+      withAlpha(accent, 0.40)
+    ];
+    rolesChart.data.datasets[0].borderColor = [accent, accent, accent, accent];
+    if (rolesChart.options?.plugins?.legend?.labels) rolesChart.options.plugins.legend.labels.color = text;
+    rolesChart.update();
+  }
 }
 function generateUserRegistrationData() {
   const labels = [];
   const values = [];
   const today = new Date();
+  // Считаем реальные регистрации по users.createdAt за последние 7 дней
+  const createdByDay = new Map(); // YYYY-MM-DD -> count
+  users.forEach((u) => {
+    const d = (u && u.createdAt) ? String(u.createdAt).slice(0, 10) : '';
+    if (!d) return;
+    createdByDay.set(d, (createdByDay.get(d) || 0) + 1);
+  });
   for (let i = 6; i >= 0; i--) {
     const date = new Date(today);
     date.setDate(date.getDate() - i);
+    const isoDay = date.toISOString().split('T')[0];
     labels.push(date.toLocaleDateString('ru-RU', { month: 'short', day: 'numeric' }));
-    values.push(Math.floor(Math.random() * 10) + 1);
+    values.push(createdByDay.get(isoDay) || 0);
   }
   return { labels, values };
 }
 function generateAuditData() {
-  const labels = ['Вход', 'Выход', 'Создание', 'Изменение', 'Удаление'];
-  const values = [25, 15, 8, 12, 3];
+  const order = ['login', 'logout', 'create', 'update', 'delete', 'export', 'backup'];
+  const labels = order.map((a) => getActionName(a));
+  const counts = Object.fromEntries(order.map((a) => [a, 0]));
+  auditLogs.forEach((l) => {
+    const a = (l && l.action) ? String(l.action) : '';
+    if (!a) return;
+    if (Object.prototype.hasOwnProperty.call(counts, a)) counts[a] += 1;
+  });
+  const values = order.map((a) => counts[a] || 0);
   return { labels, values };
 }
 function generateRolesData() {
@@ -351,24 +1005,11 @@ function generateRolesData() {
 function initializeUsers() {
   const userSearch = document.getElementById('userSearch');
   const roleFilter = document.getElementById('roleFilter');
-  const refreshUsers = document.getElementById('refreshUsers');
   if (userSearch) {
     userSearch.addEventListener('input', () => filterUsers());
   }
   if (roleFilter) {
     roleFilter.addEventListener('change', () => filterUsers());
-  }
-  if (refreshUsers) {
-    refreshUsers.addEventListener('click', () => {
-      const icon = refreshUsers.querySelector('.refresh-icon');
-      icon.classList.add('spin');
-      // Имитация задержки обновления
-      setTimeout(() => {
-        loadUsers();
-        icon.classList.remove('spin');
-        showNotification("Успешно", "Данные успешно обновлены", "success");
-      }, 1000); // 1 секунда задержка
-    });
   }
   loadUsers();
 }
@@ -423,7 +1064,9 @@ function getRoleName(role) {
   const roles = {
     'admin': 'Администратор',
     'architect': 'Архитектор',
-    'user': 'Пользователь'
+    'director': 'Директор',
+    'analyst': 'Аналитик',
+    'guest': 'Гость'
   };
   return roles[role] || role;
 }
@@ -431,9 +1074,22 @@ function getRoleClass(role) {
   const classes = {
     'admin': 'status-active',
     'architect': 'status-active',
-    'user': 'status-inactive'
+    'director': 'status-active',
+    'analyst': 'status-active'
   };
   return classes[role] || 'status-inactive';
+}
+
+function lockDateInputToPicker(inputEl) {
+  // Запрещаем ручной ввод даты — только выбор календарём.
+  // Разрешаем очистку (Backspace/Delete) и навигацию.
+  inputEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Tab' || e.key === 'Escape' || e.key === 'Enter') return;
+    if (e.key === 'Backspace' || e.key === 'Delete') return;
+    if (e.key && e.key.length === 1) e.preventDefault();
+  });
+  inputEl.addEventListener('paste', (e) => e.preventDefault());
+  inputEl.addEventListener('drop', (e) => e.preventDefault());
 }
 function editUser(userId) {
   const user = users.find(u => u.id === userId);
@@ -453,6 +1109,7 @@ function deleteUser(userId) {
     `Вы уверены, что хотите удалить пользователя "${user.name}"?`,
     () => {
       users = users.filter(u => u.id !== userId);
+      persistUsers();
       loadUsers();
       updateDashboardStats();
       addAuditLog('delete', `Удален пользователь "${user.name}"`);
@@ -464,81 +1121,171 @@ function openUserModal() {
   currentUserId = null;
   document.getElementById('userModalTitle').textContent = 'Добавить пользователя';
   document.getElementById('userForm').reset();
-  document.getElementById('userPassword').required = true;
   showModal('userModal');
 }
 // ===== ЖУРНАЛ АУДИТА =====
 function initializeAudit() {
   const dateFrom = document.getElementById('auditDateFrom');
   const dateTo = document.getElementById('auditDateTo');
-  const userFilter = document.getElementById('auditUserFilter');
+  const userSearch = document.getElementById('auditUserSearch');
   const actionFilter = document.getElementById('auditActionFilter');
-  const refreshAudit = document.getElementById('refreshAudit');
+  const clearAuditPeriodBtn = document.getElementById('clearAuditPeriod');
+  const prevPageBtn = document.getElementById('auditPrevPage');
+  const nextPageBtn = document.getElementById('auditNextPage');
 
-  if (dateFrom) dateFrom.addEventListener('change', () => filterAuditLogs());
-  if (dateTo) dateTo.addEventListener('change', () => filterAuditLogs());
-  if (userFilter) userFilter.addEventListener('change', () => filterAuditLogs());
-  if (actionFilter) actionFilter.addEventListener('change', () => filterAuditLogs());
+  if (dateFrom) {
+    lockDateInputToPicker(dateFrom);
+    dateFrom.addEventListener('change', () => { auditCurrentPage = 1; filterAuditLogs(); });
+  }
+  if (dateTo) {
+    lockDateInputToPicker(dateTo);
+    dateTo.addEventListener('change', () => { auditCurrentPage = 1; filterAuditLogs(); });
+  }
+  if (userSearch) userSearch.addEventListener('input', () => { auditCurrentPage = 1; filterAuditLogs(); });
+  if (actionFilter) actionFilter.addEventListener('change', () => { auditCurrentPage = 1; filterAuditLogs(); });
 
-  if (refreshAudit) {
-    refreshAudit.addEventListener('click', () => {
-      const icon = refreshAudit.querySelector('.refresh-icon');
-      icon.classList.add('spin');
-      // Имитация задержки обновления
-      setTimeout(() => {
-        loadAuditLogs();
-        icon.classList.remove('spin');
-        showNotification("Успешно", "Данные успешно обновлены", "success");
-      }, 1000); // 1 секунда задержка
+  if (clearAuditPeriodBtn) {
+    clearAuditPeriodBtn.addEventListener('click', () => {
+      clearAuditLogsByPeriod();
     });
   }
-  // Заполняем фильтр пользователей
-  populateUserFilter();
+
+  if (prevPageBtn) {
+    prevPageBtn.addEventListener('click', () => {
+      auditCurrentPage = Math.max(1, (Number(auditCurrentPage) || 1) - 1);
+      loadAuditLogs();
+    });
+  }
+  if (nextPageBtn) {
+    nextPageBtn.addEventListener('click', () => {
+      auditCurrentPage = (Number(auditCurrentPage) || 1) + 1;
+      loadAuditLogs();
+    });
+  }
+
   loadAuditLogs();
 }
-function populateUserFilter() {
-  const userFilter = document.getElementById('auditUserFilter');
-  if (!userFilter) return;
-  const uniqueUsers = [...new Set(auditLogs.map(log => log.user))];
-  userFilter.innerHTML = '<option value="">Все пользователи</option>'; // Очищаем и добавляем опцию "Все"
-  uniqueUsers.forEach(user => {
-    const option = document.createElement('option');
-    option.value = user;
-    option.textContent = user;
-    userFilter.appendChild(option);
-  });
-}
-function loadAuditLogs() {
-  const tbody = document.getElementById('auditTableBody');
-  if (!tbody) return;
-  tbody.innerHTML = '';
-  const dateFrom = document.getElementById('auditDateFrom').value;
-  const dateTo = document.getElementById('auditDateTo').value;
-  const userFilter = document.getElementById('auditUserFilter').value;
-  const actionFilter = document.getElementById('auditActionFilter').value;
 
-  const filteredLogs = auditLogs.filter(log => {
+function getAuditDateBoundsFromUi() {
+  const dateFrom = (document.getElementById('auditDateFrom')?.value || '').trim();
+  const dateTo = (document.getElementById('auditDateTo')?.value || '').trim();
+  const lower = dateFrom ? `${dateFrom} 00:00:00` : null;
+  const upper = dateTo ? `${dateTo} 23:59:59` : null;
+  return { dateFrom, dateTo, lower, upper };
+}
+
+function getFilteredAuditLogs() {
+  const { lower, upper } = getAuditDateBoundsFromUi();
+  const userSearch = (document.getElementById('auditUserSearch')?.value || '').trim().toLowerCase();
+  const actionFilter = (document.getElementById('auditActionFilter')?.value || '').trim();
+
+  return auditLogs.filter((log) => {
     let matchesDate = true;
     let matchesUser = true;
     let matchesAction = true;
 
-    if (dateFrom) {
-      matchesDate = log.date >= `${dateFrom} 00:00:00`;
+    if (lower) matchesDate = String(log.date || '') >= lower;
+    if (upper) matchesDate = matchesDate && String(log.date || '') <= upper;
+
+    if (userSearch) {
+      const userName = String(log.user || '').toLowerCase();
+      const roleCode = getUserRoleCodeByName(log.user);
+      const roleName = roleCode ? getRoleName(roleCode) : '';
+      const roleNameLc = String(roleName || '').toLowerCase();
+      const roleCodeLc = String(roleCode || '').toLowerCase();
+      matchesUser = userName.includes(userSearch) || roleNameLc.includes(userSearch) || roleCodeLc.includes(userSearch);
     }
-    if (dateTo) {
-      matchesDate = matchesDate && log.date <= `${dateTo} 23:59:59`;
-    }
-    if (userFilter) {
-      matchesUser = log.user === userFilter;
-    }
-    if (actionFilter) {
-      matchesAction = log.action === actionFilter;
-    }
+
+    if (actionFilter) matchesAction = String(log.action || '') === actionFilter;
 
     return matchesDate && matchesUser && matchesAction;
   });
+}
 
-  filteredLogs.forEach(log => {
+function updateAuditPaginationUi(totalItems) {
+  const pageInfo = document.getElementById('auditPageInfo');
+  const recordsInfo = document.getElementById('auditRecordsInfo');
+  const prevBtn = document.getElementById('auditPrevPage');
+  const nextBtn = document.getElementById('auditNextPage');
+
+  const total = Number(totalItems) || 0;
+  const totalPages = Math.max(1, Math.ceil(total / AUDIT_PAGE_SIZE));
+  auditCurrentPage = Math.min(Math.max(1, Number(auditCurrentPage) || 1), totalPages);
+
+  if (pageInfo) pageInfo.textContent = `Страница ${auditCurrentPage} из ${totalPages}`;
+  if (recordsInfo) recordsInfo.textContent = `Показано: ${Math.min(AUDIT_PAGE_SIZE, Math.max(0, total - ((auditCurrentPage - 1) * AUDIT_PAGE_SIZE)))} из ${total}`;
+  if (prevBtn) prevBtn.disabled = auditCurrentPage <= 1;
+  if (nextBtn) nextBtn.disabled = auditCurrentPage >= totalPages;
+}
+
+function clearAuditLogsByPeriod() {
+  const { dateFrom, dateTo, lower, upper } = getAuditDateBoundsFromUi();
+
+  if (!lower && !upper) {
+    showNotification('Очистка', 'Укажите "Дата от" и/или "Дата до" для очистки за период', 'error');
+    return;
+  }
+  if (dateFrom && dateTo && dateFrom > dateTo) {
+    showNotification('Очистка', 'Некорректный период: "Дата от" больше "Дата до"', 'error');
+    return;
+  }
+
+  const title = 'Очистка журнала аудита';
+  const periodLabel = `${dateFrom || '...'} — ${dateTo || '...'}`;
+  showConfirmModal(
+    title,
+    `Очистить журнал аудита за период: ${periodLabel}?`,
+    () => {
+      // Всегда берем актуальные данные из localStorage
+      auditLogs = normalizeAuditLogs(readStorageJson(ADMIN_STORAGE.AUDIT, []));
+
+      const before = auditLogs.length;
+      const kept = auditLogs.filter((log) => {
+        const d = String(log.date || '');
+        if (lower && d < lower) return true;
+        if (upper && d > upper) return true;
+        return false; // внутри диапазона -> удаляем
+      });
+
+      const removed = before - kept.length;
+      auditLogs = kept;
+      persistAuditLogs();
+
+      auditCurrentPage = 1;
+
+      // Логируем факт очистки (останется как новая запись в журнале)
+      addAuditLog('delete', `Очищен журнал аудита за период ${periodLabel}. Удалено записей: ${removed}`);
+
+      showNotification('Очистка', `Удалено записей: ${removed}`, 'success');
+      loadAuditLogs();
+      updateDashboardStats();
+    }
+  );
+}
+function loadAuditLogs() {
+  const tbody = document.getElementById('auditTableBody');
+  if (!tbody) return;
+
+  // Перезагружаем логи из localStorage перед отображением, чтобы получить актуальные данные
+  const raw = readStorageJson(ADMIN_STORAGE.AUDIT, []);
+  const normalized = normalizeAuditLogs(raw);
+  auditLogs = normalized;
+  // Если были старые записи без tz / с неконсистентным форматом — закрепим миграцию
+  try {
+    const needsPersist = Array.isArray(raw) && raw.some((l) => l && !('tz' in l));
+    if (needsPersist) {
+      persistAuditLogs();
+    }
+  } catch (_) {}
+
+  tbody.innerHTML = '';
+  const filteredLogs = getFilteredAuditLogs();
+  updateAuditPaginationUi(filteredLogs.length);
+
+  const start = (auditCurrentPage - 1) * AUDIT_PAGE_SIZE;
+  const pageLogs = filteredLogs.slice(start, start + AUDIT_PAGE_SIZE);
+
+  pageLogs.forEach(log => {
     const row = document.createElement('tr');
     row.innerHTML = `
       <td>${formatDateTime(log.date)}</td>
@@ -554,13 +1301,22 @@ function filterAuditLogs() {
   // Фильтрация теперь происходит в loadAuditLogs
   loadAuditLogs();
 }
+
+function getUserRoleCodeByName(userName) {
+  if (!userName) return null;
+  const name = String(userName).trim().toLowerCase();
+  const user = users.find(u => String(u.name).trim().toLowerCase() === name);
+  return user ? user.role : null;
+}
 function getActionName(action) {
   const actions = {
     'login': 'Вход',
     'logout': 'Выход',
     'create': 'Создание',
     'update': 'Изменение',
-    'delete': 'Удаление'
+    'delete': 'Удаление',
+    'export': 'Экспорт',
+    'backup': 'Бэкап'
   };
   return actions[action] || action;
 }
@@ -570,7 +1326,9 @@ function getActionClass(action) {
     'logout': 'status-inactive',
     'create': 'status-active',
     'update': 'status-active',
-    'delete': 'status-inactive'
+    'delete': 'status-inactive',
+    'export': 'status-active',
+    'backup': 'status-active'
   };
   return classes[action] || 'status-inactive';
 }
@@ -603,8 +1361,39 @@ function exportData(type, format) {
   showNotification("Экспорт", `Данные экспортированы в формате ${format.toUpperCase()}`, "success");
 }
 function exportToJSON(data, filename) {
-  const jsonString = JSON.stringify(data, null, 2);
-  const blob = new Blob([jsonString], { type: 'application/json' });
+  // Экспортируем в JSON с русскими ключами (требование: отчеты на русском)
+  let payload = data;
+  try {
+    const type = String(filename || '').toLowerCase().includes('audit') ? 'audit'
+      : String(filename || '').toLowerCase().includes('users') ? 'users'
+      : null;
+
+    if (type === 'users' && Array.isArray(data)) {
+      payload = data.map(u => ({
+        'ID': u.id,
+        'Имя': u.name,
+        'Email': u.email,
+        'Роль': getRoleName(u.role),
+        'Дата регистрации': u.createdAt,
+        'Статус': (u.status === 'active' ? 'Активен' : 'Неактивен')
+      }));
+    } else if (type === 'audit' && Array.isArray(data)) {
+      payload = data.map(l => ({
+        'Дата': l.date,
+        'Пользователь': l.user,
+        'Действие': getActionName(l.action),
+        'Детали': l.details,
+        'IP адрес': l.ip
+      }));
+    }
+  } catch (_) {
+    payload = data;
+  }
+
+  const jsonString = JSON.stringify(payload, null, 2);
+  // BOM для корректного открытия в Windows/Excel/Блокноте
+  const BOM = '\uFEFF';
+  const blob = new Blob([BOM, jsonString], { type: 'application/json;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -620,7 +1409,8 @@ function exportToExcel(data, filename, type) {
   if (type === 'users') {
     csv = 'ID,Имя,Email,Роль,Дата регистрации,Статус\n';
     data.forEach(user => {
-      csv += `${user.id},"${user.name}","${user.email}","${getRoleName(user.role)}","${user.createdAt}","${user.status}"\n`;
+      const statusRu = user.status === 'active' ? 'Активен' : 'Неактивен';
+      csv += `${user.id},"${user.name}","${user.email}","${getRoleName(user.role)}","${user.createdAt}","${statusRu}"\n`;
     });
   } else if (type === 'audit') {
     csv = 'Дата,Пользователь,Действие,Детали,IP адрес\n';
@@ -628,7 +1418,9 @@ function exportToExcel(data, filename, type) {
       csv += `"${log.date}","${log.user}","${getActionName(log.action)}","${log.details}","${log.ip}"\n`;
     });
   }
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  // BOM для корректного открытия в Windows/Excel
+  const BOM = '\uFEFF';
+  const blob = new Blob([BOM, csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -665,18 +1457,30 @@ function loadBackups() {
 }
 function createBackup() {
   const backupName = `backup_${new Date().toISOString().replace(/[-:]/g, '_').split('.')[0]}`;
-  const backupDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
-  const backupSize = `${(Math.random() * 3 + 1).toFixed(1)} MB`;
+  const backupDate = (typeof window.getAuditTimestamp === 'function')
+    ? window.getAuditTimestamp()
+    : new Date().toISOString().slice(0, 19).replace('T', ' ');
+  const snapshot = {
+    users: deepCloneJson(users) || [],
+    auditLogs: deepCloneJson(auditLogs) || []
+  };
+  const snapshotStr = JSON.stringify(snapshot);
+  const sizeBytes = computeBytes(snapshotStr);
+  const backupSize = formatBytes(sizeBytes);
+  const nextBackupId = backups.length ? (Math.max(...backups.map(b => Number(b && b.id) || 0)) + 1) : 1;
   const newBackup = {
-    id: backups.length + 1,
+    id: nextBackupId,
     name: backupName,
     date: backupDate,
-    size: backupSize
+    size: backupSize,
+    sizeBytes,
+    snapshot
   };
   backups.unshift(newBackup);
+  persistBackups();
   loadBackups();
   updateDashboardStats();
-  addAuditLog('create', `Создана резервная копия: ${backupName}`);
+  addAuditLog('backup', `Создана резервная копия: ${backupName}`);
   showNotification("Резервная копия", "Резервная копия успешно создана", "success");
 }
 function restoreBackup(backupId) {
@@ -686,8 +1490,19 @@ function restoreBackup(backupId) {
     'Восстановление из резервной копии',
     `Вы уверены, что хотите восстановить систему из копии "${backup.name}"?`,
     () => {
-      addAuditLog('update', `Восстановление из резервной копии: ${backup.name}`);
-      showNotification("Восстановление", "Система восстановлена из резервной копии", "success");
+      if (backup.snapshot && typeof backup.snapshot === 'object') {
+        const nextUsers = normalizeUsers(backup.snapshot.users || []);
+        const nextAudit = normalizeAuditLogs(backup.snapshot.auditLogs || []);
+        if (nextUsers.length) users = nextUsers;
+        if (Array.isArray(nextAudit)) auditLogs = nextAudit;
+        persistUsers();
+        persistAuditLogs();
+      }
+      loadUsers();
+      loadAuditLogs();
+      updateDashboardStats();
+      addAuditLog('backup', `Восстановление из резервной копии: ${backup.name}`);
+      showNotification("Восстановление", "Данные восстановлены из резервной копии", "success");
     }
   );
 }
@@ -699,9 +1514,10 @@ function deleteBackup(backupId) {
     `Вы уверены, что хотите удалить копию "${backup.name}"?`,
     () => {
       backups = backups.filter(b => b.id !== backupId);
+      persistBackups();
       loadBackups();
       updateDashboardStats();
-      addAuditLog('delete', `Удалена резервная копия: ${backup.name}`);
+      addAuditLog('backup', `Удалена резервная копия: ${backup.name}`);
       showNotification("Удаление", "Резервная копия удалена", "success");
     }
   );
@@ -718,6 +1534,13 @@ function initializeModals() {
   if (cancelUser) {
     cancelUser.addEventListener('click', () => hideModal('userModal'));
   }
+  // Кнопки закрытия (крестик)
+  document.querySelectorAll('.modal-close').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const modal = btn.closest('.modal');
+      if (modal && modal.id) hideModal(modal.id);
+    });
+  });
   // Модальное окно подтверждения
   const confirmModal = document.getElementById('confirmModal');
   const confirmCancel = document.getElementById('confirmCancel');
@@ -746,14 +1569,14 @@ function showModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal) {
     modal.classList.add('show');
-    modal.style.display = 'flex';
+    modal.style.display = '';
   }
 }
 function hideModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal) {
     modal.classList.remove('show');
-    modal.style.display = 'none';
+    modal.style.display = '';
   }
 }
 function handleUserSubmit(e) {
@@ -761,8 +1584,7 @@ function handleUserSubmit(e) {
   const formData = {
     name: document.getElementById('userName').value,
     email: document.getElementById('userEmail').value,
-    role: document.getElementById('userRole').value,
-    password: document.getElementById('userPassword').value
+    role: document.getElementById('userRole').value
   };
   // Валидация
   if (!formData.name || !formData.email || !formData.role) {
@@ -775,7 +1597,7 @@ function handleUserSubmit(e) {
     if (userIndex !== -1) {
       const oldRole = users[userIndex].role;
       users[userIndex].role = formData.role;
-      localStorage.setItem('adminUsers', JSON.stringify(users));
+      persistUsers();
       loadUsers();
       addAuditLog('update', `Изменена роль пользователя: ${users[userIndex].name} (${oldRole} -> ${formData.role})`);
       showNotification("Успешно", "Роль пользователя обновлена", "success");
@@ -783,7 +1605,7 @@ function handleUserSubmit(e) {
   } else {
     // Создание
     const newUser = {
-      id: Math.max(...users.map(u => u.id)) + 1,
+      id: users.length ? (Math.max(...users.map(u => Number(u && u.id) || 0)) + 1) : 1,
       name: formData.name,
       email: formData.email,
       role: formData.role,
@@ -791,6 +1613,7 @@ function handleUserSubmit(e) {
       createdAt: new Date().toISOString().split('T')[0]
     };
     users.push(newUser);
+    persistUsers();
     addAuditLog('create', `Создан новый пользователь: ${formData.name}`);
     showNotification("Успешно", "Пользователь создан", "success");
   }
@@ -866,20 +1689,45 @@ function formatDate(dateString) {
   return date.toLocaleDateString('ru-RU');
 }
 function formatDateTime(dateString) {
-  const date = new Date(dateString);
-  return date.toLocaleString('ru-RU');
+  const s = (dateString != null ? String(dateString) : '').trim();
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/);
+  if (m) {
+    const d = new Date(
+      Number(m[1]),
+      Number(m[2]) - 1,
+      Number(m[3]),
+      Number(m[4]),
+      Number(m[5]),
+      Number(m[6])
+    );
+    if (Number.isFinite(d.getTime())) return d.toLocaleString('ru-RU');
+    return s;
+  }
+  const date = new Date(s);
+  if (Number.isFinite(date.getTime())) return date.toLocaleString('ru-RU');
+  return s;
 }
 function addAuditLog(action, details) {
-  const currentUser = localStorage.getItem('userName') || 'Администратор';
-  const newLog = {
-    id: auditLogs.length + 1,
-    date: new Date().toISOString().slice(0, 19).replace('T', ' '),
-    user: currentUser,
-    action: action,
-    details: details,
-    ip: '192.168.1.100' // Mock IP
-  };
-  auditLogs.unshift(newLog);
+  // Централизованное логирование: единая функция для всех страниц
+  if (typeof window.appendAdminAudit === 'function') {
+    window.appendAdminAudit(action, details);
+  } else {
+    // Fallback (на всякий случай)
+    const currentUser = getLoggedInUserName();
+    const ts = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    auditLogs.unshift({
+      id: auditLogs.length + 1,
+      date: ts,
+      user: currentUser,
+      action: action,
+      details: details,
+      ip: 'local'
+    });
+    persistAuditLogs();
+  }
+
+  // Перезагрузим из localStorage, чтобы UI точно увидел новые записи
+  auditLogs = normalizeAuditLogs(readStorageJson(ADMIN_STORAGE.AUDIT, []));
   // Обновляем журнал аудита если он открыт
   if (currentSection === 'audit') {
     loadAuditLogs();

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Радар технологий</title>
+  <title>Админ-панель — Радар технологий</title>
   <link rel="icon" href="/assets/images/icon.png" type="image/png">
   <link rel="shortcut icon" href="/assets/images/icon.png" type="image/png">
   <link rel="stylesheet" href="/src/css/admin.css">
@@ -13,27 +13,27 @@
 </head>
 <body class="dark">
   <!-- ===== Хедер ===== -->
-  <header>
-    <a class="logo" href="index.html" data-tooltip="На главную">
+  <header role="banner">
+    <a class="logo" href="index.html" data-tooltip="На главную" aria-label="Радар технологий - на главную">
       <img src="/assets/images/icon.png" alt="Logo" class="logo-img" />
       <span>Радар технологий</span>
     </a>
-    <nav class="enterprise-nav">
-      <button class="active">РМК</button>
-      <button>ТГОК</button>
-      <button>МГОК</button>
-      <button>КБМ</button>
-      <button>КМЭЗ</button>
-      <button>АМК</button>
+    <nav class="enterprise-nav" role="tablist" aria-label="Навигация по предприятиям">
+      <button class="active" role="tab" aria-selected="true" aria-label="Переключить на предприятие РМК">РМК</button>
+      <button role="tab" aria-selected="false" aria-label="Переключить на предприятие ТГОК">ТГОК</button>
+      <button role="tab" aria-selected="false" aria-label="Переключить на предприятие МГОК">МГОК</button>
+      <button role="tab" aria-selected="false" aria-label="Переключить на предприятие КБМ">КБМ</button>
+      <button role="tab" aria-selected="false" aria-label="Переключить на предприятие КМЭЗ">КМЭЗ</button>
+      <button role="tab" aria-selected="false" aria-label="Переключить на предприятие АМК">АМК</button>
     </nav>
     <div class="controls">
-      <button class="about-btn" id="aboutBtn" data-tooltip="О проекте" aria-label="О проекте">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 26" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
-          <circle cx="12" cy="14" r="10"></circle>
-          <line x1="12" y1="7" x2="12" y2="14"></line>
-          <circle cx="12" cy="18" r="1"></circle>
+      <button class="help-btn" id="helpBtn" data-tooltip="Помощь" aria-label="Помощь">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
         </svg>
-        <span class="about-btn__text">О проекте</span>
+        <span class="help-btn__text">Помощь</span>
       </button>
       <label class="theme-switch" data-tooltip="Переключить тему" aria-label="Переключить тему">
         <input type="checkbox" id="themeToggle" />
@@ -45,80 +45,121 @@
     </div>
   </header>
   <!-- ===== Основной контент админ панели ===== -->
-  <main class="admin-main">
-    <div class="admin-container">
-      <!-- Боковая навигация -->
-      <nav class="admin-sidebar">
-        <div class="sidebar-header">
-          <h2>Админ панель</h2>
+  <main class="admin-main" role="main">
+    <div class="admin-shell">
+      <aside class="admin-sidebar" aria-label="Навигация админ-панели">
+        <div class="admin-sidebar__top">
+          <div class="admin-brand">
+            <div class="admin-brand__mark" aria-hidden="true">A</div>
+            <div class="admin-brand__text">
+              <div class="admin-brand__title">Админ‑панель</div>
+              <div class="admin-brand__subtitle">Радар технологий</div>
+            </div>
+          </div>
+          <button class="icon-btn admin-sidebar__toggle" id="adminSidebarToggle" type="button" data-tooltip="Свернуть меню" aria-label="Свернуть меню">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M15 18l-6-6 6-6"></path>
+            </svg>
+          </button>
         </div>
-        <ul class="sidebar-menu">
-          <li class="menu-item active" data-section="dashboard">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+
+        <nav class="sidebar-menu" aria-label="Разделы">
+          <button class="menu-item active" type="button" data-section="dashboard" aria-current="page">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <rect x="3" y="3" width="7" height="7"></rect>
               <rect x="14" y="3" width="7" height="7"></rect>
               <rect x="14" y="14" width="7" height="7"></rect>
               <rect x="3" y="14" width="7" height="7"></rect>
             </svg>
-            <span>Дашборд</span>
-          </li>
-          <li class="menu-item" data-section="users">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <span class="menu-item__label">Обзор</span>
+          </button>
+          <button class="menu-item" type="button" data-section="users">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
               <circle cx="12" cy="7" r="4"></circle>
             </svg>
-            <span>Пользователи</span>
-          </li>
-          <li class="menu-item" data-section="audit">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <span class="menu-item__label">Пользователи</span>
+          </button>
+          <button class="menu-item" type="button" data-section="audit">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
               <polyline points="14,2 14,8 20,8"></polyline>
               <line x1="16" y1="13" x2="8" y2="13"></line>
               <line x1="16" y1="17" x2="8" y2="17"></line>
               <polyline points="10,9 9,9 8,9"></polyline>
             </svg>
-            <span>Журнал аудита</span>
-          </li>
-          <li class="menu-item" data-section="export">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <span class="menu-item__label">Аудит</span>
+          </button>
+          <button class="menu-item" type="button" data-section="export">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
               <polyline points="7,10 12,15 17,10"></polyline>
               <line x1="12" y1="15" x2="12" y2="3"></line>
             </svg>
-            <span>Экспорт</span>
-          </li>
-          <li class="menu-item" data-section="backup">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <span class="menu-item__label">Экспорт</span>
+          </button>
+          <button class="menu-item" type="button" data-section="backup">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <rect x="8" y="2" width="12" height="16" rx="2" ry="2"></rect>
               <rect x="4" y="6" width="12" height="16" rx="2" ry="2"></rect>
             </svg>
-            <span>Резервные копии</span>
-          </li>
-        </ul>
-      </nav>
-      <!-- Основной контент -->
+            <span class="menu-item__label">Бэкапы</span>
+          </button>
+        </nav>
+
+        <!-- quick actions removed -->
+      </aside>
+
       <div class="admin-content">
-        <!-- Дашборд -->
-        <section id="dashboard" class="content-section active">
-          <div class="section-header">
-            <h1>Дашборд</h1>
-            <p>Общая статистика системы</p>
+        <div class="admin-topbar" role="region" aria-label="Панель страницы">
+          <button class="icon-btn admin-mobile-menu" id="adminMobileMenu" type="button" data-tooltip="Меню" aria-label="Открыть меню">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+          <div class="admin-topbar__title">
+            <div class="admin-topbar__kicker">Администрирование</div>
+            <h1 class="admin-topbar__h1" id="adminPageTitle">Обзор</h1>
           </div>
+          <div class="admin-topbar__right">
+            <button class="btn btn-secondary" id="adminRefreshCurrent" type="button" data-tooltip="Обновить текущий раздел" aria-label="Обновить текущий раздел">
+              <svg class="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <polyline points="1 20 1 14 7 14"></polyline>
+                <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+              </svg>
+              Обновить
+            </button>
+          </div>
+        </div>
+
+        <!-- Дашборд -->
+        <section id="dashboard" class="content-section active" aria-label="Обзор системы">
+          <div class="section-header section-header--compact">
+            <div>
+              <h2>Сводка</h2>
+              <p>Ключевые метрики и тренды.</p>
+            </div>
+          </div>
+
           <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-icon">
+            <article class="stat-card">
+              <div class="stat-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                   <circle cx="12" cy="7" r="4"></circle>
                 </svg>
               </div>
               <div class="stat-content">
-                <h3 id="totalUsers">0</h3>
-                <p>Всего пользователей</p>
+                <div class="stat-value" id="totalUsers">0</div>
+                <div class="stat-label">Пользователи</div>
               </div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-icon">
+            </article>
+
+            <article class="stat-card">
+              <div class="stat-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
                   <line x1="8" y1="21" x2="16" y2="21"></line>
@@ -126,12 +167,13 @@
                 </svg>
               </div>
               <div class="stat-content">
-                <h3 id="activeSessions">0</h3>
-                <p>Активные сессии</p>
+                <div class="stat-value" id="activeSessions">0</div>
+                <div class="stat-label">Активные сессии</div>
               </div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-icon">
+            </article>
+
+            <article class="stat-card">
+              <div class="stat-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                   <polyline points="14,2 14,8 20,8"></polyline>
@@ -141,12 +183,13 @@
                 </svg>
               </div>
               <div class="stat-content">
-                <h3 id="auditEvents">0</h3>
-                <p>События аудита</p>
+                <div class="stat-value" id="auditEvents">0</div>
+                <div class="stat-label">События аудита</div>
               </div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-icon">
+            </article>
+
+            <article class="stat-card">
+              <div class="stat-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
                   <polyline points="3.27,6.96 12,12.01 20.73,6.96"></polyline>
@@ -154,192 +197,243 @@
                 </svg>
               </div>
               <div class="stat-content">
-                <h3 id="backupCount">0</h3>
-                <p>Резервные копии</p>
+                <div class="stat-value" id="backupCount">0</div>
+                <div class="stat-label">Резервные копии</div>
+              </div>
+            </article>
+          </div>
+
+          <div class="charts-grid">
+            <div class="panel">
+              <div class="panel__header">
+                <h3>Регистрации</h3>
+                <span class="panel__meta">последние 7 дней</span>
+              </div>
+              <div class="panel__body">
+                <canvas id="usersChart"></canvas>
+              </div>
+            </div>
+            <div class="panel">
+              <div class="panel__header">
+                <h3>Аудит</h3>
+                <span class="panel__meta">активность</span>
+              </div>
+              <div class="panel__body">
+                <canvas id="auditChart"></canvas>
+              </div>
+            </div>
+            <div class="panel">
+              <div class="panel__header">
+                <h3>Роли</h3>
+                <span class="panel__meta">распределение</span>
+              </div>
+              <div class="panel__body">
+                <canvas id="rolesChart"></canvas>
               </div>
             </div>
           </div>
-          <!-- Графики -->
-          <div class="charts-grid">
-            <div class="chart-card">
-              <h3>Динамика регистрации пользователей</h3>
-              <canvas id="usersChart" width="400" height="200"></canvas>
-            </div>
-            <div class="chart-card">
-              <h3>Действия в журнале аудита</h3>
-              <canvas id="auditChart" width="400" height="200"></canvas>
-            </div>
-            <div class="chart-card">
-              <h3>Распределение ролей</h3>
-              <canvas id="rolesChart" width="400" height="200"></canvas>
-            </div>
-          </div>
         </section>
+
         <!-- Пользователи -->
-        <section id="users" class="content-section">
+        <section id="users" class="content-section" aria-label="Пользователи">
           <div class="section-header">
-            <h1>Управление пользователями</h1>
-            <!-- Убрана кнопка добавления -->
-          </div>
-          <div class="filters-bar">
-            <div class="search-box">
-              <input type="text" id="userSearch" placeholder="Поиск пользователей...">
-              <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="11" cy="11" r="8"></circle>
-                <path d="M21 21l-4.35-4.35"></path>
-              </svg>
+            <div>
+              <h2>Пользователи</h2>
+              <p>Поиск, фильтрация и управление ролями.</p>
             </div>
-            <select id="roleFilter">
-              <option value="">Все роли</option>
-              <option value="admin">Администратор</option>
-              <option value="architect">Архитектор</option>
-              <option value="user">Пользователь</option>
-            </select>
-            <button class="btn btn-secondary" id="refreshUsers" data-tooltip="Обновить">
-              <svg class="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="23 4 23 10 17 10"></polyline>
-                <polyline points="1 20 1 14 7 14"></polyline>
-                <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
-              </svg>
-              <!-- Текст убран -->
-            </button>
           </div>
-          <div class="table-container">
-            <table class="data-table" id="usersTable">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Имя</th>
-                  <th>Email</th>
-                  <th>Роль</th>
-                  <th>Дата регистрации</th>
-                  <th>Статус</th>
-                  <th>Действия</th>
-                </tr>
-              </thead>
-              <tbody id="usersTableBody">
-                <!-- Данные загружаются динамически -->
-              </tbody>
-            </table>
+
+          <div class="filters-bar">
+            <label class="field search-box">
+              <span class="field__label">Поиск</span>
+              <div class="field__control">
+                <input type="text" id="userSearch" placeholder="Имя или email..." autocomplete="off">
+                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <path d="M21 21l-4.35-4.35"></path>
+                </svg>
+              </div>
+            </label>
+
+            <label class="field">
+              <span class="field__label">Роль</span>
+              <select id="roleFilter">
+                <option value="">Все роли</option>
+                <option value="admin">Администратор</option>
+                <option value="architect">Архитектор</option>
+                <option value="director">Директор</option>
+                <option value="analyst">Аналитик</option>
+                <option value="guest">Гость</option>
+              </select>
+            </label>
+
+            <div class="filters-bar__actions">
+              <!-- refresh button removed: use topbar "Обновить" -->
+            </div>
+          </div>
+
+          <div class="panel panel--table">
+            <div class="table-container" role="region" aria-label="Таблица пользователей" tabindex="0">
+              <table class="data-table" id="usersTable">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Имя</th>
+                    <th>Email</th>
+                    <th>Роль</th>
+                    <th>Дата регистрации</th>
+                    <th>Статус</th>
+                    <th>Действия</th>
+                  </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                  <!-- Данные загружаются динамически -->
+                </tbody>
+              </table>
+            </div>
           </div>
         </section>
+
         <!-- Журнал аудита -->
-        <section id="audit" class="content-section">
+        <section id="audit" class="content-section" aria-label="Журнал аудита">
           <div class="section-header">
-            <h1>Журнал аудита</h1>
-            <p>Логи всех действий в системе</p>
-          </div>
-          <div class="filters-bar">
-            <div class="date-range">
-              <input type="date" id="auditDateFrom" data-tooltip="Дата от">
-              <span>—</span>
-              <input type="date" id="auditDateTo" data-tooltip="Дата до">
+            <div>
+              <h2>Журнал аудита</h2>
+              <p>Фильтры по датам, пользователю и типу действия.</p>
             </div>
-            <select id="auditUserFilter">
-              <option value="">Все пользователи</option>
-            </select>
-            <select id="auditActionFilter">
-              <option value="">Все действия</option>
-              <option value="login">Вход</option>
-              <option value="logout">Выход</option>
-              <option value="create">Создание</option>
-              <option value="update">Изменение</option>
-              <option value="delete">Удаление</option>
-            </select>
-            <button class="btn btn-secondary" id="refreshAudit" data-tooltip="Обновить">
-              <svg class="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="23 4 23 10 17 10"></polyline>
-                <polyline points="1 20 1 14 7 14"></polyline>
-                <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
-              </svg>
-              <!-- Текст убран -->
-            </button>
           </div>
-          <div class="table-container">
-            <table class="data-table" id="auditTable">
-              <thead>
-                <tr>
-                  <th>Дата</th>
-                  <th>Пользователь</th>
-                  <th>Действие</th>
-                  <th>Детали</th>
-                  <th>IP адрес</th>
-                </tr>
-              </thead>
-              <tbody id="auditTableBody">
-                <!-- Данные загружаются динамически -->
-              </tbody>
-            </table>
+
+          <div class="filters-bar filters-bar--audit">
+            <label class="field field--date-from">
+              <span class="field__label">Дата от</span>
+              <input type="date" id="auditDateFrom" data-tooltip="Дата от">
+            </label>
+
+            <label class="field field--date-to">
+              <span class="field__label">Дата до</span>
+              <input type="date" id="auditDateTo" data-tooltip="Дата до">
+            </label>
+
+            <label class="field field--user search-box">
+              <span class="field__label">Пользователь</span>
+              <div class="field__control">
+                <input type="text" id="auditUserSearch" placeholder="ФИО или роль..." autocomplete="off">
+                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <path d="M21 21l-4.35-4.35"></path>
+                </svg>
+              </div>
+            </label>
+
+            <label class="field field--action">
+              <span class="field__label">Действие</span>
+              <select id="auditActionFilter">
+                <option value="">Все действия</option>
+                <option value="login">Вход</option>
+                <option value="logout">Выход</option>
+                <option value="create">Создание</option>
+                <option value="update">Изменение</option>
+                <option value="delete">Удаление</option>
+                <option value="export">Экспорт</option>
+              </select>
+            </label>
+
+            <div class="filters-bar__actions">
+              <button class="btn btn-danger" id="clearAuditPeriod" type="button" data-tooltip="Очистить журнал за выбранный период (Дата от/до)" aria-label="Очистить журнал за выбранный период">
+                <svg class="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <polyline points="3,6 5,6 21,6"></polyline>
+                  <path d="M19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path>
+                  <line x1="10" y1="11" x2="10" y2="17"></line>
+                  <line x1="14" y1="11" x2="14" y2="17"></line>
+                </svg>
+                Очистить
+              </button>
+              <!-- refresh button removed: use topbar "Обновить" -->
+            </div>
+          </div>
+
+          <div class="panel panel--table">
+            <div class="table-container" role="region" aria-label="Таблица аудита" tabindex="0">
+              <table class="data-table" id="auditTable">
+                <thead>
+                  <tr>
+                    <th>Дата</th>
+                    <th>Пользователь</th>
+                    <th>Действие</th>
+                    <th>Детали</th>
+                    <th>IP адрес</th>
+                  </tr>
+                </thead>
+                <tbody id="auditTableBody">
+                  <!-- Данные загружаются динамически -->
+                </tbody>
+              </table>
+            </div>
+            <div class="audit-table-footer" role="navigation" aria-label="Пагинация журнала аудита">
+              <div class="audit-pagination">
+                <button class="btn btn-secondary" id="auditPrevPage" type="button" aria-label="Предыдущая страница" disabled>Назад</button>
+                <div class="audit-page-info" id="auditPageInfo">Страница 1 из 1</div>
+                <button class="btn btn-secondary" id="auditNextPage" type="button" aria-label="Следующая страница" disabled>Вперёд</button>
+              </div>
+              <div class="audit-records-info" id="auditRecordsInfo">Показано: 0</div>
+            </div>
           </div>
         </section>
+
         <!-- Экспорт -->
-        <section id="export" class="content-section">
+        <section id="export" class="content-section" aria-label="Экспорт данных">
           <div class="section-header">
-            <h1>Экспорт данных</h1>
-            <p>Выгрузка данных в различных форматах</p>
+            <div>
+              <h2>Экспорт</h2>
+              <p>Выгрузка в JSON или CSV (для Excel).</p>
+            </div>
           </div>
+
           <div class="export-cards">
             <div class="export-card">
+              <div class="export-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+              </div>
               <h3>Пользователи</h3>
-              <p>Экспорт списка пользователей</p>
+              <p>Список пользователей, роли и статусы.</p>
               <div class="export-actions">
-                <button class="btn btn-primary" data-export="users" data-format="excel">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                    <polyline points="14,2 14,8 20,8"></polyline>
-                    <line x1="16" y1="13" x2="8" y2="13"></line>
-                    <line x1="16" y1="17" x2="8" y2="17"></line>
-                    <polyline points="10,9 9,9 8,9"></polyline>
-                  </svg>
-                  Excel
-                </button>
-                <button class="btn btn-secondary" data-export="users" data-format="json">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                    <polyline points="14,2 14,8 20,8"></polyline>
-                    <line x1="16" y1="13" x2="8" y2="13"></line>
-                    <line x1="16" y1="17" x2="8" y2="17"></line>
-                    <polyline points="10,9 9,9 8,9"></polyline>
-                  </svg>
-                  JSON
-                </button>
+                <button class="btn btn-primary" type="button" data-export="users" data-format="excel">CSV</button>
+                <button class="btn btn-secondary" type="button" data-export="users" data-format="json">JSON</button>
               </div>
             </div>
+
             <div class="export-card">
+              <div class="export-card__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14,2 14,8 20,8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                </svg>
+              </div>
               <h3>Журнал аудита</h3>
-              <p>Экспорт логов системы</p>
+              <p>Логи действий и детализация.</p>
               <div class="export-actions">
-                <button class="btn btn-primary" data-export="audit" data-format="excel">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                    <polyline points="14,2 14,8 20,8"></polyline>
-                    <line x1="16" y1="13" x2="8" y2="13"></line>
-                    <line x1="16" y1="17" x2="8" y2="17"></line>
-                    <polyline points="10,9 9,9 8,9"></polyline>
-                  </svg>
-                  Excel
-                </button>
-                <button class="btn btn-secondary" data-export="audit" data-format="json">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                    <polyline points="14,2 14,8 20,8"></polyline>
-                    <line x1="16" y1="13" x2="8" y2="13"></line>
-                    <line x1="16" y1="17" x2="8" y2="17"></line>
-                    <polyline points="10,9 9,9 8,9"></polyline>
-                  </svg>
-                  JSON
-                </button>
+                <button class="btn btn-primary" type="button" data-export="audit" data-format="excel">CSV</button>
+                <button class="btn btn-secondary" type="button" data-export="audit" data-format="json">JSON</button>
               </div>
             </div>
           </div>
         </section>
+
         <!-- Резервные копии -->
-        <section id="backup" class="content-section">
+        <section id="backup" class="content-section" aria-label="Резервные копии">
           <div class="section-header">
-            <h1>Резервные копии</h1>
+            <div>
+              <h2>Резервные копии</h2>
+              <p>Создание, восстановление и удаление.</p>
+            </div>
             <div class="header-actions">
-              <button class="btn btn-primary" id="createBackupBtn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <button class="btn btn-primary" id="createBackupBtn" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                   <rect x="8" y="2" width="12" height="16" rx="2" ry="2"></rect>
                   <rect x="4" y="6" width="12" height="16" rx="2" ry="2"></rect>
                 </svg>
@@ -347,35 +441,39 @@
               </button>
             </div>
           </div>
-          <div class="backup-list">
-            <div class="backup-item" id="backupTemplate" style="display: none;">
-              <div class="backup-info">
-                <h4 class="backup-name"></h4>
-                <p class="backup-date"></p>
-                <p class="backup-size"></p>
+
+          <div class="panel">
+            <div class="backup-list" aria-label="Список резервных копий">
+              <div class="backup-item" id="backupTemplate" style="display: none;">
+                <div class="backup-info">
+                  <h4 class="backup-name"></h4>
+                  <p class="backup-date"></p>
+                  <p class="backup-size"></p>
+                </div>
+                <div class="backup-actions">
+                  <button class="backup-restore-btn" type="button">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                      <polyline points="23 4 23 10 17 10"></polyline>
+                      <polyline points="1 20 1 14 7 14"></polyline>
+                      <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+                    </svg>
+                    Восстановить
+                  </button>
+                  <button class="backup-delete-btn" type="button">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                      <polyline points="3,6 5,6 21,6"></polyline>
+                      <path d="M19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path>
+                      <line x1="10" y1="11" x2="10" y2="17"></line>
+                      <line x1="14" y1="11" x2="14" y2="17"></line>
+                    </svg>
+                    Удалить
+                  </button>
+                </div>
               </div>
-              <div class="backup-actions">
-                <button class="backup-restore-btn">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="23 4 23 10 17 10"></polyline>
-                    <polyline points="1 20 1 14 7 14"></polyline>
-                    <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
-                  </svg>
-                  Восстановить
-                </button>
-                <button class="backup-delete-btn">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="3,6 5,6 21,6"></polyline>
-                    <path d="M19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path>
-                    <line x1="10" y1="11" x2="10" y2="17"></line>
-                    <line x1="14" y1="11" x2="14" y2="17"></line>
-                  </svg>
-                  Удалить
-                </button>
+
+              <div id="backupList">
+                <!-- Список копий загружается динамически -->
               </div>
-            </div>
-            <div id="backupList">
-              <!-- Список копий загружается динамически -->
             </div>
           </div>
         </section>
@@ -384,28 +482,34 @@
   </main>
   <!-- Модальные окна -->
   <!-- Модальное окно добавления/редактирования пользователя -->
-  <div id="userModal" class="modal">
+  <div id="userModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="userModalTitle">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 id="userModalTitle">Добавить пользователя</h3>
-        <button class="modal-close">&times;</button>
+        <h3 id="userModalTitle">Пользователь</h3>
+        <button class="modal-close" type="button" aria-label="Закрыть">&times;</button>
       </div>
       <form id="userForm">
-        <div class="form-group">
-          <label for="userName">Имя пользователя</label>
-          <input type="text" id="userName" readonly>
-        </div>
-        <div class="form-group">
-          <label for="userEmail">Email</label>
-          <input type="email" id="userEmail" readonly>
-        </div>
-        <div class="form-group">
-          <label for="userRole">Роль</label>
-          <select id="userRole" required>
-            <option value="user">Пользователь</option>
-            <option value="architect">Архитектор</option>
-            <option value="admin">Администратор</option>
-          </select>
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="userName">Имя</label>
+              <input type="text" id="userName" readonly>
+            </div>
+            <div class="form-group">
+              <label for="userEmail">Email</label>
+              <input type="email" id="userEmail" readonly>
+            </div>
+            <div class="form-group">
+              <label for="userRole">Роль</label>
+              <select id="userRole" required>
+                <option value="admin">Администратор</option>
+                <option value="architect">Архитектор</option>
+                <option value="director">Директор</option>
+                <option value="analyst">Аналитик</option>
+                <option value="guest">Гость</option>
+              </select>
+            </div>
+          </div>
         </div>
         <div class="modal-actions">
           <button type="button" class="btn btn-secondary" id="cancelUser">Отмена</button>
@@ -415,11 +519,11 @@
     </div>
   </div>
   <!-- Модальное окно подтверждения удаления -->
-  <div id="confirmModal" class="modal">
+  <div id="confirmModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>Подтверждение</h3>
-        <button class="modal-close">&times;</button>
+        <h3 id="confirmTitle">Подтверждение</h3>
+        <button class="modal-close" type="button" aria-label="Закрыть">&times;</button>
       </div>
       <div class="modal-body">
         <p id="confirmMessage">Вы уверены?</p>
@@ -432,6 +536,9 @@
   </div>
   <!-- Панель уведомлений -->
   <div id="notificationPanel" class="notification-panel"></div>
+  <script src="/src/js/modules/ui/mobile-nav.js"></script>
+  <script src="/src/js/modules/ui/touch-handlers.js"></script>
+  <script src="/src/js/audit-logger.js"></script>
   <script src="/src/js/admin.js"></script>
   <script src="/src/js/script.js"></script>
 </body>

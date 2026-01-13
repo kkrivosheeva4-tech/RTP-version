@@ -73,6 +73,11 @@ body.dark {
 }
 .modal-panel { z-index: 10001; }
 .detail-panel { z-index: 10002; }
+/* Панель редактирования и модальное окно подтверждения удаления должны быть выше detail-panel */
+#editTechPanel,
+#deleteConfirmModal {
+  z-index: 10006 !important;
+}
 /* ===== Боковая панель ===== */
 .sidebar-wrapper {
   position: fixed;
@@ -742,6 +747,9 @@ body.dark .modal-body .custom-select-modal .arrow svg path {
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
+  right: 0;
+  width: 100%;
+  min-width: 0;
   margin: 4px 0 0;
   padding: 0;
   list-style: none;
@@ -752,8 +760,10 @@ body.dark .modal-body .custom-select-modal .arrow svg path {
   z-index: 9999; /* повысим чтобы выпадалки были поверх радара */
   max-height: 320px;
   overflow-y: auto;
+  overflow-x: hidden;
   display: none;
   color: var(--text);
+  box-sizing: border-box;
 }
 body.dark .custom-select .select-options,
 body.dark .modal-body .custom-select-modal .select-options {
@@ -769,6 +779,9 @@ body.dark .modal-body .custom-select-modal .select-options {
   cursor: pointer;
   transition: background 0.15s ease;
   color: var(--text);
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 /* Элементы с чекбоксами в фильтрах sidebar */
@@ -784,6 +797,12 @@ body.dark .modal-body .custom-select-modal .select-options {
   gap: 8px;
   width: 100%;
   cursor: pointer;
+  position: relative;
+}
+
+.custom-select .select-options .option-label input[type="checkbox"] {
+  pointer-events: auto !important;
+  z-index: 10 !important;
 }
 
 .custom-select .select-options .option-label span {
@@ -791,13 +810,27 @@ body.dark .modal-body .custom-select-modal .select-options {
   flex: 1;
 }
 
+.custom-select .select-options .option-label input[type="checkbox"] {
+  pointer-events: auto;
+  z-index: 2;
+}
+
 .custom-select .select-options input[type="checkbox"] {
   width: 16px;
   height: 16px;
+  min-width: 16px;
+  min-height: 16px;
   margin: 0;
+  padding: 0;
   accent-color: var(--accent);
   cursor: pointer;
   flex-shrink: 0;
+  transform: scale(0.75);
+  transform-origin: left center;
+  position: relative;
+  z-index: 10;
+  pointer-events: auto;
+  opacity: 1;
 }
 
 .custom-select .select-options li.select-all-option {
@@ -821,29 +854,44 @@ body.dark .modal-body .custom-select-modal .select-options {
   align-items: center;
   gap: 8px;
   width: 100%;
+  min-width: 0;
   cursor: pointer;
   user-select: none;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.custom-select-modal .select-options .option-label input[type="checkbox"] {
+  pointer-events: auto;
+  z-index: 2;
 }
 
 .custom-select-modal .select-options .option-label span {
   cursor: pointer;
-  flex: 1;
-}
-
-.custom-select-modal .select-options .option-label span {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
 
 .custom-select-modal .select-options input[type="checkbox"] {
   width: 16px;
   height: 16px;
+  min-width: 16px;
+  min-height: 16px;
   margin: 0;
+  padding: 0;
   accent-color: var(--accent);
   cursor: pointer;
   flex-shrink: 0;
+  transform: scale(0.75);
+  transform-origin: left center;
+  position: relative;
+  z-index: 10;
+  pointer-events: auto;
+  -webkit-appearance: checkbox;
+  appearance: checkbox;
 }
 
 .custom-select-modal .select-options li.select-all-option {
@@ -1344,7 +1392,11 @@ body.dark .blip.selected {
   stroke-width: 1;
   fill: none;
 }
-.quadrant-bg { fill: transparent; }
+.quadrant-bg {
+  fill: transparent;
+  pointer-events: all;
+  cursor: pointer;
+}
 .quadrant-group.q1:hover .quadrant-bg { fill: var(--quadrant-bg-q1); }
 .quadrant-group.q2:hover .quadrant-bg { fill: var(--quadrant-bg-q2); }
 .quadrant-group.q3:hover .quadrant-bg { fill: var(--quadrant-bg-q3); }
@@ -1366,8 +1418,13 @@ body.dark .blip.selected {
 
 /* ===== Подписи секторов ===== */
 .sector-label-group {
-  transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s;
-  transform-origin: center;
+  cursor: pointer;
+  pointer-events: all;
+}
+
+.sector-label-click-area {
+  pointer-events: all;
+  cursor: pointer;
 }
 
 .sector-label {
@@ -1377,6 +1434,12 @@ body.dark .blip.selected {
   text-anchor: middle;
   pointer-events: none;
   user-select: none;
+  transition: fill 0.3s ease;
+}
+
+.sector-label-group:hover .sector-label,
+.sector-label-click-area:hover ~ .sector-label {
+  fill: var(--accent);
 }
 
 /* Обычный вес шрифта для секторов 2 и 4 */
@@ -1412,55 +1475,66 @@ body.dark .blip.selected {
 .legend .legend-icon { fill: var(--accent); stroke: none; }
 
 /* ===== Панель деталей ===== */
+/* Для десктопа: отображается справа, как панель приоритета */
 .detail-panel {
-  position: absolute;
-  right: 20px;
-  top: 54%;
+  position: fixed;
+  right: 16px;
+  top: calc(var(--header-height, 64px) + 16px);
   width: 400px;
-  height: 85vh;
-  max-height: 85vh;
+  height: calc(100vh - var(--header-height, 64px) - 32px);
+  max-height: calc(100vh - var(--header-height, 64px) - 32px);
   min-height: 0;
-  padding: 0; /* header will be sticky; content gets its own padding */
+  padding: 0;
   background: var(--modal-bg);
   border: 1px solid var(--accent);
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-  transform: translateY(-50%) translateX(calc(100% + 20px));
+  transform: translateX(120%);
   opacity: 0;
   visibility: hidden;
   transition: transform 0.7s ease-out, opacity 0.5s;
-  z-index: 200;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  z-index: 2501;
+  overflow: hidden; /* Важно: скрывает переполнение всего контейнера */
+  display: flex !important;
+  flex-direction: column !important;
+  pointer-events: none;
 }
 .detail-panel.active {
-  transform: translateY(-50%) translateX(0);
+  transform: translateX(0);
   opacity: 1;
   visibility: visible;
+  pointer-events: auto;
+}
+
+.detail-panel.active * {
+  pointer-events: auto;
+}
+
+.detail-panel.active .tech-info,
+.detail-panel.active .tech-actions,
+.detail-panel.active .detail-header {
+  pointer-events: auto;
 }
 .detail-panel h2 {
   margin: 0;
   font-size: 20px;
 }
 .detail-panel .detail-header {
-  /* make detail header visually match modal header */
-  padding: 12px 16px;
+  padding: 10px 16px;
   border-bottom: 1px solid rgba(0,0,0,0.06);
-  position: sticky; /* stay visible when scrolling */
-  top: 0;
-  z-index: 6; /* above content */
+  z-index: 6;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #ce9068; /* same bg as modals */
+  background: #ce9068;
   color: #fff;
   backdrop-filter: blur(4px);
-  border-radius: 12px 12px 0 0; /* скругление верхних углов как у модального окна */
+  border-radius: 12px 12px 0 0;
+  flex-shrink: 0 !important; /* Закреплен сверху, не сжимается */
+  flex-grow: 0 !important; /* Не растягивается */
 }
 
 .detail-panel .close-btn {
-  /* place close button inside header via flex layout */
   position: relative;
   background: none;
   border: none;
@@ -1520,15 +1594,21 @@ body.dark .blip.selected {
   transform: rotate(90deg) scale(0.9);
 }
 .detail-panel .tech-info {
-  flex: 1;
-  min-height: 0;
+  flex: 1 1 0;
+  min-height: 0; /* Критично важно для работы скролла в flex-контейнере */
+  max-height: none;
+  height: 0; /* Принудительно устанавливаем height: 0 для flex-элемента, чтобы flex: 1 работал корректно */
+  box-sizing: border-box;
   padding: 9px 18px 18px 18px;
-  padding-bottom: 18px;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow-y: auto !important; /* Скролл появляется при переполнении */
+  overflow-x: hidden !important;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  max-height: 78%;
+  position: relative;
+  touch-action: pan-y;
+  scrollbar-width: thin; /* Для Firefox */
+  scrollbar-color: rgba(206, 144, 104, 0.7) rgba(0, 0, 0, 0.08);
+  width: 100%;
 }
 .info-section {
   margin-bottom: 15px;
@@ -1574,7 +1654,16 @@ body.dark .blip.selected {
   user-select: none;
   position: relative;
   transition: background 0.2s, color 0.2s, border-color 0.2s;
-  z-index: 3;
+  z-index: 100;
+  pointer-events: auto !important;
+  margin-left: 4px;
+  padding: 2px;
+  vertical-align: middle;
+}
+
+.info-tooltip svg {
+  pointer-events: none;
+  display: block;
 }
 
 .info-tooltip:hover {
@@ -1583,32 +1672,43 @@ body.dark .blip.selected {
   border-color: var(--accent, #333);
 }
 
-.tech-actions {
-  display: flex;
+.detail-panel .tech-actions {
+  display: flex !important;
   gap: 10px;
-  margin-top: auto;
-  padding: 12px 18px 18px 18px;
+  padding: 12px 18px;
   border-top: 1px solid rgba(0, 0, 0, 0.08);
   background: var(--modal-bg);
-  flex-shrink: 0;
+  flex: 0 0 auto !important; /* Закреплен снизу, фиксированный размер */
+  flex-shrink: 0 !important; /* Не сжимается */
+  flex-grow: 0 !important; /* Не растягивается */
   z-index: 10;
   box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.08);
+  position: relative;
+  border-radius: 0 0 12px 12px;
+  visibility: visible !important;
+  opacity: 1 !important;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: auto; /* Прижимается к низу */
 }
-body.dark .tech-actions {
+body.dark .detail-panel .tech-actions {
   border-top-color: rgba(255, 255, 255, 0.15);
   box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.6);
 }
-.tech-actions button {
+.detail-panel .tech-actions button {
   flex: 1;
-  padding: 10px;
+  padding: 8px 12px;
   margin-bottom: 0;
   cursor: pointer;
   font-weight: bold;
   transition: background 0.2s, color 0.2s, border-color 0.2s;
   justify-content: center;
   align-items: center;
-  display: inline-flex;
+  display: flex !important;
   gap: 8px;
+  min-height: 36px;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 .edit-btn {
   background: transparent;
@@ -1922,7 +2022,7 @@ body.dark .modal-header {
 }
 .modal-body {
   padding: 20px;
-  max-height: calc(80vh - 60px);
+  max-height: calc(70vh - 50px);
 }
 .form-group {
   margin-bottom: 16px;
@@ -1945,6 +2045,9 @@ body.dark .modal-header {
   color: var(--input-color);
   transition: all 0.2s ease;
   box-sizing: border-box;
+}
+.form-group textarea {
+  resize: vertical;
 }
 .form-group input:focus,
 .form-group select:focus,
@@ -2000,6 +2103,59 @@ body.dark .form-group textarea:hover:not(:focus) {
   border-color: rgba(206, 144, 104, 0.5);
 }
 body.dark .ratings-row > div input:hover:not(:focus) {
+  border-color: rgba(206, 144, 104, 0.6);
+}
+.ratings-row > div select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  font-size: 14px;
+  background: var(--input-bg);
+  color: var(--input-color);
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+.ratings-row > div select:focus {
+  outline: none;
+  border-color: var(--accent, #ce9068);
+  box-shadow: 0 0 0 3px rgba(206, 144, 104, 0.1);
+}
+.ratings-row > div select:hover:not(:focus) {
+  border-color: rgba(206, 144, 104, 0.5);
+}
+body.dark .ratings-row > div select:hover:not(:focus) {
+  border-color: rgba(206, 144, 104, 0.6);
+}
+
+/* Стили для custom-select-modal внутри ratings-row */
+.ratings-row > div .custom-select-modal {
+  width: 100%;
+  margin-top: 0;
+}
+
+.ratings-row > div .custom-select-modal .select-trigger {
+  padding: 8px 10px;
+  min-height: auto;
+}
+
+.ratings-row > div .custom-select-modal .select-trigger .selected-text {
+  font-size: 14px;
+  color: var(--input-color);
+}
+
+.ratings-row > div .custom-select-modal:focus {
+  outline: none;
+  border-color: var(--accent, #ce9068);
+  box-shadow: 0 0 0 3px rgba(206, 144, 104, 0.1);
+}
+
+.ratings-row > div .custom-select-modal:hover:not(:focus) {
+  border-color: rgba(206, 144, 104, 0.5);
+}
+
+body.dark .ratings-row > div .custom-select-modal:hover:not(:focus) {
   border-color: rgba(206, 144, 104, 0.6);
 }
 
@@ -2104,6 +2260,30 @@ body.dark .company-rating-input:hover:not(:focus) {
 }
 
 body.dark .company-ratings-group .ratings-row > div input:hover:not(:focus) {
+  border-color: rgba(206, 144, 104, 0.6);
+}
+
+.company-ratings-group .ratings-row > div select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  font-size: 14px;
+  background: var(--input-bg);
+  color: var(--input-color);
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+.company-ratings-group .ratings-row > div select:focus {
+  outline: none;
+  border-color: var(--accent, #ce9068);
+  box-shadow: 0 0 0 3px rgba(206, 144, 104, 0.1);
+}
+.company-ratings-group .ratings-row > div select:hover:not(:focus) {
+  border-color: rgba(206, 144, 104, 0.5);
+}
+body.dark .company-ratings-group .ratings-row > div select:hover:not(:focus) {
   border-color: rgba(206, 144, 104, 0.6);
 }
 
@@ -2362,9 +2542,42 @@ body.dark .detail-panel .ratings-hint {
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .quadrant-priority-panel {
-    display: none;
+    /* На мобильных показываем как полноэкранное модальное окно */
+    position: fixed;
+    top: var(--header-height);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100vh - var(--header-height));
+    border-radius: 0;
+    z-index: 3000;
+    /* Панель скрыта по умолчанию */
+    display: flex;
+    opacity: 0;
+    transform: translateY(100%);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    pointer-events: none;
+  }
+
+  .quadrant-priority-panel.open {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .qp-header {
+    border-radius: 0;
+    padding: 16px;
+  }
+
+  .qp-body {
+    padding: 16px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 }
 
@@ -2404,6 +2617,43 @@ body.dark .detail-panel #panelPrioritySection {
 }
 
 .detail-panel #panelPrioritySection.priority-high .priority-value {
+  color: #27ae60;
+}
+
+/* Автопересчёт приоритета в модалке редактирования технологии */
+#editPriorityPreview.edit-priority-preview {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px dashed rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.02);
+}
+
+body.dark #editPriorityPreview.edit-priority-preview {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+#editPriorityPreview .priority-value {
+  font-weight: 600;
+  margin: 4px 0;
+}
+
+#editPriorityPreview .priority-comment {
+  margin: 0;
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+#editPriorityPreview.priority-low .priority-value {
+  color: #c0392b;
+}
+
+#editPriorityPreview.priority-medium .priority-value {
+  color: #e67e22;
+}
+
+#editPriorityPreview.priority-high .priority-value {
   color: #27ae60;
 }
 .form-actions {
@@ -2710,12 +2960,22 @@ body.dark .function-row input:hover:not(:focus) {
   background-color: var(--close-btn-hover);
 }
 .export-field-item input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  min-height: 16px;
   cursor: pointer;
   margin: 0;
+  padding: 0;
   flex-shrink: 0;
   accent-color: var(--accent);
+  transform: scale(0.75);
+  transform-origin: left center;
+  position: relative;
+  z-index: 10;
+  pointer-events: auto;
+  -webkit-appearance: checkbox;
+  appearance: checkbox;
 }
 .export-field-item span {
   user-select: none;
@@ -2853,9 +3113,19 @@ body.dark .function-row input:hover:not(:focus) {
   margin-right: 8px;
   width: 16px;
   height: 16px;
+  min-width: 16px;
+  min-height: 16px;
+  padding: 0;
   cursor: pointer;
   flex-shrink: 0;
   accent-color: var(--accent);
+  transform: scale(0.75);
+  transform-origin: left center;
+  position: relative;
+  z-index: 10;
+  pointer-events: auto;
+  -webkit-appearance: checkbox;
+  appearance: checkbox;
 }
 .export-multi-select-option.hidden {
   display: none;
@@ -2943,10 +3213,13 @@ body.dark #resetSectorBtn img {
   opacity: 0;
   transform: translate(-50%, -50%) scale(0.98);
   transition: opacity 220ms cubic-bezier(.2,.9,.2,1), transform 220ms cubic-bezier(.2,.9,.2,1);
+  /* Всегда центрируем по экрану */
+  top: 50% !important;
+  left: 50% !important;
 }
 .modal-panel.open {
   opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
+  transform: translate(-50%, -50%) scale(1) !important;
 }
 .close-btn {
   width: 36px;
@@ -2983,37 +3256,47 @@ body.dark #resetSectorBtn img {
   }
 }
 @media (max-width: 768px) {
-  .detail-panel {
-    width: 90%;
-    max-width: 400px;
-    right: 5%;
-    left: 5%;
-    top: 10%;
-    height: 80vh;
-    max-height: 80vh;
-    transform: translateY(0) translateX(0);
-  }
-  .detail-panel.active { transform: translateY(0) translateX(0); }
+  /* На планшетах detail-panel использует базовые стили (справа) */
   .modal-panel {
     width: 95%;
-    max-width: none;
+    max-width: 600px;
     max-height: 95vh;
-    top: 2.5%;
-    left: 2.5%;
-    transform: none;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     border-radius: 8px;
+  }
+
+  /* Улучшаем адаптивность модальных окон */
+  .modal-panel .modal-body {
+    padding: 16px;
+    max-height: calc(95vh - 60px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .modal-panel .modal-header {
+    padding: 16px;
+    font-size: 18px;
+    flex-shrink: 0;
   }
   .legend {
     right: 10px;
     bottom: 10px;
+    left: auto;
     max-width: 200px;
-    font-size: 14px;
+    width: auto;
+    min-width: 150px;
+    font-size: 13px;
     padding: 8px;
   }
+  /* На планшетах сохраняем базовые стили */
   .sidebar-wrapper {
+    display: flex;
     top: 50%;
     transform: translateY(-50%);
   }
+
   .sidebar-buttons {
     padding: 8px 6px;
   }
@@ -3069,13 +3352,13 @@ body.dark #resetSectorBtn img {
 }
 @media (max-width: 480px) {
   .modal-panel {
-    width: 100%;
-    height: 100vh;
-    max-height: 100vh;
-    top: 0;
-    left: 0;
-    transform: none;
-    border-radius: 0;
+    width: 95%;
+    max-width: 95%;
+    max-height: 95vh;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 8px;
   }
   .radar-container { width: 95vw; height: 80vh; }
 }
@@ -3160,48 +3443,82 @@ body.dark .export-public-btn:hover {
 /* ===== Скроллбар для внутренних областей модальных окон и панели подробностей ===== */
 /* Прокручивается только контент между шапкой и нижними кнопками */
 
-
-.modal-panel .modal-body::-webkit-scrollbar,
+/* Базовые стили скроллбара для панели подробной информации */
 .detail-panel .tech-info::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.detail-panel .tech-info::-webkit-scrollbar-thumb {
+  background: rgba(206, 144, 104, 0.7);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background 0.2s ease;
+  min-height: 30px;
+}
+
+.detail-panel .tech-info::-webkit-scrollbar-thumb:hover {
+  background: rgba(206, 144, 104, 0.9);
+}
+
+.detail-panel .tech-info::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  margin: 4px 0;
+}
+
+/* Скроллбары модальных окон */
+.modal-panel .modal-body::-webkit-scrollbar {
   width: 0;
   height: 0;
 }
 
 .modal-panel .modal-body:hover,
-.modal-panel .modal-body:focus-within,
-.detail-panel .tech-info:hover,
-.detail-panel .tech-info:focus-within {
+.modal-panel .modal-body:focus-within {
   scrollbar-width: thin;
 }
 
-.modal-panel .modal-body:hover::-webkit-scrollbar,
-.detail-panel .tech-info:hover::-webkit-scrollbar {
+.modal-panel .modal-body:hover::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
-.modal-panel .modal-body:hover::-webkit-scrollbar-thumb,
-.detail-panel .tech-info:hover::-webkit-scrollbar-thumb {
+.modal-panel .modal-body:hover::-webkit-scrollbar-thumb {
   background: rgba(206, 144, 104, 0.45);
   border-radius: 8px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 
-.modal-panel .modal-body:hover::-webkit-scrollbar-track,
-.detail-panel .tech-info:hover::-webkit-scrollbar-track {
+.modal-panel .modal-body:hover::-webkit-scrollbar-track {
   background: transparent;
 }
+
 /* Скроллбары модальных окон и панели подробностей в темной теме */
-body.dark .modal-panel .modal-body:hover::-webkit-scrollbar-thumb,
-body.dark .detail-panel .tech-info:hover::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.25);
+body.dark .detail-panel .tech-info::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.4);
 }
+
+body.dark .detail-panel .tech-info::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+body.dark .detail-panel .tech-info::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+body.dark .detail-panel .tech-info {
+  scrollbar-color: rgba(255, 255, 255, 0.4) rgba(255, 255, 255, 0.1);
+}
+
+body.dark .modal-panel .modal-body:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+}
+
 body.dark .modal-panel .modal-body:hover,
-body.dark .modal-panel .modal-body:focus-within,
-body.dark .detail-panel .tech-info:hover,
-body.dark .detail-panel .tech-info:focus-within {
-  scrollbar-color: rgba(255,255,255,0.25) transparent;
+body.dark .modal-panel .modal-body:focus-within {
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
 }
 
 /* ===== УВЕДОМЛЕНИЯ ===== */
@@ -3366,8 +3683,18 @@ body.dark .detail-panel .tech-info:focus-within {
   cursor: pointer;
   width: 16px;
   height: 16px;
+  min-width: 16px;
+  min-height: 16px;
   margin: 0;
+  padding: 0;
   accent-color: var(--accent);
+  transform: scale(0.75);
+  transform-origin: left center;
+  position: relative;
+  z-index: 10;
+  pointer-events: auto;
+  -webkit-appearance: checkbox;
+  appearance: checkbox;
 }
 
 .prospects-select-all {
@@ -3414,6 +3741,24 @@ body.dark .detail-panel .tech-info:focus-within {
 
 #exportProspectsChartBtn:hover svg {
   transform: translateY(-2px) rotate(-5deg) scale(1.1);
+}
+
+/* Стили для светлой темы */
+body.light #exportProspectsChartBtn {
+  background: #fff;
+  color: #333;
+  border: 1px solid #ce9068;
+}
+
+body.light #exportProspectsChartBtn:hover {
+  background: #f5f5f5;
+  border-color: #b8734a;
+  color: #000;
+  box-shadow: 0 4px 12px rgba(206, 144, 104, 0.25);
+}
+
+body.light #exportProspectsChartBtn:active {
+  box-shadow: 0 2px 6px rgba(206, 144, 104, 0.2);
 }
 
 /* Анимация для SVG в кнопке toggleProspectsChartBtn */
@@ -3478,10 +3823,13 @@ body.dark .detail-panel .tech-info:focus-within {
 /* Стили для таблицы технологий в графике "Перспективные" */
 .prospects-tech-table {
   width: 100%;
+  max-width: 100%;
   border-collapse: collapse;
   font-size: 14px;
   background: var(--bg);
   color: var(--text);
+  table-layout: auto;
+  word-wrap: break-word;
 }
 
 .prospects-tech-table thead {
@@ -3496,12 +3844,20 @@ body.dark .detail-panel .tech-info:focus-within {
   color: var(--text);
   background: var(--bg);
   border-bottom: 2px solid var(--input-border);
+  word-wrap: break-word;
+  white-space: normal;
+  max-width: 0;
+  overflow-wrap: break-word;
 }
 
 .prospects-tech-table td {
   padding: 10px 16px;
   border-bottom: 1px solid var(--input-border);
   color: var(--text);
+  word-wrap: break-word;
+  white-space: normal;
+  max-width: 0;
+  overflow-wrap: break-word;
 }
 
 .prospects-tech-table tbody tr {
@@ -3514,6 +3870,31 @@ body.dark .detail-panel .tech-info:focus-within {
 
 .prospects-tech-table tbody tr:last-child td {
   border-bottom: none;
+}
+
+/* Адаптивные стили для таблицы на маленьких экранах */
+@media (max-width: 768px) {
+  .prospects-tech-table th {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .prospects-tech-table td {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .prospects-tech-table th {
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+
+  .prospects-tech-table td {
+    padding: 6px 8px;
+    font-size: 11px;
+  }
 }
 
 /* Кольцо-подсветка для точек с одинаковыми координатами на графике «Перспективные» */
@@ -3657,4 +4038,384 @@ body.dark .loading-modal {
 body.dark .loading-error-message {
   background: rgba(220, 53, 69, 0.2);
   color: #ff6b7a;
+}
+
+/* ===== Расширенные адаптивные стили для этапа 2 ===== */
+
+/* ===== Mobile (< 768px) - Сайдбар ===== */
+@media (max-width: 767px) {
+  /* Выдвижной сайдбар на мобильных */
+  .sidebar-wrapper {
+    position: fixed;
+    top: calc(var(--header-height) + 10px);
+    left: 10px;
+    width: auto;
+    height: auto;
+    max-height: none;
+    transform: none;
+    z-index: 999;
+    background: transparent;
+    backdrop-filter: none;
+    display: flex;
+    align-items: flex-start;
+  }
+
+  .sidebar-wrapper.expanded {
+    transform: none;
+  }
+
+  .sidebar-wrapper.collapsed {
+    transform: none;
+  }
+
+  /* Компактная панель кнопок - всегда видна */
+  .sidebar-buttons {
+    position: relative;
+    display: flex !important;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 6px;
+    background: var(--bg);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.3);
+    z-index: 1001;
+    width: auto;
+    min-width: 44px;
+    flex-shrink: 0;
+  }
+
+  /* Кнопки сайдбара компактные на мобильных */
+  .sidebar-icon-btn,
+  .sidebar-toggle-btn {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    padding: 0;
+  }
+
+  .sidebar-icon-btn svg,
+  .sidebar-toggle-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* Сайдбар выезжает справа от кнопок */
+  .sidebar {
+    position: relative;
+    top: 0;
+    left: 0;
+    margin-left: 10px;
+    width: 280px;
+    max-width: calc(100vw - 80px);
+    height: calc(100vh - var(--header-height) - 20px);
+    max-height: calc(100vh - var(--header-height) - 20px);
+    background: var(--bg);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    box-shadow: 2px 2px 12px rgba(0, 0, 0, 0.4);
+    transform: translateX(calc(-100% - 10px));
+    opacity: 0;
+    visibility: hidden;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.3s ease,
+                visibility 0.3s ease;
+    z-index: 1000;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    pointer-events: none;
+  }
+
+  .sidebar-wrapper.expanded .sidebar {
+    transform: translateX(0);
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .sidebar-wrapper.collapsed .sidebar {
+    transform: translateX(calc(-100% - 10px));
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  /* Overlay для закрытия сайдбара при клике вне его */
+  .sidebar-wrapper.expanded::after {
+    content: '';
+    position: fixed;
+    top: var(--header-height);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(2px);
+    z-index: 998;
+    pointer-events: auto;
+  }
+
+  .sidebar-wrapper.collapsed::after {
+    display: none;
+  }
+
+  /* Убираем padding из sidebar-content на мобильных для экономии места */
+  .sidebar .search-container,
+  .sidebar .filter-panel {
+    padding: 0;
+    margin-bottom: 12px;
+  }
+
+  /* Модальные окна - по центру на мобильных */
+  .modal-panel {
+    width: 95%;
+    max-width: 95%;
+    max-height: 95vh;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 8px;
+    position: fixed;
+  }
+
+  .modal-panel .modal-header {
+    border-radius: 0;
+  }
+
+  /* На мобильных: detail-panel как модальное окно по центру */
+  .detail-panel {
+    width: 95%;
+    max-width: 600px;
+    height: 95vh;
+    max-height: 95vh;
+    top: 50%;
+    left: 50%;
+    right: auto;
+    transform: translate(-50%, -50%) scale(0.98);
+    border-radius: 8px;
+    position: fixed;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .detail-panel.active {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .detail-panel .detail-header {
+    border-radius: 8px 8px 0 0;
+  }
+
+  .detail-panel .tech-actions {
+    border-radius: 0 0 8px 8px; /* Скругление нижних углов для мобильных */
+  }
+
+  /* Радар - масштабирование для мобильных */
+  .radar-container {
+    width: 100vw;
+    height: calc(100vh - var(--header-height));
+    padding: 10px;
+  }
+
+  #techRadar {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Легенда - компактная версия в правом нижнем углу */
+  .legend {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    left: auto;
+    max-width: 200px;
+    width: auto;
+    min-width: 150px;
+    font-size: 12px;
+    padding: 8px;
+    transform: none;
+    z-index: 150;
+  }
+
+  /* Увеличиваем размеры кнопок для touch */
+  .sidebar-icon-btn,
+  .sidebar-toggle-btn {
+    min-width: 44px;
+    min-height: 44px;
+    width: 44px;
+    height: 44px;
+  }
+
+  /* Таблицы - горизонтальная прокрутка */
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    position: relative;
+  }
+
+  .data-table,
+  .prospects-tech-table,
+  .tech-table {
+    min-width: 600px;
+  }
+
+  /* Карточный вид для таблиц (альтернативный вариант) */
+  .table-card-view {
+    display: none;
+  }
+
+  @media (max-width: 480px) {
+    .table-card-view {
+      display: block;
+    }
+
+    .table-container table {
+      display: none;
+    }
+  }
+}
+
+/* ===== Tablet (768px - 1024px) ===== */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .sidebar-wrapper {
+    left: 10px;
+  }
+
+  .sidebar {
+    width: 260px;
+  }
+
+  .sidebar-wrapper.expanded .sidebar {
+    width: 260px;
+  }
+
+  .detail-panel {
+    width: 380px;
+  }
+
+  .modal-panel {
+    width: 90%;
+    max-width: 600px;
+  }
+
+  .radar-container {
+    width: calc(100vw - 300px);
+    height: calc(100vh - var(--header-height) - 40px);
+  }
+
+  /* Таблицы с горизонтальной прокруткой на планшетах */
+  .table-container {
+    overflow-x: auto;
+  }
+}
+
+/* ===== Desktop (> 1024px) ===== */
+@media (min-width: 1025px) {
+  /* Базовые стили уже определены выше, здесь можно добавить специфичные для больших экранов */
+  .sidebar-wrapper {
+    left: 20px;
+    display: flex !important;
+    position: fixed !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    z-index: 100 !important;
+  }
+
+  .sidebar-buttons {
+    display: flex !important;
+  }
+
+  .sidebar {
+    display: flex !important;
+  }
+}
+
+/* ===== Touch оптимизация ===== */
+@media (hover: none) and (pointer: coarse) {
+  /* Увеличиваем размеры всех интерактивных элементов */
+  .sidebar-icon-btn,
+  .sidebar-toggle-btn,
+  .close-btn,
+  button,
+  .btn {
+    min-width: 44px;
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+
+  /* Улучшаем touch feedback */
+  .sidebar-icon-btn:active,
+  .sidebar-toggle-btn:active,
+  button:active,
+  .btn:active {
+    opacity: 0.7;
+    transform: scale(0.95);
+  }
+
+  /* Убираем hover эффекты на touch устройствах */
+  .sidebar-icon-btn:hover,
+  .sidebar-toggle-btn:hover {
+    transform: none;
+  }
+
+  /* Отключаем выделение текста при тапе */
+  .sidebar-icon-btn,
+  .sidebar-toggle-btn,
+  button,
+  .btn {
+    -webkit-tap-highlight-color: rgba(206, 144, 104, 0.2);
+    user-select: none;
+  }
+}
+
+/* ===== Swipe жесты для сайдбара ===== */
+@media (max-width: 767px) {
+  .sidebar-wrapper.swiping {
+    transition: none;
+  }
+}
+
+/* ===== Адаптивные таблицы - горизонтальная прокрутка ===== */
+@media (max-width: 1024px) {
+  .table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    position: relative;
+  }
+
+  .table-wrapper::after {
+    content: '→';
+    position: sticky;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    background: linear-gradient(to right, transparent, var(--bg) 50%);
+    padding: 0 20px;
+    pointer-events: none;
+    opacity: 0.5;
+    font-size: 24px;
+  }
+
+  .table-wrapper table {
+    min-width: 600px;
+  }
+}
+
+/* ===== Улучшение работы с виртуальной клавиатурой ===== */
+@media (max-width: 1024px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px; /* Предотвращает автоматический zoom на iOS */
+  }
 }

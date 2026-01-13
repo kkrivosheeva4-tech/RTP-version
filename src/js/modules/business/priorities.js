@@ -168,7 +168,7 @@
     const getQuadrantName = window.getQuadrantName || (() => `Сектор ${qId}`);
     const getTechStatus = window.getTechStatus || ((tech) => (tech.status || tech.level || '').toString());
     const getHoverText = window.getHoverText || (() => '');
-    const showDetail = window.showDetail || (() => {});
+    // showDetail будет получена в момент клика из window
     const getCurrentZoomedQuadrant = window.getCurrentZoomedQuadrant || (() => null);
     const setCurrentTech = window.setCurrentTech || (() => {});
 
@@ -177,7 +177,7 @@
     const hoverLabel = window.hoverLabel || document.getElementById('hoverLabel');
     const searchInput = window.searchInput || document.getElementById('searchInput');
     const qpSearchInput = document.getElementById('qpSearchInput');
-    const detailPanel = window.detailPanel || document.getElementById('detailPanel');
+    // detailPanel будет получен в момент клика через DOMCache или getElementById
     const currentZoomedQuadrant = getCurrentZoomedQuadrant();
 
     const allTechs = getTechnologiesForQuadrant(qId);
@@ -411,12 +411,24 @@
       item.addEventListener('click', (e) => {
         e.stopPropagation();
         setCurrentTech(t);
-        if (detailPanel) {
+        // Получаем showDetail из window в момент клика, а не при создании элемента
+        const showDetailFn = (typeof window.showDetail === 'function') ? window.showDetail : null;
+        // Получаем detailPanel через DOMCache или напрямую в момент клика
+        const DOMCache = window.DOMCache;
+        const detailPanelEl = (DOMCache && typeof DOMCache.get === 'function')
+          ? DOMCache.get('detailPanel')
+          : (document.getElementById('detailPanel'));
+        if (detailPanelEl && showDetailFn) {
           // Открываем детали с пометкой, что источник — панель приоритетов
           // Передаем текущий зуммированный квадрант, чтобы сохранить зум
-          showDetail(t, 'priority', qId);
+          showDetailFn(t, 'priority', qId);
         } else {
-          console.warn('recomputeQuadrantPriorityList: detailPanel не найден при клике по технологии');
+          if (!detailPanelEl) {
+            console.warn('recomputeQuadrantPriorityList: detailPanel не найден при клике по технологии', { techId: t.id, techName: t.name });
+          }
+          if (!showDetailFn) {
+            console.warn('recomputeQuadrantPriorityList: showDetail не доступна при клике по технологии', { techId: t.id, techName: t.name });
+          }
         }
         // Скрываем панель приоритета, но НЕ вызываем unzoom(),
         // чтобы зум сектора сохранился.

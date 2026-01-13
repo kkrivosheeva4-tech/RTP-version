@@ -8,6 +8,22 @@ let users = [
     { username: 'guest', password: 'guest123', role: 'guest' }
 ];
 
+function pad2(n) {
+    const v = Number(n) || 0;
+    return v < 10 ? `0${v}` : String(v);
+}
+
+function getAuditTimestampLocal() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = pad2(d.getMonth() + 1);
+    const day = pad2(d.getDate());
+    const hh = pad2(d.getHours());
+    const mm = pad2(d.getMinutes());
+    const ss = pad2(d.getSeconds());
+    return `${y}-${m}-${day} ${hh}:${mm}:${ss}`;
+}
+
 // Проверка состояния авторизации при загрузке
 document.addEventListener('DOMContentLoaded', function() {
     // Проверяем, не авторизован ли пользователь уже
@@ -16,6 +32,33 @@ document.addEventListener('DOMContentLoaded', function() {
     if (isLoggedIn && savedUsername) {
         const user = users.find(u => u.username === savedUsername);
         if (user) {
+            // Если сессия уже активна — логируем "автовход" (на случай, когда пользователь не вводит пароль повторно)
+            try {
+                let ok = false;
+                if (typeof window.appendAdminAudit === 'function') {
+                    ok = !!window.appendAdminAudit('login', `Автовход (сессия активна) (${user.role})`);
+                }
+                if (!ok) {
+                    const key = 'adminAuditLogs';
+                    const raw = localStorage.getItem(key);
+                    const list = raw ? (JSON.parse(raw) || []) : [];
+                    const arr = Array.isArray(list) ? list : [];
+                    const now = getAuditTimestampLocal();
+                    const nextId = arr.length > 0 ? (Math.max(...arr.map(x => Number(x && x.id) || 0)) + 1) : 1;
+                    arr.unshift({
+                        id: nextId,
+                        date: now,
+                        user: savedUsername,
+                        action: 'login',
+                        details: `Автовход (сессия активна) (${user.role})`,
+                        tz: 'local',
+                        ip: 'local'
+                    });
+                    localStorage.setItem(key, JSON.stringify(arr));
+                }
+            } catch (err) {
+                console.warn('Ошибка при логировании автовхода:', err);
+            }
             // Если пользователь уже авторизован, перенаправляем его на основное приложение
             window.location.href = 'index.html';
             return; // Прерываем выполнение
@@ -78,6 +121,42 @@ document.addEventListener('DOMContentLoaded', function() {
             eyeOff.style.display = isPwd ? 'block' : 'none';
         });
     })();
+
+    // Обработчик кнопки "Войти как гость"
+    const guestBtn = document.getElementById('guestBtn');
+    if (guestBtn) {
+        guestBtn.addEventListener('click', function() {
+            // Логируем вход как гость (если пользователь выбирает гостевой режим)
+            try {
+                let ok = false;
+                if (typeof window.appendAdminAudit === 'function') {
+                    ok = !!window.appendAdminAudit('login', 'Вход как гость');
+                }
+                if (!ok) {
+                    const key = 'adminAuditLogs';
+                    const raw = localStorage.getItem(key);
+                    const list = raw ? (JSON.parse(raw) || []) : [];
+                    const arr = Array.isArray(list) ? list : [];
+                    const now = getAuditTimestampLocal();
+                    const nextId = arr.length > 0 ? (Math.max(...arr.map(x => Number(x && x.id) || 0)) + 1) : 1;
+                    arr.unshift({
+                        id: nextId,
+                        date: now,
+                        user: 'guest',
+                        action: 'login',
+                        details: 'Вход как гость',
+                        tz: 'local',
+                        ip: 'local'
+                    });
+                    localStorage.setItem(key, JSON.stringify(arr));
+                }
+            } catch (err) {
+                console.warn('Ошибка при логировании входа гостя:', err);
+            }
+            // Перенаправляем на основное приложение без авторизации
+            window.location.href = 'index.html';
+        });
+    }
 });
 
 // Обработка формы входа
@@ -102,6 +181,35 @@ loginForm.addEventListener('submit', function(e) {
         localStorage.setItem('isLoggedIn', 'true');
         localStorage.setItem('username', username);
         localStorage.setItem('role', user.role);
+
+        // Пишем событие входа в журнал аудита (важное действие → должно попадать на график)
+        try {
+            let ok = false;
+            if (typeof window.appendAdminAudit === 'function') {
+                ok = !!window.appendAdminAudit('login', `Успешный вход в систему (${user.role})`);
+            }
+            if (!ok) {
+                // Fallback: прямое логирование в localStorage если функция недоступна (например, на auth.html)
+                const key = 'adminAuditLogs';
+                const raw = localStorage.getItem(key);
+                const list = raw ? (JSON.parse(raw) || []) : [];
+                const arr = Array.isArray(list) ? list : [];
+                const now = getAuditTimestampLocal();
+                const nextId = arr.length > 0 ? (Math.max(...arr.map(x => Number(x && x.id) || 0)) + 1) : 1;
+                arr.unshift({
+                    id: nextId,
+                    date: now,
+                    user: username,
+                    action: 'login',
+                    details: `Успешный вход в систему (${user.role})`,
+                    tz: 'local',
+                    ip: 'local'
+                });
+                localStorage.setItem(key, JSON.stringify(arr));
+            }
+        } catch (err) {
+            console.warn('Ошибка при логировании входа:', err);
+        }
 
         // После успешной авторизации перенаправляем на основное приложение
         window.location.href = 'index.html';

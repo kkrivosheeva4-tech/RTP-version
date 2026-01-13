@@ -269,6 +269,31 @@ form { margin-top: 6px; }
 .btn.loading .btn__spinner { display: block; }
 .btn.loading .btn__text { opacity: 0; }
 
+.guest-link-wrapper {
+    margin-top: 16px;
+    text-align: center;
+}
+
+.guest-link {
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    color: var(--c-copper);
+    text-decoration: none;
+    background: linear-gradient(90deg, var(--grad-start), var(--grad-end));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-size: 14px;
+    font-weight: 500;
+    transition: opacity .2s ease;
+}
+
+.guest-link:hover {
+    opacity: 0.8;
+}
+
 .foot {
     margin-top: 14px;
     color: var(--c-muted);

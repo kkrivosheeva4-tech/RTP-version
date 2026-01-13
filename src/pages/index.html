@@ -7,32 +7,32 @@
   <link rel="icon" href="/assets/images/icon.png" type="image/png">
   <link rel="shortcut icon" href="/assets/images/icon.png" type="image/png">
   <link rel="stylesheet" href="/src/css/styles.css">
-  <link rel="stylesheet" href="/src/css/about.css">
   <link rel="stylesheet" href="/src/css/common.css">
+  <link rel="stylesheet" href="/src/css/about.css">
 </head>
 <body class="dark">
   <!-- ===== Хедер ===== -->
-  <header>
-    <a class="logo" href="index.html">
+  <header role="banner">
+    <a class="logo" href="index.html" aria-label="Радар технологий - на главную">
       <img src="/assets/images/icon.png" alt="Logo" class="logo-img" />
       <span>Радар технологий</span>
     </a>
-    <nav class="enterprise-nav">
-      <button>РМК</button>
-      <button>ТГОК</button>
-      <button>МГОК</button>
-      <button>КБМ</button>
-      <button>КМЭЗ</button>
-      <button>АМК</button>
+    <nav class="enterprise-nav" role="tablist" aria-label="Навигация по предприятиям">
+      <button role="tab" aria-selected="false" aria-label="Переключить на предприятие РМК">РМК</button>
+      <button role="tab" aria-selected="false" aria-label="Переключить на предприятие ТГОК">ТГОК</button>
+      <button role="tab" aria-selected="false" aria-label="Переключить на предприятие МГОК">МГОК</button>
+      <button role="tab" aria-selected="false" aria-label="Переключить на предприятие КБМ">КБМ</button>
+      <button role="tab" aria-selected="false" aria-label="Переключить на предприятие КМЭЗ">КМЭЗ</button>
+      <button role="tab" aria-selected="false" aria-label="Переключить на предприятие АМК">АМК</button>
     </nav>
     <div class="controls">
-      <button class="about-btn" id="aboutBtn" data-tooltip="О проекте" aria-label="О проекте">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 26" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
-          <circle cx="12" cy="14" r="10"></circle>
-          <line x1="12" y1="7" x2="12" y2="14"></line>
-          <circle cx="12" cy="18" r="1"></circle>
+      <button class="help-btn" id="helpBtn" data-tooltip="Помощь" aria-label="Помощь">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
         </svg>
-        <span class="about-btn__text">О проекте</span>
+        <span class="help-btn__text">Помощь</span>
       </button>
       <label class="theme-switch" data-tooltip="Переключить тему" aria-label="Переключить тему">
         <input type="checkbox" id="themeToggle" />
@@ -44,7 +44,7 @@
   </header>
 
   <!-- ===== Главная ===== -->
-<main>
+<main role="main">
   <div class="main-header">
     <div class="selection-hint">
       <div class="arrow-up">
@@ -61,11 +61,14 @@
 
   </div>
   <div id="radarContainer" class="radar-container">
-    <svg id="techRadar" viewBox="0 0 1000 1000"></svg>
-    <div id="quadrantLabels"></div>
-    <div id="hoverLabel" class="hover-label"></div>
+    <svg id="techRadar" viewBox="0 0 1000 1000" role="img" aria-label="Интерактивный радар технологий"></svg>
+    <div id="quadrantLabels" role="region" aria-label="Подписи квадрантов"></div>
+    <div id="hoverLabel" class="hover-label" role="status" aria-live="polite" aria-atomic="true"></div>
   </div>
 </main>
+<script src="/src/js/modules/ui/mobile-nav.js"></script>
+<script src="/src/js/modules/ui/touch-handlers.js"></script>
+<script src="/src/js/audit-logger.js"></script>
 <script src="/src/js/script.js"></script>
 
 </body>

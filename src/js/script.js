@@ -167,9 +167,16 @@
   }
 
   // Инициализируем подсказки после загрузки DOM
-  document.addEventListener('DOMContentLoaded', () => {
+  function initTooltip() {
     new Tooltip();
-  });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTooltip);
+  } else {
+    // DOM уже загружен
+    initTooltip();
+  }
 
   // Переключение темы (сохраняем в localStorage)
   const themeToggle = document.getElementById("themeToggle");
@@ -188,6 +195,24 @@
   const authInfo = document.getElementById("authInfo");
   const logoutContainer = document.getElementById("logoutContainer");
 
+  // Логирование (централизовано в /src/js/audit-logger.js)
+  // Здесь только подстраховка: если audit-logger по какой-то причине не загрузился,
+  // то appendAdminAudit останется undefined (и вызовы в модулях не упадут).
+
+  function safeLogout() {
+    // Важно: не делаем localStorage.clear(), чтобы не стирать данные админ-панели/настройки.
+    try {
+      const role = localStorage.getItem('role') || '';
+      if (typeof window.appendAdminAudit === 'function') {
+        window.appendAdminAudit('logout', `Выход из системы${role ? ` (${role})` : ''}`);
+      }
+    } catch (err) {}
+    try { localStorage.removeItem('isLoggedIn'); } catch (err) {}
+    try { localStorage.removeItem('username'); } catch (err) {}
+    try { localStorage.removeItem('userName'); } catch (err) {}
+    try { localStorage.removeItem('role'); } catch (err) {}
+  }
+
   function renderAuth() {
     const role = localStorage.getItem("role");
     const exportPdfBtn = document.getElementById("exportPdfBtn");
@@ -199,14 +224,7 @@
     if (role === "architect") {
       if (authInfo) {
         // Исправлена разметка: правильно закрыт атрибут class и добавлен title
-        authInfo.innerHTML = `<div class="user-role architect-role" data-tooltip="Страница аналитики" style="cursor: pointer;">Архитектор</div>`;
-        // Добавляем обработчик клика для перехода на analitic.html
-        const adminRoleElement = authInfo.querySelector('.architect-role');
-        if (adminRoleElement) {
-          adminRoleElement.onclick = () => {
-            window.location.href = 'analitic.html';
-          };
-        }
+        authInfo.innerHTML = `<div class="user-role architect-role">Архитектор</div>`;
       }
       if (logoutContainer) {
         logoutContainer.innerHTML = `<button class="logout" data-tooltip="Выйти" aria-label="Выйти">
@@ -219,9 +237,7 @@
       }
       if (logoutContainer && logoutContainer.querySelector(".logout")) {
         logoutContainer.querySelector(".logout").onclick = () => {
-          const theme = localStorage.getItem('theme');
-          localStorage.clear();
-          if (theme) localStorage.setItem('theme', theme);
+          safeLogout();
           location.reload();
         };
       }
@@ -254,9 +270,7 @@
       }
       if (logoutContainer && logoutContainer.querySelector(".logout")) {
         logoutContainer.querySelector(".logout").onclick = () => {
-          const theme = localStorage.getItem('theme');
-          localStorage.clear();
-          if (theme) localStorage.setItem('theme', theme);
+          safeLogout();
           location.reload();
         };
       }
@@ -284,7 +298,7 @@
       if (addTechBtn) addTechBtn.style.display = "none";
       // экспорт доступен всем пользователям
       if (exportPdfBtn) exportPdfBtn.style.display = "flex";
-      if (reportIconBtn) reportIconBtn.style.display = "flex";
+      if (reportIconBtn) reportIconBtn.style.display = "none";
       if (addIconBtn) addIconBtn.style.display = "none";
     }
   }
@@ -303,9 +317,7 @@
     const logoutBtn = e.target.closest && e.target.closest('.logout');
     if (logoutBtn) {
       e.preventDefault();
-      const theme = localStorage.getItem('theme');
-      try { localStorage.clear(); } catch (err) {}
-      try { if (theme) localStorage.setItem('theme', theme); } catch (err) {}
+      safeLogout();
       location.reload();
       return;
     }
@@ -313,12 +325,6 @@
     if (adminRole) {
       e.preventDefault();
       window.location.href = 'admin.html';
-      return;
-    }
-    const architectRole = e.target.closest && e.target.closest('.architect-role');
-    if (architectRole) {
-      e.preventDefault();
-      window.location.href = 'analitic.html';
       return;
     }
   });
@@ -341,13 +347,34 @@
       sidebarWrapper.classList.add("collapsed");
     }
 
+    // Функция для управления видимостью кнопок "Фильтр" и "Поиск"
+    function toggleSearchFilterButtons(isExpanded) {
+      if (searchIconBtn) {
+        if (isExpanded) {
+          searchIconBtn.style.display = 'none';
+        } else {
+          searchIconBtn.style.display = '';
+        }
+      }
+      if (filterIconBtn) {
+        if (isExpanded) {
+          filterIconBtn.style.display = 'none';
+        } else {
+          filterIconBtn.style.display = '';
+        }
+      }
+    }
+
     // Переключение видимости панели
     if (toggleSidebarBtn && sidebarWrapper) {
       toggleSidebarBtn.onclick = () => {
         sidebarWrapper.classList.toggle("collapsed");
         sidebarWrapper.classList.toggle("expanded");
+        const isExpanded = sidebarWrapper.classList.contains("expanded");
         // Перемещаем кнопку сброса
         moveResetButton(sidebarWrapper);
+        // Управляем видимостью кнопок "Фильтр" и "Поиск"
+        toggleSearchFilterButtons(isExpanded);
       };
     }
 
@@ -398,6 +425,8 @@
     // Инициализация положения кнопки при загрузке
     if (sidebarWrapper) {
       moveResetButton(sidebarWrapper);
+      // Инициализация видимости кнопок "Фильтр" и "Поиск" (панель скрыта по умолчанию)
+      toggleSearchFilterButtons(false);
     }
 
     // Подключение кнопок к их функциям
@@ -406,6 +435,8 @@
         sidebarWrapper.classList.remove("collapsed");
         sidebarWrapper.classList.add("expanded");
         moveResetButton(sidebarWrapper);
+        // Скрываем кнопки "Фильтр" и "Поиск"
+        toggleSearchFilterButtons(true);
         const searchInput = document.getElementById("searchInput");
         if (searchInput) {
           setTimeout(() => searchInput.focus(), 300);
@@ -418,6 +449,8 @@
         sidebarWrapper.classList.remove("collapsed");
         sidebarWrapper.classList.add("expanded");
         moveResetButton(sidebarWrapper);
+        // Скрываем кнопки "Фильтр" и "Поиск"
+        toggleSearchFilterButtons(true);
       };
     }
 
@@ -844,120 +877,133 @@
     window.addEventListener('popstate', markActive);
   })();
 
-  // --- About modal: fetch-once, accessible dialog ---
-  (function(){
-    const aboutBtn = document.getElementById('aboutBtn');
-    if (!aboutBtn) return;
+  // --- Mobile Navigation и Touch Handlers инициализация ---
+  (function() {
+    // Загружаем модули мобильной навигации и touch-жестов, если они доступны
+    function initMobileFeatures() {
+      if (window.MobileNav && typeof window.MobileNav.init === 'function') {
+        window.MobileNav.init();
+        window.addEventListener('resize', () => {
+          if (window.MobileNav && typeof window.MobileNav.handleResize === 'function') {
+            window.MobileNav.handleResize();
+          }
+        });
+      }
 
-    let aboutCache = null;
-    let lastFocused = null;
-
-    function createModalElements(){
-      // backdrop
-      const backdrop = document.createElement('div');
-      backdrop.className = 'about-backdrop';
-      backdrop.tabIndex = -1;
-
-      // wrapper
-      const wrapper = document.createElement('div');
-      wrapper.className = 'about-modal';
-      wrapper.setAttribute('role', 'presentation');
-
-      // panel
-      const panel = document.createElement('div');
-      panel.className = 'about-panel';
-      panel.setAttribute('role','dialog');
-      panel.setAttribute('aria-modal','true');
-      panel.setAttribute('aria-labelledby','aboutTitle');
-      panel.tabIndex = -1;
-      panel.style.position = 'relative';
-      panel.style.zIndex = '2';
-
-      // close
-      const closeBtn = document.createElement('button');
-      closeBtn.className = 'about-close';
-      closeBtn.setAttribute('aria-label','Закрыть');
-      closeBtn.innerHTML = '&times;';
-
-      panel.appendChild(closeBtn);
-      wrapper.appendChild(backdrop);
-      wrapper.appendChild(panel);
-
-      document.body.appendChild(wrapper);
-
-      return { wrapper, backdrop, panel, closeBtn };
-    }
-
-    const { wrapper, backdrop, panel, closeBtn } = createModalElements();
-    panel.addEventListener('click', (e)=> e.stopPropagation());
-
-    function openModal(){
-      lastFocused = document.activeElement;
-      wrapper.classList.add('visible');
-      requestAnimationFrame(()=>{
-        backdrop.style.opacity = '1';
-        panel.classList.add('open');
-        panel.style.opacity = '1';
-        panel.focus();
-      });
-      document.addEventListener('keydown', onKeyDown);
-      backdrop.addEventListener('click', closeModal);
-      closeBtn.addEventListener('click', closeModal);
-    }
-
-    function closeModal(){
-      backdrop.style.opacity = '0';
-      panel.classList.remove('open');
-      panel.style.opacity = '0';
-      setTimeout(()=>{ wrapper.classList.remove('visible'); }, 240);
-      document.removeEventListener('keydown', onKeyDown);
-      backdrop.removeEventListener('click', closeModal);
-      closeBtn.removeEventListener('click', closeModal);
-      if (lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus();
-    }
-
-    function onKeyDown(e){
-      if (e.key === 'Escape' || e.key === 'Esc') closeModal();
-      if (e.key === 'Tab') trapTabKey(e);
-    }
-
-    function trapTabKey(e){
-      const focusable = panel.querySelectorAll('a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])');
-      const first = focusable[0];
-      const last = focusable[focusable.length-1];
-      if (!first) { e.preventDefault(); return; }
-      if (e.shiftKey){ if (document.activeElement === first){ last.focus(); e.preventDefault(); } }
-      else { if (document.activeElement === last){ first.focus(); e.preventDefault(); } }
-    }
-
-    async function loadAndShow(){
-      try{
-        if (!aboutCache){
-          const res = await fetch('/src/pages/about.html', {cache: 'no-store'});
-          if (!res.ok) throw new Error('Network');
-          const text = await res.text();
-          aboutCache = text;
-        }
-        // вставляем содержимое
-        panel.querySelectorAll('.about-content').forEach(n=>n.remove());
-        const container = document.createElement('div');
-        container.className = 'about-content';
-        container.innerHTML = aboutCache;
-        panel.appendChild(container);
-        // Обновляем aria-labelledby если есть id
-        const title = panel.querySelector('h2');
-        if (title && title.id) panel.setAttribute('aria-labelledby', title.id);
-        openModal();
-      }catch(err){
-        panel.querySelectorAll('.about-content').forEach(n=>n.remove());
-        const errDiv = document.createElement('div');
-        errDiv.className = 'about-content';
-        errDiv.innerHTML = '<h2>О проекте</h2><p>Не удалось загрузить информацию. Попробуйте позже.</p>';
-        panel.appendChild(errDiv);
-        openModal();
+      if (window.TouchHandlers && typeof window.TouchHandlers.init === 'function') {
+        window.TouchHandlers.init();
       }
     }
 
-    aboutBtn.addEventListener('click', (e)=>{ e.preventDefault(); loadAndShow(); });
+    // Инициализируем после загрузки DOM
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initMobileFeatures);
+    } else {
+      // DOM уже загружен, но модули могут еще не быть загружены
+      // Попробуем инициализировать с небольшой задержкой
+      setTimeout(initMobileFeatures, 100);
+    }
+  })();
+
+  // --- Help Button: инициализация кнопки помощи ---
+  (function(){
+    function initHelpButton() {
+      const helpBtn = document.getElementById('helpBtn');
+      if (!helpBtn) return;
+
+      helpBtn.addEventListener('click', function() {
+        showHelpMenu(helpBtn);
+      });
+    }
+
+    function showHelpMenu(button) {
+      // Удаляем существующее меню, если есть
+      const existingMenu = document.querySelector('.help-menu');
+      if (existingMenu) {
+        existingMenu.remove();
+      }
+
+      // Проверяем, находимся ли мы на странице RMK.html
+      const isRMKPage = window.location.pathname.includes('RMK.html') || window.location.href.includes('RMK.html');
+
+      // Создаем выпадающее меню
+      const menu = document.createElement('div');
+      menu.className = 'help-menu';
+      menu.setAttribute('role', 'menu');
+
+      // Формируем HTML меню в зависимости от страницы
+      let menuHTML = '';
+      if (isRMKPage) {
+        menuHTML = `
+          <button class="help-menu-item" data-action="tour" role="menuitem">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M12 16v-4M12 8h.01"></path>
+            </svg>
+            <span>Интерактивный тур</span>
+          </button>
+        `;
+      }
+      menuHTML += `
+        <a href="help.html" class="help-menu-item" role="menuitem">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          </svg>
+          <span>Справка</span>
+        </a>
+      `;
+      menu.innerHTML = menuHTML;
+
+      // Позиционируем меню
+      const rect = button.getBoundingClientRect();
+      menu.style.position = 'fixed';
+      menu.style.top = `${rect.bottom + 8}px`;
+      menu.style.right = `${window.innerWidth - rect.right}px`;
+      menu.style.zIndex = '10001';
+
+      // Добавляем обработчики (только если кнопка тура существует)
+      const tourBtn = menu.querySelector('[data-action="tour"]');
+      if (tourBtn && isRMKPage) {
+        tourBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          menu.remove();
+          // Проверяем наличие модуля и запускаем тур
+          if (window.OnboardingTour && typeof window.OnboardingTour.startTour === 'function') {
+            window.OnboardingTour.startTour();
+          } else {
+            console.warn('OnboardingTour модуль не загружен');
+            // Показываем сообщение пользователю
+            if (window.Toast) {
+              window.Toast.error('Модуль обучения не загружен. Пожалуйста, обновите страницу.');
+            } else {
+              alert('Модуль обучения не загружен. Пожалуйста, обновите страницу.');
+            }
+          }
+        });
+      }
+
+      // Закрытие меню при клике вне его
+      const closeMenu = (e) => {
+        if (!menu.contains(e.target) && e.target !== button) {
+          menu.remove();
+          document.removeEventListener('click', closeMenu);
+        }
+      };
+      setTimeout(() => document.addEventListener('click', closeMenu), 0);
+
+      document.body.appendChild(menu);
+    }
+
+    // Экспортируем функции для использования на других страницах
+    window.showHelpMenu = showHelpMenu;
+
+    // Инициализация при загрузке DOM
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initHelpButton);
+    } else {
+      initHelpButton();
+    }
   })();
 })();

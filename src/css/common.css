@@ -1,3 +1,442 @@
+/* ===== Onboarding Tour ===== */
+.onboarding-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent; /* Убираем затемнение с самого overlay, оно будет только в ::before с вырезом */
+  z-index: 9998;
+  pointer-events: auto;
+  --highlight-top: 50%;
+  --highlight-left: 50%;
+  --highlight-width: 0px;
+  --highlight-height: 0px;
+  display: none;
+}
+
+/* Убеждаемся, что панель детальной информации видна поверх overlay */
+.detail-panel.active {
+  z-index: 10003 !important;
+  position: fixed !important; /* Должно быть fixed для правильного позиционирования */
+}
+
+/* Убеждаемся, что модальное окно приоритетов видно поверх overlay */
+#quadrantPriorityPanel.open {
+  z-index: 10004 !important;
+  position: fixed;
+}
+
+/* Подсветка поля поиска в модальном окне приоритетных технологий */
+#qpSearchInput.onboarding-highlight-input {
+  position: relative !important;
+  z-index: 10005 !important;
+  background: rgba(206, 144, 104, 0.2) !important;
+  border: 2px solid var(--accent) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 0 15px rgba(206, 144, 104, 0.6), 0 0 30px rgba(206, 144, 104, 0.4) !important;
+  animation: onboarding-button-pulse 1.5s infinite;
+  transform: scale(1.02);
+}
+
+/* Убеждаемся, что поля поиска и фильтра видны поверх overlay на шагах 5 и 6 */
+.search-container.onboarding-visible,
+#sidebar.onboarding-visible {
+  position: relative;
+  z-index: 10005 !important;
+}
+
+#filterPanel.onboarding-visible {
+  position: relative;
+  z-index: 10005 !important;
+}
+
+.onboarding-overlay::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  clip-path: polygon(
+    0% 0%,
+    0% 100%,
+    calc(var(--highlight-left) - 5px) 100%,
+    calc(var(--highlight-left) - 5px) calc(var(--highlight-top) - 5px),
+    calc(var(--highlight-left) + var(--highlight-width) + 5px) calc(var(--highlight-top) - 5px),
+    calc(var(--highlight-left) + var(--highlight-width) + 5px) calc(var(--highlight-top) + var(--highlight-height) + 5px),
+    calc(var(--highlight-left) - 5px) calc(var(--highlight-top) + var(--highlight-height) + 5px),
+    calc(var(--highlight-left) - 5px) 100%,
+    100% 100%,
+    100% 0%
+  );
+}
+
+/* Создаем окно для сектора 1 на шаге 8 тура */
+/* clip-path применяется динамически через JavaScript через style элемент */
+
+.onboarding-overlay::after {
+  content: '';
+  position: absolute;
+  top: var(--highlight-top);
+  left: var(--highlight-left);
+  width: var(--highlight-width);
+  height: var(--highlight-height);
+  border: 3px solid var(--accent);
+  border-radius: 8px;
+  box-shadow: 0 0 0 5px rgba(206, 144, 104, 0.3), 0 0 20px rgba(206, 144, 104, 0.5);
+  pointer-events: none;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 5px rgba(206, 144, 104, 0.3), 0 0 20px rgba(206, 144, 104, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(206, 144, 104, 0.2), 0 0 30px rgba(206, 144, 104, 0.4);
+  }
+}
+
+/* Выделение сектора для onboarding */
+.quadrant-group.onboarding-highlight {
+  /* Подсветка только границ радара (квадранта) */
+  stroke-width: 4px !important;
+  stroke: var(--accent) !important;
+  animation: onboarding-quadrant-pulse 1.5s infinite;
+  z-index: 10001 !important;
+  position: relative;
+  pointer-events: auto;
+}
+
+/* Подсветка только границ квадранта (линий разделения) */
+.quadrant-group.onboarding-highlight path[stroke],
+.quadrant-group.onboarding-highlight line {
+  stroke-width: 4px !important;
+  stroke: var(--accent) !important;
+  filter: drop-shadow(0 0 8px var(--accent));
+}
+
+/* Убираем подсветку с технологий (blips) */
+.quadrant-group.onboarding-highlight circle[class*="blip"],
+.quadrant-group.onboarding-highlight circle[class*="tech"],
+.quadrant-group.onboarding-highlight g[class*="blip"],
+.quadrant-group.onboarding-highlight g[class*="tech"] {
+  filter: none !important;
+  stroke-width: inherit !important;
+  stroke: inherit !important;
+}
+
+/* Убираем подсветку с названия сектора внутри SVG */
+.quadrant-group.onboarding-highlight text {
+  fill: var(--text) !important;
+  font-weight: normal !important;
+  filter: none !important;
+  opacity: 1 !important;
+}
+
+/* Выделение названий секторов на шаге 8 - подчеркивание через SVG линию */
+#techRadar .sector-label-group.onboarding-highlight-label {
+  z-index: 10003 !important;
+}
+
+#techRadar .sector-label-group.onboarding-highlight-label .sector-label,
+#techRadar .sector-label-group.onboarding-highlight-label text.sector-label {
+  fill: currentColor !important;
+  opacity: 1 !important;
+}
+
+#techRadar .sector-label-group.onboarding-highlight-label .underline-line {
+  stroke: var(--accent) !important;
+  stroke-width: 2 !important;
+  stroke-linecap: round !important;
+}
+
+@keyframes onboarding-quadrant-pulse {
+  0%, 100% {
+    stroke-width: 4px;
+    opacity: 1;
+  }
+  50% {
+    stroke-width: 6px;
+    opacity: 1;
+  }
+}
+
+@keyframes onboarding-label-pulse {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(206, 144, 104, 0.5), 0 0 20px rgba(206, 144, 104, 0.3);
+    border-color: var(--accent);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(206, 144, 104, 0.7), 0 0 30px rgba(206, 144, 104, 0.5);
+    border-color: rgba(206, 144, 104, 0.9);
+  }
+}
+
+/* Убеждаемся, что сектор виден поверх overlay */
+#techRadar .quadrant-group.onboarding-highlight {
+  z-index: 10002 !important;
+  position: relative;
+}
+
+/* Подсветка кнопки боковой панели для onboarding */
+.sidebar-icon-btn.onboarding-highlight,
+.sidebar-toggle-btn.onboarding-highlight {
+  position: relative !important;
+  z-index: 10005 !important; /* Выше overlay (9998) и модального окна (10005) */
+  background: rgba(206, 144, 104, 0.2) !important;
+  border: 2px solid var(--accent) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 0 15px rgba(206, 144, 104, 0.6), 0 0 30px rgba(206, 144, 104, 0.4) !important;
+  animation: onboarding-button-pulse 1.5s infinite;
+  transform: scale(1.1);
+  isolation: isolate; /* Создаем новый контекст наложения */
+}
+
+/* Убеждаемся, что родительский контейнер не ограничивает z-index */
+.sidebar-buttons.onboarding-highlight-container,
+.sidebar-wrapper.onboarding-highlight-container {
+  position: relative;
+  z-index: 10005 !important;
+}
+
+@keyframes onboarding-button-pulse {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(206, 144, 104, 0.6), 0 0 30px rgba(206, 144, 104, 0.4);
+    border-color: var(--accent);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(206, 144, 104, 0.8), 0 0 40px rgba(206, 144, 104, 0.6);
+    border-color: rgba(206, 144, 104, 0.9);
+  }
+}
+
+.onboarding-tooltip {
+  position: fixed;
+  z-index: 10006 !important; /* Выше модального окна графика перспективных технологий */
+  background: var(--modal-bg);
+  border: 2px solid var(--accent);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  max-width: 400px;
+  min-width: 300px;
+  opacity: 0;
+  transform: scale(0.95);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  color: var(--text);
+}
+
+.onboarding-tooltip.visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.onboarding-tooltip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--input-border);
+}
+
+.onboarding-tooltip-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.onboarding-tooltip-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: var(--text);
+  opacity: 0.7;
+  transition: color 0.2s, opacity 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.onboarding-tooltip-close:hover {
+  opacity: 1;
+  color: var(--accent);
+}
+
+.onboarding-tooltip-body {
+  padding: 20px;
+}
+
+.onboarding-tooltip-description {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text);
+  opacity: 0.9;
+}
+
+.onboarding-tooltip-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-top: 1px solid var(--input-border);
+  gap: 12px;
+}
+
+.onboarding-tooltip-progress {
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0.8;
+}
+
+.onboarding-tooltip-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.onboarding-btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+
+.onboarding-btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.onboarding-btn-primary:hover {
+  background: rgba(206, 144, 104, 0.9);
+  border-color: rgba(206, 144, 104, 0.9);
+}
+
+.onboarding-btn-secondary {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--input-border);
+}
+
+.onboarding-btn-secondary:hover {
+  background: rgba(206, 144, 104, 0.1);
+  border-color: var(--accent);
+}
+
+/* Темная тема для onboarding уже учтена через переменные */
+
+/* ===== Contextual Hints ===== */
+.contextual-hint {
+  position: fixed;
+  z-index: 10000;
+  max-width: 300px;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
+}
+
+.contextual-hint.visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.contextual-hint-content {
+  background: var(--modal-bg);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 12px 16px;
+  position: relative;
+  color: var(--text);
+}
+
+.contextual-hint-content::before {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 0;
+  border: 6px solid transparent;
+}
+
+.contextual-hint[data-position="top"] .contextual-hint-content::before {
+  bottom: -12px;
+  left: 20px;
+  border-top-color: var(--accent);
+}
+
+.contextual-hint[data-position="bottom"] .contextual-hint-content::before {
+  top: -12px;
+  left: 20px;
+  border-bottom-color: var(--accent);
+}
+
+.contextual-hint[data-position="left"] .contextual-hint-content::before {
+  right: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-left-color: var(--accent);
+}
+
+.contextual-hint[data-position="right"] .contextual-hint-content::before {
+  left: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-right-color: var(--accent);
+}
+
+.contextual-hint-message {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+  opacity: 0.9;
+}
+
+.contextual-hint-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: var(--text);
+  transition: color 0.2s, opacity 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
+}
+
+.contextual-hint-close:hover {
+  opacity: 1;
+  color: var(--accent);
+}
+
+/* Адаптивность для onboarding и hints */
+@media (max-width: 768px) {
+  .onboarding-tooltip {
+    max-width: calc(100vw - 32px);
+    min-width: auto;
+    margin: 16px;
+  }
+
+  .contextual-hint {
+    max-width: calc(100vw - 32px);
+    margin: 16px;
+  }
+}
+
 /* ===== Глобальное правило шрифта ===== */
 html, body, *, *::before, *::after {
   font-family: "gf_TikTok_Sans variant0", Tofu;
@@ -13,7 +452,7 @@ html, body, *, *::before, *::after {
 .tooltip-float,
 .tooltip-global {
   position: fixed;
-  z-index: 9999;
+  z-index: 100000 !important; /* Выше всех панелей и модалок */
   min-width: 50px;
   max-width: 280px;
   padding: 6px 10px;
@@ -24,6 +463,8 @@ html, body, *, *::before, *::after {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
   font-size: 14px;
   line-height: 1.4;
+  /* Нужен для многострочных подсказок (\n) */
+  white-space: pre-line;
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.2s ease, transform 0.2s ease;
@@ -126,9 +567,13 @@ html, body, *, *::before, *::after {
 
 /* Обеспечиваем видимость подсказок внутри прокручиваемых контейнеров */
 .modal-content,
-.filter-panel-sidebar,
-.detail-panel {
+.filter-panel-sidebar {
   overflow: visible !important;
+}
+
+/* Для detail-panel overflow должен оставаться hidden, чтобы работал скролл в tech-info */
+.detail-panel {
+  overflow: hidden !important;
 }
 
 /* ===== Переменные тем ===== */
@@ -146,11 +591,17 @@ body.light {
   --bg: var(--bg-light);
   --text: var(--text-light);
   --header-bg-color: var(--bg-light);
+  --input-bg: #fff;
+  --input-border: #ccc;
+  --modal-bg: var(--bg-light);
 }
 body.dark {
   --bg: var(--bg-dark);
   --text: var(--text-dark);
   --header-bg-color: var(--bg-dark);
+  --input-bg: #333;
+  --input-border: #2a2a2a;
+  --modal-bg: var(--bg-dark);
 }
 
 /* ===== Общие стили тела ===== */
@@ -192,6 +643,14 @@ a.logo {
   text-decoration: none;
 }
 a.logo:visited { color: inherit; }
+body.dark a.logo,
+body.dark .logo span {
+  color: var(--text);
+}
+body.light a.logo,
+body.light .logo span {
+  color: var(--text);
+}
 .logo span {
   position: relative;
 }
@@ -207,7 +666,7 @@ a.logo:visited { color: inherit; }
 }
 .logo:hover span::after { transform: scaleX(1); }
 body.dark .logo-img {
-  content: url("/image/Vector.png");
+  content: url("/assets/images/Vector.png");
 }
 
 /* ===== Навигация предприятий ===== */
@@ -413,6 +872,7 @@ body.dark .slider::after {
   justify-content: center;
   text-align: center;
   position: relative;
+  color: var(--text);
 }
 .user-role::after {
   content: "";
@@ -425,6 +885,69 @@ body.dark .slider::after {
   transition: transform 0.25s ease;
 }
 .user-role:hover::after { transform: scaleX(1); }
+
+/* ===== Бургер-меню (базовые стили) ===== */
+.burger-menu-btn {
+  display: none; /* По умолчанию скрыто, показывается только на мобильных */
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: transparent;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+  z-index: 1001;
+}
+
+.burger-menu-btn:hover {
+  background: rgba(206, 144, 104, 0.1);
+}
+
+.burger-menu-icon {
+  width: 24px;
+  height: 24px;
+  position: relative;
+}
+
+.burger-menu-icon span {
+  display: block;
+  position: absolute;
+  height: 2px;
+  width: 100%;
+  background: var(--text);
+  transition: all 0.3s ease;
+  border-radius: 2px;
+}
+
+.burger-menu-icon span:nth-child(1) {
+  top: 0;
+}
+
+.burger-menu-icon span:nth-child(2) {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.burger-menu-icon span:nth-child(3) {
+  bottom: 0;
+}
+
+.burger-menu-btn.active .burger-menu-icon span:nth-child(1) {
+  top: 50%;
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.burger-menu-btn.active .burger-menu-icon span:nth-child(2) {
+  opacity: 0;
+}
+
+.burger-menu-btn.active .burger-menu-icon span:nth-child(3) {
+  bottom: 50%;
+  transform: translateY(50%) rotate(-45deg);
+}
 
 /* ===== Адаптивность хедера ===== */
 @media (max-width: 768px) {
@@ -442,5 +965,1029 @@ body.dark .slider::after {
   }
   .logo {
     order: 1;
+  }
+}
+
+/* ===== LOADING SPINNER ===== */
+.loading-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(2px);
+}
+
+.loading-spinner-wrapper,
+.loading-progress-wrapper {
+  background: var(--modal-bg, #2a2a2a);
+  border: 1px solid var(--accent, #ce9068);
+  border-radius: 12px;
+  padding: 24px 32px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  transform: scale(0.9);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: auto;
+  min-width: 200px;
+  max-width: 400px;
+}
+
+.loading-spinner-wrapper.visible,
+.loading-progress-wrapper.visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.loading-spinner-wrapper.hiding,
+.loading-progress-wrapper.hiding {
+  opacity: 0;
+  transform: scale(0.9);
+}
+
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 16px;
+  position: relative;
+  width: 48px;
+  height: 48px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.spinner-ring {
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  border: 3px solid transparent;
+  border-top-color: var(--accent, #ce9068);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  top: 0;
+  left: 0;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-message {
+  text-align: center;
+  color: var(--text, #e0e0e0);
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+.loading-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--bg-secondary, #1a1a1a);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent, #ce9068), #d4a078);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.progress-text {
+  text-align: center;
+  color: var(--text, #e0e0e0);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ===== ERROR DISPLAY ===== */
+.error-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10001;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 400px;
+  pointer-events: none;
+}
+
+.error-display {
+  background: var(--modal-bg, #2a2a2a);
+  border-left: 4px solid var(--error-color, #e74c3c);
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  display: flex;
+  gap: 12px;
+  opacity: 0;
+  transform: translateX(100%);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: auto;
+}
+
+.error-display.visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.error-display.hiding {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+.error-display.error-network {
+  border-left-color: #f39c12;
+}
+
+.error-display.error-validation {
+  border-left-color: #e67e22;
+}
+
+.error-display.error-data {
+  border-left-color: #e74c3c;
+}
+
+.error-display.error-permission {
+  border-left-color: #c0392b;
+}
+
+.error-icon {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  color: var(--error-color, #e74c3c);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.error-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.error-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text, #e0e0e0);
+  margin-bottom: 4px;
+}
+
+.error-message {
+  font-size: 13px;
+  color: var(--text-secondary, #b0b0b0);
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
+.error-context {
+  font-size: 11px;
+  color: var(--text-tertiary, #888);
+  margin-top: 4px;
+  font-style: italic;
+}
+
+.error-actions {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  flex-shrink: 0;
+}
+
+.error-retry-btn,
+.error-close-btn {
+  background: transparent;
+  border: 1px solid var(--accent, #ce9068);
+  color: var(--accent, #ce9068);
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.error-retry-btn:hover {
+  background: var(--accent, #ce9068);
+  color: var(--modal-bg, #2a2a2a);
+}
+
+.error-close-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary, #b0b0b0);
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.error-close-btn:hover {
+  color: var(--text, #e0e0e0);
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+/* ===== TOAST NOTIFICATIONS ===== */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10002;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 400px;
+  pointer-events: none;
+}
+
+.toast {
+  background: var(--modal-bg, #2a2a2a);
+  border-left: 4px solid var(--accent, #ce9068);
+  border-radius: 8px;
+  padding: 14px 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  opacity: 0;
+  transform: translateX(100%);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: auto;
+  min-width: 300px;
+  max-width: 400px;
+}
+
+.toast.visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.toast.hiding {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+.toast-success {
+  border-left-color: #27ae60;
+}
+
+.toast-error {
+  border-left-color: #e74c3c;
+}
+
+.toast-warning {
+  border-left-color: #f39c12;
+}
+
+.toast-info {
+  border-left-color: #3498db;
+}
+
+.toast-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+}
+
+.toast-success .toast-icon {
+  color: #27ae60;
+}
+
+.toast-error .toast-icon {
+  color: #e74c3c;
+}
+
+.toast-warning .toast-icon {
+  color: #f39c12;
+}
+
+.toast-info .toast-icon {
+  color: #3498db;
+}
+
+.toast-message {
+  flex: 1;
+  font-size: 14px;
+  color: var(--text, #e0e0e0);
+  line-height: 1.4;
+  min-width: 0;
+}
+
+.toast-close {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, #b0b0b0);
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+  margin-top: -2px;
+}
+
+.toast-close:hover {
+  color: var(--text, #e0e0e0);
+}
+
+/* ===== SKELETON SCREENS ===== */
+.skeleton-active {
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-hiding {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.skeleton-line,
+.skeleton-shape {
+  background: linear-gradient(90deg,
+    var(--bg-secondary, #1a1a1a) 0%,
+    var(--bg-tertiary, #252525) 50%,
+    var(--bg-secondary, #1a1a1a) 100%);
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+@keyframes skeleton-loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton-line {
+  height: 16px;
+  margin-bottom: 8px;
+}
+
+.skeleton-line:last-child {
+  margin-bottom: 0;
+}
+
+.skeleton-title {
+  height: 20px;
+  width: 60%;
+}
+
+.skeleton-title-large {
+  height: 24px;
+  width: 70%;
+  margin-bottom: 12px;
+}
+
+.skeleton-subtitle {
+  height: 14px;
+  width: 40%;
+}
+
+.skeleton-short {
+  width: 30%;
+}
+
+.skeleton-shape {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.skeleton-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.skeleton-circle-large {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  margin: 20px auto;
+}
+
+/* Skeleton для списка технологий */
+.skeleton-tech-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skeleton-tech-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg-secondary, #1a1a1a);
+  border-radius: 8px;
+}
+
+.skeleton-content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Skeleton для детальной панели */
+.skeleton-detail-panel {
+  padding: 20px;
+}
+
+.skeleton-header {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--bg-tertiary, #252525);
+}
+
+.skeleton-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.skeleton-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: var(--bg-secondary, #1a1a1a);
+  border-radius: 8px;
+}
+
+/* Skeleton для графиков */
+.skeleton-chart {
+  padding: 20px;
+  background: var(--bg-secondary, #1a1a1a);
+  border-radius: 8px;
+}
+
+.skeleton-chart-header {
+  margin-bottom: 20px;
+}
+
+.skeleton-chart-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  height: 200px;
+  gap: 12px;
+}
+
+.skeleton-bar {
+  flex: 1;
+  background: linear-gradient(180deg,
+    var(--accent, #ce9068) 0%,
+    var(--accent-dark, #b87d5a) 100%);
+  border-radius: 4px 4px 0 0;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+  min-height: 40px;
+}
+
+.skeleton-bar:nth-child(1) { height: 60%; }
+.skeleton-bar:nth-child(2) { height: 80%; }
+.skeleton-bar:nth-child(3) { height: 45%; }
+.skeleton-bar:nth-child(4) { height: 90%; }
+.skeleton-bar:nth-child(5) { height: 55%; }
+
+.skeleton-chart-line {
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.skeleton-line-path {
+  stroke: var(--accent, #ce9068);
+  opacity: 0.3;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+.skeleton-chart-pie {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+}
+
+/* Skeleton для таблиц */
+.skeleton-table {
+  background: var(--bg-secondary, #1a1a1a);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.skeleton-table-header {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg-tertiary, #252525);
+  border-bottom: 1px solid var(--bg-tertiary, #252525);
+}
+
+.skeleton-table-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 12px;
+  padding: 12px;
+  border-bottom: 1px solid var(--bg-tertiary, #252525);
+}
+
+.skeleton-table-row:last-child {
+  border-bottom: none;
+}
+
+/* ===== Адаптивность для мобильных устройств ===== */
+
+/* Breakpoints:
+ * Mobile: < 768px
+ * Tablet: 768px - 1024px
+ * Desktop: > 1024px
+ */
+
+/* ===== Mobile (<= 767px) ===== */
+@media (max-width: 767px) {
+  /* Уведомления и ошибки */
+  .error-container,
+  .toast-container {
+    right: 10px;
+    left: 10px;
+    max-width: none;
+  }
+
+  .error-display,
+  .toast {
+    min-width: auto;
+    max-width: none;
+  }
+
+  .loading-spinner-wrapper,
+  .loading-progress-wrapper {
+    margin: 20px;
+    max-width: calc(100% - 40px);
+  }
+
+  /* Хедер - бургер-меню вместо полной навигации */
+  header {
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 10px 15px;
+    height: auto;
+    min-height: var(--header-height);
+  }
+
+  .logo span {
+    font-size: clamp(14px, 4vw, 18px);
+  }
+
+  .enterprise-nav {
+    display: none; /* Скрываем обычную навигацию, будет бургер-меню */
+  }
+
+  .controls {
+    gap: 10px;
+    flex: 1;
+    justify-content: flex-end;
+  }
+
+  /* Скрываем элементы controls на мобильных (кроме бургер-меню) */
+  .controls > *:not(.burger-menu-btn) {
+    display: none;
+  }
+
+  /* Увеличиваем размеры кликабельных элементов для touch */
+  .about-btn,
+  .help-btn,
+  .theme-switch,
+  .login,
+  .logout {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .about-btn__text {
+    display: none; /* Скрываем текст на мобильных, оставляем только иконку */
+  }
+
+  /* Показываем бургер-меню на мобильных */
+  .burger-menu-btn {
+    display: flex !important;
+  }
+
+  /* Выдвижное меню со всеми элементами */
+  .mobile-enterprise-menu {
+    position: fixed;
+    top: var(--header-height);
+    left: 0;
+    right: 0;
+    background: var(--bg);
+    border-bottom: 1px solid var(--accent);
+    z-index: 1000;
+    transform: translateY(-100%);
+    opacity: 0;
+    visibility: hidden;
+    transition: transform 0.3s ease, opacity 0.3s ease, visibility 0.3s;
+    max-height: calc(100vh - var(--header-height));
+    overflow-y: auto;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .mobile-enterprise-menu.active {
+    transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
+  }
+
+  /* Секции меню */
+  .mobile-menu-section {
+    padding: 16px 20px;
+  }
+
+  .mobile-menu-title {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--accent);
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--accent);
+    opacity: 0.8;
+  }
+
+  /* Разделитель между секциями */
+  .mobile-menu-divider {
+    height: 1px;
+    background: var(--accent);
+    opacity: 0.2;
+    margin: 0;
+  }
+
+  /* Кнопки в меню */
+  .mobile-menu-btn {
+    width: 100%;
+    padding: 14px 16px;
+    margin-bottom: 8px;
+    font-size: 16px;
+    text-align: left;
+    min-height: 48px;
+    border-radius: 8px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.2s ease;
+  }
+
+  .mobile-menu-btn:last-child {
+    margin-bottom: 0;
+  }
+
+  .mobile-menu-btn:hover {
+    background: rgba(206, 144, 104, 0.1);
+    border-color: var(--accent);
+  }
+
+  .mobile-menu-btn:active {
+    background: rgba(206, 144, 104, 0.2);
+    transform: scale(0.98);
+  }
+
+  .mobile-menu-btn svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+
+  .mobile-menu-btn span {
+    flex: 1;
+  }
+
+  /* Активная кнопка предприятия */
+  .mobile-menu-btn.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+
+  /* Кнопки действий */
+  .mobile-menu-action-btn {
+    justify-content: flex-start;
+  }
+
+  /* Секция пользователя */
+  .mobile-menu-user-section {
+    background: rgba(206, 144, 104, 0.05);
+    border-top: 1px solid var(--accent);
+    border-bottom: 1px solid var(--accent);
+  }
+
+  .mobile-menu-user-info {
+    margin-bottom: 12px;
+    padding: 12px;
+    background: var(--bg);
+    border-radius: 8px;
+    border: 1px solid var(--accent);
+  }
+
+  .mobile-menu-user-info .user-role {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--accent);
+    text-align: center;
+  }
+
+  /* Кнопка выхода */
+  .mobile-menu-logout-btn {
+    background: rgba(220, 53, 69, 0.1);
+    border-color: rgba(220, 53, 69, 0.3);
+    color: #dc3545;
+  }
+
+  .mobile-menu-logout-btn:hover {
+    background: rgba(220, 53, 69, 0.2);
+    border-color: #dc3545;
+  }
+
+  .mobile-menu-logout-wrapper {
+    width: 100%;
+  }
+
+  .mobile-menu-logout-wrapper .logout {
+    width: 100%;
+    padding: 14px 16px;
+    min-height: 48px;
+    border-radius: 8px;
+    justify-content: flex-start;
+    gap: 12px;
+  }
+
+  body.dark .mobile-menu-logout-btn {
+    background: rgba(220, 53, 69, 0.15);
+    border-color: rgba(220, 53, 69, 0.4);
+    color: #ff6b7a;
+  }
+
+  body.dark .mobile-menu-logout-btn:hover {
+    background: rgba(220, 53, 69, 0.25);
+    border-color: #ff6b7a;
+  }
+}
+
+/* ===== Tablet (768px - 1024px) ===== */
+@media (min-width: 768px) and (max-width: 1024px) {
+  header {
+    padding: 10px 3%;
+  }
+
+  .enterprise-nav {
+    width: 45%;
+  }
+
+  .enterprise-nav button {
+    padding: 6px 12px;
+    font-size: clamp(14px, 1.8vw, 16px);
+  }
+
+  /* Скрываем бургер-меню на планшетах */
+  .burger-menu-btn {
+    display: none;
+  }
+
+  .mobile-enterprise-menu {
+    display: none;
+  }
+}
+
+/* ===== Desktop (> 1024px) ===== */
+@media (min-width: 1025px) {
+  /* Скрываем бургер-меню на десктопе */
+  .burger-menu-btn {
+    display: none;
+  }
+
+  .mobile-enterprise-menu {
+    display: none;
+  }
+}
+
+/* ===== Touch оптимизация ===== */
+/* Увеличиваем размеры кликабельных элементов для touch устройств */
+@media (hover: none) and (pointer: coarse) {
+  button,
+  a,
+  [role="button"],
+  input[type="checkbox"],
+  input[type="radio"],
+  label {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Заменяем hover на touch feedback */
+  button:active,
+  a:active,
+  [role="button"]:active {
+    opacity: 0.7;
+    transform: scale(0.98);
+  }
+}
+
+/* Улучшение работы с виртуальной клавиатурой */
+@media (max-width: 1024px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px; /* Предотвращает автоматический zoom на iOS */
+  }
+}
+
+/* ===== Доступность (A11y) ===== */
+
+/* Скрытый элемент для screen readers */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Визуальная индикация фокуса для клавиатурной навигации */
+.keyboard-navigation *:focus,
+.keyboard-navigation button:focus,
+.keyboard-navigation a:focus,
+.keyboard-navigation input:focus,
+.keyboard-navigation textarea:focus,
+.keyboard-navigation select:focus,
+.keyboard-navigation [role="button"]:focus,
+.keyboard-navigation [tabindex]:focus {
+  outline: 3px solid var(--accent, #ce9168);
+  outline-offset: 2px;
+}
+
+/* Улучшенная индикация фокуса для активных элементов при клавиатурной навигации */
+.keyboard-navigation .keyboard-focused {
+  outline: 3px solid var(--accent, #ce9168);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(206, 145, 104, 0.2);
+}
+
+/* Фокус для кнопок */
+.keyboard-navigation button:focus,
+.keyboard-navigation [role="button"]:focus {
+  outline: 3px solid var(--accent, #ce9168);
+  outline-offset: 2px;
+}
+
+/* Фокус для ссылок */
+.keyboard-navigation a:focus {
+  outline: 3px solid var(--accent, #ce9168);
+  outline-offset: 2px;
+  text-decoration: underline;
+}
+
+/* Фокус для полей ввода */
+.keyboard-navigation input:focus,
+.keyboard-navigation textarea:focus,
+.keyboard-navigation select:focus {
+  outline: 3px solid var(--accent, #ce9168);
+  outline-offset: 2px;
+  border-color: var(--accent, #ce9168);
+}
+
+/* Фокус для custom-select элементов */
+.keyboard-navigation .custom-select:focus,
+.keyboard-navigation .custom-select-modal:focus {
+  outline: 3px solid var(--accent, #ce9168);
+  outline-offset: 2px;
+  border-color: var(--accent, #ce9168);
+}
+
+/* Фокус для модальных окон */
+.keyboard-navigation .modal-panel:focus,
+.keyboard-navigation .detail-panel:focus {
+  outline: 3px solid var(--accent, #ce9168);
+  outline-offset: 4px;
+}
+
+/* Убираем outline для мыши, но сохраняем для клавиатуры */
+*:focus {
+  outline: none;
+}
+
+/* Стили для aria-live регионов (скрыты визуально) */
+#aria-live-status,
+#aria-live-alert {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Улучшение видимости для элементов с aria-invalid="true" */
+[aria-invalid="true"] {
+  border-color: var(--error-color, #dc3545);
+}
+
+[aria-invalid="true"]:focus {
+  outline-color: var(--error-color, #dc3545);
+  box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.2);
+}
+
+/* Визуальная индикация для aria-expanded */
+[aria-expanded="true"]::after {
+  content: '';
+  /* Добавляем визуальную индикацию если нужно */
+}
+
+/* Улучшение для элементов с aria-disabled */
+[aria-disabled="true"],
+[aria-disabled="true"]:hover,
+[aria-disabled="true"]:focus {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Адаптивная поддержка увеличенного шрифта */
+@media (prefers-reduced-motion: no-preference) {
+  * {
+    transition: outline 0.2s ease, outline-offset 0.2s ease, box-shadow 0.2s ease;
+  }
+}
+
+/* Поддержка prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
