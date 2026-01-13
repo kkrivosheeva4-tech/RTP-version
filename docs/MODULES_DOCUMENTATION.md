@@ -1,242 +1,1057 @@
-# Документация модулей проекта РТП-2.3
+# Документация модулей проекта РТП-2.3 (`src/js/modules/`)
 
-Актуально для текущей структуры `src/js/modules/` (обновлено: **2026‑01‑13**).
+Обновлено: **2026‑01‑13**  
+Цель документа: дать максимально подробное описание каждого файла в `src/js/modules/`, его API, зависимостей и роли в приложении.
 
-## Обзор архитектуры
+## Содержание
 
-Проект — статическое веб‑приложение (HTML/CSS/JS), без сборки и без обязательного Node.js.
+- [Архитектурные принципы](#архитектурные-принципы)
+- [Порядок загрузки модулей (RMK.html)](#порядок-загрузки-модулей-rmkhtml)
+- [Соглашения и общие понятия](#соглашения-и-общие-понятия)
+  - [Состояние (StateManager)](#состояние-statemanager)
+  - [DOM доступ (DOMCache и DOMProxy)](#dom-доступ-domcache-и-domproxy)
+  - [События (EventManager, events.js)](#события-eventmanager-eventsjs)
+  - [Нотификации и ошибки](#нотификации-и-ошибки)
+- [Core](#core)
+  - [`core/dom-utils.js`](#coredom-utilsjs)
+  - [`core/core-utils.js`](#corecore-utilsjs)
+  - [`core/state-manager.js`](#corestate-managerjs)
+  - [`core/data-loader.js`](#coredata-loaderjs)
+  - [`core/state-utils.js`](#corestate-utilsjs)
+  - [`core/data-indexing.js`](#coredata-indexingjs)
+  - [`core/app-init.js`](#coreapp-initjs)
+- [Radar](#radar)
+  - [`radar/positioning.js`](#radarpositioningjs)
+  - [`radar/radar-renderer.js`](#radarradar-rendererjs)
+  - [`radar/quadrant-cache.js`](#radarquadrant-cachejs)
+  - [`radar/quadrants.js`](#radarquadrantsjs)
+  - [`radar/radar-wrappers.js`](#radarradar-wrappersjs)
+  - [`radar/radar-update.js`](#radarradar-updatejs)
+  - [`radar/radar-events.js`](#radarradar-eventsjs)
+  - [`radar/prospects-chart.js`](#radarprospects-chartjs)
+- [UI](#ui)
+  - [`ui/filters.js`](#uifiltersjs)
+  - [`ui/select-events.js`](#uiselect-eventsjs)
+  - [`ui/modals.js`](#uimodalsjs)
+  - [`ui/forms.js`](#uiformsjs)
+  - [`ui/form-management.js`](#uiform-managementjs)
+  - [`ui/modal-forms.js`](#uimodal-formsjs)
+  - [`ui/sidebar.js`](#uisidebarjs)
+  - [`ui/detail-panel.js`](#uidetail-paneljs)
+  - [`ui/report-status.js`](#uireport-statusjs)
+  - [`ui/tooltips.js`](#uitooltipsjs)
+  - [`ui/toast.js`](#uitoastjs)
+  - [`ui/skeleton.js`](#uiskeletonjs)
+  - [`ui/loading.js`](#uiloadingjs)
+  - [`ui/error-display.js`](#uierror-displayjs)
+  - [`ui/mobile-nav.js`](#uimobile-navjs)
+  - [`ui/touch-handlers.js`](#uitouch-handlersjs)
+  - [`ui/keyboard-nav.js`](#uikeyboard-navjs)
+  - [`ui/aria-manager.js`](#uiaria-managerjs)
+  - [`ui/onboarding.js`](#uionboardingjs)
+  - [`ui/contextual-hints.js`](#uicontextual-hintsjs)
+- [Business](#business)
+  - [`business/auth.js`](#businessauthjs)
+  - [`business/priorities.js`](#businessprioritiesjs)
+  - [`business/export.js`](#businessexportjs)
+- [Integration](#integration)
+  - [`integration/events.js`](#integrationeventsjs)
 
-- Модули написаны в стиле **IIFE** и для совместимости **экспортируют API в `window`** (например, `window.DOMCache`, `window.DataLoader`, `window.updateRadar`).
-- Основная страница радара (`src/pages/RMK.html`) загружает модули **в строгом порядке** через `src/js/RMK2.js` (динамическая загрузка `<script>` с `async=false`).
-- Другие страницы используют свои скрипты:
-  - `src/pages/index.html` → `src/js/script.js` (+ `src/js/audit-logger.js`, части UI для моб.навигации/жестов)
-  - `src/pages/auth.html` → `src/js/auth.js`
-  - `src/pages/admin.html` → `src/js/admin.js` (+ Chart.js через CDN)
-  - `src/pages/help.html` → `src/js/help.js`
+## Архитектурные принципы
+
+1) **Модули — это IIFE + экспорт в `window`.**  
+   Практически все файлы оборачиваются в `(function(){ ... })()` и публикуют API через `window.*`. Это даёт обратную совместимость со «старым» кодом (например, `RMK2.js` или inline‑вызовами).
+
+2) **Никакой сборки/импорта.**  
+   Нет `import`/`export` (ESM). Зависимости — через проверку наличия `window.X` (ленивые `getDependency()`).
+
+3) **Единый источник правды — `StateManager`.**  
+   Данные и состояние UI хранятся в `StateManager` (и часто дублируются в `window.*` для совместимости).
+
+4) **UI реагирует на изменения через подписки и события.**  
+   `state-utils.js` подписывает UI на изменения ключей состояния, `integration/events.js` связывает клики/ввод/зум с изменением состояния и перерисовкой.
 
 ## Порядок загрузки модулей (RMK.html)
 
-Источник истины: `src/js/RMK2.js` (массив `modules` внутри `loadAllModules()`).
+Страница `src/pages/RMK.html` подключает **только** `RMK2.js`.  
+Дальше `RMK2.js` загружает все модули последовательно (см. массив `modules` в `loadAllModules()`).
 
-Коротко по слоям:
+Высокоуровневый порядок:
 
-- **Base**: `audit-logger.js`, `script.js`, `radar-utils.js`
-- **Core**: `dom-utils.js` → `core-utils.js` → `state-manager.js` → `data-loader.js` → `state-utils.js` → `data-indexing.js`
-- **UI (раньше)**: `ui/detail-panel.js` (нужен до `radar-wrappers.js`)
-- **Radar**: `positioning.js` → `radar-renderer.js` → `quadrant-cache.js` → `quadrants.js` → `prospects-chart.js` → `radar-wrappers.js` → `radar-update.js`
-- **UI (остальные)**: `filters.js`, `modals.js`, `forms.js`, `sidebar.js`, `modal-forms.js`, `report-status.js`, `tooltips.js`, `form-management.js`, `loading.js`, `error-display.js`, `toast.js`, `skeleton.js`, `mobile-nav.js`, `touch-handlers.js`, `keyboard-nav.js`, `aria-manager.js`, `onboarding.js`, `contextual-hints.js`
-- **Business**: `export.js`, `auth.js`, `priorities.js`
-- **Handlers split**: `ui/select-events.js`, `radar/radar-events.js`
-- **Integration**: `integration/events.js` (после всех зависимостей)
-- **Init**: `core/app-init.js` (последним)
+- base: `audit-logger.js`, `script.js`, `radar-utils.js`
+- core: `dom-utils` → `core-utils` → `state-manager` → `data-loader` → `state-utils` → `data-indexing`
+- ui (раньше): `detail-panel` (нужен до `radar-wrappers`)
+- radar: `positioning` → `radar-renderer` → `quadrant-cache` → `quadrants` → `prospects-chart` → `radar-wrappers` → `radar-update`
+- ui (остальные): filters/modals/forms/sidebar/.../onboarding/contextual-hints
+- business: export/auth/priorities
+- split‑handlers: `ui/select-events`, `radar/radar-events`
+- integration: `integration/events`
+- init: `core/app-init`
 
-## Каталог модулей
+## Соглашения и общие понятия
 
-Ниже — список модулей, которые реально присутствуют в `src/js/modules/` в текущей версии проекта.
+### Состояние (StateManager)
 
-### Core (`src/js/modules/core/`)
+В разных местах используются типовые ключи `StateManager`:
 
-#### `dom-utils.js`
-**Назначение:** объединённые утилиты DOM.
+- `technologies` — массив технологий (основной набор для радара)
+- `technologiesById` — `Map<id, tech>` для O(1) доступа
+- `enterpriseData` — данные предприятий/технологий из JSON
+- `currentEnterprise` — выбранное предприятие (строка)
+- `currentZoomedQuadrant` — зуммированный сектор (id или `null`)
+- `selectedBlipId` — текущий выбранный blip (id технологии)
+- `blocksList`, `functions`, `nameToBlockId`, `functionToBlockMap`, `blockToQuadrant` — справочники
+- `quadrantsCache`, `quadrantsCacheVersion` — ускорение доступа к SVG‑структуре
 
-- `window.DOMCache`: кэширование DOM‑узлов (`get/query/find/...`)
-- `window.DOMProxy`: безопасные Proxy‑объекты (`createDOMProxy/createElementProxy/...`)
+### DOM доступ (DOMCache и DOMProxy)
 
-#### `core-utils.js`
-**Назначение:** «ядро» общих инфраструктурных утилит.
+- `DOMCache.get(id)` — быстрый доступ по `id` с кешем и защитой от устаревших нод.
+- `DOMCache.query(selector)` / `find(parent, selector)` — кешируемые выборки.
+- `DOMProxy.createElementProxy(id)` — «безопасный» proxy для input/кнопок (возвращает заглушки вместо `null`).
+- `DOMProxy.createDOMProxy(id)` — «безопасный» proxy для контейнеров/DOM‑узлов (используется для SVG).
 
-- `window.ErrorHandler`: централизованная обработка ошибок (+ интеграция с `ErrorDisplay`, если он доступен)
-- `window.EventManager`: делегирование событий (`on/off/clear`)
-- `window.Memoization`: `memoize`, `memoizeWithTTL`, `FilterCache`
-- `window.ModuleLoader`: `requireGlobalModule`
-- `window.RenderQueue`: батчинг UI‑обновлений через `requestAnimationFrame`
+### События (EventManager, events.js)
 
-#### `state-manager.js`
-**Назначение:** централизованное состояние приложения (pub/sub).
+- `EventManager.on(selector, event, handler)` — делегирование событий на `document` + хранение handler‑ов.
+- `integration/events.js` — центральная точка регистрации UI‑событий (тема/поиск/предприятия/панели).
+- Часть логики вынесена в узкие модули:
+  - `ui/select-events.js` — кастомные селекты
+  - `radar/radar-events.js` — события на радаре (hover/click/zoom)
 
-- `window.StateManager`: `get/set/subscribe/subscribeToKey/clear`
+### Нотификации и ошибки
 
-#### `data-loader.js`
-**Назначение:** загрузка JSON‑данных и их нормализация, переключение предприятия.
+Есть несколько «каналов»:
 
-Ключевые особенности:
-- чтение `src/data/ru/*.json` с сетевым кешом/дедупликацией fetch
-- работа с «виртуальной ФС» (VFS) в `localStorage` (`vfs:*`)
-- запись данных в `StateManager` и синхронизация ряда ключей в `window` (для обратной совместимости)
-
-Экспорт: `window.DataLoader` (включая `loadData()`, `switchEnterprise()`, VFS‑хелперы и т.п.).
-
-#### `state-utils.js`
-**Назначение:** удобные геттеры/сеттеры и подписки на изменения состояния.
-
-- `window.StateAccessors`: типизированные accessors (например `getTechnologies`, `setCurrentEnterprise`, …)
-- `window.StateSubscriptions`: `initStateSubscriptions()` (авто‑подписки, автоперерисовка и синхронизация)
-
-#### `data-indexing.js`
-**Назначение:** индексы для быстрого доступа к технологиям.
-
-- `window.DataIndex`: индексация и фильтрация (быстрый `filter/getById/byBlock/byStatus/byCompany`)
-- `window.TechIndex`: `rebuildTechnologiesIndex()`, `getTechById()` (+ алиасы `window.getTechById`)
-
-#### `app-init.js`
-**Назначение:** оркестратор инициализации RMK‑страницы.
-
-Содержит `initApp()`:
-- тема (базовая инициализация)
-- `DataLoader.loadData()` + `switchEnterprise()`
-- первый `renderRadar()`
-- инициализация обработчиков форм/удалений/помощи, мобильной навигации, ARIA, onboarding и т.д.
+- `ui/toast.js` (`window.Toast`) — основной «современный» способ уведомлений.
+- `core/core-utils.js` (`ErrorHandler`) + `ui/error-display.js` (`ErrorDisplay`) — показ ошибок и возможность повтора.
+- `ui/loading.js` (`LoadingManager`) — индикатор загрузки/прогресса.
+- `ui/report-status.js` (`ReportStatus`) — специализированный индикатор экспорта отчёта.
 
 ---
 
-### Radar (`src/js/modules/radar/`)
+## Core
 
-#### `positioning.js`
-**Назначение:** вычисление координат/раскладка blip’ов, сопоставление блок → квадрант.
+### `core/dom-utils.js`
 
-Экспорт: `window.Positioning` + алиасы (например `window.getQuadrantIdForBlock`, `window.getAllQuadrantsForTech`).
+**Назначение:** объединение `DOMCache` и `DOMProxy` в один файл для стабильного порядка загрузки и минимизации количества `<script>`.
 
-#### `radar-renderer.js`
-**Назначение:** отрисовка SVG радара (фон, легенда, blip’ы) и связанная визуальная логика.
+**Экспорт в `window`:**
 
-Экспорт: `window.RadarRenderer`.
+- `window.DOMCache`:
+  - `get(id)` — поиск по `id` с кешем и проверкой `isConnected`
+  - `query(selector)` — кешируемый `document.querySelector`
+  - `queryAll(selector, context=document)`
+  - `find(parent, selector)` / `findAll(parent, selector)`
+  - `clear(key)`, `clearAll()`, `refresh(id|selector)`
+- `window.DOMProxy`:
+  - `createDOMGetter(id)` — геттер через `DOMCache`
+  - `createDOMProxy(id)` — proxy для «контейнеров» (svg/detailPanel)
+  - `createElementProxy(id)` — proxy для input/button и т.п.
+- алиасы совместимости: `window.createDOMGetter`, `window.createDOMProxy`, `window.createElementProxy`
 
-#### `quadrant-cache.js`
-**Назначение:** кеширование SVG‑групп квадрантов для ускорения доступа.
-
-Экспорт: `window.QuadrantCache` (например `getQuadrantGroup`, `clearQuadrantGroupsCache`).
-
-#### `quadrants.js`
-**Назначение:** логика квадрантов (получение технологий сектора, zoom/unzoom, имена/статусы).
-
-Экспорт: `window.Quadrants` + алиасы (`window.zoomQuadrant`, `window.unzoom`, и т.п.).
-
-#### `radar-wrappers.js`
-**Назначение:** обёртки ради обратной совместимости: прокидывают «старые» глобальные функции на реализацию в `RadarRenderer`.
-
-Экспорт/алиасы: `window.renderRadar`, `window.createBlip`, `window.renderLegend`, …
-
-#### `radar-update.js`
-**Назначение:** обновление радара по фильтрам/поиску (использует `Filters`, `DataIndex`, `RenderQueue`).
-
-Экспорт/алиас: `window.updateRadar`.
-
-#### `radar-events.js`
-**Назначение:** обработчики событий, специфичные для SVG‑радара (hover/click по blip’ам, зум по секторам и т.п.).
-
-Экспорт: `window.initRadarEvents()` и/или функции, используемые `integration/events.js`.
-
-#### `prospects-chart.js`
-**Назначение:** модуль «Перспективные» (график + таблица + экспорт).
-
-Примечание: экспорт PDF в этом модуле реализован через canvas/`jsPDF` (в комментариях отмечено «без html2canvas»), но на странице `RMK.html` библиотека `html2canvas` подключена для общего PDF‑экспорта.
-
-Экспорт: `window.ProspectsChart.init()` (и сопутствующие функции).
+**Ключевая идея:** любые модули могут безопасно обращаться к DOM‑элементам даже если они временно отсутствуют/пересозданы.
 
 ---
 
-### UI (`src/js/modules/ui/`)
+### `core/core-utils.js`
 
-#### `filters.js`
-**Назначение:** логика фильтров (custom select), чтение выбранных значений и наполнение опций.
+**Назначение:** объединённый «инфраструктурный» файл: ошибки, события, мемоизация, загрузчик модулей, очередь рендера.
 
-Экспорт/алиасы: `window.Filters`, `window.getFilterValues`, `window.populateSelect`, `window.updateFunctionFilterForBlock`, …
+**Экспорт в `window`:**
 
-#### `select-events.js`
-**Назначение:** вынесенные из `events.js` обработчики кликов/изменений для custom‑select (sidebar и модалки).
+- `window.ErrorHandler`:
+  - `handle(error, context)` — лог + попытка `ErrorDisplay.show`
+  - `setReporter(fn)` — «репортинг» ошибок (опционально)
+  - `setNotifier(fn)` — UI‑уведомления (опционально)
+  - `setRetryCallback(fn)` — callback для кнопки «Повторить» в `ErrorDisplay`
+- `window.EventManager`:
+  - `on(selector, event, handler)`
+  - `off(selector, event, handler?)`
+  - `clear()`
+- `window.Memoization`:
+  - `memoize(fn)`
+  - `memoizeWithTTL(fn, ttlMs)`
+  - `FilterCache` (`get/set/clear`)
+- `window.ModuleLoader` + алиас `window.requireGlobalModule(name)`:
+  - проверяет наличие `window[name]` и кидает ошибку с подсказкой пути
+- `window.RenderQueue`:
+  - `schedule(fn)` — батчинг через `requestAnimationFrame`
+  - `flush()`, `clear()`
 
-Экспорт/алиас: `window.initSelectEvents()`.
-
-#### `modals.js`
-**Назначение:** базовые операции с модальными окнами (show/hide/confirm), защита от «мгновенного закрытия», сброс форм.
-
-Экспорт/алиасы: `window.showModal`, `window.hideModal`, `window.showInternalConfirm`.
-
-#### `forms.js`
-**Назначение:** утилиты форм (dirty‑check, snapshot, динамические поля оценок предприятий и т.д.).
-
-Экспорт: функции через `window` (используются модалками и форм‑менеджментом).
-
-#### `form-management.js`
-**Назначение:** обработчики сабмитов/кнопок для добавления/редактирования/удаления сущностей (технологии/блоки/функции) и связанная логика.
-
-#### `modal-forms.js`
-**Назначение:** синхронизация опций в модальных custom‑select (блоки по секторам, функции по блокам).
-
-#### `detail-panel.js`
-**Назначение:** панель детальной информации о технологии, выделение blip’ов, логика открытия из разных источников.
-
-Экспорт/алиас: `window.showDetail` (+ функции для экспорта полей/лейблов, если присутствуют).
-
-#### `sidebar.js`
-**Назначение:** списки технологий по секторам в боковой панели, синхронизация с радаром.
-
-Экспорт/алиас: `window.updateSidebarLists` (+ функции создания/обновления списков).
-
-#### `report-status.js`
-**Назначение:** индикаторы статуса подготовки отчёта/экспорта (loading/success/error).
-
-#### `tooltips.js`
-**Назначение:** тултипы и hover‑подсказки (единая реализация для UI).
-
-#### `loading.js`
-**Назначение:** менеджер загрузки/оверлеи (используется при загрузке данных и тяжёлых операциях).
-
-#### `error-display.js`
-**Назначение:** UI‑отображение ошибок (используется `ErrorHandler`, если модуль доступен).
-
-#### `toast.js`
-**Назначение:** всплывающие уведомления (используется как современный канал уведомлений вместо legacy‑панели).
-
-#### `skeleton.js`
-**Назначение:** skeleton‑заглушки для списков/панелей/графиков на время загрузки.
-
-#### `mobile-nav.js`, `touch-handlers.js`
-**Назначение:** адаптивная навигация и поддержка touch‑жестов.
-
-#### `keyboard-nav.js`, `aria-manager.js`
-**Назначение:** улучшения доступности и управление фокусом/клавиатурой.
-
-#### `onboarding.js`
-**Назначение:** интерактивный тур/обучение по интерфейсу (запускается из меню помощи).
-
-#### `contextual-hints.js`
-**Назначение:** контекстные подсказки (в `app-init.js` отмечены как отключенные).
+**Почему это важно:** `RenderQueue` и `EventManager` резко уменьшают «дребезг» DOM‑обновлений и количество обработчиков.
 
 ---
 
-### Business (`src/js/modules/business/`)
+### `core/state-manager.js`
 
-#### `auth.js`
-**Назначение:** «права» и рендер UI‑авторизации на страницах радара.
+**Назначение:** минималистичное хранилище состояния + подписки.
 
-Экспорт/алиасы: `window.checkArchitectRole()`, `window.renderAuth()`.
+**Экспорт:** `window.StateManager` со стандартным API:
 
-#### `priorities.js`
-**Назначение:** расчет приоритета технологии (модели `avg/min/mult`), «слабое звено», панель приоритетов сектора.
+- `get(key)`
+- `set(key, value)` — не уведомляет, если значение строго равно старому (`oldValue === value`)
+- `subscribe(fn)` — глобальная подписка `(key, value, oldValue)`
+- `subscribeToKey(key, fn)` — подписка на конкретный ключ `(value, oldValue, key)`
+- `clear()`
 
-Экспорт/алиасы: `window.computePriority`, `window.getPriorityCategory`, `window.openQuadrantPriorityPanel`, …
+**Особенности:**
 
-#### `export.js`
-**Назначение:** экспорт PDF отчета (полевая выборка, фильтры экспорта, генерация PDF через `jsPDF` + `autoTable`).
-
-Экспорт/алиасы: `window.performPdfExport`, `window.showExportPdfModal`, …
+- `safeCall` ловит ошибки подписчиков и не ломает приложение.
 
 ---
 
-### Integration (`src/js/modules/integration/`)
+### `core/data-loader.js`
 
-#### `events.js`
-**Назначение:** центральные обработчики событий интерфейса (тема, фильтры, поиск, предприятия, модалки, и т.д.).
+**Назначение:** загрузка JSON данных, кеширование fetch, нормализация и запись в `StateManager`.
 
-Важно:
-- модуль ожидает, что зависимости (например `DOMCache`, `EventManager`) уже загружены;
-- часть логики вынесена в специализированные модули (`ui/select-events.js`, `radar/radar-events.js`).
+**Подсистемы:**
 
-## Примечания по внешним библиотекам
+1) **VFS в localStorage**  
+   Ключи вида `vfs:<filename>`, функции `vfsRead/vfsWrite`.
 
-- На `RMK.html` подключены через CDN:
-  - `jsPDF` + `jsPDF AutoTable` (экспорт PDF)
-  - `html2canvas` (снимки HTML для PDF в части сценариев экспорта)
-- На `admin.html` подключён `Chart.js` (графики админ‑панели).
+2) **Fetch‑cache + дедупликация**  
+   `fetchJsonWithCache(url, {ttl, timeout})`:
+   - кеширует ответы в памяти на TTL (по умолчанию 5 минут),
+   - дедуплицирует параллельные запросы через `inflightFetches`,
+   - использует `AbortController` для таймаута.
+
+3) **Загрузка JSON с приоритетом диска**  
+   `loadJsonPreferVfs(filename)` пытается:
+   - `/src/data/ru/<filename>` → `/src/data/<filename>` (через fetch),
+   - если не получилось — VFS.
+
+4) **Интеграция с UI**  
+   `showNotification(message, isSuccess)`:
+   - предпочтительно использует `window.Toast`,
+   - fallback — legacy‑панель уведомлений.
+
+**Типовые зависимости (через `window.*`):**
+
+- `StateManager`, `DOMCache`, `EventManager`, `Filters`, `Positioning`, `DataIndex`, `Toast`, `LoadingManager`
+
+**Экспорт:** `window.DataLoader` (включая, как минимум):
+
+- `loadData()` — основной вход
+- `switchEnterprise(enterpriseName)` — переключение предприятия
+- `fetchJsonWithCache`, `clearFetchCache`
+- `vfsRead`, `vfsWrite`
+- `loadJsonPreferVfs`
+- вспомогательные функции добавления/сохранения новых технологий (используются формами)
+
+**Побочные эффекты:**
+
+- синхронизирует ряд ключей в `window.*` для обратной совместимости (`technologies`, `enterpriseData`, `blockToQuadrant`, …).
+
+---
+
+### `core/state-utils.js`
+
+**Назначение:** слой удобных геттеров/сеттеров и подписок на изменения состояния.
+
+**Экспорт:**
+
+- `window.StateAccessors`:
+  - `getTechnologies/setTechnologies`
+  - `getEnterpriseData/setEnterpriseData`
+  - `getCurrentEnterprise/setCurrentEnterprise`
+  - `getCurrentZoomedQuadrant/setCurrentZoomedQuadrant`
+  - `getSelectedBlipId/setSelectedBlipId`
+  - `getCurrentTech/setCurrentTech`
+  - `getBlocksList/setBlocksList`
+  - `getFunctions/setFunctions`
+  - `getNameToBlockId/setNameToBlockId`
+  - `getFunctionToBlockMap/setFunctionToBlockMap`
+  - `getBlockToQuadrant/setBlockToQuadrant`
+  - `getTechnologiesById`
+  - `getQuadrantsCache/getQuadrantsCacheVersion/setQuadrantsCacheVersion`
+- `window.StateSubscriptions`:
+  - `initStateSubscriptions()`
+
+**Что делает `initStateSubscriptions()`:**
+
+- синхронизирует ключевые значения в `window.*`;
+- при изменении `technologies`:
+  - вызывает `rebuildTechnologiesIndex()` (из `data-indexing.js`),
+  - безопасно вызывает `updateRadar()` если модалки закрыты;
+- при изменении `currentEnterprise` вызывает `updateRadar()`;
+- при изменении `selectedBlipId` добавляет/убирает `.selected` на SVG‑blip.
+
+---
+
+### `core/data-indexing.js`
+
+**Назначение:** быстрые индексы данных (по id/блоку/статусу/предприятию) + индекс технологий.
+
+**Экспорт:**
+
+- `window.DataIndex`:
+  - `build(list)` — строит индексы
+  - `getById(id)`
+  - `getBy(predicate)`
+  - `filter(fn)`
+  - `byBlock(key)`, `byStatus(key)`, `byCompany(key)`
+- `window.TechIndex`:
+  - `rebuildTechnologiesIndex()` — пересобирает `technologiesById` и вызывает `DataIndex.build`
+  - `getTechById(id)` — O(1) чтение из `technologiesById`
+- алиасы совместимости:
+  - `window.rebuildTechnologiesIndex`
+  - `window.getTechById`
+
+**Зависимости:** `StateAccessors`, `StateManager`.
+
+---
+
+### `core/app-init.js`
+
+**Назначение:** «оркестратор» запуска RMK‑страницы (последний модуль в цепочке).
+
+**Основной вход:** `initApp()` (внутренний), запускается после загрузки данных.
+
+**Что делает по шагам:**
+
+- инициализация темы по `localStorage.theme` (основной обработчик смены темы — в `integration/events.js`);
+- `DataLoader.loadData()` → подготовка `RINGS/QUADRANTS/levelToRing`;
+- чтение `localStorage.selectedEnterprise` и вызов `DataLoader.switchEnterprise`;
+- вызывает `window.renderAuth()` если функция существует;
+- вызывает первый `window.renderRadar()` (не через RAF);
+- назначает `window.positionOptions` из `SelectPositioning.positionOptions`;
+- инициализирует формы/кнопки/обработчики (удаление, «назад» в деталях, отчёты, помощь);
+- включает `MobileNav`, `TouchHandlers`, `KeyboardNav`, `AriaManager`, `OnboardingTour`.
+
+**Примечание:** `ContextualHints` в этом файле отмечен как отключенный (закомментированная инициализация), хотя модуль и CSS существуют.
+
+---
+
+## Radar
+
+### `radar/positioning.js`
+
+**Назначение:** вычисление координат blip’ов (детерминированно по `id`), соответствие блок→квадрант, разведение точек (anti-overlap).
+
+**Входные данные (через `window.*`):**
+
+- геометрия радара: `CENTER_X`, `CENTER_Y`, `RADIUS_STEP`, `POSITION_PAD`, `POSITION_ANGLE_PAD`, `MIN_BLIP_DISTANCE`
+- кольца/квадранты: `RINGS`, `QUADRANTS`, `levelToRing`
+- отображение блок→квадрант: `blockToQuadrant` (из JSON)
+- утилиты: `polarToCartesian`, `cartesianToPolar` (из `radar-utils.js`)
+
+**Ключевые функции:**
+
+- `getQuadrantIdForBlock(blockKey)`
+- `getQuadrantsForBlock(blockKey)` — возвращает все квадранты блока (поддержка массива)
+- `getAllQuadrantsForTech(tech)` — учитывает `tech.blocks[]`
+- `assignFixedPosition(tech)` / `assignFixedPositionForQuadrant(tech, qId)`
+- `computeCoordinates(tech)` — пишет `tech.x/tech.y`
+- `applyNonOverlappingLayout(renderData)` — разводит точки внутри группы `(quadrant, ring)`
+- `avoidRingLabelOverlap(renderData)` — избегает подписи колец (использует `RING_LABEL_WIDTH/HEIGHT`)
+
+**Экспорт:**
+
+- `window.Positioning` + алиасы совместимости (в т.ч. `window.getQuadrantIdForBlock`, `window.getAllQuadrantsForTech` и др., если они экспортируются в конце файла).
+
+---
+
+### `radar/radar-renderer.js`
+
+**Назначение:** отрисовка SVG радара: фон (сектора/кольца/подписи), легенда, создание blip‑ов.
+
+**Особенности:**
+
+- фон рисуется **один раз за сессию** (`radarBackgroundRendered`).
+- подписи секторов рендерятся как `sector-label-group` + невидимый `sector-label-click-area` для клика.
+
+**Ключевые функции:**
+
+- `computeShapeByTechType(techType, TECHTYPE_TO_SHAPE)` — возвращает `"triangle"|"circle"|"square"|"star"|null`
+- `renderRadarBackground(config)` — рисует кольца/сектора/подписи
+- `renderLegend(config)` — легенда фигур
+- `createBlip(tech, pos, quadrant, config)` — создаёт SVG‑элемент blip
+- `renderRadar(technologies, config)` — основной рендер «точек»
+- `resetRadarBackground()` — сбрасывает флаг фона
+
+**DOM‑контракты:**
+
+- основной SVG: `#techRadar`
+- использует классы: `.quadrant-group`, `.ring-label`, `.ring-label-bg`, `.blip`, `.sector-label-group`, `.sector-label-click-area`
+
+**Экспорт:** `window.RadarRenderer`.
+
+---
+
+### `radar/quadrant-cache.js`
+
+**Назначение:** кеширование `.quadrant-group.q{N}` внутри `#techRadar`.
+
+**Экспорт:**
+
+- `window.QuadrantCache.getQuadrantGroup(quadrantId)`
+- `window.QuadrantCache.clearQuadrantGroupsCache()`
+- алиасы: `window.getQuadrantGroup`, `window.clearQuadrantGroupsCache`
+
+---
+
+### `radar/quadrants.js`
+
+**Назначение:** логика квадрантов: получение технологий сектора, zoom/unzoom, синхронизация с фильтрами и панелью приоритетов.
+
+**Ключевые функции:**
+
+- `getTechStatus(tech)` — `status || level`
+- `getQuadrantName(qId)`
+- `getTechnologiesForQuadrant(qId)` — учитывает технологии с несколькими квадрантами (`getAllQuadrantsForTech`)
+- `zoomQuadrant(qId, opts)`:
+  - скрывает остальные `.quadrant-group` и включает `.zoomed-in` для нужного,
+  - показывает подписи колец `#ringLabelsGroup` (не прячет),
+  - на десктопе раскрывает `.sidebar-wrapper` и перемещает кнопку сброса,
+  - вызывает `Filters.updateBlockFilterForZoomedQuadrant(qId)`,
+  - открывает панель приоритетов (`openQuadrantPriorityPanel`) если не `source: 'blip'`.
+- `unzoom()` — сброс (показ всех квадрантов), закрытие панели приоритетов, очистка `currentZoomedQuadrant`.
+
+**DOM‑контракты:**
+
+- `#resetIconBtn`, `#sidebarButtons`, `#resetButtonContainer`
+- `#ringLabelsGroup`, `.legend`
+
+**Экспорт:** `window.Quadrants` + алиасы `window.zoomQuadrant`, `window.unzoom`, `window.getTechnologiesForQuadrant`, `window.getQuadrantName`, `window.getTechStatus` (в зависимости от экспорта в конце файла).
+
+---
+
+### `radar/radar-wrappers.js`
+
+**Назначение:** слой совместимости: предоставляет «старые» функции (`renderRadar`, `createBlip`, …), прокидывая реализацию в `RadarRenderer`.
+
+**Причина существования:** в проекте есть код, который обращается к глобальным функциям напрямую (например, `RMK2.js`, `events.js`, старые обработчики).
+
+**Экспорт:**
+
+- `window.RadarWrappers`
+- алиасы:
+  - `window.renderRadarBackground`
+  - `window.renderLegend`
+  - `window.renderRadar`
+  - `window.createBlip` / `window.createBlipWrapper`
+  - `window.computeShapeByTechType`
+
+**Зависимости:** `RadarRenderer`, `StateAccessors`, `Positioning`, `QuadrantCache`, `Utils`, `DOMProxy`.
+
+---
+
+### `radar/radar-update.js`
+
+**Назначение:** пересчёт отображаемого набора технологий по фильтрам и строке поиска и обновление UI.
+
+**Вход:**
+
+- фильтры: `Filters.getFilterValues('block'|'function'|'techType'|'level')`
+- поиск: `#searchInput` через `DOMProxy.createElementProxy`
+- данные: `DataIndex.filter(fn)` (фильтрация по массиву технологий)
+- батчинг: `RenderQueue.schedule`
+
+**Поведение:**
+
+- сначала фильтрует по выбранным значениям,
+- затем применяет текстовый поиск поверх фильтра (кэширует нормализованные строки в `Map` при наличии запроса),
+- запускает `renderRadar(filtered)` и:
+  - если фильтры активны — `updateSidebarLists(filtered)`,
+  - иначе — очищает/закрывает списки в сайдбаре.
+- если открыт `#quadrantPriorityPanel` и есть зум — пересчитывает список приоритетов.
+
+**Экспорт:**
+
+- `window.RadarUpdate.updateRadar`
+- алиас: `window.updateRadar`
+
+---
+
+### `radar/radar-events.js`
+
+**Назначение:** события, специфичные для SVG‑радара: hover/click по blip, клик по сектору/подписи сектора, синхронизация с панелью приоритетов.
+
+**Основные функции:**
+
+- `attachBlipHoverHandlers()`:
+  - клонирует `.blip` (сброс слушателей) и навешивает `mouseenter/mouseleave/click`
+  - показывает `#hoverLabel` с текстом `getHoverText(tech)`
+  - при открытой панели приоритетов подсвечивает соответствующий элемент списка
+- `initRadarEvents()`:
+  - подключает обработчики клика по SVG (`#techRadar`)
+  - различает клики по blip / подписи сектора / сектору
+
+**DOM‑контракты:**
+
+- `#techRadar`, `.blip`, `#hoverLabel`
+- `#quadrantPriorityPanel`, `#qpList`, `.qp-item`
+- `.sector-label-group`, `.sector-label-click-area`, `.quadrant-group`
+
+**Экспорт (через `window`):**
+
+- как минимум: `window.attachBlipHoverHandlers` и `window.initRadarEvents` (точный набор зависит от хвоста файла).
+
+---
+
+### `radar/prospects-chart.js`
+
+**Назначение:** модуль «Перспективные» — модалка с графиком + таблицей + экспортом PDF.
+
+**DOM‑контракты (ключевые):**
+
+- кнопка открытия: `#toggleProspectsChartBtn` (скрытая в RMK.html, кликается также по `#chartIconBtn`)
+- модалка: `#prospectsModal`
+- закрытие: `#closeProspectsBtn`
+- SVG графика: `#prospectsChartSvg`
+- экспорт: `#exportProspectsChartBtn`
+- селект предприятий: `.prospects-company-select` + `.prospects-select-*`
+- hidden input: `#prospectsSelectedCompany`
+
+**Загрузка данных:**
+
+- fetch `/src/data/ru/enterpriseData.json` (для построения набора предприятий и данных графика)
+
+**Особенности:**
+
+- поддержка выбора нескольких предприятий (чекбоксы + «Выбрать все»)
+- детерминированные цвета по индексу предприятия (HSL)
+- хранит «грязность» выбора, чтобы не перетирать выбор при смене enterprise‑nav
+
+**Экспорт:**
+
+- `window.ProspectsChart = { init: initProspectsChart }` (и/или аналогичный API)
+
+---
+
+## UI
+
+### `ui/filters.js`
+
+**Назначение:** построение и управление sidebar‑фильтрами (custom select), чтение выбранных значений, синхронизация зависимых фильтров.
+
+**Ключевые функции:**
+
+- `getFilterValues(key)` — читает JSON из `#filter_<key>` или из `.selected`
+- `populateSelect(filterKey, items, placeholderText)`:
+  - создает поиск для `block`/`function`,
+  - добавляет «Выбрать все»,
+  - умеет фильтровать блоки по зуммированному квадранту,
+  - умеет фильтровать функции по выбранным блокам (через `nameToBlockId`/`functionToBlockMap`).
+
+**DOM‑контракты:**
+
+- `.custom-select[data-filter="block|function|techType|level"]`
+- `#filter_block`, `#filter_function`, `#filter_techType`, `#filter_level`
+
+**Экспорт:**
+
+- `window.Filters` (набор методов)
+- алиасы: `window.getFilterValues` и другие helper‑функции (зависят от хвоста файла)
+
+---
+
+### `ui/select-events.js`
+
+**Назначение:** единая обработка событий для кастомных селектов (sidebar + модальные) — вынесена из `integration/events.js`.
+
+**Почему выделено:** логика кликов/чекбоксов/label в мультиселектах сложная; вынесение уменьшает размер `events.js` и снижает риск регрессий.
+
+**Основные обязанности:**
+
+- открыть/закрыть `.custom-select` по клику на trigger;
+- обработка выбора опций:
+  - поддержка multi‑select с чекбоксами,
+  - корректная работа кликов по `label/span/checkbox` (в файле явно отмечены исправления),
+  - «Выбрать все» с правильной синхронизацией checked/indeterminate,
+  - обновление hidden input и `data-value`,
+  - вызов `renderMultiSelectTags`, `positionOptions`, `updateRadar`,
+  - синхронизация зависимостей (`block` → обновить `function`).
+
+**Экспорт:**
+
+- `window.initSelectEvents` (функция инициализации обработчиков).
+
+---
+
+### `ui/modals.js`
+
+**Назначение:** единое открытие/закрытие модалок и встроенное подтверждение.
+
+**Ключевые функции:**
+
+- `showModal(panelIdOrEl)`:
+  - выставляет `display: block`, затем добавляет класс `.open`,
+  - выставляет `ignoreOutsideClickUntil` (защита от мгновенного закрытия),
+  - снимает `disabled/readOnly` с инпутов,
+  - делает snapshot формы через `snapshotFormInitial` (если доступно),
+  - поднимает `z-index` для `#editTechPanel` и `#deleteConfirmModal`,
+  - при открытии `#addTechPanel` вызывает `initModalFilters()` (если есть).
+- `hideModal(panelIdOrEl)`:
+  - снимает `.open`, ждёт transitionend и прячет,
+  - делает reset для add/edit форм, сбрасывает кастомные селекты, чистит контейнеры.
+- `showInternalConfirm(message, onCloseConfirmed)`:
+  - создаёт внутреннюю confirm‑панель `#internalConfirm`.
+
+**Экспорт:**
+
+- `window.Modals` + алиасы `window.showModal`, `window.hideModal`, `window.showInternalConfirm`.
+
+---
+
+### `ui/forms.js`
+
+**Назначение:** утилиты форм и динамические поля оценок по предприятиям.
+
+**Ключевые функции:**
+
+- `isFormDirty(formEl)` — сравнение со snapshot
+- `snapshotFormInitial(formEl)`
+- `createCompanyRatingsFields(companies, containerId, prefix)` — динамическая генерация групп полей `techRead/organRead` для каждого предприятия при мультивыборе
+- функции обновления видимости полей оценок (используются `modals.js` и `form-management.js`)
+
+**Экспорт:**
+
+- `window.FormsModule = { ... }`
+- алиасы совместимости: `window.isFormDirty`, `window.snapshotFormInitial`, …
+
+---
+
+### `ui/form-management.js`
+
+**Назначение:** объединённый файл: обработчики событий форм + обработчики сабмитов и CRUD‑операций (технологии/блоки/функции).
+
+**Что внутри (крупно):**
+
+- `initFormEvents()` — live‑логика форм:
+  - live‑preview приоритета в форме редактирования (`editPriorityPreview`),
+  - парсинг значений, сбор “candidate” технологии, вызов `Priorities.computePriority`.
+- `initFormHandlers()` — обработчики submit:
+  - добавление/редактирование технологии,
+  - валидация обязательных полей,
+  - интеграция с `DataLoader.ensureAndPersistNewTech`, `switchEnterprise`, `updateRadar`, `Toast`, `appendAdminAudit`.
+
+**Сильная зависимость от DOM‑ID** (формы в `RMK.html`):
+
+- `addTechForm`, `editTechForm` и множество `tech*` / `edit*` полей (включая hidden поля кастомных селектов).
+
+**Экспорт:**
+
+- объект‑модуль (например `window.FormHandlers`) + алиасы:
+  - `window.getFormFieldValue`
+  - `window.handleAddTechFormSubmit`
+  - `window.handleEditTechFormSubmit`
+  - и т.п. (точный набор зависит от хвоста файла).
+
+---
+
+### `ui/modal-forms.js`
+
+**Назначение:** динамическая фильтрация блоков и функций в модальных селектах в зависимости от выбранных «секторов/блоков».
+
+**Ключевые функции:**
+
+- `updateModalBlocksForSectors(sectorNames)`:
+  - маппинг «имя сектора» → `quadrantId` через `window.QUADRANTS`,
+  - фильтрация `blocksList` по `blockToQuadrant`,
+  - пересборка `.custom-select-modal[data-field="techBlock"]`,
+  - синхронизация выбранных значений,
+  - вызывает `updateModalFunctionsForBlocks(...)`.
+- `updateModalFunctionsForBlocks(blockNames, fieldId)`:
+  - фильтрует функции по выбранным блокам,
+  - пересобирает `.custom-select-modal[data-field="<fieldId>"]`.
+
+**Экспорт:**
+
+- `window.ModalForms` и/или алиасы `window.updateModalBlocksForSectors`, `window.updateModalFunctionsForBlocks`.
+
+---
+
+### `ui/sidebar.js`
+
+**Назначение:** списки технологий в сайдбаре по секторам, синхронизация hover/click с SVG‑радаром.
+
+**Ключевые функции:**
+
+- `updateSidebarLists(filteredTechs)` — создать/обновить список для каждого квадранта
+- `createTechListForSector(sectorItem, quadrantId, allTechnologies)` — строит `.tech-list` со строками `.tech-list-item[data-tech-id]`
+- `updateTechListItems(quadrantId, matchedTechs)` — обновление списка без полного пересоздания
+
+**DOM‑контракты:**
+
+- `.sector-item[data-quadrant="..."]` (элементы сектора в сайдбаре)
+- `.tech-list`, `.tech-list-item`
+- `#techRadar` (поиск `.blip[data-id="..."]`)
+
+**Экспорт:**
+
+- `window.Sidebar` + алиасы `window.updateSidebarLists`, `window.createTechListForSector`, …
+
+---
+
+### `ui/detail-panel.js`
+
+**Назначение:** панель детальной информации о технологии (справа) и логика выделения/зума/экшнов.
+
+**Главная функция:** `showDetail(t, source='unknown', sourceQuadrant=null)`
+
+**Что делает `showDetail`:**
+
+- заполняет DOM‑поля `#panel*` (название, описание, блок, функция, тип, оценки, приоритет и т.д.);
+- выделяет blip‑ы технологии на радаре:
+  - `.selected`, `.highlighted`, анимации/пульсации;
+- управляет зумом сектора (через `zoomQuadrant`) и панелью приоритетов;
+- учитывает источник открытия:
+  - из blip — скрывает панель приоритетов, чтобы не перекрывала детали;
+  - из панели приоритетов — синхронизирует выделение.
+
+**DOM‑контракты:**
+
+- `#detailPanel`, `#closeDetailPanel`
+- множество `#panel...` элементов
+- `#techRadar`, `#quadrantPriorityPanel`
+
+**Экспорт:**
+
+- `window.DetailPanel` (если есть) и алиас `window.showDetail`
+- часто также экспортируются функции для экспорта полей (`getFieldValue/getFieldLabel`) — используется `business/export.js`.
+
+---
+
+### `ui/report-status.js`
+
+**Назначение:** модальный индикатор статуса генерации отчёта.
+
+**DOM‑контракты (в RMK.html):**
+
+- модалка `#reportLoadingModal`
+- элементы `#loadingSpinner`, `#loadingSuccess`, `#loadingError`, `#loadingText`, `#loadingErrorMessage`
+
+**Функции:**
+
+- `showReportLoading()`
+- `showReportSuccess()` (автозакрытие через ~2с)
+- `showReportError(message)` (автозакрытие через ~5с)
+
+**Зависимости:** `showModal/hideModal` из `ui/modals.js`.
+
+**Экспорт:** `window.ReportStatus` + алиасы `window.showReportLoading/showReportSuccess/showReportError`.
+
+---
+
+### `ui/tooltips.js`
+
+**Назначение:** объединение tooltip и hover‑логики (2 подсистемы).
+
+1) **Tooltip для обязательных полей**  
+   Вешается на `.required-star` и показывает `.tooltip-global`.
+
+2) **Hover‑подсказки по технологии**  
+   `getHoverText(tech)`:
+   - если не заполнены базовые оценки — предупреждает,
+   - иначе считает приоритет (`computePriority`, `getPriorityCategory`, `getPriorityWeakLinkComment`) и формирует многострочную подсказку.
+   `createDebouncedHover()` — меняет `#hoverLabel`.
+
+**Экспорт:**
+
+- `window.TooltipModule = { init }`
+- `window.Hover = { getHoverText, createDebouncedHover }`
+- алиасы `window.getHoverText`, `window.debouncedHover` (создаётся сразу)
+
+---
+
+### `ui/toast.js`
+
+**Назначение:** очередь toast‑уведомлений.
+
+**Особенности:**
+
+- максимум 3 видимых уведомления (`maxVisible`)
+- остальные — в очереди
+- контейнер `#toastContainer` с `aria-live="polite"`
+
+**API:**
+
+- `Toast.show(message, type, duration?)`
+- `Toast.success/error/warning/info`
+- `Toast.hide(id)` (если экспортируется), внутренние `processQueue`, `showToast`, `hideToast`
+
+**Экспорт:** `window.Toast`.
+
+---
+
+### `ui/skeleton.js`
+
+**Назначение:** генерация skeleton‑заглушек для списков/панелей/графиков/таблиц.
+
+**API:**
+
+- фабрики: `createTechListSkeleton`, `createDetailPanelSkeleton`, `createChartSkeleton`, `createTableSkeleton`
+- управление:
+  - `show(contentEl, skeletonFactory)`
+  - `hide(contentEl, useOriginal=false)`
+  - `replace(contentEl, newContent)`
+
+**Экспорт:** `window.Skeleton`.
+
+---
+
+### `ui/loading.js`
+
+**Назначение:** глобальные индикаторы загрузки (spinner и progress).
+
+**DOM‑контракт:**
+
+- `#loadingContainer` — создаётся динамически
+- внутри: `.loading-spinner-wrapper`, `.loading-progress-wrapper`
+
+**API:**
+
+- `LoadingManager.show(message, id?)`
+- `LoadingManager.hide(id?)` (если id не передан — скрывает все)
+- `LoadingManager.showProgress(current, total, message?, id?)`
+- `LoadingManager.updateMessage(id, message)`
+
+**Экспорт:** `window.LoadingManager`.
+
+---
+
+### `ui/error-display.js`
+
+**Назначение:** UI‑отображение ошибок + retry.
+
+**Типы ошибок:** `NetworkError`, `ValidationError`, `DataError`, `PermissionError`, `UnknownError` (определяется эвристикой по тексту).
+
+**DOM‑контракт:**
+
+- `#errorContainer` — создаётся динамически
+- `.error-display` — карточки ошибок, авто‑скрытие (если без retry)
+
+**API:**
+
+- `ErrorDisplay.show(error, context?, retryCallback?)`
+- `ErrorDisplay.showRetryable(error, retryCallback, context?)`
+- `ErrorDisplay.hide(errorId)`
+- `ErrorDisplay.hideAll()`
+
+**Связь с `core-utils.js`:**
+
+- `ErrorHandler.handle()` пытается вызвать `ErrorDisplay.show(...)` если модуль доступен.
+
+---
+
+### `ui/mobile-nav.js`
+
+**Назначение:** бургер‑меню и мобильная навигация по предприятиям.
+
+**DOM‑контракты:**
+
+- вставляет `#burgerMenuBtn` внутрь `header .controls`
+- создаёт `#mobileEnterpriseMenu` (контейнер меню)
+- клонирует кнопки из `.enterprise-nav button` и вызывает оригинальный `btn.click()` при выборе
+- добавляет actions (переключение темы, авторизация/выход и т.п.)
+
+**API:**
+
+- `MobileNav.init()`
+- `MobileNav.handleResize()` (если реализовано)
+- `MobileNav.openMenu()/closeMenu()` (если реализовано)
+
+**Экспорт:** обычно `window.MobileNav = MobileNav`.
+
+---
+
+### `ui/touch-handlers.js`
+
+**Назначение:** touch‑жесты (swipe/long press) на touch‑устройствах.
+
+**Поведение:**
+
+- определяет touch‑девайс через `ontouchstart`/`maxTouchPoints`;
+- swipe для закрытия `.modal-panel` и `.detail-panel` (left/right);
+- swipe для sidebar на мобильных (`.sidebar-wrapper`, `main-content`);
+- swipe up для закрытия `#mobileEnterpriseMenu` через `MobileNav.closeMenu()`.
+
+**Экспорт:** обычно `window.TouchHandlers = TouchHandlers`.
+
+---
+
+### `ui/keyboard-nav.js`
+
+**Назначение:** keyboard shortcuts и улучшение доступности клавиатурой.
+
+**Горячие клавиши:**
+
+- `Esc` — закрыть верхнюю модалку/панель/меню
+- `Ctrl+F` / `Cmd+F` — фокус на `#searchInput`
+- `Ctrl+S` / `Cmd+S` — сабмит активной формы в открытой модалке (если валидна)
+
+**Экспорт:** `window.KeyboardNav = { init, ... }`.
+
+---
+
+### `ui/aria-manager.js`
+
+**Назначение:** проставление ARIA‑атрибутов и ролей для screen readers.
+
+**Что делает:**
+
+- добавляет `role="banner"` для header;
+- проставляет `role/aria-label` для навигаций;
+- обеспечивает `aria-label` для icon‑кнопок (берёт из `data-tooltip/title/text`);
+- настраивает combobox‑подобные элементы (`.custom-select*`);
+- улучшает формы (`aria-required`, `aria-invalid`, `aria-labelledby`);
+- улучшает модалки (`role=dialog`, `aria-modal`, `aria-labelledby`);
+- настраивает `aria-live` регионы и динамический контент (sidebar, и т.д.).
+
+**Экспорт:** `window.AriaManager = { init, ... }`.
+
+---
+
+### `ui/onboarding.js`
+
+**Назначение:** интерактивный тур по приложению.
+
+**Хранилище прогресса:**
+
+- `rmk_onboarding_completed`
+- `rmk_onboarding_progress`
+- `rmk_onboarding_version` (текущая `CURRENT_VERSION`)
+
+**Структура:**
+
+- `TOUR_STEPS[]` — шаги с `id/title/description/target/position` + `conditional/beforeShow/afterHide`
+- шаги умеют:
+  - открывать модалки (например `#prospectsModal`, `#exportPdfModal`, `#addTechPanel`),
+  - подсвечивать элементы (классы `.onboarding-highlight*` поддержаны CSS в `common.css`).
+
+**Экспорт:** `window.OnboardingTour = { init, startTour, ... }` (точный набор — в хвосте файла).
+
+---
+
+### `ui/contextual-hints.js`
+
+**Назначение:** контекстные подсказки (не путать с onboarding‑туром). Обычно показываются «один раз» возле элементов интерфейса.
+
+**Хранилище:**
+
+- `rmk_contextual_hints` — список увиденных подсказок
+- `rmk_contextual_hints_enabled` — включено/выключено
+
+**Что умеет:**
+
+- содержит словарь `HINTS` по id элемента (например `searchIconBtn`, `filter_block`, `techRadar`, `detailPanel`, …)
+- умеет условные подсказки (например кнопки, которые скрыты по роли)
+- позиционирование подсказки по `getBoundingClientRect`
+
+**Экспорт:** `window.ContextualHints = { init, showHint, ... }` (точный набор — в хвосте файла).
+
+---
+
+## Business
+
+### `business/auth.js`
+
+**Назначение:** рендер авторизации в шапке на страницах приложения (не на `auth.html`) + проверка прав.
+
+**API:**
+
+- `checkArchitectRole()` — true для `role=architect|admin`
+- `renderAuth()` — показывает роль, кнопку входа/выхода, прячет/показывает кнопки редактирования
+
+**Ключевые DOM‑узлы:**
+
+- `#authInfo`, `#logoutContainer`
+- `#exportPdfBtn`, `#editTechBtn`, `#deleteTechBtn`, `#addTechBtn`
+
+**Экспорт:**
+
+- `window.AuthModule = { checkArchitectRole, renderAuth }`
+- алиасы: `window.checkArchitectRole`, `window.renderAuth`
+
+---
+
+### `business/priorities.js`
+
+**Назначение:** расчёт приоритета технологии + UI панели приоритетов сектора.
+
+**Математика:**
+
+- нормализация готовности: `techRead/3`, `organRead/3`
+- TRL: `trlN = (trlStage-1)/2`, `trlStage ∈ {1,2,3}`
+- модели:
+  - `avg` — среднее
+  - `min` — слабое звено
+  - `mult` — произведение (по умолчанию)
+
+**API:**
+
+- `computePriority(tech, model='mult', company?)`
+- `getPriorityCategory(priority)` → `{key,label,description}`
+- `getPriorityWeakLinkComment(tech, company?)`
+- `getNormalizedReadinessAndTrl(tech, company?)`
+- UI:
+  - `recomputeQuadrantPriorityList(qId)`
+  - `openQuadrantPriorityPanel(qId)`
+  - `closeQuadrantPriorityPanel()`
+
+**Экспорт:**
+
+- `window.Priorities = { ... }`
+- алиасы: `window.computePriority`, `window.getPriorityCategory`, `window.openQuadrantPriorityPanel`, …
+
+---
+
+### `business/export.js`
+
+**Назначение:** экспорт PDF отчёта: выбор полей, фильтров экспорта, генерация PDF через `jsPDF` + `autoTable`.
+
+**Входные зависимости:**
+
+- библиотеки: `window.jspdf` (UMD), `autoTable` plugin
+- данные: `StateAccessors.getTechnologies()` и/или доступ к списку технологий
+- поля: `getFieldLabel/getFieldValue` (обычно из `detail-panel.js`)
+- фильтры: `Filters` и внутренние фильтры экспорта (company/blocks/functions/techTypes/status/costProm)
+- UI:
+  - `showModal/hideModal`
+  - `ReportStatus` (индикатор отчёта)
+  - `Toast` (уведомления)
+
+**Ключевые экспортируемые функции (алиасы):**
+
+- `performPdfExport(selectedFields, filters)`
+- `showExportPdfModal()`
+- `populateExportFilters()`
+- `setupExportFilterToggles()`
+- `validateExportFields()`
+
+**Экспорт:**
+
+- `window.ExportModule = (function(){ ... })()`
+- алиасы: `window.performPdfExport`, `window.showExportPdfModal`, …
+
+---
+
+## Integration
+
+### `integration/events.js`
+
+**Назначение:** центральная регистрация UI‑событий RMK‑страницы.
+
+**Ключевые зоны:**
+
+- **Тема**: слушает `#themeToggle`, пишет `localStorage.theme`, ставит `body.dark`
+- **Поиск**: слушает `#searchInput`, делает `debounce` и вызывает `updateRadar()`
+- **Фильтры**: открытие/закрытие панели `#filterPanel`, сброс, синхронизация кастомных селектов
+- **Селекты**: вызывает `initSelectEvents()` (логика вынесена в `ui/select-events.js`)
+- **Панель приоритетов**: обработчики `#quadrantPriorityPanel` (фильтры/поиск)
+- **Предприятия**:
+  - клики по `.enterprise-nav button`
+  - запись `localStorage.selectedEnterprise`
+  - dispatch `CustomEvent('enterpriseChanged', {detail:{enterprise}})`
+  - обработчик `enterpriseChanged` вызывает `switchEnterprise` и перерисовку
+- **Модалки/формы/прочее**: закрытия, клики вне области, защита от мгновенного закрытия, и т.д.
+
+**Гарантия инициализации:**
+
+- модуль проверяет наличие критических зависимостей (`EventManager`, `DOMCache`) и падает с понятной ошибкой, если не загружены.
+
+**Экспорт:**
+
+- как минимум: `window.initEventHandlers()` (и/или авто‑инициализация при DOMContentLoaded — зависит от хвоста файла).
 
