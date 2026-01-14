@@ -19,10 +19,10 @@
 
 В проекте используются 2 независимых механизма темы (это важно при поддержке):
 
-1) **Основное приложение (`index.html`, `RMK.html`, `help.html`, `admin.html`)**  
+1. **Основное приложение (`index.html`, `RMK.html`, `help.html`, `admin.html`)**
    Обычно использует классы **`body.light` / `body.dark`** и CSS‑переменные из `src/css/common.css` (например `--bg`, `--text`, `--accent`, `--modal-bg`, `--input-border`, `--header-height`).
 
-2) **Страница авторизации (`auth.html`)**  
+2. **Страница авторизации (`auth.html`)**
    Использует **атрибут `data-theme="light|dark"` на `<html>`** и свой набор переменных в `src/css/auth.css` (они не завязаны на `body.light/body.dark`).
 
 ## Каталог CSS файлов
@@ -143,7 +143,7 @@
 - **Скрытие элементов по умолчанию**: `.hidden`, `.hidden-by-default`, и id‑специфичные скрытия.
 - **Prospects modal**: размеры `#prospectsModal`, контейнеры `#prospectsChartContainer`, `#prospectsTableContainer`, адаптивность.
 - **Поиск по таблице графика**: `.table-search-container`, `#prospectsTableSearch`.
-- **Утилитарные классы для JS** (пометки вида “js‑*” для flex/checkbox/выравниваний).
+- **Утилитарные классы для JS** (пометки вида “js‑\*” для flex/checkbox/выравниваний).
 
 ---
 
@@ -197,4 +197,3 @@
 - стеклянная карточка `.card`, блок бренда `.brand*`;
 - поля формы `.group`, `.input`, кнопки `.btn`, переключатель темы `.theme-toggle`;
 - анимации (keyframes) и адаптивность.
-

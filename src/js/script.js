@@ -168,6 +168,12 @@
 
   // Инициализируем подсказки после загрузки DOM
   function initTooltip() {
+    // Guard: предотвращаем повторную инициализацию
+    if (window.__tooltipInitialized) {
+      if (window.Logger) window.Logger.debug('Tooltip уже инициализирован, пропускаем повторную инициализацию');
+      return;
+    }
+    window.__tooltipInitialized = true;
     new Tooltip();
   }
 
@@ -178,133 +184,13 @@
     initTooltip();
   }
 
-  // Переключение темы (сохраняем в localStorage)
-  const themeToggle = document.getElementById("themeToggle");
-  const savedTheme = localStorage.getItem("theme") || "light";
-  document.body.className = savedTheme;
-  if (themeToggle) {
-    themeToggle.checked = savedTheme === "dark";
-    themeToggle.addEventListener("change", () => {
-      const theme = themeToggle.checked ? "dark" : "light";
-      document.body.className = theme;
-      localStorage.setItem("theme", theme);
-    });
-  }
-
-  // кнопка входа/выхода рендерится и навешивается в renderAuth()
-  const authInfo = document.getElementById("authInfo");
-  const logoutContainer = document.getElementById("logoutContainer");
-
   // Логирование (централизовано в /src/js/audit-logger.js)
   // Здесь только подстраховка: если audit-logger по какой-то причине не загрузился,
   // то appendAdminAudit останется undefined (и вызовы в модулях не упадут).
 
-  function safeLogout() {
-    // Важно: не делаем localStorage.clear(), чтобы не стирать данные админ-панели/настройки.
-    try {
-      const role = localStorage.getItem('role') || '';
-      if (typeof window.appendAdminAudit === 'function') {
-        window.appendAdminAudit('logout', `Выход из системы${role ? ` (${role})` : ''}`);
-      }
-    } catch (err) {}
-    try { localStorage.removeItem('isLoggedIn'); } catch (err) {}
-    try { localStorage.removeItem('username'); } catch (err) {}
-    try { localStorage.removeItem('userName'); } catch (err) {}
-    try { localStorage.removeItem('role'); } catch (err) {}
-  }
-
-  function renderAuth() {
-    const role = localStorage.getItem("role");
-    const exportPdfBtn = document.getElementById("exportPdfBtn");
-    const addTechBtn = document.getElementById("addTechBtn");
-    const reportIconBtn = document.getElementById("reportIconBtn");
-    const addIconBtn = document.getElementById("addIconBtn");
-
-    // Если роль — архитектор, показываем имя роли и кнопку выхода
-    if (role === "architect") {
-      if (authInfo) {
-        // Исправлена разметка: правильно закрыт атрибут class и добавлен title
-        authInfo.innerHTML = `<div class="user-role architect-role">Архитектор</div>`;
-      }
-      if (logoutContainer) {
-        logoutContainer.innerHTML = `<button class="logout" data-tooltip="Выйти" aria-label="Выйти">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-              <polyline points="16,17 21,12 16,7"/>
-              <line x1="21" y1="12" x2="9" y2="12"/>
-            </svg>
-          </button>`;
-      }
-      if (logoutContainer && logoutContainer.querySelector(".logout")) {
-        logoutContainer.querySelector(".logout").onclick = () => {
-          safeLogout();
-          location.reload();
-        };
-      }
-      if (addTechBtn) addTechBtn.style.display = "flex";
-      if (exportPdfBtn) exportPdfBtn.style.display = "flex";
-      if (reportIconBtn) reportIconBtn.style.display = "flex";
-      if (addIconBtn) addIconBtn.style.display = "flex";
-    }
-    // Если роль — администратор, показываем имя роли и кнопку выхода
-    else if (role === "admin") {
-      if (authInfo) {
-        authInfo.innerHTML = `<div class="user-role admin-role" data-tooltip="Перейти в админ-панель" style="cursor: pointer;">Администратор</div>`;
-        // Добавляем обработчик клика для перехода на admin.html
-        const adminRoleElement = authInfo.querySelector('.admin-role');
-        if (adminRoleElement) {
-          adminRoleElement.onclick = () => {
-            window.location.href = 'admin.html';
-          };
-        }
-      }
-      if (logoutContainer) {
-        logoutContainer.innerHTML = `<button class="logout" data-tooltip="Выйти" aria-label="Выйти">
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-      <polyline points="16,17 21,12 16,7"/>
-      <!-- Добавляем stroke-dasharray сюда -->
-      <line x1="21" y1="12" x2="9" y2="12" stroke-dasharray="100"/>
-    </svg>
-  </button>`;
-      }
-      if (logoutContainer && logoutContainer.querySelector(".logout")) {
-        logoutContainer.querySelector(".logout").onclick = () => {
-          safeLogout();
-          location.reload();
-        };
-      }
-      // Администратор имеет все функции архитектора + дополнительные
-      if (addTechBtn) addTechBtn.style.display = "flex";
-      if (exportPdfBtn) exportPdfBtn.style.display = "flex";
-      if (reportIconBtn) reportIconBtn.style.display = "flex";
-      if (addIconBtn) addIconBtn.style.display = "flex";
-    } else {
-      // По умолчанию — показываем кнопку входа в logoutContainer
-      if (authInfo) authInfo.innerHTML = ``;
-      if (logoutContainer) {
-        logoutContainer.innerHTML = `<button class="login" data-tooltip="Войти" aria-label="Войти">
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-      <polyline points="10,17 15,12 10,7"/>
-      <!-- И сюда тоже -->
-      <line x1="15" y1="12" x2="3" y2="12" stroke-dasharray="100"/>
-    </svg>
-  </button>`;
-      }
-      if (logoutContainer && logoutContainer.querySelector(".login")) {
-        logoutContainer.querySelector(".login").onclick = () => (window.location.href = "auth.html");
-      }
-      if (addTechBtn) addTechBtn.style.display = "none";
-      // экспорт доступен всем пользователям
-      if (exportPdfBtn) exportPdfBtn.style.display = "flex";
-      if (reportIconBtn) reportIconBtn.style.display = "none";
-      if (addIconBtn) addIconBtn.style.display = "none";
-    }
-  }
-
-  // Запускаем при загрузке
-  renderAuth();
+  // renderAuth, safeLogout, initTheme, initHelpButton теперь в common-ui.js
+  // Используем функции из common-ui.js через window
+  // renderAuth вызывается автоматически в common-ui.js при загрузке DOM
 
   // Делегированный обработчик кликов для динамически добавляемых кнопок входа/выхода и ролей
   document.addEventListener('click', (e) => {
@@ -317,7 +203,9 @@
     const logoutBtn = e.target.closest && e.target.closest('.logout');
     if (logoutBtn) {
       e.preventDefault();
-      safeLogout();
+      if (typeof window.safeLogout === 'function') {
+        window.safeLogout();
+      }
       location.reload();
       return;
     }
@@ -464,7 +352,7 @@
           if (toggleProspectsChartBtn) {
             toggleProspectsChartBtn.click();
           } else {
-            console.warn('toggleProspectsChartBtn not found');
+            if (window.Logger) window.Logger.warn('toggleProspectsChartBtn not found');
           }
         }, 100);
       };
@@ -483,7 +371,7 @@
           if (exportPdfBtn) {
             exportPdfBtn.click();
           } else {
-            console.warn('exportPdfBtn not found');
+            if (window.Logger) window.Logger.warn('exportPdfBtn not found');
           }
         }, 100);
       };
@@ -502,7 +390,7 @@
 
         const pop = document.getElementById('addChoicePopover');
         if (!pop) {
-          console.warn('addChoicePopover not found');
+          if (window.Logger) window.Logger.warn('addChoicePopover not found');
           return;
         }
 
@@ -905,105 +793,6 @@
     }
   })();
 
-  // --- Help Button: инициализация кнопки помощи ---
-  (function(){
-    function initHelpButton() {
-      const helpBtn = document.getElementById('helpBtn');
-      if (!helpBtn) return;
-
-      helpBtn.addEventListener('click', function() {
-        showHelpMenu(helpBtn);
-      });
-    }
-
-    function showHelpMenu(button) {
-      // Удаляем существующее меню, если есть
-      const existingMenu = document.querySelector('.help-menu');
-      if (existingMenu) {
-        existingMenu.remove();
-      }
-
-      // Проверяем, находимся ли мы на странице RMK.html
-      const isRMKPage = window.location.pathname.includes('RMK.html') || window.location.href.includes('RMK.html');
-
-      // Создаем выпадающее меню
-      const menu = document.createElement('div');
-      menu.className = 'help-menu';
-      menu.setAttribute('role', 'menu');
-
-      // Формируем HTML меню в зависимости от страницы
-      let menuHTML = '';
-      if (isRMKPage) {
-        menuHTML = `
-          <button class="help-menu-item" data-action="tour" role="menuitem">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"></circle>
-              <path d="M12 16v-4M12 8h.01"></path>
-            </svg>
-            <span>Интерактивный тур</span>
-          </button>
-        `;
-      }
-      menuHTML += `
-        <a href="help.html" class="help-menu-item" role="menuitem">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-          </svg>
-          <span>Справка</span>
-        </a>
-      `;
-      menu.innerHTML = menuHTML;
-
-      // Позиционируем меню
-      const rect = button.getBoundingClientRect();
-      menu.style.position = 'fixed';
-      menu.style.top = `${rect.bottom + 8}px`;
-      menu.style.right = `${window.innerWidth - rect.right}px`;
-      menu.style.zIndex = '10001';
-
-      // Добавляем обработчики (только если кнопка тура существует)
-      const tourBtn = menu.querySelector('[data-action="tour"]');
-      if (tourBtn && isRMKPage) {
-        tourBtn.addEventListener('click', function(e) {
-          e.preventDefault();
-          e.stopPropagation();
-          menu.remove();
-          // Проверяем наличие модуля и запускаем тур
-          if (window.OnboardingTour && typeof window.OnboardingTour.startTour === 'function') {
-            window.OnboardingTour.startTour();
-          } else {
-            console.warn('OnboardingTour модуль не загружен');
-            // Показываем сообщение пользователю
-            if (window.Toast) {
-              window.Toast.error('Модуль обучения не загружен. Пожалуйста, обновите страницу.');
-            } else {
-              alert('Модуль обучения не загружен. Пожалуйста, обновите страницу.');
-            }
-          }
-        });
-      }
-
-      // Закрытие меню при клике вне его
-      const closeMenu = (e) => {
-        if (!menu.contains(e.target) && e.target !== button) {
-          menu.remove();
-          document.removeEventListener('click', closeMenu);
-        }
-      };
-      setTimeout(() => document.addEventListener('click', closeMenu), 0);
-
-      document.body.appendChild(menu);
-    }
-
-    // Экспортируем функции для использования на других страницах
-    window.showHelpMenu = showHelpMenu;
-
-    // Инициализация при загрузке DOM
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initHelpButton);
-    } else {
-      initHelpButton();
-    }
-  })();
+  // Help Button теперь в common-ui.js
+  // Инициализация происходит автоматически в common-ui.js при загрузке DOM
 })();

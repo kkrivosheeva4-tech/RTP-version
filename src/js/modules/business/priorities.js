@@ -424,10 +424,10 @@
           showDetailFn(t, 'priority', qId);
         } else {
           if (!detailPanelEl) {
-            console.warn('recomputeQuadrantPriorityList: detailPanel не найден при клике по технологии', { techId: t.id, techName: t.name });
+            if (window.Logger) window.Logger.warn('recomputeQuadrantPriorityList: detailPanel не найден при клике по технологии', { techId: t.id, techName: t.name });
           }
           if (!showDetailFn) {
-            console.warn('recomputeQuadrantPriorityList: showDetail не доступна при клике по технологии', { techId: t.id, techName: t.name });
+            if (window.Logger) window.Logger.warn('recomputeQuadrantPriorityList: showDetail не доступна при клике по технологии', { techId: t.id, techName: t.name });
           }
         }
         // Скрываем панель приоритета, но НЕ вызываем unzoom(),

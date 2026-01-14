@@ -112,7 +112,7 @@
       try {
         seenHints = new Set(JSON.parse(stored));
       } catch (e) {
-        console.warn('Ошибка при загрузке настроек подсказок:', e);
+        if (window.Logger) window.Logger.warn('Ошибка при загрузке настроек подсказок:', e);
         seenHints = new Set();
       }
     }

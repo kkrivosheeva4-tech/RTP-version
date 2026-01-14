@@ -32,11 +32,43 @@
     const QUADRANTS = window.QUADRANTS || [];
     const updateModalFunctionsForBlocks = window.updateModalFunctionsForBlocks;
 
-    const blocksList = getBlocksList();
-    if (!Array.isArray(blocksList) || blocksList.length === 0) return;
-    if (!Array.isArray(QUADRANTS) || QUADRANTS.length === 0) return;
-    const blockToQuadrant = getBlockToQuadrant();
-    if (!blockToQuadrant || Object.keys(blockToQuadrant).length === 0) return;
+    // Получаем актуальные данные из StateAccessors, если доступны
+    let blocksList;
+    let blockToQuadrant;
+    if (window.StateAccessors) {
+      try {
+        blocksList = window.StateAccessors.getBlocksList ? window.StateAccessors.getBlocksList() : getBlocksList();
+        blockToQuadrant = window.StateAccessors.getBlockToQuadrant ? window.StateAccessors.getBlockToQuadrant() : getBlockToQuadrant();
+        // Также проверяем window.blocksList и window.blockToQuadrant для обратной совместимости
+        if (!blocksList || blocksList.length === 0) {
+          blocksList = window.blocksList || getBlocksList();
+        }
+        if (!blockToQuadrant || Object.keys(blockToQuadrant).length === 0) {
+          blockToQuadrant = window.blockToQuadrant || getBlockToQuadrant();
+        }
+      } catch (e) {
+        // Fallback к window функциям если StateAccessors недоступен
+        blocksList = window.blocksList || getBlocksList();
+        blockToQuadrant = window.blockToQuadrant || getBlockToQuadrant();
+      }
+    } else {
+      // Fallback к window функциям
+      blocksList = window.blocksList || getBlocksList();
+      blockToQuadrant = window.blockToQuadrant || getBlockToQuadrant();
+    }
+
+    if (!Array.isArray(blocksList) || blocksList.length === 0) {
+      if (window.Logger) window.Logger.warn('updateModalBlocksForSectors: blocksList пуст или не массив');
+      return;
+    }
+    if (!Array.isArray(QUADRANTS) || QUADRANTS.length === 0) {
+      if (window.Logger) window.Logger.warn('updateModalBlocksForSectors: QUADRANTS пуст');
+      return;
+    }
+    if (!blockToQuadrant || Object.keys(blockToQuadrant).length === 0) {
+      if (window.Logger) window.Logger.warn('updateModalBlocksForSectors: blockToQuadrant пуст');
+      return;
+    }
 
     // Используем query вместо find, так как find требует parent элемент
     const blockSelect = DOMCache.query('.custom-select-modal[data-field="techBlock"]') ||
@@ -86,13 +118,35 @@
       if (selectedQuadrantIds.length > 0) {
         // Фильтруем блоки: показываем блоки, которые относятся к ЛЮБОМУ из выбранных квадрантов
         allowedBlocks = blocksList.filter(blockName => {
-          const m = blockToQuadrant[blockName];
-          if (m == null) return false;
+          // Еще раз получаем актуальные данные для каждого блока
+          let currentBlockToQuadrant = blockToQuadrant;
+          if (window.StateAccessors && window.StateAccessors.getBlockToQuadrant) {
+            try {
+              currentBlockToQuadrant = window.StateAccessors.getBlockToQuadrant();
+            } catch (e) {
+              // Используем переданные данные если StateAccessors недоступен
+            }
+          }
+          const m = currentBlockToQuadrant[blockName];
+          if (m == null) {
+            // Если блока нет в blockToQuadrant, но он есть в blocksList, возможно это новый блок
+            // Пробуем найти его квадрант через nameToBlockId и blocksList
+            if (window.Logger) window.Logger.debug(`updateModalBlocksForSectors: блок "${blockName}" не найден в blockToQuadrant`);
+            return false;
+          }
           // blockToQuadrant может содержать массив квадрантов или одно значение
           const blockQuadrants = Array.isArray(m) ? m : [m];
           // Проверяем, есть ли пересечение между квадрантами блока и выбранными квадрантами
-          return blockQuadrants.some(blockQuadrantId => selectedQuadrantIds.includes(blockQuadrantId));
+          const matches = blockQuadrants.some(blockQuadrantId => selectedQuadrantIds.includes(blockQuadrantId));
+          if (window.Logger && matches) {
+            window.Logger.debug(`updateModalBlocksForSectors: блок "${blockName}" соответствует квадрантам:`, blockQuadrants, 'выбранные:', selectedQuadrantIds);
+          }
+          return matches;
         });
+
+        if (window.Logger) {
+          window.Logger.debug('updateModalBlocksForSectors: всего блоков:', blocksList.length, 'разрешено:', allowedBlocks.length, 'для квадрантов:', selectedQuadrantIds);
+        }
       }
     }
 
@@ -120,10 +174,11 @@
       li.classList.add('select-option-item');
       li.setAttribute('data-value', blockName);
       const isSelected = validSelectedBlocks.includes(blockName);
+      const escapedBlockName = window.escapeHtml ? window.escapeHtml(blockName) : String(blockName).replace(/[&<>"']/g, m => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[m]);
       li.innerHTML = `
         <label class="option-label">
           <input type="checkbox" class="option-checkbox" ${isSelected ? 'checked' : ''} />
-          <span>${blockName}</span>
+          <span>${escapedBlockName}</span>
         </label>
       `;
       if (isSelected) {
@@ -232,10 +287,11 @@
       li.classList.add('select-option-item');
       li.setAttribute('data-value', funcName);
       const isSelected = validSelectedFunctions.includes(funcName);
+      const escapedFuncName = window.escapeHtml ? window.escapeHtml(funcName) : String(funcName).replace(/[&<>"']/g, m => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[m]);
       li.innerHTML = `
         <label class="option-label">
           <input type="checkbox" class="option-checkbox" ${isSelected ? 'checked' : ''} />
-          <span>${funcName}</span>
+          <span>${escapedFuncName}</span>
         </label>
       `;
       if (isSelected) {

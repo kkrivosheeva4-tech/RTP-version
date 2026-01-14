@@ -117,7 +117,7 @@
     if (fn) {
       fn(message, isSuccess);
     } else {
-      console.warn('showNotification not available');
+      if (window.Logger) window.Logger.warn('showNotification not available');
     }
   };
 
@@ -170,7 +170,7 @@
 
     setCurrentTech(t);
     setSelectedBlipId(t.id);
-    
+
     // Логируем просмотр технологии
     if (typeof window.appendAdminAudit === 'function' && source === 'blip') {
       window.appendAdminAudit('update', `Просмотр технологии: "${t.name}" (ID: ${t.id})`);
@@ -194,9 +194,14 @@
       const companyWrap = detailPanel.querySelector('#panelCompanyTags');
       if (companyWrap) {
         const companies = Array.isArray(t.company) ? t.company : (t.company ? [t.company] : []);
-        companyWrap.innerHTML = companies.length
-          ? companies.map(c => `<span class="multi-tag">${c}</span>`).join(' ')
-          : '<span style="opacity:0.7">Не указано</span>';
+        if (companies.length) {
+          companyWrap.innerHTML = companies.map(c => {
+            const escaped = window.escapeHtml ? window.escapeHtml(c) : String(c).replace(/[&<>"']/g, m => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[m]);
+            return `<span class="multi-tag">${escaped}</span>`;
+          }).join(' ');
+        } else {
+          companyWrap.innerHTML = '<span style="opacity:0.7">Не указано</span>';
+        }
       }
 
       // Теги блоков
@@ -204,9 +209,14 @@
       const blocksArr = Array.isArray(t.blocks) && t.blocks.length ? t.blocks : (t.block ? [t.block] : []);
       const blockText = blocksArr.length ? blocksArr.join(', ') : 'Не указано';
       if (blockWrap) {
-        blockWrap.innerHTML = blocksArr.length
-          ? blocksArr.map(b => `<span class="multi-tag">${b}</span>`).join(' ')
-          : '<span style="opacity:0.7">Не указано</span>';
+        if (blocksArr.length) {
+          blockWrap.innerHTML = blocksArr.map(b => {
+            const escaped = window.escapeHtml ? window.escapeHtml(b) : String(b).replace(/[&<>"']/g, m => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[m]);
+            return `<span class="multi-tag">${escaped}</span>`;
+          }).join(' ');
+        } else {
+          blockWrap.innerHTML = '<span style="opacity:0.7">Не указано</span>';
+        }
       }
 
       // Теги функций
@@ -214,9 +224,14 @@
       const functionsArr = Array.isArray(t.functions) && t.functions.length ? t.functions : (t.func ? [t.func] : []);
       const funcText = functionsArr.length ? functionsArr.join(', ') : 'Не указано';
       if (funcWrap) {
-        funcWrap.innerHTML = functionsArr.length
-          ? functionsArr.map(f => `<span class="multi-tag">${f}</span>`).join(' ')
-          : '<span style="opacity:0.7">Не указано</span>';
+        if (functionsArr.length) {
+          funcWrap.innerHTML = functionsArr.map(f => {
+            const escaped = window.escapeHtml ? window.escapeHtml(f) : String(f).replace(/[&<>"']/g, m => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[m]);
+            return `<span class="multi-tag">${escaped}</span>`;
+          }).join(' ');
+        } else {
+          funcWrap.innerHTML = '<span style="opacity:0.7">Не указано</span>';
+        }
       }
 
       const techTypeText = t.techType || 'Не указано';
@@ -371,6 +386,13 @@
       // Добавляем класс active ПЕРЕД установкой inline стилей
       detailPanel.classList.add('active');
 
+      // Активируем focus trap для detail panel
+      if (window.FocusTrap && typeof window.FocusTrap.trap === 'function') {
+        setTimeout(() => {
+          window.FocusTrap.trap(detailPanel);
+        }, 50);
+      }
+
       // ПРИНУДИТЕЛЬНО устанавливаем стили для показа панели через inline стили с !important
       // Это необходимо, так как CSS может быть переопределен другими правилами
       // Используем setProperty с 'important' для гарантированного применения
@@ -429,7 +451,7 @@
         }
       }, 50);
     } else {
-      console.warn('showDetail: detailPanel не найден', {
+      if (window.Logger) window.Logger.warn('showDetail: detailPanel не найден', {
         DOMCache: window.DOMCache ? 'доступен' : 'недоступен',
         getElementById: document.getElementById('detailPanel') ? 'найден' : 'не найден'
       });
@@ -483,12 +505,12 @@
                 }
               }
             } catch (errInner) {
-              console.warn('showDetail: не удалось раскрыть список сектора:', errInner);
+              if (window.Logger) window.Logger.warn('showDetail: не удалось раскрыть список сектора:', errInner);
             }
           }
         }
       } catch (err) {
-        console.warn('showDetail: Не удалось открыть сектор в сайдбаре:', err);
+        if (window.Logger) window.Logger.warn('showDetail: Не удалось открыть сектор в сайдбаре:', err);
       }
     }
 

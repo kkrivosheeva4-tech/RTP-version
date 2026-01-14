@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     localStorage.setItem(key, JSON.stringify(arr));
                 }
             } catch (err) {
-                console.warn('Ошибка при логировании автовхода:', err);
+                if (window.Logger) window.Logger.warn('Ошибка при логировании автовхода:', err);
             }
             // Если пользователь уже авторизован, перенаправляем его на основное приложение
             window.location.href = 'index.html';
@@ -75,13 +75,14 @@ document.addEventListener('DOMContentLoaded', function() {
         createParticles();
     }
 
-    // Инициализация темы + переключатель
+    // Инициализация темы + переключатель (унифицировано с остальными страницами)
     (function themeInit() {
-        const root = document.documentElement;
-        const saved = localStorage.getItem('theme');
+        const saved = localStorage.getItem('theme') || 'light';
         const systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
         const theme = saved || (systemDark ? 'dark' : 'light');
-        root.setAttribute('data-theme', theme);
+        // Используем body.light/body.dark вместо data-theme для унификации
+        document.body.classList.remove('light', 'dark');
+        document.body.classList.add(theme);
         const sun = document.getElementById('iconSun');
         const moon = document.getElementById('iconMoon');
         if (sun && moon) {
@@ -92,10 +93,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const themeToggleBtn = document.getElementById('themeToggle');
     if (themeToggleBtn) {
         themeToggleBtn.addEventListener('click', () => {
-            const root = document.documentElement;
-            const current = root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+            const current = document.body.classList.contains('dark') ? 'dark' : 'light';
             const next = current === 'dark' ? 'light' : 'dark';
-            root.setAttribute('data-theme', next);
+            document.body.classList.remove('light', 'dark');
+            document.body.classList.add(next);
             localStorage.setItem('theme', next);
             const sun = document.getElementById('iconSun');
             const moon = document.getElementById('iconMoon');
@@ -151,7 +152,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     localStorage.setItem(key, JSON.stringify(arr));
                 }
             } catch (err) {
-                console.warn('Ошибка при логировании входа гостя:', err);
+                if (window.Logger) window.Logger.warn('Ошибка при логировании входа гостя:', err);
             }
             // Перенаправляем на основное приложение без авторизации
             window.location.href = 'index.html';
@@ -208,7 +209,7 @@ loginForm.addEventListener('submit', function(e) {
                 localStorage.setItem(key, JSON.stringify(arr));
             }
         } catch (err) {
-            console.warn('Ошибка при логировании входа:', err);
+            if (window.Logger) window.Logger.warn('Ошибка при логировании входа:', err);
         }
 
         // После успешной авторизации перенаправляем на основное приложение

@@ -159,12 +159,25 @@
     createElementProxy
   };
 
+  // ===== HTML ESCAPING =====
+  // Безопасное экранирование HTML для предотвращения XSS
+  // API: escapeHtml(str)
+
+  function escapeHtml(str) {
+    if (str == null) return '';
+    const text = String(str);
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
   // Экспорт в window для обратной совместимости
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { DOMCache, DOMProxy };
+    module.exports = { DOMCache, DOMProxy, escapeHtml };
   } else if (typeof window !== 'undefined') {
     window.DOMCache = DOMCache;
     window.DOMProxy = DOMProxy;
+    window.escapeHtml = escapeHtml;
     // Глобальные алиасы для обратной совместимости
     window.createDOMGetter = createDOMGetter;
     window.createDOMProxy = createDOMProxy;

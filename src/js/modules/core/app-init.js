@@ -144,6 +144,13 @@
    * Инициализация кнопки помощи
    */
   function initHelpButton() {
+    // Guard: предотвращаем повторную инициализацию
+    if (window.__appInitHelpButtonInitialized) {
+      if (window.Logger) window.Logger.debug('AppInit help button уже инициализирован, пропускаем повторную инициализацию');
+      return;
+    }
+    window.__appInitHelpButtonInitialized = true;
+
     const DOMCache = getDOMCache();
     const helpBtn = DOMCache.get('helpBtn');
 
@@ -209,7 +216,7 @@
         if (window.OnboardingTour && typeof window.OnboardingTour.startTour === 'function') {
           window.OnboardingTour.startTour();
         } else {
-          console.warn('OnboardingTour модуль не загружен');
+          if (window.Logger) window.Logger.warn('OnboardingTour модуль не загружен');
           // Показываем сообщение пользователю
           if (window.Toast) {
             window.Toast.error('Модуль обучения не загружен. Пожалуйста, обновите страницу.');
@@ -247,9 +254,20 @@
         StateAccessors.setTechnologies(technologies.filter(t => t.id !== currentTech.id));
 
         // Инвалидируем кэш квадрантов при удалении технологии
-        const quadrantsCache = StateAccessors.getQuadrantsCache();
-        quadrantsCache.clear();
-        StateAccessors.setQuadrantsCacheVersion(StateAccessors.getQuadrantsCacheVersion() + 1);
+        let quadrantsCache = StateAccessors.getQuadrantsCache();
+        if (!quadrantsCache) {
+          // Создаем новый Map если кэш не существует
+          quadrantsCache = new Map();
+          const StateManager = getStateManager();
+          if (StateManager && StateManager.set) {
+            StateManager.set('quadrantsCache', quadrantsCache);
+          }
+        }
+        if (quadrantsCache && typeof quadrantsCache.clear === 'function') {
+          quadrantsCache.clear();
+        }
+        const currentVersion = StateAccessors.getQuadrantsCacheVersion() || 0;
+        StateAccessors.setQuadrantsCacheVersion(currentVersion + 1);
 
         // Сначала сбрасываем выбранную технологию, чтобы панель не переоткрылась при обновлении радара
         StateAccessors.setSelectedBlipId(null);
@@ -265,6 +283,10 @@
           detailPanelEl.style.removeProperty('position');
           detailPanelEl.style.removeProperty('z-index');
           detailPanelEl.style.removeProperty('display');
+          // Деактивируем focus trap перед закрытием
+          if (window.FocusTrap && typeof window.FocusTrap.release === 'function') {
+            window.FocusTrap.release();
+          }
           // Удаляем класс active
           detailPanelEl.classList.remove("active");
           // Снимаем выделение с blip'ов
@@ -289,7 +311,7 @@
           enterpriseData[currentEnterprise] = [...technologies];
           StateAccessors.setEnterpriseData({...enterpriseData});
           DataLoader.vfsWrite('enterpriseData.json', enterpriseData);
-        } catch (err) { console.warn('Не удалось сохранить enterpriseData после удаления', err); }
+        } catch (err) { if (window.Logger) window.Logger.warn('Не удалось сохранить enterpriseData после удаления', err); }
 
         DataLoader.showNotification('Технология удалена!', true);
 

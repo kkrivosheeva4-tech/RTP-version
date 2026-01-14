@@ -3,21 +3,42 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; base-uri 'self';" />
+  <meta name="description" content="Радар технологий - интерактивная визуализация технологических решений с возможностью фильтрации, экспорта и управления приоритетами" />
+  <meta name="keywords" content="радар технологий, визуализация, технологии, фильтры, экспорт, приоритеты" />
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Радар технологий - Визуализация" />
+  <meta property="og:description" content="Интерактивная визуализация технологических решений с возможностью фильтрации, экспорта и управления приоритетами" />
+  <meta property="og:image" content="/assets/images/icon.png" />
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Радар технологий - Визуализация" />
+  <meta name="twitter:description" content="Интерактивная визуализация технологических решений с возможностью фильтрации, экспорта и управления приоритетами" />
+  <meta name="twitter:image" content="/assets/images/icon.png" />
+  <!-- PWA мета-теги -->
+  <meta name="theme-color" content="#ce9068" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Радар технологий" />
   <title>Радар технологий</title>
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin="anonymous" />
+  <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com" />
   <link rel="icon" href="/assets/images/icon.png" type="image/png" />
   <link rel="shortcut icon" href="/assets/images/icon.png" type="image/png" />
   <link rel="stylesheet" href="/src/css/common.css" />
   <link rel="stylesheet" href="/src/css/RMK.css" />
   <link rel="stylesheet" href="/src/css/about.css" />
   <link rel="stylesheet" href="/src/css/rmk-inline-styles.css" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAOnx5S09ydFYWWNSfcEqDTTHgtNA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js" integrity="sha512-03CCNkeosDFN2zCCu4vLpu3pJfZcrL48F3yB8k87ejT+OVMwco7IH3FW02vtbGhdncS6gyYZ/duYaC/K62xQPQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body class="light">
   <header role="banner">
     <a class="logo" href="index.html" data-tooltip="На главную" aria-label="Радар технологий - на главную">
-      <img src="/assets/images/icon.png" alt="Logo" class="logo-img" />
+      <img src="/assets/images/icon.png" alt="Logo" class="logo-img" onerror="this.style.display='none'; this.nextElementSibling?.style.display='inline';" />
+      <span class="logo-fallback" style="display:none;">РТ</span>
       <span>Радар технологий</span>
     </a>
     <nav class="enterprise-nav" role="tablist" aria-label="Навигация по предприятиям">
@@ -743,7 +764,14 @@
   <div id="prospectsModal" class="modal-panel hidden" role="dialog" aria-modal="true" aria-labelledby="prospectsTitle">
     <div class="modal-header">
       <h2 id="prospectsTitle">График «Перспективные»</h2>
-      <div class="prospects-header-controls">
+      <button class="close-btn" id="closeProspectsBtn" aria-label="Закрыть">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" class="close-icon">
+          <path d="M15 5L5 15M5 5L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body flex-column">
+      <div class="prospects-controls-bar" aria-label="Фильтры и экспорт графика перспективных технологий">
         <div class="prospects-company-select">
           <div class="prospects-select-trigger" tabindex="0">
             <span class="prospects-select-text">Все предприятия</span>
@@ -762,13 +790,6 @@
           <span>Экспорт</span>
         </button>
       </div>
-      <button class="close-btn" id="closeProspectsBtn" aria-label="Закрыть">
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" class="close-icon">
-          <path d="M15 5L5 15M5 5L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
-    </div>
-    <div class="modal-body flex-column">
       <div id="prospectsChartContainer">
         <svg id="prospectsChartSvg" viewBox="0 0 1200 680" preserveAspectRatio="xMidYMid meet"></svg>
       </div>
@@ -1114,6 +1135,7 @@
 
   <div id="notificationPanel" class="notification-panel"></div>
   <!-- Все модули загружаются динамически через RMK2.js -->
+  <script src="/src/js/modules/ui/common-ui.js"></script>
   <script src="/src/js/RMK2.js"></script>
 </body>
 </html>

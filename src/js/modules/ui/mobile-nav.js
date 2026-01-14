@@ -24,13 +24,13 @@ const MobileNav = {
   createBurgerMenu() {
     const header = document.querySelector('header');
     if (!header) {
-      console.warn('MobileNav: header не найден');
+      if (window.Logger) window.Logger.warn('MobileNav: header не найден');
       return;
     }
 
     const controls = header.querySelector('.controls');
     if (!controls) {
-      console.warn('MobileNav: .controls не найден в header');
+      if (window.Logger) window.Logger.warn('MobileNav: .controls не найден в header');
       return;
     }
 
@@ -266,12 +266,29 @@ const MobileNav = {
       }
     });
 
-    // Закрытие меню при изменении размера окна
-    window.addEventListener('resize', () => {
+    // Закрытие меню при изменении размера окна (с debounce для оптимизации)
+    const debounce = window.debounce || ((func, wait) => {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    });
+
+    const handleResize = debounce(() => {
       if (window.innerWidth > 767) {
         this.closeMenu();
       }
-    });
+    }, 200);
+
+    window.addEventListener('resize', handleResize);
+
+    // Сохраняем ссылку на обработчик для возможности удаления
+    this._resizeHandler = handleResize;
 
     // Закрытие меню по Escape
     document.addEventListener('keydown', (e) => {
@@ -406,6 +423,32 @@ const MobileNav = {
         btn.classList.add('active');
       }
     });
+  },
+
+  /**
+   * Очистка обработчиков событий (для предотвращения утечек памяти)
+   */
+  destroy() {
+    // Удаляем обработчик resize
+    if (this._resizeHandler) {
+      window.removeEventListener('resize', this._resizeHandler);
+      this._resizeHandler = null;
+    }
+
+    // Закрываем меню, если оно открыто
+    this.closeMenu();
+
+    // Удаляем мобильное меню из DOM
+    const mobileMenu = document.getElementById('mobileEnterpriseMenu');
+    if (mobileMenu) {
+      mobileMenu.remove();
+    }
+
+    // Удаляем кнопку бургер-меню
+    const burgerBtn = document.getElementById('burgerMenuBtn');
+    if (burgerBtn) {
+      burgerBtn.remove();
+    }
   }
 };
 

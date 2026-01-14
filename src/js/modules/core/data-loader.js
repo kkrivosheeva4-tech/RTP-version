@@ -16,7 +16,7 @@
       if (!raw) return null;
       return JSON.parse(raw);
     } catch (e) {
-      console.warn('vfsRead parse error', e);
+      if (window.Logger) window.Logger.warn('vfsRead parse error', e);
       return null;
     }
   }
@@ -24,7 +24,7 @@
   function vfsWrite(filename, data) {
     try {
       localStorage.setItem(vfsKey(filename), JSON.stringify(data));
-      console.debug(`vfsWrite: ${filename} saved to localStorage`);
+      if (window.Logger) window.Logger.debug(`vfsWrite: ${filename} saved to localStorage`);
       return true;
     } catch (e) {
       console.error('vfsWrite error', e);
@@ -42,6 +42,19 @@
   function clearFetchCache() {
     fetchCache.clear();
     inflightFetches.clear();
+  }
+
+  // Функция для ручного сброса VFS (локальных изменений пользователя)
+  function clearVfsCache() {
+    try {
+      const vfsKeys = Object.keys(localStorage).filter(key => key.startsWith('vfs:'));
+      vfsKeys.forEach(key => localStorage.removeItem(key));
+      if (window.Logger) window.Logger.debug(`Очищено ${vfsKeys.length} ключей VFS из localStorage`);
+      return vfsKeys.length;
+    } catch (e) {
+      console.error('Ошибка при очистке VFS:', e);
+      return 0;
+    }
   }
 
   async function fetchJsonWithCache(url, { ttl = FETCH_CACHE_TTL_MS, timeout = DEFAULT_FETCH_TIMEOUT_MS } = {}) {
@@ -86,18 +99,18 @@
       try {
         const json = await fetchJsonWithCache(p, { ttl: FETCH_CACHE_TTL_MS, timeout: DEFAULT_FETCH_TIMEOUT_MS });
         if (json) {
-          console.debug(`Загружены данные из файла ${p}:`, json);
+          if (window.Logger) window.Logger.debug(`Загружены данные из файла ${p}:`, json);
           return { path: p, data: json };
         }
       } catch (err) {
-        console.warn(`Ошибка загрузки ${p}:`, err);
+        if (window.Logger) window.Logger.warn(`Ошибка загрузки ${p}:`, err);
       }
     }
 
     // Только если не удалось загрузить с диска, пробуем из VFS
     const fromVfs = vfsRead(filename);
     if (fromVfs !== null) {
-      console.debug(`Загружены данные из VFS для ${filename}:`, fromVfs);
+      if (window.Logger) window.Logger.debug(`Загружены данные из VFS для ${filename}:`, fromVfs);
       return { path: `local:${filename}`, data: fromVfs };
     }
 
@@ -149,7 +162,7 @@
     if (window.Filters) {
       return window.Filters;
     }
-    console.warn('Filters не загружен, попытка повторной инициализации фильтров будет пропущена');
+    if (window.Logger) window.Logger.warn('Filters не загружен, попытка повторной инициализации фильтров будет пропущена');
     return null;
   };
 
@@ -157,7 +170,7 @@
     if (window.Positioning) {
       return window.Positioning;
     }
-    console.warn('Positioning не загружен, вычисление координат будет пропущено');
+    if (window.Logger) window.Logger.warn('Positioning не загружен, вычисление координат будет пропущено');
     return null;
   };
 
@@ -165,7 +178,7 @@
     if (window.DataIndex) {
       return window.DataIndex;
     }
-    console.warn('DataIndex не загружен, индексация будет пропущена');
+    if (window.Logger) window.Logger.warn('DataIndex не загружен, индексация будет пропущена');
     return null;
   };
 
@@ -194,9 +207,10 @@
     }
     const notification = document.createElement('div');
     notification.className = `notification ${isSuccess ? 'success' : 'info'}`;
+    const escapedMessage = window.escapeHtml ? window.escapeHtml(message) : String(message).replace(/[&<>"']/g, m => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[m]);
     notification.innerHTML = `
       <div class="notification-title">${isSuccess ? 'Успешно' : 'Уведомление'}</div>
-      <div class="notification-message">${message}</div>
+      <div class="notification-message">${escapedMessage}</div>
       <button class="notification-close" aria-label="Закрыть">&times;</button>
     `;
     const topZ = parseInt(panel.getAttribute('data-top-z') || '2000', 10) + 1;
@@ -223,12 +237,9 @@
     }
 
     try {
-      // Очищаем кэш при загрузке
-      Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('vfs:')) {
-          localStorage.removeItem(key);
-        }
-      });
+      // Очищаем только fetch-кэш при загрузке
+      // VFS (vfs:*) НЕ очищаем автоматически, чтобы сохранить пользовательские правки
+      // Для сброса локальных изменений используйте функцию clearVfsCache() или кнопку в UI
       clearFetchCache();
 
       // Попытаться загрузить и распарсить JSON по наборам путей (data/ и data/ru/). Возвращает { path, data, errors }
@@ -362,15 +373,15 @@
               });
               if (merged) {
                 setState('enterpriseData', {...enterpriseData}); // Сохраняем изменения обратно в StateManager
-                try { vfsWrite('enterpriseData.json', enterpriseData); } catch (e) { console.warn('vfs write failed during merge', e); }
+                try { vfsWrite('enterpriseData.json', enterpriseData); } catch (e) { if (window.Logger) window.Logger.warn('vfs write failed during merge', e); }
               }
               break; // whether merged or not, we've checked disk
             } catch (err) { /* ignore fetch parse errors for this path */ }
           }
         }
-      } catch (err) { console.warn('Error while attempting to merge enterpriseData from disk into VFS', err); }
+      } catch (err) { if (window.Logger) window.Logger.warn('Error while attempting to merge enterpriseData from disk into VFS', err); }
       if (validationErrors.length) {
-        console.warn('Валидация данных: обнаружены проблемы', validationErrors);
+        if (window.Logger) window.Logger.warn('Валидация данных: обнаружены проблемы', validationErrors);
         showNotification(`Проверка данных: ${validationErrors.join('; ')}`, false);
       }
       setState('blockToQuadrant', fetched['blockToQuadrant.json'].data || {});
@@ -573,7 +584,7 @@
           // Пересобираем индекс
           const DataIndex = getDataIndex();
           if (DataIndex) {
-            try { DataIndex.build(getState('technologies')); } catch (e) { console.warn('DataIndex.build failed', e); }
+            try { DataIndex.build(getState('technologies')); } catch (e) { if (window.Logger) window.Logger.warn('DataIndex.build failed', e); }
           }
           const enterpriseData = getState('enterpriseData');
           const currentEnterprise = getState('currentEnterprise');
@@ -639,7 +650,7 @@
             // Пересобираем индекс
             const DataIndex = getDataIndex();
             if (DataIndex) {
-              try { DataIndex.build(getState('technologies')); } catch (e) { console.warn('DataIndex.build failed', e); }
+              try { DataIndex.build(getState('technologies')); } catch (e) { if (window.Logger) window.Logger.warn('DataIndex.build failed', e); }
             }
             const enterpriseData = getState('enterpriseData');
             const currentEnterprise = getState('currentEnterprise');
@@ -729,7 +740,7 @@
           });
         });
         if (updated) {
-          try { vfsWrite('enterpriseData.json', enterpriseData); } catch (e) { console.warn('Не удалось сохранить enterpriseData после нормализации', e); }
+          try { vfsWrite('enterpriseData.json', enterpriseData); } catch (e) { if (window.Logger) window.Logger.warn('Не удалось сохранить enterpriseData после нормализации', e); }
         }
         setState('nextId', nextId);
       }
@@ -749,7 +760,7 @@
           });
         }
       } catch (e) {
-        console.warn('Ошибка при обновлении заголовков секторов:', e);
+        if (window.Logger) window.Logger.warn('Ошибка при обновлении заголовков секторов:', e);
       }
 
       // Убеждаемся, что фильтры заполнены после полной загрузки DOM
@@ -761,7 +772,7 @@
         setTimeout(() => {
           const Filters = getFilters();
           if (!Filters) {
-            console.warn(`Попытка ${attempt + 1}: Filters не загружен`);
+            if (window.Logger) window.Logger.warn(`Попытка ${attempt + 1}: Filters не загружен`);
             if (attempt < maxAttempts - 1) {
               initFiltersWithRetry(attempt + 1);
             }
@@ -792,7 +803,7 @@
           const sidebarLevelSelect = document.querySelector('.custom-select[data-filter="level"]');
 
           if (!sidebarBlockSelect || !sidebarFunctionSelect || !sidebarTechTypeSelect || !sidebarLevelSelect) {
-            console.warn(`Попытка ${attempt + 1}: не все элементы DOM найдены`, {
+            if (window.Logger) window.Logger.warn(`Попытка ${attempt + 1}: не все элементы DOM найдены`, {
               block: !!sidebarBlockSelect,
               function: !!sidebarFunctionSelect,
               techType: !!sidebarTechTypeSelect,
@@ -985,7 +996,8 @@
             const li = document.createElement('li');
             li.classList.add('select-option-item');
             li.setAttribute('data-value', bk);
-            li.innerHTML = `<label class="option-label"><input type="checkbox" class="option-checkbox" /><span>${bk}</span></label>`;
+            const escapedBk = window.escapeHtml ? window.escapeHtml(bk) : String(bk).replace(/[&<>"']/g, m => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[m]);
+            li.innerHTML = `<label class="option-label"><input type="checkbox" class="option-checkbox" /><span>${escapedBk}</span></label>`;
             opts.appendChild(li);
           }
         });
@@ -994,7 +1006,7 @@
           setState('blocksList', [...blocksList, bk]);
         }
         setState('blockToQuadrant', {...blockToQuadrant});
-        try { vfsWrite('bloks.json', getState('blocksList')); vfsWrite('blockToQuadrant.json', blockToQuadrant); } catch (e) { console.warn('vfs write failed', e); }
+        try { vfsWrite('bloks.json', getState('blocksList')); vfsWrite('blockToQuadrant.json', blockToQuadrant); } catch (e) { if (window.Logger) window.Logger.warn('vfs write failed', e); }
       }
       // Ensure level mapping exists
       const levelToRing = window.levelToRing || {};
@@ -1005,11 +1017,11 @@
       }
 
       // Compute coordinates taking into account existing technologies (technologies may include newTech)
-      console.debug('ensureAndPersistNewTech: computing coordinates for', { id: newTech.id, block: newTech.block, level: newTech.level });
+      if (window.Logger) window.Logger.debug('ensureAndPersistNewTech: computing coordinates for', { id: newTech.id, block: newTech.block, level: newTech.level });
       const Positioning = getPositioning();
       if (Positioning) {
         Positioning.computeCoordinates(newTech);
-        console.debug('ensureAndPersistNewTech: coords computed', { id: newTech.id, x: newTech.x, y: newTech.y });
+        if (window.Logger) window.Logger.debug('ensureAndPersistNewTech: coords computed', { id: newTech.id, x: newTech.x, y: newTech.y });
       }
 
       // Ensure technologies array contains the tech (if not, add it)
@@ -1029,9 +1041,9 @@
         enterpriseData[currentEnterprise] = Array.isArray(enterpriseData[currentEnterprise]) ? [...getState('technologies')] : [...getState('technologies')];
         setState('enterpriseData', {...enterpriseData});
         vfsWrite('enterpriseData.json', enterpriseData);
-        console.debug('ensureAndPersistNewTech: enterpriseData persisted for', currentEnterprise, 'total techs:', getState('technologies').length);
-      } catch (e) { console.warn('persist enterpriseData failed', e); }
-    } catch (err) { console.warn('ensureAndPersistNewTech error', err); }
+        if (window.Logger) window.Logger.debug('ensureAndPersistNewTech: enterpriseData persisted for', currentEnterprise, 'total techs:', getState('technologies').length);
+      } catch (e) { if (window.Logger) window.Logger.warn('persist enterpriseData failed', e); }
+    } catch (err) { if (window.Logger) window.Logger.warn('ensureAndPersistNewTech error', err); }
   }
 
   // ===== ФУНКЦИЯ ПЕРЕКЛЮЧЕНИЯ ПРЕДПРИЯТИЯ =====
@@ -1075,7 +1087,7 @@
       // Пересобираем индекс
       const DataIndex = getDataIndex();
       if (DataIndex) {
-        try { DataIndex.build(getState('technologies')); } catch (e) { console.warn('DataIndex.build failed', e); }
+        try { DataIndex.build(getState('technologies')); } catch (e) { if (window.Logger) window.Logger.warn('DataIndex.build failed', e); }
       }
       const technologies = getState('technologies');
       let nextId = technologies.length > 0 ? Math.max(...technologies.map((t) => t.id)) + 1 : 1;
@@ -1139,7 +1151,7 @@
             try {
               window.showDetail(nextTech, 'blip', q);
             } catch (e) {
-              console.warn('switchEnterprise: failed to refresh detail panel', e);
+              if (window.Logger) window.Logger.warn('switchEnterprise: failed to refresh detail panel', e);
             }
           }, 0);
         } else {
@@ -1254,6 +1266,7 @@
     vfsWrite,
     fetchJsonWithCache,
     clearFetchCache,
+    clearVfsCache,
     loadJsonPreferVfs,
     loadData,
     ensureAndPersistNewTech,
@@ -1270,6 +1283,7 @@
   window.vfsWrite = vfsWrite;
   window.fetchJsonWithCache = fetchJsonWithCache;
   window.clearFetchCache = clearFetchCache;
+  window.clearVfsCache = clearVfsCache;
   window.loadJsonPreferVfs = loadJsonPreferVfs;
   window.loadData = loadData;
   window.ensureAndPersistNewTech = ensureAndPersistNewTech;

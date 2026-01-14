@@ -67,11 +67,11 @@
   function populateSelect(filterKey, items, placeholderText) {
     const select = document.querySelector(`.custom-select[data-filter="${filterKey}"]`);
     if (!select) {
-      console.warn(`populateSelect: селект с data-filter="${filterKey}" не найден`);
+      if (window.Logger) window.Logger.warn(`populateSelect: селект с data-filter="${filterKey}" не найден`);
       return;
     }
     if (!Array.isArray(items) || items.length === 0) {
-      console.warn(`populateSelect: для "${filterKey}" передан пустой массив или не массив:`, items);
+      if (window.Logger) window.Logger.warn(`populateSelect: для "${filterKey}" передан пустой массив или не массив:`, items);
     }
     const optionsList = select.querySelector('.select-options');
     if (!optionsList) {
@@ -345,18 +345,6 @@
     // Сохраняем текущие выбранные значения (множественный выбор)
     const currentSelected = getFilterValues('function');
 
-    // Очищаем список опций
-    optionsList.innerHTML = '';
-
-    // Добавляем поиск
-    const searchWrap = document.createElement('li');
-    searchWrap.className = 'select-search';
-    searchWrap.innerHTML = `<input type="text" placeholder="Поиск..." autocomplete="off" />`;
-    optionsList.appendChild(searchWrap);
-
-    // Добавляем "Выбрать все"
-    optionsList.appendChild(createSelectAllLi());
-
     // Фильтруем функции по выбранным блокам
     let filteredFunctions = window.functions;
     const blockNamesArray = Array.isArray(blockNames) ? blockNames : (blockNames ? [blockNames] : []);
@@ -374,7 +362,19 @@
       }
     }
 
-    // Добавляем отфильтрованные функции
+    // Используем DocumentFragment для батчинга изменений DOM
+    const fragment = document.createDocumentFragment();
+
+    // Добавляем поиск
+    const searchWrap = document.createElement('li');
+    searchWrap.className = 'select-search';
+    searchWrap.innerHTML = `<input type="text" placeholder="Поиск..." autocomplete="off" />`;
+    fragment.appendChild(searchWrap);
+
+    // Добавляем "Выбрать все"
+    fragment.appendChild(createSelectAllLi());
+
+    // Добавляем отфильтрованные функции в fragment
     filteredFunctions.forEach(funcName => {
       const li = createCheckboxOptionLi(funcName, funcName);
       // Восстанавливаем выделение, если функция была выбрана и все еще доступна
@@ -383,8 +383,12 @@
         const checkbox = li.querySelector('input[type="checkbox"]');
         if (checkbox) checkbox.checked = true;
       }
-      optionsList.appendChild(li);
+      fragment.appendChild(li);
     });
+
+    // Очищаем список опций и добавляем fragment одним операцией
+    optionsList.innerHTML = '';
+    optionsList.appendChild(fragment);
 
     // Обновляем скрытое поле и отображение, оставляя только доступные выбранные функции
     const validSelected = currentSelected.filter(func => filteredFunctions.includes(func));
@@ -414,18 +418,6 @@
     // Сохраняем текущие выбранные значения (множественный выбор)
     const currentSelected = getFilterValues('block');
 
-    // Очищаем список опций
-    optionsList.innerHTML = '';
-
-    // Добавляем поиск
-    const searchWrap = document.createElement('li');
-    searchWrap.className = 'select-search';
-    searchWrap.innerHTML = `<input type="text" placeholder="Поиск..." autocomplete="off" />`;
-    optionsList.appendChild(searchWrap);
-
-    // Добавляем "Выбрать все"
-    optionsList.appendChild(createSelectAllLi());
-
     // Фильтруем блоки по квадранту, если есть зум
     let filteredBlocks = window.blocksList;
     if (quadrantId != null) {
@@ -438,7 +430,19 @@
       }
     }
 
-    // Добавляем отфильтрованные блоки
+    // Используем DocumentFragment для батчинга изменений DOM
+    const fragment = document.createDocumentFragment();
+
+    // Добавляем поиск
+    const searchWrap = document.createElement('li');
+    searchWrap.className = 'select-search';
+    searchWrap.innerHTML = `<input type="text" placeholder="Поиск..." autocomplete="off" />`;
+    fragment.appendChild(searchWrap);
+
+    // Добавляем "Выбрать все"
+    fragment.appendChild(createSelectAllLi());
+
+    // Добавляем отфильтрованные блоки в fragment
     filteredBlocks.forEach(blockName => {
       const li = createCheckboxOptionLi(blockName, blockName);
       // Восстанавливаем выделение, если блок был выбран и все еще доступен
@@ -447,8 +451,12 @@
         const checkbox = li.querySelector('input[type="checkbox"]');
         if (checkbox) checkbox.checked = true;
       }
-      optionsList.appendChild(li);
+      fragment.appendChild(li);
     });
+
+    // Очищаем список опций и добавляем fragment одной операцией
+    optionsList.innerHTML = '';
+    optionsList.appendChild(fragment);
 
     // Обновляем скрытое поле и отображение, оставляя только доступные выбранные блоки
     const validSelected = currentSelected.filter(block => filteredBlocks.includes(block));
@@ -469,11 +477,11 @@
   function populateSelectForModal(selectId, items, placeholder) {
     const customSelect = document.querySelector(`.custom-select-modal[data-field="${selectId}"]`);
     if (!customSelect) {
-      console.warn(`populateSelectForModal: селект с data-field="${selectId}" не найден`);
+      if (window.Logger) window.Logger.warn(`populateSelectForModal: селект с data-field="${selectId}" не найден`);
       return;
     }
     if (!Array.isArray(items) || items.length === 0) {
-      console.warn(`populateSelectForModal: для "${selectId}" передан пустой массив или не массив:`, items);
+      if (window.Logger) window.Logger.warn(`populateSelectForModal: для "${selectId}" передан пустой массив или не массив:`, items);
     }
     const optionsList = customSelect.querySelector('.select-options');
     if (!optionsList) {

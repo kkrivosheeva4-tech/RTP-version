@@ -110,7 +110,7 @@
       try {
         window.updateRadar();
       } catch (e) {
-        console.warn('Ошибка при автоматическом обновлении радара:', e);
+        if (window.Logger) window.Logger.warn('Ошибка при автоматическом обновлении радара:', e);
       }
     });
   }

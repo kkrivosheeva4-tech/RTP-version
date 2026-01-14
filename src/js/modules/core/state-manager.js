@@ -1,5 +1,6 @@
 // StateManager: простое централизованное состояние с подписками.
 // API: get(key), set(key, value), subscribe(fn) -> unsubscribe, subscribeToKey(key, fn) -> unsubscribe, clear()
+
 (function() {
   'use strict';
 
@@ -69,10 +70,8 @@
     }
   };
 
-  // Экспорт
-  if (typeof module !== 'undefined' && module.exports) {
-    module.exports = StateManager;
-  } else if (typeof window !== 'undefined') {
+  // Экспорт в window
+  if (typeof window !== 'undefined') {
     window.StateManager = StateManager;
   }
 })();

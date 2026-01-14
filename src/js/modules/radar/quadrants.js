@@ -7,14 +7,32 @@
 
   // Получаем зависимости из других модулей и глобальных переменных (ленивая загрузка)
   const getTechnologies = () => {
+    // Пробуем получить через StateManager
     if (window.StateManager) {
-      return window.StateManager.get('technologies') || [];
+      const techs = window.StateManager.get('technologies');
+      if (Array.isArray(techs) && techs.length > 0) {
+        return techs;
+      }
+    }
+    // Fallback на window.getTechnologies для обратной совместимости
+    if (typeof window.getTechnologies === 'function') {
+      const techs = window.getTechnologies();
+      if (Array.isArray(techs) && techs.length > 0) {
+        return techs;
+      }
+    }
+    // Fallback на window.technologies
+    if (Array.isArray(window.technologies) && window.technologies.length > 0) {
+      return window.technologies;
     }
     return [];
   };
 
   const getAllQuadrantsForTech = (...args) => {
-    const fn = window.getAllQuadrantsForTech;
+    // Используем функцию из window.Positioning, если она доступна
+    const fn = (window.Positioning && typeof window.Positioning.getAllQuadrantsForTech === 'function')
+      ? window.Positioning.getAllQuadrantsForTech
+      : (typeof window.getAllQuadrantsForTech === 'function' ? window.getAllQuadrantsForTech : null);
     return fn ? fn(...args) : [];
   };
 
@@ -79,10 +97,19 @@
    * @returns {Array} Массив технологий
    */
   function getTechnologiesForQuadrant(qId) {
+    // Нормализуем qId к числу для корректного сравнения
+    const normalizedQId = typeof qId === 'string' ? parseInt(qId, 10) : Number(qId);
+    if (isNaN(normalizedQId)) return [];
+
     return getTechnologies().filter(t => {
       // Проверяем все квадранты технологии, а не только первый блок
       const techQuadrants = getAllQuadrantsForTech(t);
-      return techQuadrants.includes(qId);
+      if (!Array.isArray(techQuadrants) || techQuadrants.length === 0) return false;
+      // Нормализуем квадранты к числам для корректного сравнения
+      return techQuadrants.some(q => {
+        const normalizedQ = typeof q === 'string' ? parseInt(q, 10) : Number(q);
+        return !isNaN(normalizedQ) && normalizedQ === normalizedQId;
+      });
     });
   }
 

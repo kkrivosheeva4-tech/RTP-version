@@ -174,8 +174,15 @@
           // Проверяем наличие технологий в секторе (учитываем технологии с несколькими блоками/квадрантами)
           if (typeof window.getTechnologies === 'function') {
             const techs = window.getTechnologies() || [];
-            const getAllQuadrantsForTech = (typeof window.getAllQuadrantsForTech === 'function') ? window.getAllQuadrantsForTech : null;
-            const getQuadrantIdForBlock = (typeof window.getQuadrantIdForBlock === 'function') ? window.getQuadrantIdForBlock : null;
+            // Используем функции из window.Positioning, если они доступны
+            const getAllQuadrantsForTech =
+              (window.Positioning && typeof window.Positioning.getAllQuadrantsForTech === 'function')
+                ? window.Positioning.getAllQuadrantsForTech
+                : (typeof window.getAllQuadrantsForTech === 'function' ? window.getAllQuadrantsForTech : null);
+            const getQuadrantIdForBlock =
+              (window.Positioning && typeof window.Positioning.getQuadrantIdForBlock === 'function')
+                ? window.Positioning.getQuadrantIdForBlock
+                : (typeof window.getQuadrantIdForBlock === 'function' ? window.getQuadrantIdForBlock : null);
 
             const hasTechs = (Array.isArray(techs) ? techs : []).some(t => {
               if (!t) return false;
@@ -408,7 +415,7 @@
     // Обработчик клика на blip
     el.addEventListener('click', (e) => {
       e.stopPropagation();
-      console.log('=== Клик на blip ===', {
+      if (window.Logger) window.Logger.log('=== Клик на blip ===', {
         id: el.dataset.id,
         quadrant: el.dataset.quadrant
       });
@@ -416,21 +423,21 @@
         const id = +el.dataset.id;
         const blipQuadrant = el.dataset.quadrant ? +el.dataset.quadrant : null;
         const t = getTechById(id);
-        console.log('blip click: технология найдена', {
+        if (window.Logger) window.Logger.log('blip click: технология найдена', {
           tech: t ? { id: t.id, name: t.name } : null
         });
 
         // Получаем showDetail из window в момент клика, а не из конфига
         const showDetailFn = (typeof window.showDetail === 'function') ? window.showDetail : null;
-        console.log('blip click: showDetail доступна', {
+        if (window.Logger) window.Logger.log('blip click: showDetail доступна', {
           available: !!showDetailFn,
           type: typeof window.showDetail
         });
 
         if (t && showDetailFn) {
-          console.log('blip click: вызываем showDetail');
+          if (window.Logger) window.Logger.log('blip click: вызываем showDetail');
           showDetailFn(t, 'blip', blipQuadrant);
-          console.log('blip click: showDetail вызвана');
+          if (window.Logger) window.Logger.log('blip click: showDetail вызвана');
         } else {
           if (!t) {
             console.error('Ошибка при обработке клика на blip: технология не найдена', { id });
@@ -470,7 +477,7 @@
     const blipsToRemove = svg.querySelectorAll('.blip, .blip-warning');
     blipsToRemove.forEach(el => el.remove());
 
-    console.debug('renderRadar: start — input data length:', Array.isArray(techData) ? techData.length : 0);
+    if (window.Logger) window.Logger.debug('renderRadar: start — input data length:', Array.isArray(techData) ? techData.length : 0);
 
     // Фильтруем технологии по валидности кольца
     const validTechs = (Array.isArray(techData) ? techData : [])
@@ -479,7 +486,7 @@
         return t && ring != null;
       });
 
-    console.debug('renderRadar: start — valid techs:', validTechs.length);
+    if (window.Logger) window.Logger.debug('renderRadar: start — valid techs:', validTechs.length);
 
     // Создаем структуру данных для отображения
     const renderData = [];
@@ -488,7 +495,7 @@
       const techQuadrants = getAllQuadrantsForTech(t);
 
       if (techQuadrants.length === 0) {
-        console.debug('renderRadar: tech has no quadrants', { id: t.id, name: t.name });
+        if (window.Logger) window.Logger.debug('renderRadar: tech has no quadrants', { id: t.id, name: t.name });
         return;
       }
 
@@ -506,7 +513,7 @@
       });
     });
 
-    console.debug('renderRadar: after mapping — renderData entries:', renderData.length);
+    if (window.Logger) window.Logger.debug('renderRadar: after mapping — renderData entries:', renderData.length);
 
     // Вычисляем позиции для каждого blip'а
     renderData.forEach((entry) => {
@@ -533,7 +540,7 @@
 
     // Создаём blip'ы в SVG
     renderData.forEach((entry) => {
-      console.debug('renderRadar: rendering blip', {
+      if (window.Logger) window.Logger.debug('renderRadar: rendering blip', {
         id: entry.id,
         name: entry.name,
         quadrant: entry.quadrant,

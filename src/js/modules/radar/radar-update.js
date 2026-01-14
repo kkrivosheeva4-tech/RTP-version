@@ -47,8 +47,8 @@
     throw new Error('DOMProxy не загружен');
   }
 
-  // Функция обновления радара
-  function updateRadar() {
+  // Внутренняя функция обновления радара (без debounce для синхронных вызовов)
+  function updateRadarInternal() {
     const Filters = getFilters();
     const DataIndex = getDataIndex();
     const RenderQueue = getRenderQueue();
@@ -151,9 +151,45 @@
     }
   }
 
+  // Debounced версия updateRadar для использования из обработчиков событий
+  // Оптимизация производительности: предотвращаем избыточные перерисовки при частых вызовах
+  function getDebounce() {
+    if (typeof window !== 'undefined' && typeof window.debounce === 'function') {
+      return window.debounce;
+    }
+    // Fallback реализация
+    return function(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    };
+  }
+
+  // Создаем debounced версию с задержкой 50мс (баланс между производительностью и отзывчивостью UI)
+  const debounceFn = getDebounce();
+  const debouncedUpdateRadar = debounceFn(updateRadarInternal, 50);
+
+  // Публичная функция updateRadar - использует debounce для оптимизации
+  function updateRadar(immediate) {
+    if (immediate === true) {
+      // Для критических обновлений (например, при загрузке данных) выполняем сразу
+      updateRadarInternal();
+    } else {
+      // Для обычных обновлений (например, при изменении фильтров) используем debounce
+      debouncedUpdateRadar();
+    }
+  }
+
   // Экспорт модуля
   const RadarUpdate = {
-    updateRadar
+    updateRadar,
+    updateRadarInternal // Экспортируем и внутреннюю функцию для случаев, когда нужен немедленный вызов
   };
 
   if (typeof window !== 'undefined') {

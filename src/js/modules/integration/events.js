@@ -17,6 +17,13 @@
 
   // Инициализация обработчиков событий
   function initEventHandlers() {
+    // Guard: предотвращаем повторную инициализацию
+    if (window.__eventsInitialized) {
+      if (window.Logger) window.Logger.debug('initEventHandlers уже выполнен, пропускаем повторную инициализацию');
+      return;
+    }
+    window.__eventsInitialized = true;
+
     // Проверяем, что все зависимости доступны
     const EventManager = getDependency("EventManager");
     const DOMCache = getDependency("DOMCache");
@@ -26,7 +33,7 @@
       return function (...args) {
         const fn = window[name];
         if (typeof fn !== "function") {
-          console.warn(`Функция ${name} не найдена в window`);
+          if (window.Logger) window.Logger.warn(`Функция ${name} не найдена в window`);
           return;
         }
         return fn(...args);
@@ -61,7 +68,7 @@
         }, 300);
         searchInput.addEventListener("input", debouncedSearch);
       } else {
-        console.warn("Функция debounce не найдена");
+        if (window.Logger) window.Logger.warn("Функция debounce не найдена");
       }
     }
 
@@ -278,6 +285,10 @@
       }
       const detailPanel = DOMCache.get("detailPanel");
       if (detailPanel && detailPanel.classList.contains("active")) {
+        // Деактивируем focus trap перед закрытием
+        if (window.FocusTrap && typeof window.FocusTrap.release === 'function') {
+          window.FocusTrap.release();
+        }
         detailPanel.classList.remove("active");
         detailPanel.style.display = "none";
       }
@@ -512,6 +523,10 @@
       }
       const detailPanel = DOMCache.get("detailPanel");
       if (detailPanel && detailPanel.classList.contains("active")) {
+        // Деактивируем focus trap перед закрытием
+        if (window.FocusTrap && typeof window.FocusTrap.release === 'function') {
+          window.FocusTrap.release();
+        }
         detailPanel.classList.remove("active");
         detailPanel.style.display = "none";
       }
@@ -554,6 +569,10 @@
           detailPanel.style.removeProperty("position");
           detailPanel.style.removeProperty("z-index");
           detailPanel.style.removeProperty("display");
+          // Деактивируем focus trap перед закрытием
+          if (window.FocusTrap && typeof window.FocusTrap.release === 'function') {
+            window.FocusTrap.release();
+          }
           // Удаляем класс active
           detailPanel.classList.remove("active");
           // Сбрасываем выбранную технологию
@@ -588,11 +607,22 @@
           backBtn.setAttribute("aria-label", "Назад к списку технологий");
           backBtn.setAttribute("data-tooltip", "Назад к списку технологий");
           backBtn.title = "Назад к списку технологий";
-          backBtn.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path d="M15.5 19.5L8 12l7.5-7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          `;
+          const backBtnSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+          backBtnSvg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+          backBtnSvg.setAttribute("width", "18");
+          backBtnSvg.setAttribute("height", "18");
+          backBtnSvg.setAttribute("viewBox", "0 0 24 24");
+          backBtnSvg.setAttribute("aria-hidden", "true");
+          backBtnSvg.setAttribute("focusable", "false");
+          const backBtnPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          backBtnPath.setAttribute("d", "M15.5 19.5L8 12l7.5-7.5");
+          backBtnPath.setAttribute("fill", "none");
+          backBtnPath.setAttribute("stroke", "currentColor");
+          backBtnPath.setAttribute("stroke-width", "2");
+          backBtnPath.setAttribute("stroke-linecap", "round");
+          backBtnPath.setAttribute("stroke-linejoin", "round");
+          backBtnSvg.appendChild(backBtnPath);
+          backBtn.appendChild(backBtnSvg);
           backBtn.style.display = "none";
           detailHeader.insertBefore(backBtn, detailHeader.firstChild);
         }
@@ -607,6 +637,10 @@
           detailPanel.style.removeProperty("position");
           detailPanel.style.removeProperty("z-index");
           detailPanel.style.removeProperty("display");
+          // Деактивируем focus trap перед закрытием
+          if (window.FocusTrap && typeof window.FocusTrap.release === 'function') {
+            window.FocusTrap.release();
+          }
           // Удаляем класс active
           detailPanel.classList.remove("active");
 
@@ -635,12 +669,12 @@
               window.openQuadrantPriorityPanel(currentZoomed);
               window.recomputeQuadrantPriorityList(currentZoomed);
             } else {
-              console.warn(
+              if (window.Logger) window.Logger.warn(
                 'Кнопка "Назад": текущий зуммированный квадрант не найден'
               );
             }
           } else {
-            console.warn(
+            if (window.Logger) window.Logger.warn(
               'Кнопка "Назад": функции для работы с модальным окном приоритетных технологий недоступны'
             );
           }
@@ -909,45 +943,72 @@
         confirmEl = document.createElement("div");
         confirmEl.id = "internalConfirm";
         confirmEl.className = "modal-panel confirm-panel";
-        confirmEl.innerHTML = `
-          <div class="modal-header"><h2>Подтвердите действие</h2></div>
-          <div class="modal-body"><p class="confirm-message"></p>
-            <div class="form-actions" style="margin-top:12px; display:flex; gap:8px; justify-content:flex-end">
-              <button class="btn-secondary" data-action="cancel">Отмена</button>
-              <button class="btn-primary" data-action="close">Закрыть</button>
-            </div>
-          </div>`;
+        // Создаем структуру модального окна через createElement (безопаснее чем innerHTML)
+        const modalHeader = document.createElement('div');
+        modalHeader.className = 'modal-header';
+        const modalTitle = document.createElement('h2');
+        modalTitle.textContent = 'Подтвердите действие';
+        modalHeader.appendChild(modalTitle);
+
+        const modalBody = document.createElement('div');
+        modalBody.className = 'modal-body';
+        const confirmMessage = document.createElement('p');
+        confirmMessage.className = 'confirm-message';
+        modalBody.appendChild(confirmMessage);
+
+        const formActions = document.createElement('div');
+        formActions.style.marginTop = '12px';
+        formActions.style.display = 'flex';
+        formActions.style.gap = '8px';
+        formActions.style.justifyContent = 'flex-end';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'btn-secondary';
+        cancelBtn.setAttribute('data-action', 'cancel');
+        cancelBtn.textContent = 'Отмена';
+
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'btn-primary';
+        closeBtn.setAttribute('data-action', 'close');
+        closeBtn.textContent = 'Закрыть';
+
+        formActions.appendChild(cancelBtn);
+        formActions.appendChild(closeBtn);
+        modalBody.appendChild(formActions);
+
+        confirmEl.appendChild(modalHeader);
+        confirmEl.appendChild(modalBody);
+        // Сохраняем ссылку на элемент сообщения для последующего использования
+        confirmEl._confirmMessageEl = confirmMessage;
         document.body.appendChild(confirmEl);
-        confirmEl
-          .querySelector('[data-action="cancel"]')
-          .addEventListener("click", () => {
-            confirmEl.classList.remove("open");
-            setTimeout(() => (confirmEl.style.display = "none"), 220);
-          });
-        confirmEl
-          .querySelector('[data-action="close"]')
-          .addEventListener("click", (ev) => {
-            ev.stopPropagation();
-            confirmEl.classList.remove("open");
-            setTimeout(() => {
-              confirmEl.style.display = "none";
-              try {
-                if (typeof confirmEl._onClose === "function")
-                  confirmEl._onClose();
-              } catch (e) {
-                console.error(e);
-              }
-              try {
-                const related = confirmEl._relatedPanel;
-                if (related && typeof window.hideModal === "function")
-                  window.hideModal(related);
-              } catch (e) {
-                /* ignore */
-              }
-            }, 220);
-          });
+        cancelBtn.addEventListener("click", () => {
+          confirmEl.classList.remove("open");
+          setTimeout(() => (confirmEl.style.display = "none"), 220);
+        });
+        closeBtn.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          confirmEl.classList.remove("open");
+          setTimeout(() => {
+            confirmEl.style.display = "none";
+            try {
+              if (typeof confirmEl._onClose === "function")
+                confirmEl._onClose();
+            } catch (e) {
+              console.error(e);
+            }
+            try {
+              const related = confirmEl._relatedPanel;
+              if (related && typeof window.hideModal === "function")
+                window.hideModal(related);
+            } catch (e) {
+              /* ignore */
+            }
+          }, 220);
+        });
       }
-      confirmEl.querySelector(".confirm-message").textContent = message;
+      // Используем сохраненную ссылку или querySelector как fallback
+      const messageEl = confirmEl._confirmMessageEl || confirmEl.querySelector(".confirm-message");
+      if (messageEl) messageEl.textContent = message;
       confirmEl._onClose = onCloseConfirmed;
       confirmEl._relatedPanel = arguments[2] || null;
       confirmEl.style.display = "block";
@@ -961,7 +1022,7 @@
       if (Date.now() < ignoreOutsideClickUntil) return;
       const mod = e.target.closest(".modal-panel");
       if (mod) {
-        if (mod.id === "reportLoadingModal") return;
+        if (mod.id === "reportLoadingModal" || mod.id === "prospectsModal") return;
         return;
       }
 

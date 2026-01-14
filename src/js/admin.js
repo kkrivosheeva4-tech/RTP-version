@@ -5,6 +5,16 @@ let backups = [];
 let currentUserId = null;
 let currentSection = 'dashboard';
 
+// ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
+// Безопасное экранирование HTML для предотвращения XSS
+// Используем window.escapeHtml из dom-utils.js, если доступен, иначе fallback
+const escapeHtml = window.escapeHtml || ((text) => {
+  if (text == null) return '';
+  const div = document.createElement('div');
+  div.textContent = String(text);
+  return div.innerHTML;
+});
+
 // ===== Пагинация журнала аудита =====
 const AUDIT_PAGE_SIZE = 30;
 let auditCurrentPage = 1;
@@ -40,7 +50,7 @@ function writeStorageJson(key, value) {
     localStorage.setItem(key, JSON.stringify(value));
     return true;
   } catch (e) {
-    console.warn('writeStorageJson failed', key, e);
+    if (window.Logger) window.Logger.warn('writeStorageJson failed', key, e);
     return false;
   }
 }
@@ -340,26 +350,25 @@ function checkAdminAccess() {
   return true;
 }
 // ===== ТЕМА =====
+// initializeTheme теперь в common-ui.js
+// Используем функцию из common-ui.js через window
 function initializeTheme() {
-  const themeToggle = document.getElementById("themeToggle");
-  const savedTheme = localStorage.getItem("theme") || "light";
-  document.body.classList.remove('light', 'dark');
-  document.body.classList.add(savedTheme);
-  if (themeToggle) {
-    themeToggle.checked = savedTheme === "dark";
-    themeToggle.addEventListener("change", () => {
-      const theme = themeToggle.checked ? "dark" : "light";
-      document.body.classList.remove('light', 'dark');
-      document.body.classList.add(theme);
-      localStorage.setItem("theme", theme);
-      // Обновляем графики при смене темы
-      setTimeout(() => {
-        applyChartsTheme();
-      }, 100);
-    });
+  if (typeof window.CommonUI !== 'undefined' && typeof window.CommonUI.initTheme === 'function') {
+    window.CommonUI.initTheme();
+    // Обновляем графики при смене темы (специфичная логика для admin.js)
+    const themeToggle = document.getElementById("themeToggle");
+    if (themeToggle) {
+      themeToggle.addEventListener("change", () => {
+        setTimeout(() => {
+          applyChartsTheme();
+        }, 100);
+      }, { once: false });
+    }
   }
   // Рендер информации об авторизации
-  renderAuth();
+  if (typeof window.renderAuth === 'function') {
+    window.renderAuth();
+  }
 }
 
 function initializeAdminShell() {
@@ -430,26 +439,9 @@ function updateCollapsedSidebarTooltips(isCollapsed) {
     }
   });
 }
-function renderAuth() {
-  const authInfo = document.getElementById("authInfo");
-  const logoutContainer = document.getElementById("logoutContainer");
-  const role = localStorage.getItem("role");
-  if (role === "admin" || role === "architect") {
-    const roleName = role === "admin" ? "Администратор" : "Архитектор";
-    if (authInfo) {
-      authInfo.innerHTML = `<div class="user-role">${roleName}</div>`;
-    }
-    if (logoutContainer) {
-      logoutContainer.innerHTML = `<button class="logout" data-tooltip="Выйти" aria-label="Выйти">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-        <polyline points="16,17 21,12 16,7"/>
-        <line x1="21" y1="12" x2="9" y2="12"/>
-      </svg>
-    </button>`;
-    }
-  }
-}
+// renderAuth теперь в common-ui.js
+// Используем функцию из common-ui.js напрямую через window.renderAuth
+// Локальная обертка удалена, чтобы избежать бесконечной рекурсии
 
 // ===== КАСТОМНЫЕ СЕЛЕКТЫ (для админ-панели) =====
 const enhancedSelects = new Map();
@@ -501,11 +493,16 @@ function enhanceSelect(selectEl) {
 
   const arrow = document.createElement('span');
   arrow.className = 'app-select__arrow';
-  arrow.innerHTML = `
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-      <polyline points="6 9 12 15 18 9"></polyline>
-    </svg>
-  `;
+  const arrowSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  arrowSvg.setAttribute('viewBox', '0 0 24 24');
+  arrowSvg.setAttribute('fill', 'none');
+  arrowSvg.setAttribute('stroke', 'currentColor');
+  arrowSvg.setAttribute('stroke-width', '2');
+  arrowSvg.setAttribute('aria-hidden', 'true');
+  const arrowPolyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+  arrowPolyline.setAttribute('points', '6 9 12 15 18 9');
+  arrowSvg.appendChild(arrowPolyline);
+  arrow.appendChild(arrowSvg);
 
   trigger.appendChild(valueEl);
   trigger.appendChild(arrow);
@@ -1027,32 +1024,81 @@ function loadUsers() {
   });
   filteredUsers.forEach(user => {
     const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${user.id}</td>
-      <td>${user.name}</td>
-      <td>${user.email}</td>
-      <td><span class="status-badge ${getRoleClass(user.role)}">${getRoleName(user.role)}</span></td>
-      <td>${formatDate(user.createdAt)}</td>
-      <td><span class="status-badge ${user.status === 'active' ? 'status-active' : 'status-inactive'}">${user.status === 'active' ? 'Активен' : 'Неактивен'}</span></td>
-      <td>
-        <div class="action-buttons">
-          <button class="action-btn edit-btn" onclick="editUser(${user.id})" data-tooltip="Редактировать">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-            </svg>
-          </button>
-          <button class="action-btn delete-btn" onclick="deleteUser(${user.id})" data-tooltip="Удалить">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="3,6 5,6 21,6"></polyline>
-              <path d="M19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path>
-              <line x1="10" y1="11" x2="10" y2="17"></line>
-              <line x1="14" y1="11" x2="14" y2="17"></line>
-            </svg>
-          </button>
-        </div>
-      </td>
+
+    // ID
+    const tdId = document.createElement('td');
+    tdId.textContent = user.id;
+    row.appendChild(tdId);
+
+    // Имя
+    const tdName = document.createElement('td');
+    tdName.textContent = user.name;
+    row.appendChild(tdName);
+
+    // Email
+    const tdEmail = document.createElement('td');
+    tdEmail.textContent = user.email;
+    row.appendChild(tdEmail);
+
+    // Роль
+    const tdRole = document.createElement('td');
+    const roleBadge = document.createElement('span');
+    roleBadge.className = `status-badge ${getRoleClass(user.role)}`;
+    roleBadge.textContent = getRoleName(user.role);
+    tdRole.appendChild(roleBadge);
+    row.appendChild(tdRole);
+
+    // Дата регистрации
+    const tdDate = document.createElement('td');
+    tdDate.textContent = formatDate(user.createdAt);
+    row.appendChild(tdDate);
+
+    // Статус
+    const tdStatus = document.createElement('td');
+    const statusBadge = document.createElement('span');
+    statusBadge.className = `status-badge ${user.status === 'active' ? 'status-active' : 'status-inactive'}`;
+    statusBadge.textContent = user.status === 'active' ? 'Активен' : 'Неактивен';
+    tdStatus.appendChild(statusBadge);
+    row.appendChild(tdStatus);
+
+    // Действия
+    const tdActions = document.createElement('td');
+    const actionsDiv = document.createElement('div');
+    actionsDiv.className = 'action-buttons';
+
+    // Кнопка редактирования
+    const editBtn = document.createElement('button');
+    editBtn.className = 'action-btn edit-btn';
+    editBtn.setAttribute('data-tooltip', 'Редактировать');
+    editBtn.setAttribute('data-user-id', user.id);
+    editBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+      </svg>
     `;
+    editBtn.addEventListener('click', () => editUser(user.id));
+    actionsDiv.appendChild(editBtn);
+
+    // Кнопка удаления
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'action-btn delete-btn';
+    deleteBtn.setAttribute('data-tooltip', 'Удалить');
+    deleteBtn.setAttribute('data-user-id', user.id);
+    deleteBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="3,6 5,6 21,6"></polyline>
+        <path d="M19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path>
+        <line x1="10" y1="11" x2="10" y2="17"></line>
+        <line x1="14" y1="11" x2="14" y2="17"></line>
+      </svg>
+    `;
+    deleteBtn.addEventListener('click', () => deleteUser(user.id));
+    actionsDiv.appendChild(deleteBtn);
+
+    tdActions.appendChild(actionsDiv);
+    row.appendChild(tdActions);
+
     tbody.appendChild(row);
   });
 }
@@ -1287,13 +1333,35 @@ function loadAuditLogs() {
 
   pageLogs.forEach(log => {
     const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${formatDateTime(log.date)}</td>
-      <td>${log.user}</td>
-      <td><span class="status-badge ${getActionClass(log.action)}">${getActionName(log.action)}</span></td>
-      <td>${log.details}</td>
-      <td>${log.ip}</td>
-    `;
+
+    // Дата
+    const tdDate = document.createElement('td');
+    tdDate.textContent = formatDateTime(log.date);
+    row.appendChild(tdDate);
+
+    // Пользователь
+    const tdUser = document.createElement('td');
+    tdUser.textContent = log.user;
+    row.appendChild(tdUser);
+
+    // Действие
+    const tdAction = document.createElement('td');
+    const actionBadge = document.createElement('span');
+    actionBadge.className = `status-badge ${getActionClass(log.action)}`;
+    actionBadge.textContent = getActionName(log.action);
+    tdAction.appendChild(actionBadge);
+    row.appendChild(tdAction);
+
+    // Детали
+    const tdDetails = document.createElement('td');
+    tdDetails.textContent = log.details;
+    row.appendChild(tdDetails);
+
+    // IP адрес
+    const tdIp = document.createElement('td');
+    tdIp.textContent = log.ip;
+    row.appendChild(tdIp);
+
     tbody.appendChild(row);
   });
 }
@@ -1436,6 +1504,22 @@ function initializeBackup() {
   if (createBackupBtn) {
     createBackupBtn.addEventListener('click', createBackup);
   }
+
+  // Кнопка сброса локальных правок (VFS)
+  const clearVfsCacheBtn = document.getElementById('clearVfsCacheBtn');
+  if (clearVfsCacheBtn) {
+    clearVfsCacheBtn.addEventListener('click', () => {
+      if (confirm('Вы уверены, что хотите сбросить все локальные правки данных? Это действие нельзя отменить.')) {
+        if (typeof window.clearVfsCache === 'function') {
+          window.clearVfsCache();
+          showNotification("Успешно", "Локальные правки данных сброшены", "success");
+          addAuditLog('backup', 'Сброшены локальные правки данных (VFS)');
+        } else {
+          showNotification("Ошибка", "Функция сброса недоступна", "error");
+        }
+      }
+    });
+  }
   loadBackups();
 }
 function loadBackups() {
@@ -1568,6 +1652,12 @@ function initializeModals() {
 function showModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal) {
+    // Активируем focus trap для модалок в админке
+    if (window.FocusTrap && typeof window.FocusTrap.trap === 'function') {
+      setTimeout(() => {
+        window.FocusTrap.trap(modal);
+      }, 50);
+    }
     modal.classList.add('show');
     modal.style.display = '';
   }
@@ -1575,6 +1665,10 @@ function showModal(modalId) {
 function hideModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal) {
+    // Деактивируем focus trap перед закрытием
+    if (window.FocusTrap && typeof window.FocusTrap.release === 'function') {
+      window.FocusTrap.release();
+    }
     modal.classList.remove('show');
     modal.style.display = '';
   }
@@ -1658,11 +1752,23 @@ function showNotification(title, message, type = 'info', persistent = false) {
   const notification = document.createElement('div');
   notification.className = `notification ${type}`;
   if (persistent) notification.classList.add('persistent');
-  notification.innerHTML = `
-    <div class="notification-title">${title}</div>
-    <div class="notification-message">${message}</div>
-    <button class="notification-close" onclick="hideNotification(this.parentElement)">&times;</button>
-  `;
+    // Создаем структуру уведомления через createElement (безопаснее чем innerHTML)
+    const notificationTitle = document.createElement('div');
+    notificationTitle.className = 'notification-title';
+    notificationTitle.textContent = title;
+
+    const notificationMessage = document.createElement('div');
+    notificationMessage.className = 'notification-message';
+    notificationMessage.textContent = message;
+
+    const notificationClose = document.createElement('button');
+    notificationClose.className = 'notification-close';
+    notificationClose.textContent = '×';
+    notificationClose.addEventListener('click', () => hideNotification(notification));
+
+    notification.appendChild(notificationTitle);
+    notification.appendChild(notificationMessage);
+    notification.appendChild(notificationClose);
   // Новые уведомления накладываются поверх старых: appendChild + управляем z-index
   const topZ = parseInt(panel.getAttribute('data-top-z') || '2000', 10) + 1;
   panel.setAttribute('data-top-z', String(topZ));

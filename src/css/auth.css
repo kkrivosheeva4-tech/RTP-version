@@ -19,7 +19,7 @@
     --accent-solid: var(--c-copper);
     --icon: #2C2F36;
 }
-[data-theme="dark"] {
+body.dark {
     --c-text: #EAECEE;
     --c-muted: #9AA1A9;
     --c-border: rgba(255,255,255,.12);
@@ -119,7 +119,7 @@ body {
     transition: transform .4s ease, box-shadow .4s ease, background .3s ease;
 }
 .card:hover { transform: translateY(-2px); }
-[data-theme="light"] .card { border-color: rgba(0,0,0,0.12); }
+body.light .card { border-color: rgba(0,0,0,0.12); }
 
 .brand {
     display: flex;
@@ -184,7 +184,7 @@ form { margin-top: 6px; }
     border-color: color-mix(in oklab, var(--grad-end) 45%, var(--grad-start) 55%);
     box-shadow: 0 0 0 3px rgba(183,134,106,0.18);
 }
-[data-theme="light"] .input { color: #000000; }
+body.light .input { color: #000000; }
 .icon {
     position: absolute;
     top: 0;

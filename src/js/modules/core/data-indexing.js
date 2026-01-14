@@ -128,7 +128,7 @@
     try {
       DataIndex.build(technologies || []);
     } catch (e) {
-      console.warn('DataIndex.build failed', e);
+      if (window.Logger) window.Logger.warn('DataIndex.build failed', e);
     }
   }
 

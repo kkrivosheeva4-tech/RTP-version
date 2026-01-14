@@ -3,6 +3,24 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; base-uri 'self';" />
+  <meta name="description" content="Справка по использованию радара технологий - инструкции, руководство пользователя и часто задаваемые вопросы" />
+  <meta name="keywords" content="справка, помощь, руководство, инструкция, радар технологий, FAQ" />
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Справка - Радар технологий" />
+  <meta property="og:description" content="Справка по использованию радара технологий - инструкции, руководство пользователя и часто задаваемые вопросы" />
+  <meta property="og:image" content="/assets/images/icon.png" />
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Справка - Радар технологий" />
+  <meta name="twitter:description" content="Справка по использованию радара технологий - инструкции, руководство пользователя и часто задаваемые вопросы" />
+  <meta name="twitter:image" content="/assets/images/icon.png" />
+  <!-- PWA мета-теги -->
+  <meta name="theme-color" content="#ce9068" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Радар технологий" />
   <title>Справка - Радар технологий</title>
   <link rel="icon" href="/assets/images/icon.png" type="image/png">
   <link rel="shortcut icon" href="/assets/images/icon.png" type="image/png">
@@ -13,7 +31,8 @@
 <body class="light">
   <header role="banner">
     <a class="logo" href="index.html" aria-label="Радар технологий - на главную">
-      <img src="/assets/images/icon.png" alt="Logo" class="logo-img" />
+      <img src="/assets/images/icon.png" alt="Logo" class="logo-img" onerror="this.style.display='none'; this.nextElementSibling?.style.display='inline';" />
+      <span class="logo-fallback" style="display:none;">РТ</span>
       <span>Радар технологий</span>
     </a>
     <nav class="enterprise-nav" role="tablist" aria-label="Навигация по предприятиям">
@@ -487,6 +506,8 @@
     </div>
   </main>
 
+  <script src="/src/js/modules/ui/common-ui.js"></script>
+  <script src="/src/js/modules/ui/offline-handler.js"></script>
   <script src="/src/js/help.js"></script>
 </body>
 </html>

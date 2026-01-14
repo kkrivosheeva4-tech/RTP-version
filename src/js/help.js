@@ -4,35 +4,12 @@
 (function() {
   'use strict';
 
-  /**
-   * Инициализация темы
-   */
+  // initTheme теперь в common-ui.js
+  // Используем функцию из common-ui.js через window
   function initTheme() {
-    const themeToggle = document.getElementById('themeToggle');
-    if (!themeToggle) return;
-
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    if (savedTheme === 'dark') {
-      document.body.classList.add('dark');
-      document.body.classList.remove('light');
-      themeToggle.checked = true;
-    } else {
-      document.body.classList.add('light');
-      document.body.classList.remove('dark');
+    if (typeof window.CommonUI !== 'undefined' && typeof window.CommonUI.initTheme === 'function') {
+      window.CommonUI.initTheme();
     }
-
-    themeToggle.addEventListener('change', function() {
-      const newTheme = this.checked ? 'dark' : 'light';
-      if (this.checked) {
-        document.body.classList.add('dark');
-        document.body.classList.remove('light');
-        localStorage.setItem('theme', 'dark');
-      } else {
-        document.body.classList.add('light');
-        document.body.classList.remove('dark');
-        localStorage.setItem('theme', 'light');
-      }
-    });
   }
 
   /**
@@ -244,84 +221,117 @@
     }
   }
 
-  /**
-   * Инициализация кнопки помощи
-   */
+  // initHelpButton теперь в common-ui.js
+  // Используем функцию из common-ui.js через window
   function initHelpButton() {
-    const helpBtn = document.getElementById('helpBtn');
-    if (helpBtn) {
-      helpBtn.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        // Используем глобальную функцию showHelpMenu, если она доступна
-        if (typeof window.showHelpMenu === 'function') {
-          window.showHelpMenu(helpBtn);
-        } else {
-          // Если функция не загружена, используем локальную реализацию
-          const existingMenu = document.querySelector('.help-menu');
-          if (existingMenu) {
-            existingMenu.remove();
-          }
-
-          // Проверяем, находимся ли мы на странице RMK.html
-          const isRMKPage = window.location.pathname.includes('RMK.html') || window.location.href.includes('RMK.html');
-
-          const menu = document.createElement('div');
-          menu.className = 'help-menu';
-          menu.setAttribute('role', 'menu');
-
-          // Формируем HTML меню в зависимости от страницы
-          let menuHTML = '';
-          if (isRMKPage) {
-            menuHTML = `
-              <button class="help-menu-item" data-action="tour" role="menuitem">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <path d="M12 16v-4M12 8h.01"></path>
-                </svg>
-                <span>Интерактивный тур</span>
-              </button>
-            `;
-          }
-          menuHTML += `
-            <a href="help.html" class="help-menu-item" role="menuitem">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-              </svg>
-              <span>Справка</span>
-            </a>
-          `;
-          menu.innerHTML = menuHTML;
-
-          const rect = helpBtn.getBoundingClientRect();
-          menu.style.position = 'fixed';
-          menu.style.top = `${rect.bottom + 8}px`;
-          menu.style.right = `${window.innerWidth - rect.right}px`;
-          menu.style.zIndex = '10001';
-
-          const tourBtn = menu.querySelector('[data-action="tour"]');
-          if (tourBtn && isRMKPage) {
-            tourBtn.addEventListener('click', function(e) {
-              e.preventDefault();
-              e.stopPropagation();
-              menu.remove();
-              if (window.OnboardingTour && typeof window.OnboardingTour.startTour === 'function') {
-                window.OnboardingTour.startTour();
-              }
-            });
-          }
-
-          const closeMenu = (e) => {
-            if (!menu.contains(e.target) && e.target !== helpBtn) {
-              menu.remove();
-              document.removeEventListener('click', closeMenu);
+    if (typeof window.CommonUI !== 'undefined' && typeof window.CommonUI.initHelpButton === 'function') {
+      window.CommonUI.initHelpButton();
+    } else {
+      // Fallback для обратной совместимости
+      const helpBtn = document.getElementById('helpBtn');
+      if (helpBtn) {
+        helpBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (typeof window.showHelpMenu === 'function') {
+            window.showHelpMenu(helpBtn);
+          } else {
+            // Если функция не загружена, используем локальную реализацию
+            const existingMenu = document.querySelector('.help-menu');
+            if (existingMenu) {
+              existingMenu.remove();
             }
-          };
-          setTimeout(() => document.addEventListener('click', closeMenu), 0);
-          document.body.appendChild(menu);
-        }
-      });
+
+            // Проверяем, находимся ли мы на странице RMK.html
+            const isRMKPage = window.location.pathname.includes('RMK.html') || window.location.href.includes('RMK.html');
+
+            const menu = document.createElement('div');
+            menu.className = 'help-menu';
+            menu.setAttribute('role', 'menu');
+
+            // Формируем меню через createElement (безопаснее чем innerHTML)
+            if (isRMKPage) {
+              const tourBtn = document.createElement('button');
+              tourBtn.className = 'help-menu-item';
+              tourBtn.setAttribute('data-action', 'tour');
+              tourBtn.setAttribute('role', 'menuitem');
+              const tourSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+              tourSvg.setAttribute('width', '18');
+              tourSvg.setAttribute('height', '18');
+              tourSvg.setAttribute('viewBox', '0 0 24 24');
+              tourSvg.setAttribute('fill', 'none');
+              tourSvg.setAttribute('stroke', 'currentColor');
+              tourSvg.setAttribute('stroke-width', '2');
+              const tourCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+              tourCircle.setAttribute('cx', '12');
+              tourCircle.setAttribute('cy', '12');
+              tourCircle.setAttribute('r', '10');
+              const tourPath1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+              tourPath1.setAttribute('d', 'M12 16v-4');
+              const tourPath2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+              tourPath2.setAttribute('d', 'M12 8h.01');
+              tourSvg.appendChild(tourCircle);
+              tourSvg.appendChild(tourPath1);
+              tourSvg.appendChild(tourPath2);
+              const tourSpan = document.createElement('span');
+              tourSpan.textContent = 'Интерактивный тур';
+              tourBtn.appendChild(tourSvg);
+              tourBtn.appendChild(tourSpan);
+              menu.appendChild(tourBtn);
+            }
+
+            const helpLink = document.createElement('a');
+            helpLink.href = 'help.html';
+            helpLink.className = 'help-menu-item';
+            helpLink.setAttribute('role', 'menuitem');
+            const helpSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            helpSvg.setAttribute('width', '18');
+            helpSvg.setAttribute('height', '18');
+            helpSvg.setAttribute('viewBox', '0 0 24 24');
+            helpSvg.setAttribute('fill', 'none');
+            helpSvg.setAttribute('stroke', 'currentColor');
+            helpSvg.setAttribute('stroke-width', '2');
+            const helpPath1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            helpPath1.setAttribute('d', 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20');
+            const helpPath2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            helpPath2.setAttribute('d', 'M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z');
+            helpSvg.appendChild(helpPath1);
+            helpSvg.appendChild(helpPath2);
+            const helpSpan = document.createElement('span');
+            helpSpan.textContent = 'Справка';
+            helpLink.appendChild(helpSvg);
+            helpLink.appendChild(helpSpan);
+            menu.appendChild(helpLink);
+
+            const rect = helpBtn.getBoundingClientRect();
+            menu.style.position = 'fixed';
+            menu.style.top = `${rect.bottom + 8}px`;
+            menu.style.right = `${window.innerWidth - rect.right}px`;
+            menu.style.zIndex = '10001';
+
+            const tourBtnEl = menu.querySelector('[data-action="tour"]');
+            if (tourBtnEl && isRMKPage) {
+              tourBtnEl.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                menu.remove();
+                if (window.OnboardingTour && typeof window.OnboardingTour.startTour === 'function') {
+                  window.OnboardingTour.startTour();
+                }
+              });
+            }
+
+            const closeMenu = (e) => {
+              if (!menu.contains(e.target) && e.target !== helpBtn) {
+                menu.remove();
+                document.removeEventListener('click', closeMenu);
+              }
+            };
+            setTimeout(() => document.addEventListener('click', closeMenu), 0);
+            document.body.appendChild(menu);
+          }
+        });
+      }
     }
   }
 

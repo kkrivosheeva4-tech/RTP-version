@@ -104,9 +104,10 @@ window.Toast = (function() {
     toastEl.setAttribute('role', 'alert');
     toastEl.setAttribute('aria-live', 'assertive');
 
+    const escapedMessage = window.escapeHtml ? window.escapeHtml(message) : String(message).replace(/[&<>"']/g, m => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[m]);
     toastEl.innerHTML = `
       <div class="toast-icon">${icons[type] || icons[ToastType.INFO]}</div>
-      <div class="toast-message">${message}</div>
+      <div class="toast-message">${escapedMessage}</div>
       <button class="toast-close" aria-label="Закрыть уведомление">&times;</button>
     `;
 

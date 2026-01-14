@@ -19,10 +19,15 @@
   function quadrantHasTechs(qId) {
     if (!qId) return false;
     const techs = typeof window.getTechnologies === "function" ? window.getTechnologies() : [];
+    // Используем функции из window.Positioning, если они доступны
     const getAllQuadrantsForTech =
-      typeof window.getAllQuadrantsForTech === "function" ? window.getAllQuadrantsForTech : null;
+      (window.Positioning && typeof window.Positioning.getAllQuadrantsForTech === "function")
+        ? window.Positioning.getAllQuadrantsForTech
+        : (typeof window.getAllQuadrantsForTech === "function" ? window.getAllQuadrantsForTech : null);
     const getQuadrantIdForBlock =
-      typeof window.getQuadrantIdForBlock === "function" ? window.getQuadrantIdForBlock : null;
+      (window.Positioning && typeof window.Positioning.getQuadrantIdForBlock === "function")
+        ? window.Positioning.getQuadrantIdForBlock
+        : (typeof window.getQuadrantIdForBlock === "function" ? window.getQuadrantIdForBlock : null);
 
     return (Array.isArray(techs) ? techs : []).some((t) => {
       if (!t) return false;
@@ -44,108 +49,109 @@
 
   // ===== ОБРАБОТЧИКИ BLIP HOVER =====
   // Функция для привязки обработчиков hover к blip элементам
+  // ОПТИМИЗАЦИЯ: Используем делегирование событий вместо клонирования элементов
+  let hoverHandlersAttached = false;
+  let currentHoveredBlip = null;
+
   function attachBlipHoverHandlers() {
     const DOMCache = getDependency("DOMCache");
     const svg = DOMCache.get("techRadar");
     if (!svg) return;
 
+    // Если обработчики уже прикреплены, не делаем ничего (они работают через делегирование)
+    if (hoverHandlersAttached) return;
+
     const hoverLabel = document.getElementById("hoverLabel");
-    const quadrantPriorityPanel = document.getElementById(
-      "quadrantPriorityPanel"
-    );
-    const qpListEl = quadrantPriorityPanel
+    let quadrantPriorityPanel = document.getElementById("quadrantPriorityPanel");
+    let qpListEl = quadrantPriorityPanel
       ? quadrantPriorityPanel.querySelector("#qpList")
       : null;
 
-    svg.querySelectorAll(".blip").forEach((b) => {
-      b.replaceWith(b.cloneNode(true));
-    });
+    // Используем mouseover/mouseout с делегированием (mouseenter/mouseleave не всплывают)
+    svg.addEventListener("mouseover", (e) => {
+      const b = e.target.closest(".blip");
+      if (!b || b === currentHoveredBlip) return; // Предотвращаем повторную обработку
 
-    svg.querySelectorAll(".blip").forEach((b) => {
-      b.addEventListener("mouseenter", () => {
-        const id = +b.dataset.id;
-        if (typeof window.getTechById !== "function") return;
-        const tech = window.getTechById(id);
-        if (!tech) return;
-        b.classList.add("highlighted");
+      // Скрываем предыдущий hover
+      if (currentHoveredBlip) {
+        currentHoveredBlip.classList.remove("highlighted");
+      }
 
-        // Подсвечиваем соответствующий элемент в модальном окне приоритетных технологий (если открыто)
-        if (
-          quadrantPriorityPanel &&
-          quadrantPriorityPanel.classList.contains("open") &&
-          qpListEl
-        ) {
-          qpListEl
-            .querySelectorAll(".qp-item")
-            .forEach((el) => el.classList.remove("highlighted"));
-          const priorityItem = qpListEl.querySelector(
-            `.qp-item[data-tech-id="${id}"]`
-          );
-          if (priorityItem) {
-            priorityItem.classList.add("highlighted");
-            // Прокручиваем к элементу, если он не виден
-            priorityItem.scrollIntoView({
-              behavior: "smooth",
-              block: "nearest",
-            });
-          }
-        }
+      currentHoveredBlip = b;
+      const id = +b.dataset.id;
+      if (typeof window.getTechById !== "function") return;
+      const tech = window.getTechById(id);
+      if (!tech) return;
+      b.classList.add("highlighted");
 
-        if (hoverLabel && typeof window.getHoverText === "function") {
-          const rect = b.getBoundingClientRect();
-          const svgRect = svg.getBoundingClientRect();
-          const text = window.getHoverText(tech);
-          hoverLabel.textContent = text;
-          hoverLabel.classList.remove(
-            "priority-low",
-            "priority-medium",
-            "priority-high"
-          );
-          // Точное позиционирование подсказки над blip по центру
-          hoverLabel.style.left = `${
-            rect.left + rect.width / 2 - svgRect.left
-          }px`;
-          hoverLabel.style.top = `${rect.top - svgRect.top}px`;
-          hoverLabel.classList.add("visible");
-        }
-      });
+      // Обновляем ссылки на элементы (могут измениться)
+      if (!quadrantPriorityPanel) quadrantPriorityPanel = document.getElementById("quadrantPriorityPanel");
+      if (quadrantPriorityPanel && !qpListEl) qpListEl = quadrantPriorityPanel.querySelector("#qpList");
 
-      b.addEventListener("mouseleave", () => {
-        // Подсветка бордером только при ховере
-        b.classList.remove("highlighted");
-        if (hoverLabel) {
-          hoverLabel.classList.remove("visible");
+      // Подсвечиваем соответствующий элемент в модальном окне приоритетных технологий (если открыто)
+      if (
+        quadrantPriorityPanel &&
+        quadrantPriorityPanel.classList.contains("open") &&
+        qpListEl
+      ) {
+        qpListEl
+          .querySelectorAll(".qp-item")
+          .forEach((el) => el.classList.remove("highlighted"));
+        const priorityItem = qpListEl.querySelector(
+          `.qp-item[data-tech-id="${id}"]`
+        );
+        if (priorityItem) {
+          priorityItem.classList.add("highlighted");
+          // Прокручиваем к элементу, если он не виден
+          priorityItem.scrollIntoView({
+            behavior: "smooth",
+            block: "nearest",
+          });
         }
-        // Убираем подсветку с элемента в модальном окне
-        if (qpListEl) {
-          qpListEl
-            .querySelectorAll(".qp-item")
-            .forEach((el) => el.classList.remove("highlighted"));
-        }
-      });
+      }
 
-      // Надёжный обработчик клика на каждом blip, добавляем после клонирования.
-      // Примечание: после клонирования blip теряет обработчики из createBlip, поэтому добавляем здесь
-      b.addEventListener("click", (ev) => {
-        ev.stopPropagation();
-        const id = +b.dataset.id;
-        const blipQuadrant = b.dataset.quadrant ? +b.dataset.quadrant : null;
-        if (typeof window.getTechById !== "function") return;
-        const tech = window.getTechById(id);
-        if (!tech) return;
-        // Установим как текущую технологию
-        if (typeof window.setCurrentTech === "function") {
-          window.setCurrentTech(tech);
-        }
-        b.classList.remove("highlighted"); // убрать бордер, он только для hover
+      if (hoverLabel && typeof window.getHoverText === "function") {
+        const rect = b.getBoundingClientRect();
+        const svgRect = svg.getBoundingClientRect();
+        const text = window.getHoverText(tech);
+        hoverLabel.textContent = text;
+        hoverLabel.classList.remove(
+          "priority-low",
+          "priority-medium",
+          "priority-high"
+        );
+        // Точное позиционирование подсказки над blip по центру
+        hoverLabel.style.left = `${
+          rect.left + rect.width / 2 - svgRect.left
+        }px`;
+        hoverLabel.style.top = `${rect.top - svgRect.top}px`;
+        hoverLabel.classList.add("visible");
+      }
+    }, true); // Используем capture phase для лучшей производительности
 
-        // Обновим панель деталей, передавая квадрант blip'а
-        // showDetail сам выделит все blip'ы технологии (подсветка и пульсация) и выполнит зум
-        if (typeof window.showDetail === "function") {
-          window.showDetail(tech, "blip", blipQuadrant);
-        }
-      });
-    });
+    svg.addEventListener("mouseout", (e) => {
+      const b = e.target.closest(".blip");
+      if (!b || b !== currentHoveredBlip) return;
+
+      // Проверяем, что мы действительно покидаем blip (а не переходим к дочернему элементу)
+      const relatedTarget = e.relatedTarget;
+      if (relatedTarget && b.contains(relatedTarget)) return;
+
+      currentHoveredBlip = null;
+      // Подсветка бордером только при ховере
+      b.classList.remove("highlighted");
+      if (hoverLabel) {
+        hoverLabel.classList.remove("visible");
+      }
+      // Убираем подсветку с элемента в модальном окне
+      if (qpListEl) {
+        qpListEl
+          .querySelectorAll(".qp-item")
+          .forEach((el) => el.classList.remove("highlighted"));
+      }
+    }, true);
+
+    hoverHandlersAttached = true;
   }
 
   // Инициализация обработчиков событий для радара
@@ -202,7 +208,7 @@
           const blipQuadrant = blip.dataset.quadrant
             ? +blip.dataset.quadrant
             : null;
-          console.debug("radar-events.js: обработчик клика на blip", {
+          if (window.Logger) window.Logger.debug("radar-events.js: обработчик клика на blip", {
             techId: currentTech.id,
             techName: currentTech.name,
             detailPanel: detailPanel ? "найден" : "не найден",
@@ -215,10 +221,10 @@
             if (typeof window.showDetail === "function") {
               window.showDetail(currentTech, "blip", blipQuadrant);
             } else {
-              console.warn("radar-events.js: showDetail не доступна");
+              if (window.Logger) window.Logger.warn("radar-events.js: showDetail не доступна");
             }
           } else {
-            console.warn("radar-events.js: detailPanel не найден");
+            if (window.Logger) window.Logger.warn("radar-events.js: detailPanel не найден");
           }
 
           // При клике по blip НЕ открываем модальное окно приоритетных технологий
@@ -227,11 +233,15 @@
             currentTech.blocks && currentTech.blocks.length
               ? currentTech.blocks[0]
               : currentTech.block;
+          const getQuadrantIdForBlockFn =
+            (window.Positioning && typeof window.Positioning.getQuadrantIdForBlock === "function")
+              ? window.Positioning.getQuadrantIdForBlock
+              : (typeof window.getQuadrantIdForBlock === "function" ? window.getQuadrantIdForBlock : null);
           if (
-            typeof window.getQuadrantIdForBlock === "function" &&
+            getQuadrantIdForBlockFn &&
             typeof window.zoomQuadrant === "function"
           ) {
-            const q = window.getQuadrantIdForBlock(blockKeyZoom);
+            const q = getQuadrantIdForBlockFn(blockKeyZoom);
             const currentZoomed =
               typeof window.getCurrentZoomedQuadrant === "function"
                 ? window.getCurrentZoomedQuadrant()
@@ -295,7 +305,7 @@
                 }
               }
             } catch (err) {
-              console.warn("Не удалось открыть сектор в сайдбаре:", err);
+              if (window.Logger) window.Logger.warn("Не удалось открыть сектор в сайдбаре:", err);
             }
           }
         } else if (sectorLabel) {
@@ -368,6 +378,10 @@
             detailPanel.style.removeProperty("position");
             detailPanel.style.removeProperty("z-index");
             detailPanel.style.removeProperty("display");
+            // Деактивируем focus trap перед закрытием
+            if (window.FocusTrap && typeof window.FocusTrap.release === 'function') {
+              window.FocusTrap.release();
+            }
             // Удаляем класс active
             detailPanel.classList.remove("active");
           }

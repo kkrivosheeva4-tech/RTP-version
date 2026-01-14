@@ -3,19 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; base-uri 'self';" />
+  <meta name="description" content="Административная панель радара технологий - управление пользователями, просмотр статистики и журнала аудита" />
+  <meta name="keywords" content="админ-панель, управление пользователями, статистика, аудит, радар технологий" />
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Админ-панель — Радар технологий" />
+  <meta property="og:description" content="Административная панель радара технологий - управление пользователями, просмотр статистики и журнала аудита" />
+  <meta property="og:image" content="/assets/images/icon.png" />
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Админ-панель — Радар технологий" />
+  <meta name="twitter:description" content="Административная панель радара технологий - управление пользователями, просмотр статистики и журнала аудита" />
+  <meta name="twitter:image" content="/assets/images/icon.png" />
+  <!-- PWA мета-теги -->
+  <meta name="theme-color" content="#ce9068" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Радар технологий" />
   <title>Админ-панель — Радар технологий</title>
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin="anonymous" />
+  <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com" />
   <link rel="icon" href="/assets/images/icon.png" type="image/png">
   <link rel="shortcut icon" href="/assets/images/icon.png" type="image/png">
   <link rel="stylesheet" href="/src/css/admin.css">
   <link rel="stylesheet" href="/src/css/common.css">
   <link rel="stylesheet" href="/src/css/about.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js" integrity="sha512-ElRFoEQdI5Ht6kZvyzXhYG9NqjtkmlkfYk0wr6wHxU9JEHakS7UJZNeml5ALk+8IKlU6jDgMabC3vkumRokgJA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body class="dark">
   <!-- ===== Хедер ===== -->
   <header role="banner">
     <a class="logo" href="index.html" data-tooltip="На главную" aria-label="Радар технологий - на главную">
-      <img src="/assets/images/icon.png" alt="Logo" class="logo-img" />
+      <img src="/assets/images/icon.png" alt="Logo" class="logo-img" onerror="this.style.display='none'; this.nextElementSibling?.style.display='inline';" />
+      <span class="logo-fallback" style="display:none;">РТ</span>
       <span>Радар технологий</span>
     </a>
     <nav class="enterprise-nav" role="tablist" aria-label="Навигация по предприятиям">
@@ -432,6 +453,16 @@
               <p>Создание, восстановление и удаление.</p>
             </div>
             <div class="header-actions">
+              <button class="btn btn-secondary" id="clearVfsCacheBtn" type="button" data-tooltip="Сбросить локальные правки данных (VFS)" aria-label="Сбросить локальные правки данных">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path d="M3 6h18"></path>
+                  <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                  <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                  <line x1="10" y1="11" x2="10" y2="17"></line>
+                  <line x1="14" y1="11" x2="14" y2="17"></line>
+                </svg>
+                Сбросить локальные правки
+              </button>
               <button class="btn btn-primary" id="createBackupBtn" type="button">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                   <rect x="8" y="2" width="12" height="16" rx="2" ry="2"></rect>
@@ -536,10 +567,11 @@
   </div>
   <!-- Панель уведомлений -->
   <div id="notificationPanel" class="notification-panel"></div>
+  <script src="/src/js/modules/ui/common-ui.js"></script>
+  <script src="/src/js/modules/ui/offline-handler.js"></script>
   <script src="/src/js/modules/ui/mobile-nav.js"></script>
   <script src="/src/js/modules/ui/touch-handlers.js"></script>
   <script src="/src/js/audit-logger.js"></script>
   <script src="/src/js/admin.js"></script>
-  <script src="/src/js/script.js"></script>
 </body>
 </html>

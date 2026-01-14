@@ -70,6 +70,7 @@
     // Анимация SVG при клике на кнопку
     toggleBtn.addEventListener('click', function(e) {
       e.preventDefault();
+      e.stopPropagation(); // Предотвращаем всплытие события, чтобы глобальные обработчики не закрыли модальное окно
       toggleBtn.classList.add('animating');
       setTimeout(() => {
         toggleBtn.classList.remove('animating');
@@ -173,11 +174,12 @@
       // Добавляем предприятия с чекбоксами
       companiesList.forEach(company => {
         const li = document.createElement('li');
+        const escapedCompany = window.escapeHtml ? window.escapeHtml(company) : String(company).replace(/[&<>"']/g, m => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[m]);
         const checkboxId = `prospects-company-${company.replace(/\s+/g, '-')}`;
         li.innerHTML = `
           <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; width: 100%; padding: 4px 0;">
-            <input type="checkbox" id="${checkboxId}" value="${company}" style="cursor: pointer;">
-            <span>${company}</span>
+            <input type="checkbox" id="${checkboxId}" value="${escapedCompany}" style="cursor: pointer;">
+            <span>${escapedCompany}</span>
           </label>
         `;
         const checkbox = li.querySelector('input[type="checkbox"]');
@@ -253,7 +255,7 @@
           });
         }
       } catch (e) {
-        console.warn('Не удалось загрузить blockToQuadrant.json:', e);
+        if (window.Logger) window.Logger.warn('Не удалось загрузить blockToQuadrant.json:', e);
       }
     }
 
@@ -308,7 +310,7 @@
           getQuadrantIdForBlockFn = getQuadrantIdForBlock;
         }
       } catch (e) {
-        console.warn('Не удалось получить фильтры из RMK2.js:', e);
+        if (window.Logger) window.Logger.warn('Не удалось получить фильтры из RMK2.js:', e);
       }
 
       return { currentEnt, zoomedQuadrant, getFilterValuesFn, getQuadrantIdForBlockFn };
@@ -1710,6 +1712,10 @@
     });
 
     function openModal() {
+      // Устанавливаем защиту от мгновенного закрытия модального окна при открытии
+      if (typeof window.ignoreOutsideClickUntil !== 'undefined') {
+        window.ignoreOutsideClickUntil = Date.now() + 500;
+      }
       modal.style.display = 'block';
       requestAnimationFrame(() => modal.classList.add('open'));
       document.body.style.overflow = 'hidden';

@@ -45,6 +45,13 @@
         panel.style.setProperty('z-index', '10006', 'important');
       }
 
+      // Активируем focus trap
+      if (window.FocusTrap && typeof window.FocusTrap.trap === 'function') {
+        setTimeout(() => {
+          window.FocusTrap.trap(panel);
+        }, 50);
+      }
+
       // Инициализация фильтрации для модального окна добавления технологии
       if (panel.id === 'addTechPanel' && typeof window.initModalFilters === 'function') {
         setTimeout(() => {
@@ -58,6 +65,12 @@
   function hideModal(panelIdOrEl) {
     const panel = typeof panelIdOrEl === 'string' ? document.getElementById(panelIdOrEl) : panelIdOrEl;
     if (!panel) return;
+
+    // Деактивируем focus trap перед закрытием
+    if (window.FocusTrap && typeof window.FocusTrap.release === 'function') {
+      window.FocusTrap.release();
+    }
+
     panel.classList.remove('open');
     const onEnd = () => {
       panel.style.display = 'none';
@@ -162,7 +175,15 @@
     confirmEl._onClose = onCloseConfirmed;
     confirmEl._relatedPanel = arguments[2] || null;
     confirmEl.style.display = 'block';
-    requestAnimationFrame(() => confirmEl.classList.add('open'));
+    requestAnimationFrame(() => {
+      confirmEl.classList.add('open');
+      // Активируем focus trap для окна подтверждения
+      if (window.FocusTrap && typeof window.FocusTrap.trap === 'function') {
+        setTimeout(() => {
+          window.FocusTrap.trap(confirmEl);
+        }, 50);
+      }
+    });
   }
 
   // Экспорт функций

@@ -140,22 +140,6 @@
         return;
       }
 
-      // ИСПРАВЛЕНО: Если клик был по label или span, обрабатываем через label
-      // Клик по label автоматически активирует связанный чекбокс
-      if (
-        e.target.tagName === "LABEL" ||
-        (e.target.tagName === "SPAN" && e.target.closest(".option-label"))
-      ) {
-        e.stopPropagation();
-      }
-
-      // Если клик был непосредственно на чекбокс, позволяем стандартное поведение браузера
-      // Браузер сам переключит checked состояние
-      if (e.target.type === "checkbox") {
-        // Не блокируем стандартное поведение - позволяем браузеру переключить чекбокс
-        e.stopPropagation(); // Останавливаем всплытие, чтобы избежать двойной обработки на уровне li
-      }
-
       const select = sidebarSelect;
       const isMulti = select.getAttribute("data-multi") === "true";
       const key = select.getAttribute("data-filter");
@@ -205,9 +189,10 @@
           if (cb) {
             cb.dataset.programmaticChange = "true";
             cb.checked = shouldSelectAll;
-            setTimeout(() => {
+            // Удаляем флаг программного изменения в следующем кадре
+            requestAnimationFrame(() => {
               delete cb.dataset.programmaticChange;
-            }, 100);
+            });
           }
         });
 
@@ -230,15 +215,18 @@
           window.positionOptions(select);
         }
 
-        if (
-          key === "block" &&
-          typeof window.updateFunctionFilterForBlock === "function"
-        ) {
-          window.updateFunctionFilterForBlock(selectedValues);
-        }
-        if (typeof window.updateRadar === "function") {
-          window.updateRadar();
-        }
+        // Выполняем тяжелые операции асинхронно, чтобы не блокировать обработчик событий
+        requestAnimationFrame(() => {
+          if (
+            key === "block" &&
+            typeof window.updateFunctionFilterForBlock === "function"
+          ) {
+            window.updateFunctionFilterForBlock(selectedValues);
+          }
+          if (typeof window.updateRadar === "function") {
+            window.updateRadar();
+          }
+        });
         return;
       }
 
@@ -259,81 +247,81 @@
           // Клик по чекбоксу: браузер уже переключил checked к моменту bubble-click
           newSelected = checkbox ? checkbox.checked : !li.classList.contains("selected");
         } else if (clickedLabelLike) {
-          // Клик по тексту/лейблу: checkbox будет переключён браузером ПОСЛЕ текущего click,
-          // поэтому берём "следующее" состояние как инверсию текущего checked.
-          newSelected = checkbox ? !checkbox.checked : !li.classList.contains("selected");
+          // Клик по тексту/лейблу (span/label): браузер переключит checkbox автоматически
+          // НЕ обновляем класс li здесь - событие change обработает это полностью
+          // Это предотвращает рассинхронизацию между классом li и состоянием checkbox
+          return; // Выходим раньше, чтобы событие change обработало обновление
         } else {
-          // Клик по свободной области строки (не по label): управляем только через класс li
+          // Клик по свободной области строки (не по label): управляем вручную
           newSelected = !li.classList.contains("selected");
+          li.classList.toggle("selected", newSelected);
+          if (checkbox) {
+            checkbox.dataset.programmaticChange = "true";
+            checkbox.checked = newSelected;
+            requestAnimationFrame(() => {
+              delete checkbox.dataset.programmaticChange;
+            });
+          }
         }
 
-        // Обновляем состояние li
-        li.classList.toggle("selected", newSelected);
-
-        // ВАЖНО:
-        // - если клик был по label/span, НЕ трогаем checkbox.checked здесь (браузер сделает это сам),
-        //   иначе возможна рассинхронизация и пропуск обработчика change из-за programmaticChange.
-        // - если клик был по чекбоксу, тоже не нужно выставлять checked (он уже выставлен браузером).
-        // - если клик был по пустой зоне строки (не по label), браузер НЕ переключит checkbox,
-        //   поэтому синхронизируем checked вручную.
-        if (checkbox && !clickedCheckbox && !clickedLabelLike) {
-          checkbox.dataset.programmaticChange = "true";
-          checkbox.checked = newSelected;
-          setTimeout(() => {
-            delete checkbox.dataset.programmaticChange;
-          }, 100);
+        // Если клик был по чекбоксу, обновляем класс li синхронно с состоянием checkbox
+        if (clickedCheckbox && checkbox) {
+          li.classList.toggle("selected", checkbox.checked);
         }
 
-        const selected = Array.from(
-          select.querySelectorAll(
-            ".select-options li.select-option-item.selected"
+        // Выполняем все операции асинхронно, чтобы не блокировать обработчик событий
+        requestAnimationFrame(() => {
+          const selected = Array.from(
+            select.querySelectorAll(
+              ".select-options li.select-option-item.selected"
+            )
           )
-        )
-          .map((x) => x.getAttribute("data-value"))
-          .filter((v) => v && v.length > 0);
+            .map((x) => x.getAttribute("data-value"))
+            .filter((v) => v && v.length > 0);
 
-        if (hiddenInput) hiddenInput.value = JSON.stringify(selected);
-        select.setAttribute(
-          "data-value",
-          hiddenInput ? hiddenInput.value : JSON.stringify(selected)
-        );
-
-        // Синхронизация состояния чекбокса "Выбрать все"
-        const allLi = select.querySelector(".select-all-option");
-        const allCheckbox = allLi
-          ? allLi.querySelector('input[type="checkbox"]')
-          : null;
-        if (allCheckbox) {
-          const optionLis = Array.from(
-            select.querySelectorAll(".select-options li.select-option-item")
+          if (hiddenInput) hiddenInput.value = JSON.stringify(selected);
+          select.setAttribute(
+            "data-value",
+            hiddenInput ? hiddenInput.value : JSON.stringify(selected)
           );
-          const allSelected =
-            optionLis.length > 0 &&
-            optionLis.every((optLi) => optLi.classList.contains("selected"));
-          allCheckbox.dataset.programmaticChange = "true";
-          allCheckbox.checked = allSelected;
-          setTimeout(() => {
-            delete allCheckbox.dataset.programmaticChange;
-          }, 100);
-        }
 
-        if (typeof window.renderMultiSelectTags === "function") {
-          window.renderMultiSelectTags(select);
-        }
-        if (typeof window.positionOptions === "function") {
-          window.positionOptions(select);
-        }
+          // Синхронизация состояния чекбокса "Выбрать все"
+          const allLi = select.querySelector(".select-all-option");
+          const allCheckbox = allLi
+            ? allLi.querySelector('input[type="checkbox"]')
+            : null;
+          if (allCheckbox) {
+            const optionLis = Array.from(
+              select.querySelectorAll(".select-options li.select-option-item")
+            );
+            const allSelected =
+              optionLis.length > 0 &&
+              optionLis.every((optLi) => optLi.classList.contains("selected"));
+            allCheckbox.dataset.programmaticChange = "true";
+            allCheckbox.checked = allSelected;
+            requestAnimationFrame(() => {
+              delete allCheckbox.dataset.programmaticChange;
+            });
+          }
 
-        if (
-          key === "block" &&
-          typeof window.updateFunctionFilterForBlock === "function"
-        ) {
-          window.updateFunctionFilterForBlock(selected);
-        }
+          if (typeof window.renderMultiSelectTags === "function") {
+            window.renderMultiSelectTags(select);
+          }
+          if (typeof window.positionOptions === "function") {
+            window.positionOptions(select);
+          }
 
-        if (typeof window.updateRadar === "function") {
-          window.updateRadar();
-        }
+          if (
+            key === "block" &&
+            typeof window.updateFunctionFilterForBlock === "function"
+          ) {
+            window.updateFunctionFilterForBlock(selected);
+          }
+
+          if (typeof window.updateRadar === "function") {
+            window.updateRadar();
+          }
+        });
         return;
       }
 
@@ -363,15 +351,18 @@
           hiddenInput.value = "";
           hiddenInput.dispatchEvent(new Event("change", { bubbles: true }));
         }
-        if (typeof window.updateRadar === "function") {
-          window.updateRadar();
-        }
-        if (
-          key === "block" &&
-          typeof window.updateFunctionFilterForBlock === "function"
-        ) {
-          window.updateFunctionFilterForBlock(null);
-        }
+        // Выполняем тяжелые операции асинхронно, чтобы не блокировать обработчик событий
+        requestAnimationFrame(() => {
+          if (typeof window.updateRadar === "function") {
+            window.updateRadar();
+          }
+          if (
+            key === "block" &&
+            typeof window.updateFunctionFilterForBlock === "function"
+          ) {
+            window.updateFunctionFilterForBlock(null);
+          }
+        });
         return;
       }
 
@@ -398,16 +389,19 @@
         hiddenInput.dispatchEvent(new Event("change", { bubbles: true }));
       }
 
-      if (
-        key === "block" &&
-        typeof window.updateFunctionFilterForBlock === "function"
-      ) {
-        window.updateFunctionFilterForBlock(value);
-      }
+      // Выполняем тяжелые операции асинхронно, чтобы не блокировать обработчик событий
+      requestAnimationFrame(() => {
+        if (
+          key === "block" &&
+          typeof window.updateFunctionFilterForBlock === "function"
+        ) {
+          window.updateFunctionFilterForBlock(value);
+        }
 
-      if (typeof window.updateRadar === "function") {
-        window.updateRadar();
-      }
+        if (typeof window.updateRadar === "function") {
+          window.updateRadar();
+        }
+      });
 
       if (!e.target.closest(".custom-select")) {
         document
@@ -458,9 +452,10 @@
             if (cb) {
               cb.dataset.programmaticChange = "true";
               cb.checked = shouldSelectAll;
-              setTimeout(() => {
+              // Удаляем флаг программного изменения в следующем кадре
+              requestAnimationFrame(() => {
                 delete cb.dataset.programmaticChange;
-              }, 100);
+              });
             }
           });
 
@@ -483,15 +478,18 @@
             window.positionOptions(select);
           }
 
-          if (
-            key === "block" &&
-            typeof window.updateFunctionFilterForBlock === "function"
-          ) {
-            window.updateFunctionFilterForBlock(selectedValues);
-          }
-          if (typeof window.updateRadar === "function") {
-            window.updateRadar();
-          }
+          // Выполняем тяжелые операции асинхронно, чтобы не блокировать обработчик событий
+          requestAnimationFrame(() => {
+            if (
+              key === "block" &&
+              typeof window.updateFunctionFilterForBlock === "function"
+            ) {
+              window.updateFunctionFilterForBlock(selectedValues);
+            }
+            if (typeof window.updateRadar === "function") {
+              window.updateRadar();
+            }
+          });
           return;
         }
 
@@ -516,39 +514,42 @@
           hiddenInput ? hiddenInput.value : JSON.stringify(selected)
         );
 
-        // Синхронизация состояния чекбокса "Выбрать все"
-        const allLi = select.querySelector(".select-all-option");
-        const allCheckbox = allLi
-          ? allLi.querySelector('input[type="checkbox"]')
-          : null;
-        if (allCheckbox) {
-          const optionLis = Array.from(
-            select.querySelectorAll(".select-options li.select-option-item")
-          );
-          const allSelected =
-            optionLis.length > 0 &&
-            optionLis.every((optLi) => optLi.classList.contains("selected"));
-          allCheckbox.dataset.programmaticChange = "true";
-          allCheckbox.checked = allSelected;
-          setTimeout(() => {
-            delete allCheckbox.dataset.programmaticChange;
-          }, 100);
-        }
+        // Выполняем все тяжелые операции асинхронно, чтобы не блокировать обработчик событий
+        requestAnimationFrame(() => {
+          // Синхронизация состояния чекбокса "Выбрать все"
+          const allLi = select.querySelector(".select-all-option");
+          const allCheckbox = allLi
+            ? allLi.querySelector('input[type="checkbox"]')
+            : null;
+          if (allCheckbox) {
+            const optionLis = Array.from(
+              select.querySelectorAll(".select-options li.select-option-item")
+            );
+            const allSelected =
+              optionLis.length > 0 &&
+              optionLis.every((optLi) => optLi.classList.contains("selected"));
+            allCheckbox.dataset.programmaticChange = "true";
+            allCheckbox.checked = allSelected;
+            requestAnimationFrame(() => {
+              delete allCheckbox.dataset.programmaticChange;
+            });
+          }
 
-        if (typeof window.renderMultiSelectTags === "function") {
-          window.renderMultiSelectTags(select);
-        }
+          if (typeof window.renderMultiSelectTags === "function") {
+            window.renderMultiSelectTags(select);
+          }
 
-        if (
-          key === "block" &&
-          typeof window.updateFunctionFilterForBlock === "function"
-        ) {
-          window.updateFunctionFilterForBlock(selected);
-        }
+          if (
+            key === "block" &&
+            typeof window.updateFunctionFilterForBlock === "function"
+          ) {
+            window.updateFunctionFilterForBlock(selected);
+          }
 
-        if (typeof window.updateRadar === "function") {
-          window.updateRadar();
-        }
+          if (typeof window.updateRadar === "function") {
+            window.updateRadar();
+          }
+        });
       }
     });
 
@@ -796,9 +797,12 @@
           if (cb) {
             cb.dataset.programmaticChange = "true";
             cb.checked = shouldSelectAll;
-            setTimeout(() => {
-              delete cb.dataset.programmaticChange;
-            }, 100);
+            // Используем requestAnimationFrame для более быстрого обновления
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                delete cb.dataset.programmaticChange;
+              });
+            });
           }
         });
 
@@ -957,6 +961,15 @@
           hiddenInputId === "techSector" &&
           typeof window.updateModalBlocksForSectors === "function"
         ) {
+          // Обновляем данные перед вызовом, если доступны StateAccessors
+          if (window.StateAccessors) {
+            try {
+              window.blocksList = window.StateAccessors.getBlocksList() || window.blocksList || [];
+              window.blockToQuadrant = window.StateAccessors.getBlockToQuadrant() || window.blockToQuadrant || {};
+            } catch (e) {
+              // Используем существующие данные если StateAccessors недоступен
+            }
+          }
           window.updateModalBlocksForSectors(selected);
         } else if (
           hiddenInputId === "techBlock" &&
@@ -1128,6 +1141,15 @@
             hiddenInputId === "techSector" &&
             typeof window.updateModalBlocksForSectors === "function"
           ) {
+            // Обновляем данные перед вызовом, если доступны StateAccessors
+            if (window.StateAccessors) {
+              try {
+                window.blocksList = window.StateAccessors.getBlocksList() || window.blocksList || [];
+                window.blockToQuadrant = window.StateAccessors.getBlockToQuadrant() || window.blockToQuadrant || {};
+              } catch (e) {
+                // Используем существующие данные если StateAccessors недоступен
+              }
+            }
             window.updateModalBlocksForSectors(selectedValues);
           } else if (
             hiddenInputId === "techBlock" &&
@@ -1212,6 +1234,15 @@
           hiddenInputId === "techSector" &&
           typeof window.updateModalBlocksForSectors === "function"
         ) {
+          // Обновляем данные перед вызовом, если доступны StateAccessors
+          if (window.StateAccessors) {
+            try {
+              window.blocksList = window.StateAccessors.getBlocksList() || window.blocksList || [];
+              window.blockToQuadrant = window.StateAccessors.getBlockToQuadrant() || window.blockToQuadrant || {};
+            } catch (e) {
+              // Используем существующие данные если StateAccessors недоступен
+            }
+          }
           window.updateModalBlocksForSectors(selected);
         } else if (
           hiddenInputId === "techBlock" &&

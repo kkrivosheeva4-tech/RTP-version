@@ -36,15 +36,15 @@
         try {
           ErrorDisplay.show(error, context, retryCallback);
         } catch (e) {
-          console.warn('ErrorDisplay.show failed', e);
+          if (window.Logger) window.Logger.warn('ErrorDisplay.show failed', e);
         }
       }
 
       if (typeof reporter === 'function') {
-        try { reporter(error, context); } catch (e) { console.warn('Reporter failed', e); }
+        try { reporter(error, context); } catch (e) { if (window.Logger) window.Logger.warn('Reporter failed', e); }
       }
       if (typeof notifier === 'function') {
-        try { notifier(`Ошибка: ${formatMessage(error)}`); } catch (e) { console.warn('Notifier failed', e); }
+        try { notifier(`Ошибка: ${formatMessage(error)}`); } catch (e) { if (window.Logger) window.Logger.warn('Notifier failed', e); }
       }
     },
     setReporter(fn) { reporter = fn; },
@@ -57,6 +57,7 @@
   // API: on(selector, event, handler), off(selector, event, handler), clear()
 
   const handlers = new Map(); // key: `${selector}:${event}` => Set<handler>
+  const documentListeners = new Map(); // key: `${selector}:${event}` => listener function
 
   function getKey(selector, event) {
     return `${selector}:${event}`;
@@ -68,14 +69,17 @@
       const key = getKey(selector, event);
       if (!handlers.has(key)) {
         handlers.set(key, new Set());
-        document.addEventListener(event, (e) => {
+        // Создаем делегированный обработчик один раз для каждой пары (selector, event)
+        const delegatedHandler = (e) => {
           const target = e.target && e.target.closest(selector);
           if (!target) return;
           const set = handlers.get(key);
-          if (set) {
+          if (set && set.size > 0) {
             set.forEach((h) => h(e, target));
           }
-        });
+        };
+        document.addEventListener(event, delegatedHandler);
+        documentListeners.set(key, delegatedHandler);
       }
       handlers.get(key).add(handler);
     },
@@ -87,9 +91,24 @@
       } else {
         handlers.set(key, new Set());
       }
+      // Если больше нет обработчиков для этой пары, снимаем слушатель с document
+      if (handlers.get(key).size === 0) {
+        const delegatedHandler = documentListeners.get(key);
+        if (delegatedHandler) {
+          document.removeEventListener(event, delegatedHandler);
+          documentListeners.delete(key);
+        }
+        handlers.delete(key);
+      }
     },
     clear() {
+      // Снимаем все слушатели с document
+      documentListeners.forEach((handler, key) => {
+        const [selector, event] = key.split(':');
+        document.removeEventListener(event, handler);
+      });
       handlers.clear();
+      documentListeners.clear();
     }
   };
 

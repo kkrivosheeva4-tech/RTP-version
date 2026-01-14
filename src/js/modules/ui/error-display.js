@@ -111,6 +111,15 @@ window.ErrorDisplay = (function() {
     const userMessage = formatUserMessage(error, context || error);
     const canRetry = retryCallback && typeof retryCallback === 'function';
 
+    // Получаем функцию escapeHtml для безопасного экранирования
+    const escapeHtml = window.escapeHtml || ((str) => {
+      if (str == null) return '';
+      const text = String(str);
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    });
+
     // Логируем ошибку для разработчиков
     console.error(`[ErrorDisplay] ${type}`, {
       error,
@@ -137,6 +146,10 @@ window.ErrorDisplay = (function() {
     const errorId = `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     errorEl.id = errorId;
 
+    // Безопасное экранирование пользовательских данных
+    const safeUserMessage = escapeHtml(userMessage);
+    const safeContext = context ? escapeHtml(context) : '';
+
     errorEl.innerHTML = `
       <div class="error-icon">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -147,8 +160,8 @@ window.ErrorDisplay = (function() {
       </div>
       <div class="error-content">
         <div class="error-title">Ошибка</div>
-        <div class="error-message">${userMessage}</div>
-        ${context ? `<div class="error-context">${context}</div>` : ''}
+        <div class="error-message">${safeUserMessage}</div>
+        ${safeContext ? `<div class="error-context">${safeContext}</div>` : ''}
       </div>
       <div class="error-actions">
         ${canRetry ? `<button class="error-retry-btn" data-error-id="${errorId}" aria-label="Повторить">Повторить</button>` : ''}

@@ -305,8 +305,8 @@
     }
   }
 
-  // Экспорт функций
-  window.AriaManager = {
+  // Экспорт функций (базовые функции)
+  window.AriaManager = window.AriaManager || {
     init,
     updateAriaAttributes,
     updateAriaExpanded,
@@ -324,25 +324,147 @@
 
   // Обновление ARIA при изменении DOM (MutationObserver)
   if (window.MutationObserver) {
-    const observer = new MutationObserver(mutations => {
-      mutations.forEach(mutation => {
-        mutation.addedNodes.forEach(node => {
-          if (node.nodeType === 1) { // Element node
-            updateAriaAttributes(node);
-            // Также проверяем дочерние элементы
-            if (node.querySelectorAll) {
-              node.querySelectorAll('button, input, textarea, select, nav, .modal-panel, .detail-panel').forEach(el => {
-                updateAriaAttributes(el);
-              });
-            }
+    let pendingMutations = [];
+    let rafScheduled = false;
+    let isExportModalLoading = false;
+    let exportModalLoadTimeout = null;
+
+    // Функция для проверки, нужно ли пропустить обработку элемента
+    function shouldSkipElement(node) {
+      if (!node || node.nodeType !== 1) return true;
+
+      // Пропускаем обработку элементов внутри .select-options (фильтры)
+      // так как они обрабатываются отдельно и часто пересоздаются массово
+      if (node.closest && node.closest('.select-options')) {
+        return true;
+      }
+
+      // Пропускаем обработку элементов внутри #exportPdfModal во время его загрузки
+      if (isExportModalLoading) {
+        const exportModal = document.getElementById('exportPdfModal');
+        if (exportModal && (node === exportModal || exportModal.contains(node))) {
+          return true;
+        }
+      }
+
+      return false;
+    }
+
+    // Обработка узлов батчами с ограничением времени выполнения
+    const processBatch = (nodes, startIndex, batchSize = 50) => {
+      const endIndex = Math.min(startIndex + batchSize, nodes.length);
+      const startTime = performance.now();
+      const MAX_TIME = 8; // Максимальное время обработки батча в миллисекундах
+
+      for (let i = startIndex; i < endIndex; i++) {
+        // Проверяем время выполнения и прерываем, если превысили лимит
+        if (performance.now() - startTime > MAX_TIME) {
+          // Планируем обработку оставшихся узлов в следующем кадре
+          if (i < nodes.length) {
+            requestAnimationFrame(() => processBatch(nodes, i, batchSize));
           }
+          return;
+        }
+
+        const node = nodes[i];
+        if (shouldSkipElement(node)) {
+          continue;
+        }
+
+        updateAriaAttributes(node);
+
+        // Также проверяем дочерние элементы (но не внутри .select-options)
+        if (node.querySelectorAll && !shouldSkipElement(node)) {
+          // Используем более эффективный селектор - только прямые дочерние элементы
+          const directChildren = Array.from(node.children || []);
+          directChildren.forEach(el => {
+            if (!shouldSkipElement(el)) {
+              updateAriaAttributes(el);
+            }
+          });
+        }
+      }
+
+      // Если есть еще узлы для обработки, планируем следующий батч
+      if (endIndex < nodes.length) {
+        requestAnimationFrame(() => processBatch(nodes, endIndex, batchSize));
+      }
+    };
+
+    const processPendingMutations = () => {
+      // Собираем все добавленные узлы из всех pending мутаций
+      const nodesToProcess = new Set();
+      pendingMutations.forEach(mutations => {
+        mutations.forEach(mutation => {
+          mutation.addedNodes.forEach(node => {
+            if (node.nodeType === 1) { // Element node
+              nodesToProcess.add(node);
+            }
+          });
         });
       });
+
+      // Преобразуем Set в массив для более эффективной обработки
+      const nodesArray = Array.from(nodesToProcess);
+
+      // Очищаем pending мутации
+      pendingMutations = [];
+      rafScheduled = false;
+
+      // Если узлов много, обрабатываем батчами
+      if (nodesArray.length > 0) {
+        processBatch(nodesArray, 0);
+      }
+    };
+
+    // Дебаунсинг для обработки мутаций - накапливаем изменения и обрабатываем их батчами
+    let debounceTimer = null;
+    const scheduleProcessing = () => {
+      if (debounceTimer) {
+        clearTimeout(debounceTimer);
+      }
+      debounceTimer = setTimeout(() => {
+        if (!rafScheduled) {
+          rafScheduled = true;
+          requestAnimationFrame(processPendingMutations);
+        }
+        debounceTimer = null;
+      }, 16); // ~60fps
+    };
+
+    const observer = new MutationObserver(mutations => {
+      pendingMutations.push(mutations);
+      scheduleProcessing();
     });
 
     observer.observe(document.body, {
       childList: true,
       subtree: true
     });
+
+    // Отслеживание загрузки модального окна экспорта
+    // Экспортируем функцию для установки флага загрузки
+    window.AriaManager = window.AriaManager || {};
+    window.AriaManager.setExportModalLoading = (loading) => {
+      isExportModalLoading = loading;
+      if (loading) {
+        // Автоматически сбрасываем флаг через 2 секунды (достаточно для загрузки)
+        if (exportModalLoadTimeout) {
+          clearTimeout(exportModalLoadTimeout);
+        }
+        exportModalLoadTimeout = setTimeout(() => {
+          isExportModalLoading = false;
+        }, 2000);
+      } else {
+        if (exportModalLoadTimeout) {
+          clearTimeout(exportModalLoadTimeout);
+          exportModalLoadTimeout = null;
+        }
+        // Обрабатываем накопленные мутации после загрузки модального окна
+        if (pendingMutations.length > 0) {
+          requestAnimationFrame(processPendingMutations);
+        }
+      }
+    };
   }
 })();

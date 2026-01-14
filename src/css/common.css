@@ -1931,7 +1931,7 @@ body.dark .slider::after {
 }
 
 /* Убираем outline для мыши, но сохраняем для клавиатуры */
-*:focus {
+*:focus:not(:focus-visible) {
   outline: none;
 }
 
@@ -1975,11 +1975,8 @@ body.dark .slider::after {
 }
 
 /* Адаптивная поддержка увеличенного шрифта */
-@media (prefers-reduced-motion: no-preference) {
-  * {
-    transition: outline 0.2s ease, outline-offset 0.2s ease, box-shadow 0.2s ease;
-  }
-}
+/* Убраны глобальные transition на * для оптимизации производительности */
+/* Transition применяются точечно к конкретным элементам, где это необходимо */
 
 /* Поддержка prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
@@ -1989,5 +1986,101 @@ body.dark .slider::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* ===== Offline/Online уведомления ===== */
+.offline-notification,
+.online-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  max-width: 400px;
+  padding: 16px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateX(calc(100% + 20px));
+  opacity: 0;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.offline-notification.visible,
+.online-notification.visible {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.offline-notification.hiding,
+.online-notification.hiding {
+  transform: translateX(calc(100% + 20px));
+  opacity: 0;
+}
+
+.offline-notification {
+  background: #ff4444;
+  color: #fff;
+  border-left: 4px solid #cc0000;
+}
+
+.online-notification {
+  background: #4caf50;
+  color: #fff;
+  border-left: 4px solid #2e7d32;
+}
+
+.offline-notification-content,
+.online-notification-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.offline-notification-content svg,
+.online-notification-content svg {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
+.offline-notification-content span,
+.online-notification-content span {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* Темная тема для уведомлений */
+body.dark .offline-notification {
+  background: #cc0000;
+  border-left-color: #990000;
+}
+
+body.dark .online-notification {
+  background: #2e7d32;
+  border-left-color: #1b5e20;
+}
+
+/* Мобильная адаптация */
+@media (max-width: 768px) {
+  .offline-notification,
+  .online-notification {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    max-width: none;
+    transform: translateY(-100px);
+  }
+
+  .offline-notification.visible,
+  .online-notification.visible {
+    transform: translateY(0);
+  }
+
+  .offline-notification.hiding,
+  .online-notification.hiding {
+    transform: translateY(-100px);
   }
 }

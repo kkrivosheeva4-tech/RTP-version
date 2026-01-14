@@ -1048,7 +1048,7 @@ window.ExportModule = (function() {
       if (typeof window !== 'undefined' && window.Toast) {
         window.Toast.success('PDF отчет успешно сгенерирован и сохранен');
       }
-      
+
       // Логируем экспорт PDF (enterpriseName уже определен выше из prepareSourceList)
       try {
         const fieldsCount = Object.values(selectedFields).filter(v => v === true).length;
@@ -1077,7 +1077,7 @@ window.ExportModule = (function() {
           localStorage.setItem(key, JSON.stringify(arr));
         }
       } catch (err) {
-        console.warn('Ошибка при логировании экспорта:', err);
+        if (window.Logger) window.Logger.warn('Ошибка при логировании экспорта:', err);
       }
     } catch (error) {
       console.error('Ошибка при генерации отчёта (canvas flow):', error);
@@ -1142,38 +1142,63 @@ window.ExportModule = (function() {
 
   // Функция для заполнения списков фильтров
   function populateExportFilters() {
-    // Заполнение основных фильтров из конфигурации
+    // Создаем очередь задач для обработки фильтров по одному
+    const tasks = [];
+
+    // Добавляем основные фильтры из конфигурации
     FILTER_CONFIG.forEach(({ field, source, placeholder }) => {
-      const data = source();
-      if (Array.isArray(data) && data.length > 0) {
-        populateMultiSelect(`filter_${field}_container`, data, placeholder);
-      } else if (field === 'techTypes') {
-        console.warn('Не удалось загрузить список типов технологий для фильтра экспорта. Проверьте, что данные загружены и window.techTypes или window.TECHTYPE_TO_SHAPE доступны.');
-      }
+      tasks.push(() => {
+        const data = source();
+        if (Array.isArray(data) && data.length > 0) {
+          populateMultiSelect(`filter_${field}_container`, data, placeholder);
+        } else if (field === 'techTypes') {
+          if (window.Logger) window.Logger.warn('Не удалось загрузить список типов технологий для фильтра экспорта. Проверьте, что данные загружены и window.techTypes или window.TECHTYPE_TO_SHAPE доступны.');
+        }
+      });
     });
 
-    // Заполнение множественного выбора для стоимости внедрения
+    // Добавляем заполнение множественного выбора для стоимости внедрения
     const costPromOptions = [
       '0 - 1 000 000',
       '1 000 000 - 5 000 000',
       '5 000 000 - 10 000 000',
       'Более 10 000 000'
     ];
-    populateMultiSelect('filter_costProm_container', costPromOptions, 'Все значения');
-
-    // Заполнение множественного выбора для технологической готовности, организационной готовности, покрытия функций
-    const ratingOptions = ['0', '1', '2', '3'];
-    ['techRead', 'organRead', 'funcCover'].forEach(fieldName => {
-      populateMultiSelect(`filter_${fieldName}_container`, ratingOptions, 'Все значения');
+    tasks.push(() => {
+      populateMultiSelect('filter_costProm_container', costPromOptions, 'Все значения');
     });
 
-    // Заполнение множественного выбора для приоритета технологии
+    // Добавляем заполнение множественного выбора для технологической готовности, организационной готовности, покрытия функций
+    const ratingOptions = ['0', '1', '2', '3'];
+    ['techRead', 'organRead', 'funcCover'].forEach(fieldName => {
+      tasks.push(() => {
+        populateMultiSelect(`filter_${fieldName}_container`, ratingOptions, 'Все значения');
+      });
+    });
+
+    // Добавляем заполнение множественного выбора для приоритета технологии
     const priorityOptions = [
       'Высокий (60-100%)',
       'Средний (30-60%)',
       'Низкий (0-30%)'
     ];
-    populateMultiSelect('filter_priority_container', priorityOptions, 'Все приоритеты');
+    tasks.push(() => {
+      populateMultiSelect('filter_priority_container', priorityOptions, 'Все приоритеты');
+    });
+
+    // Обрабатываем задачи по одной, используя requestAnimationFrame для разбиения работы
+    let currentTaskIndex = 0;
+    const processNextTask = () => {
+      if (currentTaskIndex < tasks.length) {
+        tasks[currentTaskIndex]();
+        currentTaskIndex++;
+        // Планируем следующую задачу в следующем кадре
+        requestAnimationFrame(processNextTask);
+      }
+    };
+
+    // Начинаем обработку
+    processNextTask();
   }
 
   // Функция для включения/отключения фильтров при изменении чекбоксов
@@ -1314,6 +1339,11 @@ window.ExportModule = (function() {
     const modal = document.getElementById('exportPdfModal');
     if (!modal) return;
 
+    // Устанавливаем флаг загрузки модального окна для пропуска обработки ARIA
+    if (window.AriaManager && typeof window.AriaManager.setExportModalLoading === 'function') {
+      window.AriaManager.setExportModalLoading(true);
+    }
+
     // Очищаем все ошибки при открытии модального окна
     clearAllErrors();
 
@@ -1351,80 +1381,89 @@ window.ExportModule = (function() {
     requestAnimationFrame(() => {
       // Заполнение и обновление фильтров
       populateExportFilters();
-      setupExportFilterToggles();
 
-      // Автоматическая установка параметров из текущих фильтров
+      // Откладываем setupExportFilterToggles на следующий кадр для лучшей производительности
       requestAnimationFrame(() => {
-        const currentEnterprise = safeGet('getCurrentEnterprise');
-        if (currentEnterprise && currentEnterprise !== "all") {
-          setMultiSelectFilter('company', [currentEnterprise], 'Все предприятия');
-        }
+        setupExportFilterToggles();
 
-        // Сектор (если есть зум)
-        const currentZoomedQuadrant = safeGet('getCurrentZoomedQuadrant');
-        if (currentZoomedQuadrant !== null) {
-          const blocksInQuadrant = [];
-          if (typeof window.blockToQuadrant !== 'undefined') {
-            Object.keys(window.blockToQuadrant).forEach(blockName => {
-              const qId = Array.isArray(window.blockToQuadrant[blockName])
-                ? window.blockToQuadrant[blockName][0]
-                : window.blockToQuadrant[blockName];
-              if (qId === currentZoomedQuadrant) {
-                blocksInQuadrant.push(blockName);
-              }
-            });
-          }
-          if (blocksInQuadrant.length > 0) {
-            setMultiSelectFilter('blocks', blocksInQuadrant, 'Все блоки');
-          }
-        }
-
-        // Функциональный блок (из фильтра)
-        if (typeof window.getFilterValues === 'function') {
-          const filterBlocks = window.getFilterValues('block');
-          if (filterBlocks && filterBlocks.length > 0) {
-            setMultiSelectFilter('blocks', filterBlocks, 'Все блоки');
+        // Автоматическая установка параметров из текущих фильтров
+        requestAnimationFrame(() => {
+          const currentEnterprise = safeGet('getCurrentEnterprise');
+          if (currentEnterprise && currentEnterprise !== "all") {
+            setMultiSelectFilter('company', [currentEnterprise], 'Все предприятия');
           }
 
-          // Функция (из фильтра)
-          const filterFunctions = window.getFilterValues('function');
-          if (filterFunctions && filterFunctions.length > 0) {
-            setMultiSelectFilter('functions', filterFunctions, 'Все функции');
-          }
-
-          // Тип технологии (из фильтра)
-          const filterTechTypes = window.getFilterValues('techType');
-          if (filterTechTypes && filterTechTypes.length > 0) {
-            setMultiSelectFilter('techTypes', filterTechTypes, 'Все типы');
-          }
-
-          // Статус (из фильтра)
-          const filterStatus = window.getFilterValues('level');
-          if (filterStatus && filterStatus.length > 0) {
-            setMultiSelectFilter('status', filterStatus, 'Все статусы');
-          }
-        }
-
-        // Обновляем состояние кнопки переключения после открытия модального окна
-        setTimeout(() => {
-          const toggleBtn = document.getElementById('toggleAllFields');
-          if (toggleBtn) {
-            const checkboxes = document.querySelectorAll('#exportPdfModal input[type="checkbox"]');
-            const allSelected = checkboxes.length > 0 && Array.from(checkboxes).every(cb => cb.checked);
-            const icon = toggleBtn.querySelector('.toggle-all-icon');
-            const text = toggleBtn.querySelector('.toggle-all-text');
-
-            if (allSelected && icon && text) {
-              icon.innerHTML = '<path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>';
-              text.textContent = 'Снять все';
-              toggleBtn.setAttribute('data-state', 'all-selected');
-            } else if (icon && text) {
-              icon.innerHTML = '<path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>';
-              text.textContent = 'Выбрать все';
-              toggleBtn.setAttribute('data-state', 'not-all-selected');
+          // Сектор (если есть зум)
+          const currentZoomedQuadrant = safeGet('getCurrentZoomedQuadrant');
+          if (currentZoomedQuadrant !== null) {
+            const blocksInQuadrant = [];
+            if (typeof window.blockToQuadrant !== 'undefined') {
+              Object.keys(window.blockToQuadrant).forEach(blockName => {
+                const qId = Array.isArray(window.blockToQuadrant[blockName])
+                  ? window.blockToQuadrant[blockName][0]
+                  : window.blockToQuadrant[blockName];
+                if (qId === currentZoomedQuadrant) {
+                  blocksInQuadrant.push(blockName);
+                }
+              });
+            }
+            if (blocksInQuadrant.length > 0) {
+              setMultiSelectFilter('blocks', blocksInQuadrant, 'Все блоки');
             }
           }
-        }, 50);
+
+          // Функциональный блок (из фильтра)
+          if (typeof window.getFilterValues === 'function') {
+            const filterBlocks = window.getFilterValues('block');
+            if (filterBlocks && filterBlocks.length > 0) {
+              setMultiSelectFilter('blocks', filterBlocks, 'Все блоки');
+            }
+
+            // Функция (из фильтра)
+            const filterFunctions = window.getFilterValues('function');
+            if (filterFunctions && filterFunctions.length > 0) {
+              setMultiSelectFilter('functions', filterFunctions, 'Все функции');
+            }
+
+            // Тип технологии (из фильтра)
+            const filterTechTypes = window.getFilterValues('techType');
+            if (filterTechTypes && filterTechTypes.length > 0) {
+              setMultiSelectFilter('techTypes', filterTechTypes, 'Все типы');
+            }
+
+            // Статус (из фильтра)
+            const filterStatus = window.getFilterValues('level');
+            if (filterStatus && filterStatus.length > 0) {
+              setMultiSelectFilter('status', filterStatus, 'Все статусы');
+            }
+          }
+
+          // Обновляем состояние кнопки переключения после открытия модального окна
+          setTimeout(() => {
+            const toggleBtn = document.getElementById('toggleAllFields');
+            if (toggleBtn) {
+              const checkboxes = document.querySelectorAll('#exportPdfModal input[type="checkbox"]');
+              const allSelected = checkboxes.length > 0 && Array.from(checkboxes).every(cb => cb.checked);
+              const icon = toggleBtn.querySelector('.toggle-all-icon');
+              const text = toggleBtn.querySelector('.toggle-all-text');
+
+              if (allSelected && icon && text) {
+                icon.innerHTML = '<path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>';
+                text.textContent = 'Снять все';
+                toggleBtn.setAttribute('data-state', 'all-selected');
+              } else if (icon && text) {
+                icon.innerHTML = '<path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>';
+                text.textContent = 'Выбрать все';
+                toggleBtn.setAttribute('data-state', 'not-all-selected');
+              }
+            }
+
+            // Сбрасываем флаг загрузки модального окна после завершения инициализации
+            if (window.AriaManager && typeof window.AriaManager.setExportModalLoading === 'function') {
+              window.AriaManager.setExportModalLoading(false);
+            }
+          }, 50);
+        });
       });
     });
   }

@@ -329,6 +329,10 @@
             detailPanel.style.removeProperty("position");
             detailPanel.style.removeProperty("z-index");
             detailPanel.style.removeProperty("display");
+            // Деактивируем focus trap перед закрытием
+            if (window.FocusTrap && typeof window.FocusTrap.release === 'function') {
+              window.FocusTrap.release();
+            }
             // Удаляем класс active
             detailPanel.classList.remove("active");
             // Снимаем выделение с blip'ов
@@ -362,7 +366,7 @@
               window.vfsWrite("enterpriseData.json", enterpriseData);
             }
           } catch (err) {
-            console.warn(
+            if (window.Logger) window.Logger.warn(
               "Не удалось сохранить enterpriseData после удаления",
               err
             );
@@ -371,7 +375,7 @@
           if (typeof window.showNotification === "function") {
             window.showNotification("Технология удалена!", true);
           }
-          
+
           // Логируем удаление технологии
           try {
             if (typeof window.appendAdminAudit === 'function') {
@@ -399,9 +403,9 @@
               localStorage.setItem(key, JSON.stringify(arr));
             }
           } catch (err) {
-            console.warn('Ошибка при логировании удаления:', err);
+            if (window.Logger) window.Logger.warn('Ошибка при логировании удаления:', err);
           }
-          
+
           if (typeof window.hideModal === "function") {
             window.hideModal("deleteConfirmModal");
           }
@@ -619,7 +623,7 @@
           }
           if (typeof window.showModal === "function") {
             window.showModal("editTechPanel");
-            
+
             // Логируем открытие модального окна редактирования технологии
             if (typeof window.appendAdminAudit === 'function' && currentTech) {
               window.appendAdminAudit('update', `Открыто модальное окно редактирования технологии: "${currentTech.name}" (ID: ${currentTech.id})`);
@@ -869,13 +873,13 @@
         }
         DataLoader.vfsWrite('bloks.json', StateAccessors.getBlocksList());
         DataLoader.vfsWrite('blockToQuadrant.json', StateAccessors.getBlockToQuadrant());
-      } catch (err) { console.warn('Не удалось сохранить новый блок в VFS', err); }
+      } catch (err) { if (window.Logger) window.Logger.warn('Не удалось сохранить новый блок в VFS', err); }
     }
 
     const bk = t.block;
     const blockToQuadrantMap = StateAccessors.getBlockToQuadrant();
     if (!bk || !blockToQuadrantMap || !Object.prototype.hasOwnProperty.call(blockToQuadrantMap, bk) || blockToQuadrantMap[bk] == null) {
-      console.warn('addTech: block mapping missing for', bk, '— defaulting to quadrant 1 and adding option');
+      if (window.Logger) window.Logger.warn('addTech: block mapping missing for', bk, '— defaulting to quadrant 1 and adding option');
       blockToQuadrantMap[bk] = 1;
       StateAccessors.setBlockToQuadrant({...blockToQuadrantMap});
       const sidebarSelect = DOMCache.find('.custom-select[data-filter="block"] .select-options');
@@ -894,27 +898,53 @@
       if (!blocksList.includes(bk)) {
         StateAccessors.setBlocksList([...blocksList, bk]);
       }
-      try { DataLoader.vfsWrite('bloks.json', StateAccessors.getBlocksList()); DataLoader.vfsWrite('blockToQuadrant.json', StateAccessors.getBlockToQuadrant()); } catch (err) { console.warn('vfs write failed for new block', err); }
+      try { DataLoader.vfsWrite('bloks.json', StateAccessors.getBlocksList()); DataLoader.vfsWrite('blockToQuadrant.json', StateAccessors.getBlockToQuadrant()); } catch (err) { if (window.Logger) window.Logger.warn('vfs write failed for new block', err); }
     }
 
     if (!levelToRing || !Object.prototype.hasOwnProperty.call(levelToRing, t.level)) {
-      console.warn('addTech: level mapping missing for', t.level, '— defaulting to "Существующие"');
+      if (window.Logger) window.Logger.warn('addTech: level mapping missing for', t.level, '— defaulting to "Существующие"');
       t.level = (RINGS && RINGS.length) ? RINGS[0] : 'Используемые';
     }
 
     Positioning.computeCoordinates(t);
 
     try {
-      console.debug('addTech: new tech BEFORE persist', { id: t.id, name: t.name, block: t.block, quadrant: Positioning.getQuadrantIdForBlock(t.block), level: t.level, ring: levelToRing[t.level], x: t.x, y: t.y });
+      if (window.Logger) window.Logger.debug('addTech: new tech BEFORE persist', { id: t.id, name: t.name, block: t.block, quadrant: Positioning.getQuadrantIdForBlock(t.block), level: t.level, ring: levelToRing[t.level], x: t.x, y: t.y });
     } catch (e) { /* ignore */ }
 
     const technologies = StateAccessors.getTechnologies();
     technologies.push(t);
     StateManager.set('nextId', nextId);
 
-    const quadrantsCache = StateAccessors.getQuadrantsCache();
-    quadrantsCache.clear();
-    StateAccessors.setQuadrantsCacheVersion(StateAccessors.getQuadrantsCacheVersion() + 1);
+    // Получаем или создаем quadrantsCache
+    let quadrantsCache = StateAccessors.getQuadrantsCache();
+    if (!quadrantsCache) {
+      // Создаем новый Map если кэш не существует
+      quadrantsCache = new Map();
+      // Устанавливаем через StateManager напрямую
+      try {
+        if (StateManager && StateManager.set) {
+          StateManager.set('quadrantsCache', quadrantsCache);
+        }
+        // Также пробуем установить через window для обратной совместимости
+        if (window.setQuadrantsCache && typeof window.setQuadrantsCache === 'function') {
+          window.setQuadrantsCache(quadrantsCache);
+        }
+      } catch (e) {
+        if (window.Logger) window.Logger.warn('Не удалось установить quadrantsCache', e);
+      }
+    }
+    // Проверяем еще раз после возможной установки
+    if (!quadrantsCache) {
+      quadrantsCache = StateAccessors.getQuadrantsCache() || new Map();
+    }
+    if (quadrantsCache && typeof quadrantsCache.clear === 'function') {
+      quadrantsCache.clear();
+    } else if (window.Logger) {
+      window.Logger.warn('quadrantsCache не является объектом с методом clear', quadrantsCache);
+    }
+    const currentVersion = StateAccessors.getQuadrantsCacheVersion() || 0;
+    StateAccessors.setQuadrantsCacheVersion(currentVersion + 1);
 
     if (typeof window.rebuildTechnologiesIndex === 'function') {
       window.rebuildTechnologiesIndex();
@@ -936,7 +966,7 @@
       if (typeof window.updateRadar === 'function') {
         window.updateRadar();
       }
-    } catch (err) { console.warn('updateRadar failed after add', err); }
+    } catch (err) { if (window.Logger) window.Logger.warn('updateRadar failed after add', err); }
 
     if (q != null) {
       const g = DOMCache.find(`.quadrant-group.q${q}`);
@@ -993,10 +1023,10 @@
       enterpriseData[currentEnterprise] = [...technologies];
       StateAccessors.setEnterpriseData({...enterpriseData});
       DataLoader.vfsWrite('enterpriseData.json', enterpriseData);
-    } catch (err) { console.warn('Не удалось сохранить enterpriseData в VFS', err); }
+    } catch (err) { if (window.Logger) window.Logger.warn('Не удалось сохранить enterpriseData в VFS', err); }
 
     DataLoader.showNotification('Технология добавлена!', true);
-    
+
     // Логируем создание технологии
     if (typeof window.appendAdminAudit === 'function') {
       window.appendAdminAudit('create', `Создана технология: "${t.name}" (ID: ${t.id})`);
@@ -1197,9 +1227,21 @@
       Positioning.computeCoordinates(technologies[idx]);
 
       // Инвалидируем кэш квадрантов
-      const quadrantsCache = StateAccessors.getQuadrantsCache();
+    // Получаем или создаем quadrantsCache
+    let quadrantsCache = StateAccessors.getQuadrantsCache();
+    if (!quadrantsCache) {
+      // Создаем новый Map если кэш не существует
+      quadrantsCache = new Map();
+      // Пытаемся установить через StateManager, если доступен
+      if (StateManager && StateManager.set) {
+        StateManager.set('quadrantsCache', quadrantsCache);
+      }
+    }
+    if (quadrantsCache && typeof quadrantsCache.clear === 'function') {
       quadrantsCache.clear();
-      StateAccessors.setQuadrantsCacheVersion(StateAccessors.getQuadrantsCacheVersion() + 1);
+    }
+    const currentVersion = StateAccessors.getQuadrantsCacheVersion() || 0;
+    StateAccessors.setQuadrantsCacheVersion(currentVersion + 1);
     }
 
     StateAccessors.setTechnologies([...technologies]);
@@ -1276,7 +1318,7 @@
 
       StateAccessors.setEnterpriseData({...enterpriseData});
       DataLoader.vfsWrite('enterpriseData.json', enterpriseData);
-    } catch (err) { console.warn('Не удалось сохранить enterpriseData после редактирования', err); }
+    } catch (err) { if (window.Logger) window.Logger.warn('Не удалось сохранить enterpriseData после редактирования', err); }
 
     // Проверяем, открыта ли панель подробной информации для этой технологии
     // Если да, обновляем данные в панели
@@ -1300,7 +1342,7 @@
     }
 
     DataLoader.showNotification('Изменения сохранены!', true);
-    
+
     // Логируем редактирование технологии
     if (typeof window.appendAdminAudit === 'function') {
       const techName = technologies[idx]?.name || 'Неизвестная технология';
@@ -1314,8 +1356,6 @@
     const StateAccessors = getStateAccessors();
     const DataLoader = getDataLoader();
 
-    const QUADRANTS = window.QUADRANTS || [];
-
     const addBlockForm = DOMCache.get('addBlockForm');
     if (addBlockForm) {
       addBlockForm.onsubmit = async (e) => {
@@ -1325,33 +1365,335 @@
         if (!nameInput) { DataLoader.showNotification('Не найдено поле имени блока (blockName)', false); return; }
         if (!sectorInput) { DataLoader.showNotification('Не найдено поле выбора сектора (blockSector)', false); return; }
         const blockName = (nameInput.value || '').trim();
-        const sectorName = (sectorInput.value || '').trim();
-        if (!blockName) { DataLoader.showNotification('Введите имя блока', false); return; }
-        if (!sectorName) { DataLoader.showNotification('Выберите сектор', false); return; }
 
-        const quad = QUADRANTS.find(q => q.name === sectorName) || QUADRANTS[0];
-        const qId = quad ? quad.id : 1;
+        // Получаем значение сектора из кастомного селекта
+        let sectorName = (sectorInput.value || '').trim();
+
+        // Если значение пустое, пробуем получить из атрибута data-value селекта
+        if (!sectorName) {
+          const sectorSelect = DOMCache.query('.custom-select-modal[data-field="blockSector"]');
+          if (sectorSelect) {
+            const sectorValue = sectorSelect.getAttribute('data-value') || '';
+            if (sectorValue) {
+              try {
+                // Если это JSON, парсим
+                const parsed = JSON.parse(sectorValue);
+                sectorName = Array.isArray(parsed) ? parsed[0] : parsed;
+              } catch (e) {
+                sectorName = sectorValue;
+              }
+            }
+            // Также пробуем получить из текста выбранного элемента
+            if (!sectorName) {
+              const selectedTextEl = sectorSelect.querySelector('.selected-text');
+              if (selectedTextEl && selectedTextEl.textContent && selectedTextEl.textContent !== 'Выберите') {
+                sectorName = selectedTextEl.textContent.trim();
+              }
+            }
+            // Или из выбранного li элемента
+            if (!sectorName) {
+              const selectedLi = sectorSelect.querySelector('.select-options li.selected');
+              if (selectedLi) {
+                sectorName = selectedLi.getAttribute('data-value') || selectedLi.textContent.trim();
+              }
+            }
+          }
+        }
+
+        if (!blockName) { DataLoader.showNotification('Введите имя блока', false); return; }
+        if (!sectorName || sectorName === 'Выберите') { DataLoader.showNotification('Выберите сектор', false); return; }
+
+        // Получаем QUADRANTS из window или создаем дефолтные значения
+        let QUADRANTS_LOCAL = window.QUADRANTS || [];
+
+        // Если QUADRANTS не загружены, используем дефолтные значения
+        if (!QUADRANTS_LOCAL || QUADRANTS_LOCAL.length === 0) {
+          QUADRANTS_LOCAL = [
+            { id: 1, name: "Корпоративное управление и администрация", startAngle: 0 },
+            { id: 2, name: "Основное производство", startAngle: 90 },
+            { id: 3, name: "Производственная поддержка и безопасность", startAngle: 180 },
+            { id: 4, name: "Внешние бизнесы", startAngle: 270 },
+          ];
+          if (window.Logger) window.Logger.warn('QUADRANTS не загружены, используются дефолтные значения');
+        }
+
+        // Ищем квадрант по имени (точное совпадение, без учета регистра)
+        const quad = QUADRANTS_LOCAL.find(q => {
+          const qName = String(q.name || '').trim();
+          const sName = String(sectorName).trim();
+          return qName === sName || qName.toLowerCase() === sName.toLowerCase();
+        });
+
+        if (!quad) {
+          DataLoader.showNotification(`Сектор "${sectorName}" не найден. Использован квадрант по умолчанию`, false);
+          if (window.Logger) window.Logger.warn('Квадрант не найден для сектора:', sectorName, 'Доступные:', QUADRANTS_LOCAL.map(q => q.name));
+        }
+
+        const qId = quad ? quad.id : (QUADRANTS_LOCAL[0] ? QUADRANTS_LOCAL[0].id : 1);
+
+        // Логируем для отладки
+        if (window.Logger) {
+          window.Logger.debug('Добавление блока:', { blockName, sectorName, quadId: qId, quadName: quad ? quad.name : 'не найдено' });
+        }
+
+        // Собираем функции из формы
+        const functionsContainer = DOMCache.get('functionsContainer');
+        const functionNames = [];
+        if (functionsContainer) {
+          const functionRows = functionsContainer.querySelectorAll('.function-row input[type="text"]');
+          functionRows.forEach(input => {
+            const funcName = (input.value || '').trim();
+            if (funcName) {
+              functionNames.push(funcName);
+            }
+          });
+        }
+
+        // Загружаем текущие данные блоков для получения/создания ID
+        let blocksData = DataLoader.vfsRead('bloks.json');
+        if (!blocksData) {
+          // Если нет в VFS, загружаем из исходного файла
+          try {
+            const loaded = await DataLoader.loadJsonPreferVfs('bloks.json');
+            blocksData = loaded.data || [];
+          } catch (err) {
+            blocksData = [];
+          }
+        }
+        // Если блоки хранятся как массив строк, конвертируем их в объекты
+        if (Array.isArray(blocksData) && blocksData.length > 0 && typeof blocksData[0] === 'string') {
+          blocksData = blocksData.map((name, idx) => ({ id: idx + 1, name }));
+        }
+        if (!Array.isArray(blocksData)) {
+          blocksData = [];
+        }
+
+        // Проверяем, существует ли блок с таким именем
+        let blockId = StateAccessors.getNameToBlockId ? (StateAccessors.getNameToBlockId()[blockName] || null) : null;
+        const existingBlockIndex = blocksData.findIndex(b => (b.name || b) === blockName);
+
+        if (existingBlockIndex !== -1) {
+          // Блок существует, используем его ID
+          const existingBlock = blocksData[existingBlockIndex];
+          blockId = existingBlock.id || existingBlockIndex + 1;
+        } else {
+          // Создаем новый блок с новым ID
+          const maxId = blocksData.length > 0
+            ? Math.max(...blocksData.map(b => (b && typeof b === 'object' && b.id) ? b.id : 0))
+            : 0;
+          blockId = maxId + 1;
+          blocksData.push({ id: blockId, name: blockName });
+        }
+
+        // Обновляем nameToBlockId
+        const nameToBlockId = StateAccessors.getNameToBlockId ? StateAccessors.getNameToBlockId() : {};
+        nameToBlockId[blockName] = blockId;
+        if (StateAccessors.setNameToBlockId) {
+          StateAccessors.setNameToBlockId({...nameToBlockId});
+        }
 
         const blockToQuadrantMap = StateAccessors.getBlockToQuadrant();
         blockToQuadrantMap[blockName] = qId;
         StateAccessors.setBlockToQuadrant({...blockToQuadrantMap});
 
-        const sidebarSelect = DOMCache.find('.custom-select[data-filter="block"] .select-options');
-        if (sidebarSelect) {
-          const li = document.createElement('li'); li.textContent = blockName; li.setAttribute('data-value', blockName);
-          sidebarSelect.appendChild(li);
+        // Логируем привязку для отладки
+        if (window.Logger) {
+          window.Logger.debug('Привязка блока к квадранту:', {
+            blockName,
+            sectorName,
+            quadrantId: qId,
+            quadrantName: quad ? quad.name : 'не определено',
+            blockToQuadrant: blockToQuadrantMap[blockName]
+          });
         }
-        const modalSelects = DOMCache.queryAll('.custom-select-modal[data-field="techBlock"], .custom-select-modal[data-field="editBlock"]');
-        modalSelects.forEach(ms => {
-          const opts = ms.querySelector('.select-options');
-          if (opts) {
-            const li = document.createElement('li');
-            li.classList.add('select-option-item');
-            li.setAttribute('data-value', blockName);
-            li.innerHTML = `<label class="option-label"><input type="checkbox" class="option-checkbox" /><span>${blockName}</span></label>`;
-            opts.appendChild(li);
+
+        // Проверяем, что привязка произошла
+        const verifyMap = StateAccessors.getBlockToQuadrant();
+        if (verifyMap[blockName] !== qId) {
+          if (window.Logger) window.Logger.error('ОШИБКА: блок не привязан к квадранту!', { blockName, expected: qId, actual: verifyMap[blockName] });
+          DataLoader.showNotification('Ошибка при сохранении привязки блока к сектору', false);
+        }
+
+        // Обновляем blocksList (массив строк для селектов)
+        const blocksList = StateAccessors.getBlocksList();
+        if (!blocksList.includes(blockName)) {
+          StateAccessors.setBlocksList([...blocksList, blockName]);
+        }
+
+        // Обновляем функции и связи
+        if (functionNames.length > 0) {
+          try {
+            // Загружаем текущие функции
+            let functionsData = DataLoader.vfsRead('functions.json');
+            if (!functionsData) {
+              try {
+                const loaded = await DataLoader.loadJsonPreferVfs('functions.json');
+                functionsData = loaded.data || [];
+              } catch (err) {
+                functionsData = [];
+              }
+            }
+            if (!Array.isArray(functionsData)) {
+              functionsData = [];
+            }
+            // Преобразуем функции в массив строк, если нужно
+            const functionsList = functionsData.map(f => (f && typeof f === 'object' && f.name) ? f.name : String(f || '')).filter(Boolean);
+
+            // Добавляем новые функции
+            functionNames.forEach(funcName => {
+              if (!functionsList.includes(funcName)) {
+                functionsList.push(funcName);
+              }
+            });
+            StateAccessors.setFunctions([...functionsList]);
+            DataLoader.vfsWrite('functions.json', functionsList);
+
+            // Загружаем текущие связи функций и блоков
+            let functionToBlockMap = StateAccessors.getFunctionToBlockMap ? StateAccessors.getFunctionToBlockMap() : {};
+            if (!functionToBlockMap || typeof functionToBlockMap !== 'object') {
+              try {
+                const loaded = await DataLoader.loadJsonPreferVfs('functionToBlock.json');
+                functionToBlockMap = loaded.data || {};
+              } catch (err) {
+                functionToBlockMap = {};
+              }
+            }
+
+            // Создаем связи функций с блоком
+            functionNames.forEach(funcName => {
+              if (!functionToBlockMap[funcName]) {
+                // Функция не связана ни с каким блоком
+                functionToBlockMap[funcName] = blockId;
+              } else if (Array.isArray(functionToBlockMap[funcName])) {
+                // Функция уже связана с несколькими блоками
+                if (!functionToBlockMap[funcName].includes(blockId)) {
+                  functionToBlockMap[funcName].push(blockId);
+                }
+              } else if (functionToBlockMap[funcName] !== blockId) {
+                // Функция связана с другим блоком, преобразуем в массив
+                functionToBlockMap[funcName] = [functionToBlockMap[funcName], blockId];
+              }
+            });
+
+            StateAccessors.setFunctionToBlockMap({...functionToBlockMap});
+            DataLoader.vfsWrite('functionToBlock.json', functionToBlockMap);
+          } catch (err) {
+            if (window.Logger) window.Logger.warn('Не удалось сохранить функции и связи', err);
           }
-        });
+        }
+
+        // Сохраняем блоки
+        const finalBlockToQuadrant = StateAccessors.getBlockToQuadrant();
+        DataLoader.vfsWrite('bloks.json', blocksData);
+        DataLoader.vfsWrite('blockToQuadrant.json', finalBlockToQuadrant);
+
+        // Проверяем финальную привязку после сохранения
+        if (window.Logger) {
+          window.Logger.debug('Финальная проверка привязки после сохранения:', {
+            blockName,
+            quadrantId: finalBlockToQuadrant[blockName],
+            expected: qId,
+            allBlocks: Object.keys(finalBlockToQuadrant).length
+          });
+        }
+
+        // Обновляем фильтры и модальные формы с актуальными данными
+        const blocksListUpdated = StateAccessors.getBlocksList();
+        const functionsUpdated = StateAccessors.getFunctions();
+
+        // Обновляем фильтры sidebar
+        if (window.Filters && typeof window.Filters.populateSelect === 'function') {
+          if (blocksListUpdated.length > 0) {
+            window.Filters.populateSelect('block', blocksListUpdated, 'Функциональные блоки: Все');
+          }
+          if (functionsUpdated.length > 0) {
+            window.Filters.populateSelect('function', functionsUpdated, 'Функции: Все');
+          }
+        }
+
+        // Сначала синхронизируем данные с window и StateManager для гарантии актуальности
+        const blockToQuadrantUpdated = StateAccessors.getBlockToQuadrant();
+        window.blocksList = blocksListUpdated;
+        window.blockToQuadrant = blockToQuadrantUpdated;
+        if (window.StateManager && window.StateManager.set) {
+          window.StateManager.set('blocksList', blocksListUpdated);
+          window.StateManager.set('blockToQuadrant', blockToQuadrantUpdated);
+        }
+
+        // Обновляем модальные формы
+        if (window.Filters && typeof window.Filters.populateSelectForModal === 'function') {
+          if (blocksListUpdated.length > 0) {
+            window.Filters.populateSelectForModal('techBlock', blocksListUpdated, 'Выберите');
+            window.Filters.populateSelectForModal('editBlock', blocksListUpdated, 'Выберите');
+          }
+          if (functionsUpdated.length > 0) {
+            window.Filters.populateSelectForModal('techFunc', functionsUpdated, 'Выберите');
+            window.Filters.populateSelectForModal('editFunc', functionsUpdated, 'Выберите');
+          }
+        }
+
+        // Если модальное окно добавления технологии открыто и выбран сектор, обновляем список блоков
+        if (typeof window.updateModalBlocksForSectors === 'function') {
+          try {
+            const addTechPanel = DOMCache.get('addTechPanel');
+            if (addTechPanel && (addTechPanel.style.display === 'block' || addTechPanel.classList.contains('open'))) {
+              const techSectorInput = DOMCache.get('techSector');
+              if (techSectorInput && techSectorInput.value) {
+                let selectedSectors = [];
+                try {
+                  const parsed = JSON.parse(techSectorInput.value);
+                  if (Array.isArray(parsed)) {
+                    selectedSectors = parsed;
+                  } else if (parsed) {
+                    selectedSectors = [parsed];
+                  }
+                } catch (e) {
+                  // Если не JSON, пробуем как строку
+                  if (techSectorInput.value.trim()) {
+                    selectedSectors = [techSectorInput.value.trim()];
+                  }
+                }
+                if (selectedSectors.length > 0) {
+                  // Используем setTimeout для гарантии, что данные обновились и populateSelectForModal завершился
+                  setTimeout(() => {
+                    // Еще раз получаем актуальные данные перед вызовом
+                    if (window.StateAccessors) {
+                      window.blocksList = window.StateAccessors.getBlocksList() || blocksListUpdated;
+                      window.blockToQuadrant = window.StateAccessors.getBlockToQuadrant() || blockToQuadrantUpdated;
+                    }
+                    window.updateModalBlocksForSectors(selectedSectors);
+                  }, 50);
+                }
+              }
+            }
+          } catch (err) {
+            if (window.Logger) window.Logger.warn('Не удалось обновить блоки модальных форм для секторов', err);
+          }
+        }
+
+        // Обновляем функции модальных форм для блоков (если модальное окно открыто)
+        if (typeof window.updateModalFunctionsForBlocks === 'function') {
+          try {
+            // Получаем текущий выбор блоков в модальном окне добавления технологии
+            const techBlockInput = DOMCache.get('techBlock');
+            if (techBlockInput && techBlockInput.value) {
+              try {
+                const selectedBlocks = JSON.parse(techBlockInput.value);
+                if (Array.isArray(selectedBlocks) && selectedBlocks.length > 0) {
+                  window.updateModalFunctionsForBlocks(selectedBlocks);
+                }
+              } catch (e) {
+                // Если не JSON, пробуем как строку
+                const selectedBlock = techBlockInput.value.trim();
+                if (selectedBlock) {
+                  window.updateModalFunctionsForBlocks([selectedBlock]);
+                }
+              }
+            }
+          } catch (err) {
+            if (window.Logger) window.Logger.warn('Не удалось обновить функции модальных форм для блоков', err);
+          }
+        }
 
         if (qId != null) {
           const g = document.querySelector(`.quadrant-group.q${qId}`);
@@ -1364,20 +1706,15 @@
           }
         }
 
-        try {
-          const blocksList = StateAccessors.getBlocksList();
-          if (!blocksList.includes(blockName)) {
-            StateAccessors.setBlocksList([...blocksList, blockName]);
-          }
-          DataLoader.vfsWrite('bloks.json', StateAccessors.getBlocksList());
-          DataLoader.vfsWrite('blockToQuadrant.json', StateAccessors.getBlockToQuadrant());
-        } catch (err) { console.warn('Не удалось сохранить блоки в VFS', err); }
-
         if (typeof window.hideModal === 'function') {
           window.hideModal('addBlockPanel');
         }
 
-        DataLoader.showNotification('Функциональный блок добавлен и сектор разблокирован', true);
+        const funcCount = functionNames.length;
+        const message = funcCount > 0
+          ? `Функциональный блок добавлен с ${funcCount} ${funcCount === 1 ? 'функцией' : 'функциями'}. Сектор разблокирован`
+          : 'Функциональный блок добавлен и сектор разблокирован';
+        DataLoader.showNotification(message, true);
       };
     }
   }

@@ -146,7 +146,7 @@ window.Skeleton = (function() {
       : contentEl;
 
     if (!element) {
-      console.warn('[Skeleton] Element not found:', contentEl);
+      if (window.Logger) window.Logger.warn('[Skeleton] Element not found:', contentEl);
       return null;
     }
 
@@ -157,7 +157,7 @@ window.Skeleton = (function() {
     // Создаем skeleton
     const skeleton = skeletonFactory();
     if (!skeleton) {
-      console.warn('[Skeleton] Skeleton factory returned null');
+      if (window.Logger) window.Logger.warn('[Skeleton] Skeleton factory returned null');
       return null;
     }
 
@@ -180,7 +180,7 @@ window.Skeleton = (function() {
       : contentEl;
 
     if (!element) {
-      console.warn('[Skeleton] Element not found:', contentEl);
+      if (window.Logger) window.Logger.warn('[Skeleton] Element not found:', contentEl);
       return;
     }
 
@@ -217,7 +217,7 @@ window.Skeleton = (function() {
       : contentEl;
 
     if (!element) {
-      console.warn('[Skeleton] Element not found:', contentEl);
+      if (window.Logger) window.Logger.warn('[Skeleton] Element not found:', contentEl);
       return;
     }
 
