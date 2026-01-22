@@ -71,6 +71,8 @@ function getDefaultUsers() {
   const base = [
     { username: 'admin', role: 'admin' },
     { username: 'architect', role: 'architect' },
+    { username: 'director', role: 'director' },
+    { username: 'project_manager', role: 'project_manager' },
     { username: 'guest', role: 'guest' }
   ];
   return base.map((u, idx) => ({
@@ -1111,6 +1113,7 @@ function getRoleName(role) {
     'admin': 'Администратор',
     'architect': 'Архитектор',
     'director': 'Директор',
+    'project_manager': 'Руководитель проекта',
     'analyst': 'Аналитик',
     'guest': 'Гость'
   };
@@ -1121,6 +1124,7 @@ function getRoleClass(role) {
     'admin': 'status-active',
     'architect': 'status-active',
     'director': 'status-active',
+    'project_manager': 'status-active',
     'analyst': 'status-active'
   };
   return classes[role] || 'status-inactive';

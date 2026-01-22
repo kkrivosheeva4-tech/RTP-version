@@ -1,10 +1,10 @@
 // Управление авторизацией (для auth.html)
-const authPage = document.getElementById('auth-page');
-const loginForm = document.getElementById('loginForm');
 // Пользователи системы
 let users = [
     { username: 'admin', password: 'admin123', role: 'admin' },
     { username: 'architect', password: 'architect123', role: 'architect' },
+    { username: 'director', password: 'director123', role: 'director' },
+    { username: 'project_manager', password: 'pm123', role: 'project_manager' },
     { username: 'guest', password: 'guest123', role: 'guest' }
 ];
 
@@ -59,7 +59,8 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch (err) {
                 if (window.Logger) window.Logger.warn('Ошибка при логировании автовхода:', err);
             }
-            // Если пользователь уже авторизован, перенаправляем его на основное приложение
+            // Если пользователь уже авторизован, перенаправляем его на нужную страницу в зависимости от роли
+            // Директоры и РП теперь идут на index.html, а затем выбирают предприятие для перехода на радар
             window.location.href = 'index.html';
             return; // Прерываем выполнение
         } else {
@@ -83,6 +84,10 @@ document.addEventListener('DOMContentLoaded', function() {
         // Используем body.light/body.dark вместо data-theme для унификации
         document.body.classList.remove('light', 'dark');
         document.body.classList.add(theme);
+        const themeToggleBtn = document.getElementById('themeToggle');
+        if (themeToggleBtn) {
+            themeToggleBtn.checked = theme === 'dark';
+        }
         const sun = document.getElementById('iconSun');
         const moon = document.getElementById('iconMoon');
         if (sun && moon) {
@@ -97,6 +102,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const next = current === 'dark' ? 'light' : 'dark';
             document.body.classList.remove('light', 'dark');
             document.body.classList.add(next);
+            themeToggleBtn.checked = next === 'dark';
             localStorage.setItem('theme', next);
             const sun = document.getElementById('iconSun');
             const moon = document.getElementById('iconMoon');
@@ -158,68 +164,71 @@ document.addEventListener('DOMContentLoaded', function() {
             window.location.href = 'index.html';
         });
     }
-});
-
-// Обработка формы входа
-loginForm.addEventListener('submit', function(e) {
-    e.preventDefault();
-    if (loginForm && !loginForm.checkValidity()) {
-        loginForm.reportValidity();
-        return;
-    }
-    const submitBtn = document.getElementById('submitBtn');
-    if (submitBtn) {
-        submitBtn.classList.add('loading');
-        submitBtn.setAttribute('disabled', 'true');
-    }
-
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-    const remember = document.getElementById('remember') ? document.getElementById('remember').checked : false;
-
-    const user = users.find(u => u.username === username && u.password === password);
-    if (user) {
-        localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('username', username);
-        localStorage.setItem('role', user.role);
-
-        // Пишем событие входа в журнал аудита (важное действие → должно попадать на график)
-        try {
-            let ok = false;
-            if (typeof window.appendAdminAudit === 'function') {
-                ok = !!window.appendAdminAudit('login', `Успешный вход в систему (${user.role})`);
+    // Обработка формы входа
+    const form = document.getElementById('loginForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
             }
-            if (!ok) {
-                // Fallback: прямое логирование в localStorage если функция недоступна (например, на auth.html)
-                const key = 'adminAuditLogs';
-                const raw = localStorage.getItem(key);
-                const list = raw ? (JSON.parse(raw) || []) : [];
-                const arr = Array.isArray(list) ? list : [];
-                const now = getAuditTimestampLocal();
-                const nextId = arr.length > 0 ? (Math.max(...arr.map(x => Number(x && x.id) || 0)) + 1) : 1;
-                arr.unshift({
-                    id: nextId,
-                    date: now,
-                    user: username,
-                    action: 'login',
-                    details: `Успешный вход в систему (${user.role})`,
-                    tz: 'local',
-                    ip: 'local'
-                });
-                localStorage.setItem(key, JSON.stringify(arr));
+            const submitBtn = document.getElementById('submitBtn');
+            if (submitBtn) {
+                submitBtn.classList.add('loading');
+                submitBtn.setAttribute('disabled', 'true');
             }
-        } catch (err) {
-            if (window.Logger) window.Logger.warn('Ошибка при логировании входа:', err);
-        }
 
-        // После успешной авторизации перенаправляем на основное приложение
-        window.location.href = 'index.html';
-    } else {
-        if (submitBtn) {
-            submitBtn.classList.remove('loading');
-            submitBtn.removeAttribute('disabled');
-        }
-        showNotification('Неверное имя пользователя или пароль', 'error');
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const remember = document.getElementById('remember') ? document.getElementById('remember').checked : false;
+
+            const user = users.find(u => u.username === username && u.password === password);
+            if (user) {
+                localStorage.setItem('isLoggedIn', 'true');
+                localStorage.setItem('username', username);
+                localStorage.setItem('role', user.role);
+
+                // Пишем событие входа в журнал аудита (важное действие → должно попадать на график)
+                try {
+                    let ok = false;
+                    if (typeof window.appendAdminAudit === 'function') {
+                        ok = !!window.appendAdminAudit('login', `Успешный вход в систему (${user.role})`);
+                    }
+                    if (!ok) {
+                        // Fallback: прямое логирование в localStorage если функция недоступна (например, на auth.html)
+                        const key = 'adminAuditLogs';
+                        const raw = localStorage.getItem(key);
+                        const list = raw ? (JSON.parse(raw) || []) : [];
+                        const arr = Array.isArray(list) ? list : [];
+                        const now = getAuditTimestampLocal();
+                        const nextId = arr.length > 0 ? (Math.max(...arr.map(x => Number(x && x.id) || 0)) + 1) : 1;
+                        arr.unshift({
+                            id: nextId,
+                            date: now,
+                            user: username,
+                            action: 'login',
+                            details: `Успешный вход в систему (${user.role})`,
+                            tz: 'local',
+                            ip: 'local'
+                        });
+                        localStorage.setItem(key, JSON.stringify(arr));
+                    }
+                } catch (err) {
+                    if (window.Logger) window.Logger.warn('Ошибка при логировании входа:', err);
+                }
+
+                // После успешной авторизации перенаправляем на нужную страницу в зависимости от роли
+                // Директоры и РП теперь идут на index.html, а затем выбирают предприятие для перехода на радар
+                window.location.href = 'index.html';
+            } else {
+                if (submitBtn) {
+                    submitBtn.classList.remove('loading');
+                    submitBtn.removeAttribute('disabled');
+                }
+                showNotification('Неверное имя пользователя или пароль', 'error');
+            }
+        });
     }
 });
 

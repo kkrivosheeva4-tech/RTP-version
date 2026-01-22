@@ -58,6 +58,23 @@
           window.initModalFilters();
         }, 100);
       }
+
+      // Инициализация управления файлами
+      if (window.VendorsFiles) {
+        if (panel.id === 'addTechPanel') {
+          setTimeout(() => {
+            // Инициализация управления файлами
+            window.VendorsFiles.initFilesManagement('techFilesInput', 'techFilesList', false);
+          }, 100);
+        } else if (panel.id === 'editTechPanel') {
+          setTimeout(() => {
+            // Инициализация управления файлами
+            if (window.VendorsFiles) {
+              window.VendorsFiles.initFilesManagement('editFilesInput', 'editFilesList', true);
+            }
+          }, 100);
+        }
+      }
     });
   }
 
@@ -90,6 +107,15 @@
           if (functionsContainer) functionsContainer.innerHTML = '';
           const companyRatingsContainer = DOMCache.get('techCompanyRatingsContainer');
           if (companyRatingsContainer) companyRatingsContainer.innerHTML = '';
+          // Сбрасываем файлы
+          const filesList = DOMCache.get('techFilesList');
+          if (filesList) filesList.innerHTML = '';
+          const filesInput = DOMCache.get('techFilesInput');
+          if (filesInput) filesInput.value = '';
+          // Сбрасываем флаг инициализации для файлового input
+          if (window.VendorsFiles && typeof window.VendorsFiles.resetFileInputInitialization === 'function') {
+            window.VendorsFiles.resetFileInputInitialization('techFilesInput');
+          }
           // Сбрасываем видимость полей оценок
           if (typeof window.updateTechRatingsVisibility === 'function') {
             setTimeout(() => {
@@ -105,6 +131,15 @@
           if (editForm) editForm.reset();
           if (typeof window.resetCustomSelects === 'function') {
             window.resetCustomSelects('edit');
+          }
+          // Сбрасываем файлы
+          const filesList = DOMCache.get('editFilesList');
+          if (filesList) filesList.innerHTML = '';
+          const filesInput = DOMCache.get('editFilesInput');
+          if (filesInput) filesInput.value = '';
+          // Сбрасываем флаг инициализации для файлового input
+          if (window.VendorsFiles && typeof window.VendorsFiles.resetFileInputInitialization === 'function') {
+            window.VendorsFiles.resetFileInputInitialization('editFilesInput');
           }
         }
       }
@@ -174,6 +209,8 @@
     // store callback and related panel on element for safe later invocation
     confirmEl._onClose = onCloseConfirmed;
     confirmEl._relatedPanel = arguments[2] || null;
+    // Устанавливаем z-index выше модального окна редактирования (10006)
+    confirmEl.style.setProperty('z-index', '10007', 'important');
     confirmEl.style.display = 'block';
     requestAnimationFrame(() => {
       confirmEl.classList.add('open');

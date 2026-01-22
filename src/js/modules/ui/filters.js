@@ -177,7 +177,15 @@
     if (!selected || selected.length === 0) {
       selectedTextEl.innerHTML = customSelect.getAttribute('data-placeholder') || 'Выберите';
       customSelect.setAttribute('data-value', '');
-      if (hiddenInput) hiddenInput.value = '';
+      if (hiddenInput) {
+        hiddenInput.value = '';
+        // ВАЖНО: для модальных форм (например, techVendors/editVendors) слушаемые модулями
+        // изменения приходят через события input/change на hidden input.
+        // Без этого секции, зависящие от значения (например, интеграторы по вендору),
+        // не пересобираются при удалении последнего тега.
+        hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+        hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+      }
       // Если это фильтр (не модальное окно), обновляем радар при очистке
       const filterKey = customSelect.getAttribute('data-filter');
       if (filterKey) {
@@ -245,7 +253,12 @@
             const remaining = Array.from(customSelect.querySelectorAll(selectedSelector))
               .map(x => x.getAttribute('data-value'))
               .filter(v => v && v.length > 0);
-            if (hiddenInput) hiddenInput.value = JSON.stringify(remaining);
+            if (hiddenInput) {
+              hiddenInput.value = JSON.stringify(remaining);
+              // Сообщаем подписчикам (например, form-management.js), что значение изменилось.
+              hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+              hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+            }
             customSelect.setAttribute('data-value', hiddenInput ? hiddenInput.value : JSON.stringify(remaining));
 
             // Обновляем чекбокс "Выбрать все", если он есть
@@ -499,8 +512,11 @@
     optionsList.innerHTML = '';
     // Для селектов с поиском проверяем, есть ли уже обёртка select-dropdown в HTML
     const selectDropdown = customSelect.querySelector('.select-dropdown');
-    // Определяем, нужны ли чекбоксы для данного селекта (блоки и функции в модалках)
-    const needsCheckboxes = ['techBlock', 'techFunc', 'editBlock', 'editFunc'].includes(selectId);
+    // Определяем, нужны ли чекбоксы для данного селекта (мультиселекты в модалках)
+    const isVendorIntegratorsByVendor = typeof selectId === 'string'
+      && (selectId.startsWith('techVendorIntegrators__') || selectId.startsWith('editVendorIntegrators__'));
+    const needsCheckboxes = ['techBlock', 'techFunc', 'editBlock', 'editFunc', 'techVendors', 'editVendors', 'techIntegrators', 'editIntegrators'].includes(selectId)
+      || isVendorIntegratorsByVendor;
     if (needsCheckboxes) {
       // Если есть select-dropdown, поиск уже есть в HTML, не добавляем
       if (!selectDropdown) {
@@ -521,7 +537,8 @@
       optionsList.appendChild(selectAllLi);
     }
     // Для блоков, функций, процессов и предприятий в модалке разрешим множественный выбор
-    const isMulti = ['techSector', 'techBlock', 'editBlock', 'techFunc', 'editFunc', 'techLevel', 'editLevel', 'techCompany', 'editCompany'].includes(selectId);
+    const isMulti = ['techSector', 'techBlock', 'editBlock', 'techFunc', 'editFunc', 'techLevel', 'editLevel', 'techCompany', 'editCompany', 'techVendors', 'editVendors', 'techIntegrators', 'editIntegrators'].includes(selectId)
+      || isVendorIntegratorsByVendor;
     if (isMulti) {
       customSelect.setAttribute('data-multi', 'true');
     } else {

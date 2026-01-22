@@ -49,8 +49,22 @@
 
         document.querySelectorAll(".custom-select").forEach((s) => {
           if (s !== select) s.classList.remove("open");
+          // Убираем класс с родительского filter-group при закрытии других селектов
+          const parentGroup = s.closest("#filterPanel .filter-group");
+          if (parentGroup) {
+            parentGroup.classList.remove("has-open-dropdown");
+          }
         });
         select.classList.toggle("open");
+        // Управляем классом на родительском filter-group для поддержки браузеров без :has()
+        const parentGroup = select.closest("#filterPanel .filter-group");
+        if (parentGroup) {
+          if (select.classList.contains("open")) {
+            parentGroup.classList.add("has-open-dropdown");
+          } else {
+            parentGroup.classList.remove("has-open-dropdown");
+          }
+        }
         if (select.classList.contains("open")) {
           if (typeof window.positionOptions === "function") {
             window.positionOptions(select);
@@ -202,7 +216,11 @@
               .filter((v) => v && v.length > 0)
           : [];
 
-        if (hiddenInput) hiddenInput.value = JSON.stringify(selectedValues);
+        if (hiddenInput) {
+          hiddenInput.value = JSON.stringify(selectedValues);
+          hiddenInput.dispatchEvent(new Event("input", { bubbles: true }));
+          hiddenInput.dispatchEvent(new Event("change", { bubbles: true }));
+        }
         select.setAttribute(
           "data-value",
           hiddenInput ? hiddenInput.value : JSON.stringify(selectedValues)
@@ -347,6 +365,11 @@
           .querySelectorAll(".select-options li")
           .forEach((opt) => opt.classList.remove("selected"));
         select.classList.remove("open");
+        // Убираем класс с родительского filter-group при закрытии селекта
+        const parentGroupForReset = select.closest("#filterPanel .filter-group");
+        if (parentGroupForReset) {
+          parentGroupForReset.classList.remove("has-open-dropdown");
+        }
         if (hiddenInput) {
           hiddenInput.value = "";
           hiddenInput.dispatchEvent(new Event("change", { bubbles: true }));
@@ -382,6 +405,11 @@
       });
 
       select.classList.remove("open");
+      // Убираем класс с родительского filter-group при закрытии селекта
+      const parentGroupForOption = select.closest("#filterPanel .filter-group");
+      if (parentGroupForOption) {
+        parentGroupForOption.classList.remove("has-open-dropdown");
+      }
 
       if (hiddenInput) {
         hiddenInput.value = value;
@@ -406,7 +434,14 @@
       if (!e.target.closest(".custom-select")) {
         document
           .querySelectorAll(".custom-select")
-          .forEach((s) => s.classList.remove("open"));
+          .forEach((s) => {
+            s.classList.remove("open");
+            // Убираем класс с родительского filter-group при закрытии селекта
+            const parentGroup = s.closest("#filterPanel .filter-group");
+            if (parentGroup) {
+              parentGroup.classList.remove("has-open-dropdown");
+            }
+          });
       }
     });
 
@@ -465,7 +500,11 @@
                 .filter((v) => v && v.length > 0)
             : [];
 
-          if (hiddenInput) hiddenInput.value = JSON.stringify(selectedValues);
+          if (hiddenInput) {
+            hiddenInput.value = JSON.stringify(selectedValues);
+            hiddenInput.dispatchEvent(new Event("input", { bubbles: true }));
+            hiddenInput.dispatchEvent(new Event("change", { bubbles: true }));
+          }
           select.setAttribute(
             "data-value",
             hiddenInput ? hiddenInput.value : JSON.stringify(selectedValues)
@@ -508,7 +547,11 @@
           .map((x) => x.getAttribute("data-value"))
           .filter((v) => v && v.length > 0);
 
-        if (hiddenInput) hiddenInput.value = JSON.stringify(selected);
+        if (hiddenInput) {
+          hiddenInput.value = JSON.stringify(selected);
+          hiddenInput.dispatchEvent(new Event("input", { bubbles: true }));
+          hiddenInput.dispatchEvent(new Event("change", { bubbles: true }));
+        }
         select.setAttribute(
           "data-value",
           hiddenInput ? hiddenInput.value : JSON.stringify(selected)
@@ -558,7 +601,14 @@
       if (e.key === "Escape") {
         document
           .querySelectorAll(".custom-select")
-          .forEach((s) => s.classList.remove("open"));
+          .forEach((s) => {
+            s.classList.remove("open");
+            // Убираем класс с родительского filter-group при закрытии селекта
+            const parentGroup = s.closest("#filterPanel .filter-group");
+            if (parentGroup) {
+              parentGroup.classList.remove("has-open-dropdown");
+            }
+          });
       }
       const active = document.activeElement?.closest(".custom-select");
       if (!active || !active.classList.contains("open")) return;
@@ -613,6 +663,11 @@
     // ===== МОДАЛЬНЫЕ СЕЛЕКТЫ =====
     // Используем прямое делегирование для более надежной работы
     // Используем capture phase для раннего перехвата, но с более высоким приоритетом
+
+    // Флаг для предотвращения немедленного закрытия только что открытого селекта
+    const recentlyOpenedSelects = new WeakMap();
+    let recentlyOpenedTimeout = null;
+
     document.addEventListener(
       "click",
       (e) => {
@@ -621,7 +676,11 @@
         if (!select) return;
 
         // Игнорируем клики на опции внутри открытого списка - они обрабатываются отдельным обработчиком
-        if (e.target.closest(".select-options li")) return;
+        // НО только если это не клик по кнопке добавления нового вендора/интегратора
+        const clickedLi = e.target.closest(".select-options li");
+        if (clickedLi && !clickedLi.classList.contains("add-new-vendor-option") && !clickedLi.classList.contains("add-new-integrator-option")) {
+          return;
+        }
 
         // Игнорируем клики на теги и кнопки удаления тегов (multi-tag, multi-tag-remove)
         if (
@@ -635,24 +694,464 @@
         const trigger = e.target.closest(".select-trigger");
         if (!trigger || !select.contains(trigger)) return;
 
+        // Устанавливаем флаг на самом событии ПЕРЕД остановкой распространения
+        // чтобы глобальный обработчик мог его проверить даже если событие остановлено
+        e._selectHandled = true;
+        e._selectElement = select; // Сохраняем ссылку на селект для дополнительной проверки
+
+        // Останавливаем распространение события, чтобы другие обработчики не закрыли список
+        // Важно: stopImmediatePropagation останавливает все обработчики на текущей фазе,
+        // но обработчики в других фазах (bubble) все еще могут сработать
         e.stopPropagation();
+        e.stopImmediatePropagation(); // Останавливаем все обработчики на этом элементе
 
         document.querySelectorAll(".custom-select-modal").forEach((s) => {
           if (s !== select) s.classList.remove("open");
         });
+        const isVendorSelect = select.classList.contains("vendor-select");
+        const isIntegratorSelect = select.classList.contains("integrator-select");
+        const options = select.querySelector(".select-options");
+
+        const wasOpen = select.classList.contains("open");
+
         select.classList.toggle("open");
-        if (select.classList.contains("open")) {
+        const isNowOpen = select.classList.contains("open");
+
+        // Для селектов вендоров и интеграторов применяем стили ПОСЛЕ добавления класса open
+        // чтобы CSS правила для .open сработали, а затем inline стили гарантируют отображение
+        if ((isVendorSelect || isIntegratorSelect) && options && isNowOpen && !wasOpen) {
+          // Если открывается селект интеграторов - скрываем кнопку добавления интегратора
+          if (isIntegratorSelect) {
+            const vendorIntegratorsSection = select.closest('.vendor-integrators');
+            if (vendorIntegratorsSection) {
+              const addIntegratorBtn = vendorIntegratorsSection.querySelector('.add-integrator-btn');
+              if (addIntegratorBtn) {
+                addIntegratorBtn.style.display = 'none';
+              }
+            }
+          }
+          // Функция для принудительного применения стилей
+          const applyStyles = () => {
+            // Для absolute позиционирования не нужно вычислять координаты вручную
+            // CSS уже установит правильную позицию через top: calc(100% + 6px)
+            // Просто убеждаемся, что стили видимости применены
+
+            options.style.setProperty('display', 'block', 'important');
+            options.style.setProperty('visibility', 'visible', 'important');
+            options.style.setProperty('opacity', '1', 'important');
+            options.style.setProperty('pointer-events', 'auto', 'important');
+            options.style.setProperty('z-index', '10008', 'important');
+            options.style.setProperty('position', 'absolute', 'important');
+            // Убеждаемся, что позиционирование установлено правильно
+            options.style.setProperty('top', 'calc(100% + 6px)', 'important');
+            options.style.setProperty('left', '0', 'important');
+            options.style.setProperty('right', '0', 'important');
+            options.style.setProperty('width', '100%', 'important');
+
+            void options.offsetHeight; // Force reflow
+
+            // Получаем координаты селекта для логирования
+            const selectRect = select.getBoundingClientRect();
+            // Проверяем, что список имеет высоту и виден
+            const rect = options.getBoundingClientRect();
+            const hasItems = options.querySelectorAll('li').length > 0;
+
+            if (window.Logger) {
+              window.Logger.debug(`${isVendorSelect ? 'Вендор' : 'Интегратор'} селект: применение стилей`, {
+                selectRect: {
+                  top: selectRect.top,
+                  bottom: selectRect.bottom,
+                  left: selectRect.left,
+                  width: selectRect.width
+                },
+                optionsStyle: {
+                  top: options.style.top,
+                  left: options.style.left,
+                  width: options.style.width
+                },
+                computedStyle: {
+                  display: window.getComputedStyle(options).display,
+                  visibility: window.getComputedStyle(options).visibility,
+                  opacity: window.getComputedStyle(options).opacity,
+                  position: window.getComputedStyle(options).position
+                },
+                rect: {
+                  top: rect.top,
+                  left: rect.left,
+                  height: rect.height,
+                  width: rect.width
+                },
+                hasItems: hasItems,
+                itemsCount: options.querySelectorAll('li').length
+              });
+            }
+
+            if (rect.height === 0 && hasItems) {
+              // Если высота 0, но есть элементы - принудительно устанавливаем высоту
+              options.style.setProperty('min-height', '40px', 'important');
+              void options.offsetHeight; // Force reflow again
+            }
+          };
+
+          // Применяем стили синхронно после добавления класса open
+          applyStyles();
+
+          // Дополнительно проверяем стили через requestAnimationFrame
+          // чтобы гарантировать правильное отображение после всех обновлений DOM
+          requestAnimationFrame(() => {
+            if (options) {
+              const computedStyle = window.getComputedStyle(options);
+              if (computedStyle.display === 'none' || computedStyle.visibility === 'hidden' || computedStyle.opacity === '0') {
+                options.style.setProperty('display', 'block', 'important');
+                options.style.setProperty('visibility', 'visible', 'important');
+                options.style.setProperty('opacity', '1', 'important');
+              }
+              // Убеждаемся, что позиционирование правильное
+              options.style.setProperty('position', 'absolute', 'important');
+              options.style.setProperty('top', 'calc(100% + 6px)', 'important');
+              options.style.setProperty('left', '0', 'important');
+              options.style.setProperty('right', '0', 'important');
+              options.style.setProperty('width', '100%', 'important');
+            }
+          });
+
+          // Создаем MutationObserver для отслеживания изменений стилей
+          // и автоматического восстановления их при необходимости
+          const styleObserver = new MutationObserver(() => {
+            if (select.classList.contains('open')) {
+              const computedStyle = window.getComputedStyle(options);
+              if (computedStyle.display === 'none' || computedStyle.visibility === 'hidden' || computedStyle.opacity === '0') {
+                applyStyles();
+              }
+            }
+          });
+
+          // Наблюдаем за изменениями атрибутов style и class
+          styleObserver.observe(options, {
+            attributes: true,
+            attributeFilter: ['style', 'class']
+          });
+
+          styleObserver.observe(select, {
+            attributes: true,
+            attributeFilter: ['class']
+          });
+
+          // Функция для обновления позиции при скролле или изменении размера окна
+          // Для absolute позиционирования обновление не требуется, так как позиция относительная
+          const updatePosition = () => {
+            // Для absolute позиционирования позиция автоматически обновляется относительно родителя
+            // Ничего делать не нужно
+          };
+
+          // Обработчики для обновления позиции
+          const scrollHandler = () => updatePosition();
+          const resizeHandler = () => updatePosition();
+
+          // Добавляем обработчики на window и modal-body
+          window.addEventListener('scroll', scrollHandler, true);
+          window.addEventListener('resize', resizeHandler);
+          const modalBody = select.closest('.modal-body');
+          if (modalBody) {
+            modalBody.addEventListener('scroll', scrollHandler, true);
+          }
+
+          // Сохраняем observer и обработчики для очистки при закрытии
+          select._vendorStyleObserver = styleObserver;
+          select._vendorScrollHandler = scrollHandler;
+          select._vendorResizeHandler = resizeHandler;
+          select._vendorModalBody = modalBody;
+          // Для интеграторов используем те же имена свойств для единообразия
+          if (isIntegratorSelect) {
+            select._integratorStyleObserver = styleObserver;
+            select._integratorScrollHandler = scrollHandler;
+            select._integratorResizeHandler = resizeHandler;
+            select._integratorModalBody = modalBody;
+          }
+
+          // Дополнительно: убеждаемся, что стили применены через микро-задержку
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              const computedStyle = window.getComputedStyle(options);
+              if (computedStyle.display === 'none' || computedStyle.visibility === 'hidden' || computedStyle.opacity === '0') {
+                applyStyles();
+              }
+
+              if (window.Logger) {
+                window.Logger.debug(`${isVendorSelect ? 'Вендор' : 'Интегратор'} селект: стили применены после открытия`, {
+                  display: computedStyle.display,
+                  visibility: computedStyle.visibility,
+                  opacity: computedStyle.opacity,
+                  zIndex: computedStyle.zIndex
+                });
+              }
+            });
+          });
+        }
+
+        // Если селект только что открылся, помечаем его как недавно открытый
+        // чтобы предотвратить немедленное закрытие другими обработчиками
+        if (isNowOpen && !wasOpen) {
+          const openTime = Date.now();
+          recentlyOpenedSelects.set(select, openTime);
+          // Очищаем флаг через 500мс (увеличено для надежности, особенно для первого открытия)
+          if (recentlyOpenedTimeout) clearTimeout(recentlyOpenedTimeout);
+          recentlyOpenedTimeout = setTimeout(() => {
+            recentlyOpenedSelects.delete(select);
+          }, 500);
+
+          // Также устанавливаем глобальный флаг для защиты от других обработчиков
+          if (typeof window.ignoreOutsideClickUntil !== 'undefined') {
+            window.ignoreOutsideClickUntil = Math.max(window.ignoreOutsideClickUntil || 0, openTime + 500);
+          }
+
+          // Для селектов вендоров и интеграторов добавляем дополнительную защиту при первом открытии
+          // так как они могут инициализироваться с задержкой
+          if (isVendorSelect || isIntegratorSelect) {
+            // Устанавливаем дополнительный флаг на самом селекте
+            select.dataset.recentlyOpened = 'true';
+            setTimeout(() => {
+              delete select.dataset.recentlyOpened;
+            }, 500);
+          }
+        }
+
+        if (isNowOpen) {
+          // Для селектов вендоров и интеграторов дополнительная проверка через requestAnimationFrame
+          // чтобы гарантировать, что стили применены после всех обновлений DOM
+          if ((isVendorSelect || isIntegratorSelect) && options) {
+            // Дополнительная проверка через requestAnimationFrame для гарантии
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                // Убеждаемся, что стили применены после всех обновлений
+                const computedStyle = window.getComputedStyle(options);
+                if (computedStyle.display === 'none' || computedStyle.visibility === 'hidden' || computedStyle.opacity === '0') {
+                  // Если стили не применились, принудительно применяем еще раз
+                  options.style.setProperty('display', 'block', 'important');
+                  options.style.setProperty('visibility', 'visible', 'important');
+                  options.style.setProperty('opacity', '1', 'important');
+                  options.style.setProperty('pointer-events', 'auto', 'important');
+                  options.style.setProperty('z-index', '10008', 'important');
+
+                  // Принудительно обновляем layout
+                  void options.offsetHeight; // Force reflow
+                }
+
+                if (window.Logger) {
+                  const optionsCount = options.querySelectorAll("li").length;
+                  window.Logger.debug("Вендор селект открыт (финальная проверка):", {
+                    isOpen: select.classList.contains('open'),
+                    optionsCount: optionsCount,
+                    hasOptions: !!options,
+                    computedDisplay: computedStyle.display,
+                    computedVisibility: computedStyle.visibility,
+                    computedOpacity: computedStyle.opacity,
+                    zIndex: computedStyle.zIndex
+                  });
+                }
+              });
+            });
+          }
+
           if (typeof window.positionOptions === "function") {
-            window.positionOptions(select);
+          // Для селектов вендоров и интеграторов не используем стандартную функцию positionOptions,
+          // так как мы используем absolute позиционирование
+          if (!isVendorSelect && !isIntegratorSelect) {
+              window.positionOptions(select);
+            } else {
+            // Для селектов вендоров позиционирование уже установлено в applyStyles
+            // Просто убеждаемся, что стили применены после всех изменений DOM
+            requestAnimationFrame(() => {
+              if (options) {
+                const computedStyle = window.getComputedStyle(options);
+                if (computedStyle.display === 'none' || computedStyle.visibility === 'hidden' || computedStyle.opacity === '0') {
+                  options.style.setProperty('display', 'block', 'important');
+                  options.style.setProperty('visibility', 'visible', 'important');
+                  options.style.setProperty('opacity', '1', 'important');
+                }
+              }
+            });
+            }
           }
           const searchInputInside = select.querySelector(
             ".select-search input"
           );
           if (searchInputInside) setTimeout(() => searchInputInside.focus(), 0);
+        } else {
+          // При закрытии убеждаемся, что стили сброшены
+          if ((isVendorSelect || isIntegratorSelect) && options) {
+            options.style.removeProperty('display');
+            options.style.removeProperty('visibility');
+            options.style.removeProperty('opacity');
+            options.style.removeProperty('pointer-events');
+            options.style.removeProperty('z-index');
+          }
+          // Удаляем флаг недавно открытого при закрытии
+          if (select.dataset.recentlyOpened) {
+            delete select.dataset.recentlyOpened;
+          }
+          // Останавливаем observer и удаляем обработчики при закрытии
+          if (select._vendorStyleObserver) {
+            select._vendorStyleObserver.disconnect();
+            delete select._vendorStyleObserver;
+          }
+          if (select._vendorScrollHandler) {
+            window.removeEventListener('scroll', select._vendorScrollHandler, true);
+            if (select._vendorModalBody) {
+              select._vendorModalBody.removeEventListener('scroll', select._vendorScrollHandler, true);
+            }
+            delete select._vendorScrollHandler;
+          }
+          if (select._vendorResizeHandler) {
+            window.removeEventListener('resize', select._vendorResizeHandler);
+            delete select._vendorResizeHandler;
+          }
+          delete select._vendorModalBody;
         }
       },
       true
     ); // Используем capture phase
+
+    // Глобальный обработчик для закрытия модальных селектов при клике вне их
+    // Запускается в bubble phase ПОСЛЕ обработчика открытия
+    document.addEventListener("click", (e) => {
+      // Если событие уже обработано обработчиком открытия - игнорируем
+      if (e._selectHandled) {
+        // Если это был клик на селект вендоров или интеграторов, который только что открылся - не закрываем
+        if (e._selectElement && (e._selectElement.classList.contains("vendor-select") || e._selectElement.classList.contains("integrator-select"))) {
+          return;
+        }
+      }
+
+      // Проверяем глобальный флаг защиты от немедленного закрытия
+      if (typeof window.ignoreOutsideClickUntil !== 'undefined' && Date.now() < window.ignoreOutsideClickUntil) {
+        return;
+      }
+
+      // Игнорируем клики внутри модальных селектов (триггеры и опции)
+      const clickedSelect = e.target.closest(".custom-select-modal");
+      if (clickedSelect) {
+        // Если клик был на триггер или внутри опций - не закрываем
+        const clickedTrigger = e.target.closest(".custom-select-modal .select-trigger");
+        const clickedOptions = e.target.closest(".custom-select-modal .select-options");
+        if (clickedTrigger || clickedOptions) {
+          return;
+        }
+        // Дополнительная проверка: если клик был на сам селект (не на опции или триггер),
+        // но селект открыт - это может быть клик на триггер, который мы пропустили
+        // В этом случае не закрываем селект
+        if (clickedSelect.classList.contains("open")) {
+          // Проверяем, не был ли это клик на триггер (даже если closest не сработал)
+          const trigger = clickedSelect.querySelector(".select-trigger");
+          if (trigger && (trigger.contains(e.target) || e.target === trigger)) {
+            return;
+          }
+        }
+      }
+
+      // Игнорируем клики на кнопки добавления вендоров
+      if (e.target.closest(".add-vendor-btn") || e.target.closest(".add-new-vendor-option")) {
+        return;
+      }
+
+      // Закрываем все модальные селекты, кроме недавно открытых
+      document.querySelectorAll(".custom-select-modal.open").forEach((select) => {
+        // Проверяем, не был ли селект только что открыт
+        if (recentlyOpenedSelects.has(select)) {
+          const openTime = recentlyOpenedSelects.get(select);
+          // Если селект был открыт менее 500мс назад - не закрываем
+          if (Date.now() - openTime < 500) {
+            return;
+          }
+        }
+
+          // Дополнительная проверка для селектов вендоров и интеграторов
+          if (select.dataset.recentlyOpened === 'true') {
+            return;
+          }
+
+          // Для селектов вендоров и интеграторов дополнительно проверяем, что стили применены
+          // Если стили еще не применены (селект только что открылся), не закрываем
+          const isVendorSelect = select.classList.contains("vendor-select");
+          const isIntegratorSelect = select.classList.contains("integrator-select");
+          if (isVendorSelect || isIntegratorSelect) {
+          const options = select.querySelector(".select-options");
+          if (options) {
+            const computedStyle = window.getComputedStyle(options);
+            // Если селект только что открылся и стили еще не применены полностью - не закрываем
+            if (computedStyle.display === 'none' || computedStyle.visibility === 'hidden' || computedStyle.opacity === '0') {
+              // Стили еще не применены - это значит селект только что открылся, не закрываем
+              return;
+            }
+          }
+        }
+
+        select.classList.remove("open");
+        // Убираем класс с родительского filter-group при закрытии селекта
+        const parentGroupForModal = select.closest("#filterPanel .filter-group");
+        if (parentGroupForModal) {
+          parentGroupForModal.classList.remove("has-open-dropdown");
+        }
+        // Сбрасываем inline стили при закрытии для селектов вендоров и интеграторов
+        if (isVendorSelect || isIntegratorSelect) {
+          // Если закрывается селект интеграторов - показываем кнопку добавления интегратора обратно
+          if (isIntegratorSelect) {
+            const vendorIntegratorsSection = select.closest('.vendor-integrators');
+            if (vendorIntegratorsSection) {
+              const addIntegratorBtn = vendorIntegratorsSection.querySelector('.add-integrator-btn');
+              if (addIntegratorBtn) {
+                addIntegratorBtn.style.display = '';
+              }
+            }
+          }
+          const options = select.querySelector(".select-options");
+          if (options) {
+            options.style.removeProperty('display');
+            options.style.removeProperty('visibility');
+            options.style.removeProperty('opacity');
+            options.style.removeProperty('pointer-events');
+            options.style.removeProperty('z-index');
+          }
+          // Останавливаем observer и удаляем обработчики при закрытии
+          if (select._vendorStyleObserver) {
+            select._vendorStyleObserver.disconnect();
+            delete select._vendorStyleObserver;
+          }
+          if (select._integratorStyleObserver) {
+            select._integratorStyleObserver.disconnect();
+            delete select._integratorStyleObserver;
+          }
+          if (select._vendorScrollHandler) {
+            window.removeEventListener('scroll', select._vendorScrollHandler, true);
+            if (select._vendorModalBody) {
+              select._vendorModalBody.removeEventListener('scroll', select._vendorScrollHandler, true);
+            }
+            delete select._vendorScrollHandler;
+          }
+          if (select._integratorScrollHandler) {
+            window.removeEventListener('scroll', select._integratorScrollHandler, true);
+            if (select._integratorModalBody) {
+              select._integratorModalBody.removeEventListener('scroll', select._integratorScrollHandler, true);
+            }
+            delete select._integratorScrollHandler;
+          }
+          if (select._vendorResizeHandler) {
+            window.removeEventListener('resize', select._vendorResizeHandler);
+            delete select._vendorResizeHandler;
+          }
+          if (select._integratorResizeHandler) {
+            window.removeEventListener('resize', select._integratorResizeHandler);
+            delete select._integratorResizeHandler;
+          }
+          if (select._vendorModalBody) {
+            delete select._vendorModalBody;
+          }
+          if (select._integratorModalBody) {
+            delete select._integratorModalBody;
+          }
+        }
+      });
+    }, false); // Bubble phase (по умолчанию)
 
     // Обработка кликов по опциям в модальных селектах
     // Используем bubble phase (по умолчанию), чтобы сработать после обработчика открытия/закрытия
@@ -662,6 +1161,17 @@
         ".custom-select-modal .select-options"
       );
       if (!isInModalSelectOptions) {
+        return;
+      }
+
+      // ВАЖНО: Пропускаем клики по кнопкам добавления вендоров и интеграторов
+      // Эти клики должны обрабатываться обработчиками в vendors-files.js
+      if (e.target.closest(".add-new-vendor-btn") ||
+          e.target.closest(".add-new-integrator-btn") ||
+          e.target.closest(".add-new-vendor-option") ||
+          e.target.closest(".add-new-integrator-option") ||
+          e.target.classList.contains("new-vendor-input") ||
+          e.target.classList.contains("new-integrator-input")) {
         return;
       }
 
@@ -746,12 +1256,15 @@
       if (li.classList.contains("select-search")) return;
 
       // Определяем, есть ли чекбоксы в этом селекте
+      // Проверяем по ID поля или по наличию класса select-option-item
       const hasCheckboxes = [
         "techBlock",
         "techFunc",
         "editBlock",
         "editFunc",
-      ].includes(hiddenInputId);
+      ].includes(hiddenInputId) ||
+      (hiddenInputId && hiddenInputId.startsWith('integrator-')) ||
+      select.querySelector('.select-options li.select-option-item') !== null;
 
       // Обработка "Выбрать все" для селектов с чекбоксами
       if (
@@ -812,7 +1325,11 @@
               .filter((v) => v && v.length > 0)
           : [];
 
-        if (hiddenInput) hiddenInput.value = JSON.stringify(selectedValues);
+        if (hiddenInput) {
+          hiddenInput.value = JSON.stringify(selectedValues);
+          hiddenInput.dispatchEvent(new Event("input", { bubbles: true }));
+          hiddenInput.dispatchEvent(new Event("change", { bubbles: true }));
+        }
         select.setAttribute(
           "data-value",
           hiddenInput ? hiddenInput.value : JSON.stringify(selectedValues)
@@ -903,7 +1420,11 @@
           .map((x) => x.getAttribute("data-value"))
           .filter((v) => v && v.length > 0);
 
-        if (hiddenInput) hiddenInput.value = JSON.stringify(selected);
+        if (hiddenInput) {
+          hiddenInput.value = JSON.stringify(selected);
+          hiddenInput.dispatchEvent(new Event("input", { bubbles: true }));
+          hiddenInput.dispatchEvent(new Event("change", { bubbles: true }));
+        }
         select.setAttribute(
           "data-value",
           hiddenInput ? hiddenInput.value : JSON.stringify(selected)
@@ -935,6 +1456,24 @@
         }
         if (typeof window.positionOptions === "function") {
           window.positionOptions(select);
+        }
+
+        // Обновление данных вендоров при изменении интеграторов
+        if (hiddenInputId && hiddenInputId.startsWith('integrator-')) {
+          const integratorItem = select.closest('.integrator-item');
+          if (integratorItem) {
+            const container = integratorItem.closest('.vendors-container');
+            if (container) {
+              const containerId = container.id;
+              const isEdit = containerId.includes('edit');
+              // Вызываем updateVendorsHiddenInput через модуль vendors-files
+              if (window.VendorsFiles && typeof window.VendorsFiles.updateVendorsHiddenInput === 'function') {
+                setTimeout(() => {
+                  window.VendorsFiles.updateVendorsHiddenInput(containerId, isEdit);
+                }, 0);
+              }
+            }
+          }
         }
 
         // Если это поле techCompany, обновляем видимость полей оценок
@@ -999,6 +1538,11 @@
           .querySelectorAll(".select-options li")
           .forEach((opt) => opt.classList.remove("selected"));
         select.classList.remove("open");
+        // Убираем класс с родительского filter-group при закрытии селекта
+        const parentGroupForClear = select.closest("#filterPanel .filter-group");
+        if (parentGroupForClear) {
+          parentGroupForClear.classList.remove("has-open-dropdown");
+        }
         return;
       }
 
@@ -1006,7 +1550,10 @@
       if (hiddenInput) {
         hiddenInput.value = value;
         // Триггерим событие change для скрытого поля, чтобы формы могли его обработать
-        hiddenInput.dispatchEvent(new Event("change", { bubbles: true }));
+        // Используем setTimeout для гарантии, что событие обработается после закрытия селекта
+        setTimeout(() => {
+          hiddenInput.dispatchEvent(new Event("change", { bubbles: true }));
+        }, 0);
       }
       select.setAttribute("data-value", value);
 
@@ -1025,6 +1572,46 @@
 
       // Закрываем выпадающий список
       select.classList.remove("open");
+      // Убираем класс с родительского filter-group при закрытии селекта
+      const parentGroupForClose = select.closest("#filterPanel .filter-group");
+      if (parentGroupForClose) {
+        parentGroupForClose.classList.remove("has-open-dropdown");
+      }
+
+      // Для селектов вендоров и интеграторов сбрасываем inline стили при закрытии и показываем секцию интеграторов
+      const isVendorSelect = select.classList.contains("vendor-select");
+      const isIntegratorSelect = select.classList.contains("integrator-select");
+      if (isVendorSelect || isIntegratorSelect) {
+        // Если закрывается селект интеграторов - показываем кнопку добавления интегратора обратно
+        if (isIntegratorSelect) {
+          const vendorIntegratorsSection = select.closest('.vendor-integrators');
+          if (vendorIntegratorsSection) {
+            const addIntegratorBtn = vendorIntegratorsSection.querySelector('.add-integrator-btn');
+            if (addIntegratorBtn) {
+              addIntegratorBtn.style.display = '';
+            }
+          }
+        }
+        const options = select.querySelector(".select-options");
+        if (options) {
+          options.style.removeProperty('display');
+          options.style.removeProperty('visibility');
+          options.style.removeProperty('opacity');
+          options.style.removeProperty('pointer-events');
+        }
+        // Показываем секцию интеграторов при выборе вендора
+        if (value && hiddenInput) {
+          // Находим элемент вендора, к которому относится этот селект
+          const vendorItem = select.closest('.vendor-item');
+          if (vendorItem) {
+            const vendorIntegratorsSection = vendorItem.querySelector('.vendor-integrators');
+            if (vendorIntegratorsSection) {
+              vendorIntegratorsSection.style.display = '';
+              vendorIntegratorsSection.setAttribute('aria-hidden', 'false');
+            }
+          }
+        }
+      }
 
       // Обновляем видимость полей оценок для techCompany
       if (
@@ -1060,10 +1647,14 @@
         window.updateModalFunctionsForBlocks([value], "techFunc");
       }
 
+      // Не закрываем селекты здесь - это делается глобальным обработчиком выше
+      // Оставляем эту проверку только для обратной совместимости, но с проверкой на недавно открытые
       if (!e.target.closest(".custom-select-modal")) {
-        document
-          .querySelectorAll(".custom-select-modal")
-          .forEach((s) => s.classList.remove("open"));
+        document.querySelectorAll(".custom-select-modal").forEach((s) => {
+          if (!recentlyOpenedSelects.has(s)) {
+            s.classList.remove("open");
+          }
+        });
       }
     });
 
@@ -1123,7 +1714,11 @@
                 .filter((v) => v && v.length > 0)
             : [];
 
-          if (hiddenInput) hiddenInput.value = JSON.stringify(selectedValues);
+          if (hiddenInput) {
+            hiddenInput.value = JSON.stringify(selectedValues);
+            hiddenInput.dispatchEvent(new Event("input", { bubbles: true }));
+            hiddenInput.dispatchEvent(new Event("change", { bubbles: true }));
+          }
           select.setAttribute(
             "data-value",
             hiddenInput ? hiddenInput.value : JSON.stringify(selectedValues)
@@ -1179,7 +1774,11 @@
           .map((x) => x.getAttribute("data-value"))
           .filter((v) => v && v.length > 0);
 
-        if (hiddenInput) hiddenInput.value = JSON.stringify(selected);
+        if (hiddenInput) {
+          hiddenInput.value = JSON.stringify(selected);
+          hiddenInput.dispatchEvent(new Event("input", { bubbles: true }));
+          hiddenInput.dispatchEvent(new Event("change", { bubbles: true }));
+        }
         select.setAttribute(
           "data-value",
           hiddenInput ? hiddenInput.value : JSON.stringify(selected)

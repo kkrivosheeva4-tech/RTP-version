@@ -2,7 +2,7 @@
 // Экспортирует функции в window.Priorities для использования в RMK2.js
 // Использует глобальные переменные из RMK2.js и функции из других модулей
 
-(function() {
+(function () {
   'use strict';
 
   /**
@@ -70,7 +70,7 @@
     const getCurrentEnterprise = window.getCurrentEnterprise || (() => window.currentEnterprise);
     const currentEnterprise = getCurrentEnterprise();
     if (!company && currentEnterprise &&
-        Array.isArray(tech.company) && tech.company.includes(currentEnterprise)) {
+      Array.isArray(tech.company) && tech.company.includes(currentEnterprise)) {
       company = currentEnterprise;
     }
 
@@ -128,7 +128,7 @@
     const getCurrentEnterprise = window.getCurrentEnterprise || (() => window.currentEnterprise);
     const currentEnterprise = getCurrentEnterprise();
     if (!company && typeof currentEnterprise !== 'undefined' && currentEnterprise &&
-        Array.isArray(tech.company) && tech.company.includes(currentEnterprise)) {
+      Array.isArray(tech.company) && tech.company.includes(currentEnterprise)) {
       company = currentEnterprise;
     }
 
@@ -145,12 +145,12 @@
     const weakest = values[0];
 
     if (weakest.key === 'org') {
-      return 'Слабое звено: организационная готовность — нужна подготовка процессов и команды.';
+      return 'Слабое звено: организационная готовность – нужна подготовка процессов и команды.';
     }
     if (weakest.key === 'tech') {
-      return 'Слабое звено: технологическая готовность — важно доработать прототипы и архитектуру.';
+      return 'Слабое звено: технологическая готовность – важно доработать прототипы и архитектуру.';
     }
-    return 'Слабое звено: стадия TRL — технология ещё на ранней исследовательской стадии.';
+    return 'Слабое звено: стадия TRL – технология ещё на ранней исследовательской стадии.';
   }
 
   /**
@@ -170,7 +170,7 @@
     const getHoverText = window.getHoverText || (() => '');
     // showDetail будет получена в момент клика из window
     const getCurrentZoomedQuadrant = window.getCurrentZoomedQuadrant || (() => null);
-    const setCurrentTech = window.setCurrentTech || (() => {});
+    const setCurrentTech = window.setCurrentTech || (() => { });
 
     // Получаем глобальные переменные
     const svg = window.svg || document.getElementById('techRadar');

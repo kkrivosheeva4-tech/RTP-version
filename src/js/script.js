@@ -342,7 +342,8 @@
       };
     }
 
-    if (chartIconBtn) {
+    // Обработчик графика только для обычной страницы RMK.html, не для RMK-director.html
+    if (chartIconBtn && document.body.id !== 'rmk-director') {
       chartIconBtn.onclick = (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -382,9 +383,9 @@
         e.preventDefault();
         e.stopPropagation();
 
-        // Проверяем роль пользователя
+        // Проверяем роль пользователя (архитектор, админ, директор, РП могут добавлять технологии)
         const role = localStorage.getItem("role");
-        if (role !== "architect" && role !== "admin") {
+        if (role !== "architect" && role !== "admin" && role !== "director" && role !== "project_manager") {
           return;
         }
 
@@ -733,8 +734,16 @@
           }, 300);
         }
 
+        // Определяем роль пользователя для выбора правильной страницы
+        const role = localStorage.getItem('role');
+        const isDirectorOrPM = role === 'director' || role === 'project_manager';
+        const isArchitectOrAdmin = role === 'architect' || role === 'admin';
+
         const isRMKPage = location.pathname.endsWith('RMK.html') || location.pathname.endsWith('/RMK.html') || location.href.includes('RMK.html');
-        if (isRMKPage) {
+        const isRMKDirectorPage = location.pathname.endsWith('RMK-director.html') || location.pathname.endsWith('/RMK-director.html') || location.href.includes('RMK-director.html');
+
+        // Если уже на нужной странице, просто обновляем выбор предприятия
+        if (isRMKPage && isArchitectOrAdmin) {
           document.querySelectorAll('.enterprise-nav button').forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
           try {
@@ -746,10 +755,31 @@
           return;
         }
 
+        if (isRMKDirectorPage && isDirectorOrPM) {
+          document.querySelectorAll('.enterprise-nav button').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          try {
+            window.dispatchEvent(new CustomEvent('enterpriseChanged', { detail: { enterprise: text } }));
+          } catch (err) {
+            try { sessionStorage.setItem('silentEnterpriseNav', '1'); } catch(e){}
+            window.location.href = 'RMK-director.html';
+          }
+          return;
+        }
+
+        // Перенаправляем на нужную страницу в зависимости от роли
         try {
           sessionStorage.setItem('silentEnterpriseNav', '1');
         } catch (err) {}
-        window.location.href = 'RMK.html';
+
+        if (isDirectorOrPM) {
+          window.location.href = 'RMK-director.html';
+        } else if (isArchitectOrAdmin) {
+          window.location.href = 'RMK.html';
+        } else {
+          // Для гостей и других ролей - на RMK.html
+          window.location.href = 'RMK.html';
+        }
       });
     });
 

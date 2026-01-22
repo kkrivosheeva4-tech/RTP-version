@@ -2,8 +2,16 @@
 // Экспортирует функции в window.DataLoader для использования в RMK2.js
 // Использует глобальные переменные из RMK2.js и функции из других модулей
 
-(function() {
+(function () {
   'use strict';
+
+  // ===== ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ДЛЯ ОПРЕДЕЛЕНИЯ ИМЕНИ ФАЙЛА ДАННЫХ =====
+  function getEnterpriseDataFileName() {
+    const isDirectorPage = document.body && document.body.id === 'rmk-director' ||
+      window.location.pathname.includes('RMK-director.html') ||
+      window.location.href.includes('RMK-director.html');
+    return isDirectorPage ? 'enterpriseData-director.json' : 'enterpriseData.json';
+  }
 
   // ===== VFS: virtual file system using localStorage =====
   function vfsKey(filename) {
@@ -92,14 +100,34 @@
   }
 
   // ===== ЗАГРУЗКА JSON С ПРИОРИТЕТОМ VFS =====
-  async function loadJsonPreferVfs(filename) {
+  async function loadJsonPreferVfs(filename, forceReload = false) {
+    // Если forceReload = true, очищаем кэш для этого файла перед загрузкой
+    if (forceReload) {
+      const paths = [`/src/data/ru/${filename}`, `/src/data/${filename}`];
+      paths.forEach(p => fetchCache.delete(p));
+    }
+
     // Всегда пытаемся сначала загрузить из data/ru
     const paths = [`/src/data/ru/${filename}`, `/src/data/${filename}`];
     for (const p of paths) {
       try {
-        const json = await fetchJsonWithCache(p, { ttl: FETCH_CACHE_TTL_MS, timeout: DEFAULT_FETCH_TIMEOUT_MS });
+        // Если forceReload, используем fetch напрямую без кэша
+        let json;
+        if (forceReload) {
+          const response = await fetch(p, { cache: 'no-store' });
+          if (!response || !response.ok) {
+            throw new Error(`HTTP ${response ? response.status : 'no response'}`);
+          }
+          json = await response.json();
+        } else {
+          json = await fetchJsonWithCache(p, { ttl: FETCH_CACHE_TTL_MS, timeout: DEFAULT_FETCH_TIMEOUT_MS });
+        }
         if (json) {
           if (window.Logger) window.Logger.debug(`Загружены данные из файла ${p}:`, json);
+          // Обновляем кэш даже при forceReload, чтобы последующие запросы использовали свежие данные
+          if (forceReload) {
+            fetchCache.set(p, { data: json, expiresAt: Date.now() + FETCH_CACHE_TTL_MS });
+          }
           return { path: p, data: json };
         }
       } catch (err) {
@@ -207,7 +235,7 @@
     }
     const notification = document.createElement('div');
     notification.className = `notification ${isSuccess ? 'success' : 'info'}`;
-    const escapedMessage = window.escapeHtml ? window.escapeHtml(message) : String(message).replace(/[&<>"']/g, m => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[m]);
+    const escapedMessage = window.escapeHtml ? window.escapeHtml(message) : String(message).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
     notification.innerHTML = `
       <div class="notification-title">${isSuccess ? 'Успешно' : 'Уведомление'}</div>
       <div class="notification-message">${escapedMessage}</div>
@@ -260,11 +288,11 @@
         return { path: null, data: null, errors };
       }
 
-      // Load blocks list (prefer VFS)
-      const b1 = await loadJsonPreferVfs('bloks.json');
+      // Load blocks list (prefer VFS, но принудительно перезагружаем с диска)
+      const b1 = await loadJsonPreferVfs('bloks.json', true); // forceReload = true
       let blocks = b1.data;
       if (!blocks) {
-        const alt = await loadJsonPreferVfs('blocks.json');
+        const alt = await loadJsonPreferVfs('blocks.json', true); // forceReload = true
         if (alt.data) blocks = alt.data;
       }
       // Справочники блоков и список имен для селектов
@@ -285,19 +313,26 @@
       }
       setState('blocksList', Array.isArray(blocks) ? blocks.map(b => (b && b.name) ? b.name : b).filter(Boolean) : []);
 
+      // Выбираем файл данных в зависимости от страницы
+      const enterpriseDataFileName = getEnterpriseDataFileName();
+
       const fileNames = [
         'functions.json',
         'techTypes.json',
         'status.json',
         'sector.json',
         'functionToBlock.json',
-        'enterpriseData.json',
+        enterpriseDataFileName,
         'blockToQuadrant.json',
+        'vendors.json',
+        'integrators.json',
       ];
 
+      // Принудительно перезагружаем данные с диска, игнорируя кэш
+      // Это гарантирует, что изменения в JSON файлах будут видны сразу после обновления страницы
       const fetched = {};
       for (const fn of fileNames) {
-        fetched[fn] = await loadJsonPreferVfs(fn);
+        fetched[fn] = await loadJsonPreferVfs(fn, true); // forceReload = true
       }
 
       // Соберём список отсутствующих/непреобразованных файлов
@@ -342,15 +377,19 @@
       setState('sectors', sectors); // Сохраняем sectors для использования в initFilters
       setState('functionToBlockMap', ensureObject('functionToBlock.json', fetched['functionToBlock.json'].data));
       // enterpriseData may come from VFS (path startsWith 'local:') or from disk
-      setState('enterpriseData', ensureObject('enterpriseData.json', fetched['enterpriseData.json'].data));
+      // Используем правильное имя файла в зависимости от страницы
+      setState('enterpriseData', ensureObject(enterpriseDataFileName, fetched[enterpriseDataFileName].data));
       // If enterpriseData was loaded from VFS, attempt to read disk copy and merge any new entries (helps when user edited JSON on disk)
       try {
-        if (fetched['enterpriseData.json'].path && String(fetched['enterpriseData.json'].path).startsWith('local:')) {
-          // try disk locations
-          const diskPaths = ['/src/data/enterpriseData.json', '/src/data/ru/enterpriseData.json'];
+        if (fetched[enterpriseDataFileName].path && String(fetched[enterpriseDataFileName].path).startsWith('local:')) {
+          // try disk locations - принудительно загружаем с диска, игнорируя кэш
+          const diskPaths = [`/src/data/${enterpriseDataFileName}`, `/src/data/ru/${enterpriseDataFileName}`];
           for (const p of diskPaths) {
             try {
-              const diskJson = await fetchJsonWithCache(p, { ttl: FETCH_CACHE_TTL_MS, timeout: DEFAULT_FETCH_TIMEOUT_MS });
+              // Используем fetch напрямую с cache: 'no-store' для получения свежих данных
+              const response = await fetch(p, { cache: 'no-store' });
+              if (!response || !response.ok) continue;
+              const diskJson = await response.json();
               if (!diskJson) continue;
               // Merge: for each enterprise, add technologies with ids not present in VFS
               let merged = false;
@@ -372,8 +411,8 @@
                 });
               });
               if (merged) {
-                setState('enterpriseData', {...enterpriseData}); // Сохраняем изменения обратно в StateManager
-                try { vfsWrite('enterpriseData.json', enterpriseData); } catch (e) { if (window.Logger) window.Logger.warn('vfs write failed during merge', e); }
+                setState('enterpriseData', { ...enterpriseData }); // Сохраняем изменения обратно в StateManager
+                try { vfsWrite(enterpriseDataFileName, enterpriseData); } catch (e) { if (window.Logger) window.Logger.warn('vfs write failed during merge', e); }
               }
               break; // whether merged or not, we've checked disk
             } catch (err) { /* ignore fetch parse errors for this path */ }
@@ -385,6 +424,12 @@
         showNotification(`Проверка данных: ${validationErrors.join('; ')}`, false);
       }
       setState('blockToQuadrant', fetched['blockToQuadrant.json'].data || {});
+      // Сохраняем список вендоров
+      const vendorsList = ensureArray('vendors.json', fetched['vendors.json'].data);
+      setState('vendorsList', vendorsList);
+      // Сохраняем список интеграторов
+      const integratorsList = ensureArray('integrators.json', fetched['integrators.json'].data);
+      setState('integratorsList', integratorsList);
       // Инвалидируем кэш квадрантов при изменении blockToQuadrant
       const quadrantsCache = getState('quadrantsCache');
       if (quadrantsCache && typeof quadrantsCache.clear === 'function') {
@@ -406,16 +451,16 @@
       const QUADRANTS = Array.isArray(sectors)
         ? sectors.map(s => ({ id: s.quadrant, name: s.name, startAngle: (s.quadrant - 1) * 90 }))
         : [
-            { id: 1, name: "Корпоративное управление и администрация", startAngle: 0 },
-            { id: 2, name: "Основное производство", startAngle: 90 },
-            { id: 3, name: "Производственная поддержка и безопасность", startAngle: 180 },
-            { id: 4, name: "Внешние бизнесы", startAngle: 270 },
-          ];
+          { id: 1, name: "Корпоративное управление и администрация", startAngle: 0 },
+          { id: 2, name: "Основное производство", startAngle: 90 },
+          { id: 3, name: "Производственная поддержка и безопасность", startAngle: 180 },
+          { id: 4, name: "Внешние бизнесы", startAngle: 270 },
+        ];
       window.QUADRANTS = QUADRANTS;
       // Преобразуем enterpriseData к объекту по предприятиям, если пришел массив
-      if (Array.isArray(fetched['enterpriseData.json'].data)) {
+      if (Array.isArray(fetched[enterpriseDataFileName].data)) {
         const grouped = {};
-        (fetched['enterpriseData.json'].data || []).forEach(item => {
+        (fetched[enterpriseDataFileName].data || []).forEach(item => {
           // Обрабатываем company как массив или строку
           const companies = Array.isArray(item.company) ? item.company : (item.company ? [item.company] : ['РМК']);
           // Преобразуем блоки (id → имя)
@@ -451,15 +496,15 @@
         sectorNames = QUADRANTS.map(q => q && q.name).filter(Boolean);
       }
       // Объявляем trlOptions и addTrlTooltips ПЕРЕД использованием, чтобы они были доступны всегда
-      const trlOptions = ['1 — Ранняя стадия (исследование)', '2 — Разработка (прототип)', '3 — Зрелость (готовность к внедрению)'];
+      const trlOptions = ['1-Исследовательская', '2-Прототип', '3-Технология готова к внедрению'];
       const addTrlTooltips = (fieldId) => {
         const trlSelect = document.querySelector(`.custom-select-modal[data-field="${fieldId}"]`);
         if (trlSelect) {
           const options = trlSelect.querySelectorAll('.select-options li[data-value]');
           const tooltips = {
-            '1 — Ранняя стадия (исследование)': 'Ранняя исследовательская стадия: технология находится на начальном этапе разработки, концепция только формируется',
-            '2 — Разработка (прототип)': 'Стадия разработки и прототипирования: технология проходит активную разработку, создаются прототипы',
-            '3 — Зрелость (готовность к внедрению)': 'Зрелая стадия: технология готова к внедрению и использованию в производстве'
+            '1-Исследовательская': 'Ранняя исследовательская стадия: технология находится на начальном этапе разработки, концепция только формируется',
+            '2-Прототип': 'Стадия разработки и прототипирования: технология проходит активную разработку, создаются прототипы',
+            '3-Технология готова к внедрению': 'Зрелая стадия: технология готова к внедрению и использованию в производстве'
           };
           options.forEach(li => {
             const value = li.getAttribute('data-value');
@@ -523,6 +568,15 @@
       } else {
         console.error('Filters не загружен, модальные фильтры не будут заполнены');
       }
+      // Инициализируем селект вендоров с возможностью добавления новых (вне блока Filters)
+      // Вызываем с небольшой задержкой, чтобы убедиться, что DOM готов
+      setTimeout(() => {
+        if (typeof window.initVendorsSelect === 'function') {
+          window.initVendorsSelect();
+        } else if (typeof initVendorsSelect === 'function') {
+          initVendorsSelect();
+        }
+      }, 200);
       // Добавляем подсказки для опций TRL и оценок после создания опций
       if (Filters) {
         setTimeout(() => {
@@ -544,7 +598,7 @@
       // Настройка обработчиков форм
       const addTechForm = document.getElementById('addTechForm');
       if (addTechForm) {
-        addTechForm.onsubmit = function(e) {
+        addTechForm.onsubmit = function (e) {
           e.preventDefault();
           const formData = new FormData(this);
 
@@ -589,10 +643,10 @@
           const enterpriseData = getState('enterpriseData');
           const currentEnterprise = getState('currentEnterprise');
           enterpriseData[currentEnterprise] = [...getState('technologies')];
-          setState('enterpriseData', {...enterpriseData});
+          setState('enterpriseData', { ...enterpriseData });
 
           // Сохраняем в VFS
-          vfsWrite('enterpriseData.json', enterpriseData);
+          vfsWrite(getEnterpriseDataFileName(), enterpriseData);
 
           // Обновляем радар
           const Positioning = getPositioning();
@@ -614,7 +668,7 @@
 
       const editTechForm = document.getElementById('editTechForm');
       if (editTechForm) {
-        editTechForm.onsubmit = function(e) {
+        editTechForm.onsubmit = function (e) {
           e.preventDefault();
           const currentTech = getState('currentTech');
           if (!currentTech) return false;
@@ -655,7 +709,7 @@
             const enterpriseData = getState('enterpriseData');
             const currentEnterprise = getState('currentEnterprise');
             enterpriseData[currentEnterprise] = [...getState('technologies')];
-            setState('enterpriseData', {...enterpriseData});
+            setState('enterpriseData', { ...enterpriseData });
 
             // Сохраняем в VFS
             vfsWrite('enterpriseData.json', enterpriseData);
@@ -740,7 +794,7 @@
           });
         });
         if (updated) {
-          try { vfsWrite('enterpriseData.json', enterpriseData); } catch (e) { if (window.Logger) window.Logger.warn('Не удалось сохранить enterpriseData после нормализации', e); }
+          try { vfsWrite(getEnterpriseDataFileName(), enterpriseData); } catch (e) { if (window.Logger) window.Logger.warn('Не удалось сохранить enterpriseData после нормализации', e); }
         }
         setState('nextId', nextId);
       }
@@ -832,6 +886,8 @@
           // Заполняем модальные фильтры
           const enterpriseData = getState('enterpriseData');
           const enterpriseList = Object.keys(enterpriseData || {});
+          const vendorsList = getState('vendorsList') || [];
+          const integratorsList = getState('integratorsList') || [];
           const modalSelects = [
             { id: 'techSector', items: sectorNames, placeholder: 'Выберите' },
             { id: 'techBlock', items: blocksList, placeholder: 'Выберите' },
@@ -839,11 +895,15 @@
             { id: 'techTechType', items: techTypes, placeholder: 'Выберите' },
             { id: 'techStatus', items: RINGS, placeholder: 'Выберите' },
             { id: 'techCompany', items: enterpriseList, placeholder: 'Выберите' },
+            { id: 'techVendors', items: vendorsList, placeholder: 'Выберите' },
+            { id: 'techIntegrators', items: integratorsList, placeholder: 'Выберите' },
             { id: 'editBlock', items: blocksList, placeholder: 'Выберите' },
             { id: 'editFunc', items: functions, placeholder: 'Выберите' },
             { id: 'editTechType', items: techTypes, placeholder: 'Выберите' },
             { id: 'editStatus', items: RINGS, placeholder: 'Выберите' },
-            { id: 'editCompany', items: enterpriseList, placeholder: 'Выберите' }
+            { id: 'editCompany', items: enterpriseList, placeholder: 'Выберите' },
+            { id: 'editVendors', items: vendorsList, placeholder: 'Выберите' },
+            { id: 'editIntegrators', items: integratorsList, placeholder: 'Выберите' }
           ];
 
           modalSelects.forEach(({ id, items, placeholder }) => {
@@ -853,7 +913,7 @@
           });
 
           // Заполняем TRL фильтры
-          const trlOptions = ['1 — Ранняя стадия (исследование)', '2 — Разработка (прототип)', '3 — Зрелость (готовность к внедрению)'];
+          const trlOptions = ['1-Исследовательская', '2-Прототип', '3-Технология готова к внедрению'];
           Filters.populateSelectForModal('techTrlStage', trlOptions, 'Выберите стадию');
           Filters.populateSelectForModal('editTrlStage', trlOptions, 'Выберите стадию');
 
@@ -982,12 +1042,12 @@
           const li = typeof Filters.createCheckboxOptionLi === 'function'
             ? Filters.createCheckboxOptionLi(bk, bk)
             : (function () {
-                const tmpLi = document.createElement('li');
-                tmpLi.classList.add('select-option-item');
-                tmpLi.setAttribute('data-value', bk);
-                tmpLi.textContent = bk;
-                return tmpLi;
-              })();
+              const tmpLi = document.createElement('li');
+              tmpLi.classList.add('select-option-item');
+              tmpLi.setAttribute('data-value', bk);
+              tmpLi.textContent = bk;
+              return tmpLi;
+            })();
           sidebarOptionsList.appendChild(li);
         }
         document.querySelectorAll('.custom-select-modal[data-field="techBlock"], .custom-select-modal[data-field="editBlock"]').forEach(ms => {
@@ -996,7 +1056,7 @@
             const li = document.createElement('li');
             li.classList.add('select-option-item');
             li.setAttribute('data-value', bk);
-            const escapedBk = window.escapeHtml ? window.escapeHtml(bk) : String(bk).replace(/[&<>"']/g, m => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[m]);
+            const escapedBk = window.escapeHtml ? window.escapeHtml(bk) : String(bk).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
             li.innerHTML = `<label class="option-label"><input type="checkbox" class="option-checkbox" /><span>${escapedBk}</span></label>`;
             opts.appendChild(li);
           }
@@ -1005,7 +1065,7 @@
         if (!blocksList.includes(bk)) {
           setState('blocksList', [...blocksList, bk]);
         }
-        setState('blockToQuadrant', {...blockToQuadrant});
+        setState('blockToQuadrant', { ...blockToQuadrant });
         try { vfsWrite('bloks.json', getState('blocksList')); vfsWrite('blockToQuadrant.json', blockToQuadrant); } catch (e) { if (window.Logger) window.Logger.warn('vfs write failed', e); }
       }
       // Ensure level mapping exists
@@ -1039,7 +1099,7 @@
         const enterpriseData = getState('enterpriseData');
         const currentEnterprise = getState('currentEnterprise');
         enterpriseData[currentEnterprise] = Array.isArray(enterpriseData[currentEnterprise]) ? [...getState('technologies')] : [...getState('technologies')];
-        setState('enterpriseData', {...enterpriseData});
+        setState('enterpriseData', { ...enterpriseData });
         vfsWrite('enterpriseData.json', enterpriseData);
         if (window.Logger) window.Logger.debug('ensureAndPersistNewTech: enterpriseData persisted for', currentEnterprise, 'total techs:', getState('technologies').length);
       } catch (e) { if (window.Logger) window.Logger.warn('persist enterpriseData failed', e); }
@@ -1068,10 +1128,39 @@
       const wasDetailPanelActive = !!(detailPanelEl && detailPanelEl.classList && detailPanelEl.classList.contains('active'));
 
       const enterpriseData = getState('enterpriseData');
-      if (!enterpriseData[enterpriseName]) {
-        console.error(`Данные для предприятия "${enterpriseName}" не найдены`);
-        if (typeof window !== 'undefined' && window.ErrorDisplay) {
-          window.ErrorDisplay.show(`Данные для предприятия "${enterpriseName}" не найдены`, 'Переключение предприятия');
+      if (!enterpriseData || !enterpriseData[enterpriseName]) {
+        console.warn(`Данные для предприятия "${enterpriseName}" не найдены, используем пустой массив`);
+        // Устанавливаем пустой массив вместо возврата с ошибкой
+        setState('currentEnterprise', enterpriseName);
+        setState('technologies', []);
+        // Обновляем индекс с пустым массивом
+        const DataIndex = getDataIndex();
+        if (DataIndex) {
+          try { DataIndex.build([]); } catch (e) { if (window.Logger) window.Logger.warn('DataIndex.build failed', e); }
+        }
+        setState('nextId', 1);
+        // Обновляем радар с пустыми данными
+        if (typeof window.updateRadar === 'function') {
+          window.updateRadar();
+        }
+        return;
+      }
+
+      // Проверяем, что данные - это массив
+      if (!Array.isArray(enterpriseData[enterpriseName])) {
+        console.warn(`Данные для предприятия "${enterpriseName}" имеют неверный формат, используем пустой массив`);
+        // Устанавливаем пустой массив вместо возврата с ошибкой
+        setState('currentEnterprise', enterpriseName);
+        setState('technologies', []);
+        // Обновляем индекс с пустым массивом
+        const DataIndex = getDataIndex();
+        if (DataIndex) {
+          try { DataIndex.build([]); } catch (e) { if (window.Logger) window.Logger.warn('DataIndex.build failed', e); }
+        }
+        setState('nextId', 1);
+        // Обновляем радар с пустыми данными
+        if (typeof window.updateRadar === 'function') {
+          window.updateRadar();
         }
         return;
       }
@@ -1144,6 +1233,15 @@
       // - refresh it with the technology object from the new enterprise (so ratings update)
       // - preserve the zoomed sector when possible by forcing the same quadrant
       if (wasDetailPanelActive) {
+        // Освобождаем focus trap перед обновлением или закрытием панели
+        if (window.FocusTrap && typeof window.FocusTrap.release === 'function') {
+          try {
+            window.FocusTrap.release();
+          } catch (e) {
+            if (window.Logger) window.Logger.warn('switchEnterprise: failed to release focus trap', e);
+          }
+        }
+
         if (shouldRefreshDetailPanel && typeof window.showDetail === 'function') {
           const q = shouldPreserveZoom ? prevZoomedQuadrant : null;
           // Defer until after radar re-render
@@ -1226,7 +1324,9 @@
     // Заполняем модальные фильтры
     const enterpriseData = getState('enterpriseData');
     const enterpriseList = Object.keys(enterpriseData || {});
-    const trlOptions = ['1 — Ранняя стадия (исследование)', '2 — Разработка (прототип)', '3 — Зрелость (готовность к внедрению)'];
+    const vendorsList = getState('vendorsList') || [];
+    const integratorsList = getState('integratorsList') || [];
+    const trlOptions = ['1-Исследовательская', '2-Прототип', '3-Технология готова к внедрению'];
 
     const ratingOptions = ['0 — Не готова', '1 — Низкая', '2 — Средняя', '3 — Высокая'];
     const modalSelects = [
@@ -1236,6 +1336,8 @@
       { id: 'techTechType', items: techTypes, placeholder: 'Выберите' },
       { id: 'techStatus', items: RINGS, placeholder: 'Выберите' },
       { id: 'techCompany', items: enterpriseList, placeholder: 'Выберите' },
+      { id: 'techVendors', items: vendorsList, placeholder: 'Выберите' },
+      { id: 'techIntegrators', items: integratorsList, placeholder: 'Выберите' },
       { id: 'techTrlStage', items: trlOptions, placeholder: 'Выберите стадию' },
       { id: 'techTechRead', items: ratingOptions, placeholder: 'Выберите оценку' },
       { id: 'techOrganRead', items: ratingOptions, placeholder: 'Выберите оценку' },
@@ -1245,6 +1347,8 @@
       { id: 'editTechType', items: techTypes, placeholder: 'Выберите' },
       { id: 'editStatus', items: RINGS, placeholder: 'Выберите' },
       { id: 'editCompany', items: enterpriseList, placeholder: 'Выберите' },
+      { id: 'editVendors', items: vendorsList, placeholder: 'Выберите' },
+      { id: 'editIntegrators', items: integratorsList, placeholder: 'Выберите' },
       { id: 'editTrlStage', items: trlOptions, placeholder: 'Выберите стадию' },
       { id: 'editTechRead', items: ratingOptions, placeholder: 'Выберите оценку' },
       { id: 'editOrganRead', items: ratingOptions, placeholder: 'Выберите оценку' },
@@ -1282,6 +1386,225 @@
   window.vfsRead = vfsRead;
   window.vfsWrite = vfsWrite;
   window.fetchJsonWithCache = fetchJsonWithCache;
+  // Инициализация селекта вендоров с возможностью добавления новых
+  function initVendorsSelect() {
+    const customSelect = document.querySelector('.custom-select-modal[data-field="techVendors"]');
+    if (!customSelect) {
+      // Не логируем предупреждение, так как это нормально, если модальное окно закрыто
+      return;
+    }
+    // Если это мультиселект (чекбоксы), то управление выполняется через Filters/select-events
+    if (customSelect.getAttribute('data-multi') === 'true') {
+      return;
+    }
+
+    // Убеждаемся, что селект виден
+    customSelect.style.display = 'block';
+    customSelect.style.visibility = 'visible';
+    customSelect.style.opacity = '1';
+    customSelect.style.minHeight = '40px';
+
+    const selectTrigger = customSelect.querySelector('.select-trigger');
+    if (selectTrigger) {
+      selectTrigger.style.display = 'flex';
+      selectTrigger.style.minHeight = '40px';
+    }
+
+    const optionsList = customSelect.querySelector('.select-options');
+    if (!optionsList) {
+      if (window.Logger) window.Logger.warn('initVendorsSelect: optionsList не найден');
+      return;
+    }
+
+    const hiddenInput = document.getElementById('techVendors');
+    if (!hiddenInput) {
+      if (window.Logger) window.Logger.warn('initVendorsSelect: hiddenInput не найден');
+      return;
+    }
+
+    // Получаем список вендоров из state
+    let vendorsList = getState('vendorsList') || [];
+
+    // Также проверяем localStorage для новых вендоров
+    try {
+      const storedVendors = localStorage.getItem('rmk_vendors_list');
+      if (storedVendors) {
+        const parsed = JSON.parse(storedVendors);
+        if (Array.isArray(parsed)) {
+          // Объединяем списки, убирая дубликаты
+          vendorsList = [...new Set([...vendorsList, ...parsed])];
+        }
+      }
+    } catch (e) {
+      if (window.Logger) window.Logger.warn('Ошибка при чтении вендоров из localStorage', e);
+    }
+
+    // Заполняем селект опциями
+    optionsList.innerHTML = '';
+
+    // Сначала добавляем опцию для добавления нового вендора (в начало списка)
+    const addNewOption = document.createElement('li');
+    addNewOption.className = 'add-new-vendor-option';
+    addNewOption.innerHTML = `
+      <input type="text" class="new-vendor-input" placeholder="Введите название нового вендора" />
+      <button type="button" class="add-new-vendor-btn btn-primary btn-with-icon">
+        <svg class="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>Добавить</span>
+      </button>
+    `;
+    optionsList.appendChild(addNewOption);
+
+    // Затем добавляем все опции вендоров
+    vendorsList.forEach(vendor => {
+      const li = document.createElement('li');
+      li.textContent = vendor;
+      li.setAttribute('data-value', vendor);
+      optionsList.appendChild(li);
+    });
+
+    // Обработчик добавления нового вендора
+    const addNewVendorBtn = addNewOption.querySelector('.add-new-vendor-btn');
+    const newVendorInput = addNewOption.querySelector('.new-vendor-input');
+
+    if (addNewVendorBtn && newVendorInput) {
+      const addNewVendor = () => {
+        const newVendorName = newVendorInput.value.trim();
+        if (!newVendorName) return;
+
+        // Проверяем, нет ли уже такого вендора
+        if (vendorsList.includes(newVendorName)) {
+          if (window.showNotification) {
+            window.showNotification('Такой вендор уже существует', false);
+          }
+          return;
+        }
+
+        // Добавляем в список
+        vendorsList.push(newVendorName);
+
+        // Сохраняем новый вендор в localStorage
+        try {
+          // Получаем текущий список из localStorage
+          let localVendors = [];
+          try {
+            const stored = localStorage.getItem('rmk_vendors_list');
+            if (stored) {
+              localVendors = JSON.parse(stored);
+              if (!Array.isArray(localVendors)) {
+                localVendors = [];
+              }
+            }
+          } catch (e) {
+            localVendors = [];
+          }
+
+          // Добавляем новый вендор, если его еще нет
+          if (!localVendors.includes(newVendorName)) {
+            localVendors.push(newVendorName);
+            localStorage.setItem('rmk_vendors_list', JSON.stringify(localVendors));
+            if (window.Logger) {
+              window.Logger.debug('Сохранен новый вендор в localStorage:', newVendorName);
+            }
+          }
+        } catch (e) {
+          if (window.Logger) window.Logger.warn('Ошибка при сохранении вендора в localStorage', e);
+        }
+
+        // Обновляем state
+        setState('vendorsList', vendorsList);
+
+        // Создаем новую опцию и вставляем после опции добавления (опция добавления должна быть первой)
+        const newOption = document.createElement('li');
+        newOption.textContent = newVendorName;
+        newOption.setAttribute('data-value', newVendorName);
+        if (addNewOption.nextSibling) {
+          optionsList.insertBefore(newOption, addNewOption.nextSibling);
+        } else {
+          optionsList.appendChild(newOption);
+        }
+
+        // Устанавливаем значение в селекте используя setCustomSelectValue для правильного обновления UI
+        const fieldId = customSelect.getAttribute('data-field');
+        if (fieldId && typeof window.setCustomSelectValue === 'function') {
+          window.setCustomSelectValue(fieldId, newVendorName);
+        } else {
+          // Fallback на ручную установку
+          hiddenInput.value = newVendorName;
+          const selectedText = customSelect.querySelector('.selected-text');
+          if (selectedText) {
+            selectedText.textContent = newVendorName;
+          }
+
+          // Выделяем выбранную опцию
+          optionsList.querySelectorAll('li').forEach(li => {
+            li.classList.remove('selected');
+            if (li.dataset.value === newVendorName) {
+              li.classList.add('selected');
+            }
+          });
+
+          // Триггерим событие change
+          hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        // Закрываем селект
+        customSelect.classList.remove('open');
+
+        // Очищаем поле ввода
+        newVendorInput.value = '';
+
+        // Обновляем все селекты вендоров на странице (и модальные, и обычные)
+        document.querySelectorAll('.custom-select-modal[data-field="techVendors"], .vendor-select').forEach(select => {
+          const otherOptionsList = select.querySelector('.select-options');
+          if (otherOptionsList && select !== customSelect) {
+            // Проверяем, нет ли уже такой опции
+            const existingOption = Array.from(otherOptionsList.querySelectorAll('li')).find(
+              li => li.dataset.value === newVendorName && !li.classList.contains('add-new-vendor-option')
+            );
+            if (!existingOption) {
+              const otherAddNewOption = otherOptionsList.querySelector('.add-new-vendor-option');
+              const newOptionClone = document.createElement('li');
+              newOptionClone.textContent = newVendorName;
+              newOptionClone.setAttribute('data-value', newVendorName);
+              // Вставляем после опции добавления (опция добавления должна быть первой)
+              if (otherAddNewOption && otherAddNewOption.nextSibling) {
+                otherOptionsList.insertBefore(newOptionClone, otherAddNewOption.nextSibling);
+              } else if (otherAddNewOption) {
+                otherOptionsList.appendChild(newOptionClone);
+              } else {
+                otherOptionsList.appendChild(newOptionClone);
+              }
+            }
+          }
+        });
+
+        if (window.showNotification) {
+          window.showNotification(`Вендор "${newVendorName}" добавлен`, true);
+        }
+      };
+
+      addNewVendorBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        addNewVendor();
+      });
+
+      newVendorInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          e.stopPropagation();
+          addNewVendor();
+        }
+      });
+    }
+
+    // Устанавливаем placeholder
+    const selectedText = customSelect.querySelector('.selected-text');
+    if (selectedText && !hiddenInput.value) {
+      selectedText.textContent = 'Выберите';
+    }
+  }
+
   window.clearFetchCache = clearFetchCache;
   window.clearVfsCache = clearVfsCache;
   window.loadJsonPreferVfs = loadJsonPreferVfs;
@@ -1289,5 +1612,6 @@
   window.ensureAndPersistNewTech = ensureAndPersistNewTech;
   window.switchEnterprise = switchEnterprise;
   window.showNotification = showNotification;
+  window.initVendorsSelect = initVendorsSelect;
 
 })();

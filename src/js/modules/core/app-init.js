@@ -50,11 +50,12 @@
 
     // Инициализация темы (обработчик переключения вынесен в events.js)
     const savedTheme = localStorage.getItem("theme") || "light";
-    if (savedTheme === "dark") {
-      document.body.classList.add("dark");
-      const themeToggle = DOMCache.get('themeToggle');
-      if (themeToggle) themeToggle.checked = true;
-    }
+    const isDark = savedTheme === "dark";
+    // Убеждаемся, что есть правильный класс для темы
+    document.body.classList.remove("light", "dark");
+    document.body.classList.add(isDark ? "dark" : "light");
+    const themeToggle = DOMCache.get('themeToggle');
+    if (themeToggle) themeToggle.checked = isDark;
 
     // Загрузка данных
     await DataLoader.loadData();

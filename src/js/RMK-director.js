@@ -1,5 +1,5 @@
-// RMK2.js
-// ===== ЗАГРУЗКА МОДУЛЕЙ =====
+// RMK-director.js
+// ===== ЗАГРУЗКА МОДУЛЕЙ ДЛЯ ДИРЕКТОРСКОЙ СТРАНИЦЫ =====
 // Функция для динамической загрузки модулей
 function loadModule(src) {
   return new Promise((resolve, reject) => {
@@ -39,8 +39,7 @@ async function loadAllModules() {
     '/src/js/modules/radar/radar-renderer.js',
     '/src/js/modules/radar/quadrant-cache.js',
     '/src/js/modules/radar/quadrants.js',
-    // prospects-chart.js загружается только для обычной страницы RMK.html, не для RMK-director.html
-    ...(document.body.id !== 'rmk-director' ? ['/src/js/modules/radar/prospects-chart.js'] : []),
+    // prospects-chart.js НЕ загружается для директорской страницы
     '/src/js/modules/radar/radar-wrappers.js',
     '/src/js/modules/radar/radar-update.js',
 
@@ -78,7 +77,7 @@ async function loadAllModules() {
     '/src/js/modules/radar/radar-events.js',
     '/src/js/modules/integration/events.js',  // теперь включает utils
 
-    // App init (должен быть загружен последним перед RMK2.js)
+    // App init (должен быть загружен последним перед RMK-director.js)
     '/src/js/modules/core/app-init.js'
   ];
 
@@ -118,15 +117,14 @@ window.POSITION_ANGLE_PAD = POSITION_ANGLE_PAD;
 window.MIN_BLIP_DISTANCE = MIN_BLIP_DISTANCE;
 window.RING_LABEL_WIDTH = RING_LABEL_WIDTH;
 window.RING_LABEL_HEIGHT = RING_LABEL_HEIGHT;
-// Соответствие techType → форма
-const TECHTYPE_TO_SHAPE = {
-  "Базовые": "triangle",
+// Для директорской страницы все технологии отображаются как круги
+// Экспорт TECHTYPE_TO_SHAPE в window для использования модулями (для совместимости)
+window.TECHTYPE_TO_SHAPE = {
+  "Базовые": "circle",
   "Интегрированные": "circle",
-  "Платформенные решения": "square",
-  "Управление с ML и AI": "star",
+  "Платформенные решения": "circle",
+  "Управление с ML и AI": "circle",
 };
-// Экспорт TECHTYPE_TO_SHAPE в window для использования модулями
-window.TECHTYPE_TO_SHAPE = TECHTYPE_TO_SHAPE;
 
 // ===== ИНИЦИАЛИЗАЦИЯ =====
 // Инициализация приложения происходит в модуле app-init.js

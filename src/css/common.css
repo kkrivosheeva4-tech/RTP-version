@@ -5,7 +5,8 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: transparent; /* Убираем затемнение с самого overlay, оно будет только в ::before с вырезом */
+  background: transparent;
+  /* Убираем затемнение с самого overlay, оно будет только в ::before с вырезом */
   z-index: 9998;
   pointer-events: auto;
   --highlight-top: 50%;
@@ -18,7 +19,8 @@
 /* Убеждаемся, что панель детальной информации видна поверх overlay */
 .detail-panel.active {
   z-index: 10003 !important;
-  position: fixed !important; /* Должно быть fixed для правильного позиционирования */
+  position: fixed !important;
+  /* Должно быть fixed для правильного позиционирования */
 }
 
 /* Убеждаемся, что модальное окно приоритетов видно поверх overlay */
@@ -59,18 +61,16 @@
   width: 100%;
   height: 100%;
   background: rgba(0, 0, 0, 0.7);
-  clip-path: polygon(
-    0% 0%,
-    0% 100%,
-    calc(var(--highlight-left) - 5px) 100%,
-    calc(var(--highlight-left) - 5px) calc(var(--highlight-top) - 5px),
-    calc(var(--highlight-left) + var(--highlight-width) + 5px) calc(var(--highlight-top) - 5px),
-    calc(var(--highlight-left) + var(--highlight-width) + 5px) calc(var(--highlight-top) + var(--highlight-height) + 5px),
-    calc(var(--highlight-left) - 5px) calc(var(--highlight-top) + var(--highlight-height) + 5px),
-    calc(var(--highlight-left) - 5px) 100%,
-    100% 100%,
-    100% 0%
-  );
+  clip-path: polygon(0% 0%,
+      0% 100%,
+      calc(var(--highlight-left) - 5px) 100%,
+      calc(var(--highlight-left) - 5px) calc(var(--highlight-top) - 5px),
+      calc(var(--highlight-left) + var(--highlight-width) + 5px) calc(var(--highlight-top) - 5px),
+      calc(var(--highlight-left) + var(--highlight-width) + 5px) calc(var(--highlight-top) + var(--highlight-height) + 5px),
+      calc(var(--highlight-left) - 5px) calc(var(--highlight-top) + var(--highlight-height) + 5px),
+      calc(var(--highlight-left) - 5px) 100%,
+      100% 100%,
+      100% 0%);
 }
 
 /* Создаем окно для сектора 1 на шаге 8 тура */
@@ -91,9 +91,12 @@
 }
 
 @keyframes pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 0 0 5px rgba(206, 144, 104, 0.3), 0 0 20px rgba(206, 144, 104, 0.5);
   }
+
   50% {
     box-shadow: 0 0 0 8px rgba(206, 144, 104, 0.2), 0 0 30px rgba(206, 144, 104, 0.4);
   }
@@ -154,10 +157,13 @@
 }
 
 @keyframes onboarding-quadrant-pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     stroke-width: 4px;
     opacity: 1;
   }
+
   50% {
     stroke-width: 6px;
     opacity: 1;
@@ -165,10 +171,13 @@
 }
 
 @keyframes onboarding-label-pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 0 10px rgba(206, 144, 104, 0.5), 0 0 20px rgba(206, 144, 104, 0.3);
     border-color: var(--accent);
   }
+
   50% {
     box-shadow: 0 0 15px rgba(206, 144, 104, 0.7), 0 0 30px rgba(206, 144, 104, 0.5);
     border-color: rgba(206, 144, 104, 0.9);
@@ -185,14 +194,16 @@
 .sidebar-icon-btn.onboarding-highlight,
 .sidebar-toggle-btn.onboarding-highlight {
   position: relative !important;
-  z-index: 10005 !important; /* Выше overlay (9998) и модального окна (10005) */
+  z-index: 10005 !important;
+  /* Выше overlay (9998) и модального окна (10005) */
   background: rgba(206, 144, 104, 0.2) !important;
   border: 2px solid var(--accent) !important;
   border-radius: 8px !important;
   box-shadow: 0 0 15px rgba(206, 144, 104, 0.6), 0 0 30px rgba(206, 144, 104, 0.4) !important;
   animation: onboarding-button-pulse 1.5s infinite;
   transform: scale(1.1);
-  isolation: isolate; /* Создаем новый контекст наложения */
+  isolation: isolate;
+  /* Создаем новый контекст наложения */
 }
 
 /* Убеждаемся, что родительский контейнер не ограничивает z-index */
@@ -203,10 +214,13 @@
 }
 
 @keyframes onboarding-button-pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 0 15px rgba(206, 144, 104, 0.6), 0 0 30px rgba(206, 144, 104, 0.4);
     border-color: var(--accent);
   }
+
   50% {
     box-shadow: 0 0 20px rgba(206, 144, 104, 0.8), 0 0 40px rgba(206, 144, 104, 0.6);
     border-color: rgba(206, 144, 104, 0.9);
@@ -215,7 +229,8 @@
 
 .onboarding-tooltip {
   position: fixed;
-  z-index: 10006 !important; /* Выше модального окна графика перспективных технологий */
+  z-index: 10006 !important;
+  /* Выше модального окна графика перспективных технологий */
   background: var(--modal-bg);
   border: 2px solid var(--accent);
   border-radius: 12px;
@@ -438,7 +453,11 @@
 }
 
 /* ===== Глобальное правило шрифта ===== */
-html, body, *, *::before, *::after {
+html,
+body,
+*,
+*::before,
+*::after {
   font-family: "gf_TikTok_Sans variant0", Tofu;
   font-weight: 400;
   font-style: normal;
@@ -452,7 +471,8 @@ html, body, *, *::before, *::after {
 .tooltip-float,
 .tooltip-global {
   position: fixed;
-  z-index: 100000 !important; /* Выше всех панелей и модалок */
+  z-index: 100000 !important;
+  /* Выше всех панелей и модалок */
   min-width: 50px;
   max-width: 280px;
   padding: 6px 10px;
@@ -530,6 +550,7 @@ html, body, *, *::before, *::after {
 .custom-tooltip.top {
   transform: translateY(-8px);
 }
+
 .custom-tooltip.top.visible {
   transform: translateY(0);
 }
@@ -537,6 +558,7 @@ html, body, *, *::before, *::after {
 .custom-tooltip.bottom {
   transform: translateY(8px);
 }
+
 .custom-tooltip.bottom.visible {
   transform: translateY(0);
 }
@@ -544,6 +566,7 @@ html, body, *, *::before, *::after {
 .custom-tooltip.left {
   transform: translateX(-8px);
 }
+
 .custom-tooltip.left.visible {
   transform: translateX(0);
 }
@@ -551,6 +574,7 @@ html, body, *, *::before, *::after {
 .custom-tooltip.right {
   transform: translateX(8px);
 }
+
 .custom-tooltip.right.visible {
   transform: translateX(0);
 }
@@ -595,6 +619,7 @@ body.light {
   --input-border: #ccc;
   --modal-bg: var(--bg-light);
 }
+
 body.dark {
   --bg: var(--bg-dark);
   --text: var(--text-dark);
@@ -611,11 +636,14 @@ html {
 
 /* ===== Хедер ===== */
 header {
-  position: fixed;         /* Фиксирует шапку сверху */
-  top: 0;                  /* Прижимает к верхнему краю */
+  position: fixed;
+  /* Фиксирует шапку сверху и создает контекст для абсолютного позиционирования */
+  top: 0;
+  /* Прижимает к верхнему краю */
   left: 0;
   right: 0;
-  z-index: 1000;           /* Чтобы шапка была поверх контента */
+  z-index: 1000;
+  /* Чтобы шапка была поверх контента */
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -625,7 +653,8 @@ header {
   padding: 10px 5%;
   gap: 10px;
   background: var(--header-bg-color);
-  backdrop-filter: blur(8px);   /* (необязательно) эффект полупрозрачности */
+  backdrop-filter: blur(8px);
+  /* (необязательно) эффект полупрозрачности */
 }
 
 .logo {
@@ -633,38 +662,53 @@ header {
   align-items: center;
   gap: 10px;
 }
+
 .logo img {
   width: clamp(36px, 5vw, 56px);
   height: auto;
   object-fit: contain;
 }
+
 a.logo {
   color: inherit;
   text-decoration: none;
 }
-a.logo:visited { color: inherit; }
+
+a.logo:visited {
+  color: inherit;
+}
+
 body.dark a.logo,
 body.dark .logo span {
   color: var(--text);
 }
+
 body.light a.logo,
 body.light .logo span {
   color: var(--text);
 }
+
 .logo span {
   position: relative;
 }
+
 .logo span::after {
   content: "";
   position: absolute;
-  left: 0; right: 0; bottom: -4px;
+  left: 0;
+  right: 0;
+  bottom: -4px;
   height: 2px;
   background: var(--accent);
   transform: scaleX(0);
   transform-origin: left;
   transition: transform 0.25s ease;
 }
-.logo:hover span::after { transform: scaleX(1); }
+
+.logo:hover span::after {
+  transform: scaleX(1);
+}
+
 body.dark .logo-img {
   content: url("/assets/images/Vector.png");
 }
@@ -674,12 +718,20 @@ body.dark .logo-img {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  width: 50%;
+  align-items: center;
   gap: 5px;
   padding: 0;
   border-radius: 8px;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 8px;
+  height: 100%;
+  width: fit-content;
   margin: 0 auto;
+  z-index: 1;
 }
+
 .enterprise-nav button {
   background: transparent;
   border: 1px solid transparent;
@@ -689,19 +741,23 @@ body.dark .logo-img {
   border-radius: 6px;
   transition: 0.3s;
 }
+
 body.light .enterprise-nav button:hover {
   background: #fff;
   border: 1px solid #C8977F;
   color: var(--accent);
 }
+
 body.dark .enterprise-nav button {
   color: #fff;
 }
+
 body.dark .enterprise-nav button:hover {
   background: #000;
   border: 1px solid var(--accent);
   color: var(--accent);
 }
+
 /* ===== Контролы (тема, авторизация) ===== */
 .controls {
   display: flex;
@@ -709,10 +765,14 @@ body.dark .enterprise-nav button:hover {
   gap: 15px;
   flex-wrap: wrap;
   justify-content: flex-end;
+  margin-left: auto;
+  /* Прижимает к правому краю */
 }
+
 /* кнопки входа/выхода */
 /* кнопки входа/выхода */
-.login, .logout {
+.login,
+.logout {
   border: none;
   background: transparent;
   padding: 4px;
@@ -725,7 +785,8 @@ body.dark .enterprise-nav button:hover {
   gap: 8px;
 }
 
-.logout svg, .login svg {
+.logout svg,
+.login svg {
   width: 24px;
   height: 24px;
   vertical-align: middle;
@@ -737,6 +798,7 @@ body.dark .enterprise-nav button:hover {
 .logout:hover svg polyline {
   animation: slide-out-arrow 0.8s ease-in-out infinite;
 }
+
 .logout:hover svg line {
   animation: slide-out-line 0.8s ease-in-out infinite;
 }
@@ -746,6 +808,7 @@ body.dark .enterprise-nav button:hover {
 .login:hover svg polyline {
   animation: slide-in-arrow 0.8s ease-in-out infinite;
 }
+
 .login:hover svg line {
   animation: slide-in-line 0.8s ease-in-out infinite;
 }
@@ -755,33 +818,70 @@ body.dark .enterprise-nav button:hover {
 
 /* Анимация для стрелки "выхода" (уходит вправо) */
 @keyframes slide-out-arrow {
-  0%, 100% { transform: translateX(0); }
-  50% { transform: translateX(4px); }
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  50% {
+    transform: translateX(4px);
+  }
 }
 
 /* Анимация для линии "выхода" (создает эффект движения) */
 @keyframes slide-out-line {
-  0% { stroke-dashoffset: 0; }
-  50% { stroke-dashoffset: -10; }
-  100% { stroke-dashoffset: 0; }
+  0% {
+    stroke-dashoffset: 0;
+  }
+
+  50% {
+    stroke-dashoffset: -10;
+  }
+
+  100% {
+    stroke-dashoffset: 0;
+  }
 }
 
 /* Анимация для стрелки "входа" (уходит вправо, в "дверь") */
 @keyframes slide-in-arrow {
-  0%, 100% { transform: translateX(0); }
-  50% { transform: translateX(4px); }
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  50% {
+    transform: translateX(4px);
+  }
 }
 
 /* Анимация для линии "входа" (создает эффект втягивания) */
 @keyframes slide-in-line {
-  0% { stroke-dashoffset: 0; }
-  50% { stroke-dashoffset: 10; }
-  100% { stroke-dashoffset: 0; }
+  0% {
+    stroke-dashoffset: 0;
+  }
+
+  50% {
+    stroke-dashoffset: 10;
+  }
+
+  100% {
+    stroke-dashoffset: 0;
+  }
 }
 
 /* --- ТЕМЫ (без изменений) --- */
-body.light .login, body.light .logout { color: #000; }
-body.dark .login, body.dark .logout { color: #fff; }
+body.light .login,
+body.light .logout {
+  color: #000;
+}
+
+body.dark .login,
+body.dark .logout {
+  color: #fff;
+}
 
 /* ===== Переключатель темы ===== */
 .theme-switch {
@@ -795,9 +895,11 @@ body.dark .login, body.dark .logout { color: #fff; }
   width: var(--switch-w);
   height: var(--switch-h);
 }
+
 .theme-switch input {
   display: none;
 }
+
 .slider {
   position: absolute;
   inset: 0;
@@ -807,6 +909,7 @@ body.dark .login, body.dark .logout { color: #fff; }
   cursor: pointer;
   transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
+
 .slider::before {
   content: "";
   position: absolute;
@@ -819,12 +922,15 @@ body.dark .login, body.dark .logout { color: #fff; }
   transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
   z-index: 2;
 }
-input:checked + .slider {
+
+input:checked+.slider {
   background: #444;
 }
-input:checked + .slider::before {
+
+input:checked+.slider::before {
   left: calc(var(--switch-w) - var(--knob-size) - var(--gap));
 }
+
 .slider::after {
   content: "";
   position: absolute;
@@ -839,28 +945,65 @@ input:checked + .slider::before {
   transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
   z-index: 1;
 }
+
 body.light .slider::after {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='currentColor' d='M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z'/></svg>");
   left: clamp(var(--gap), calc(var(--gap) + var(--knob-size) + var(--icon-gap)), calc(var(--switch-w) - var(--gap) - var(--icon-size)));
 }
+
 body.dark .slider::after {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><circle cx='12' cy='12' r='4' fill='%23fff'/><path stroke='%23fff' stroke-linecap='round' stroke-width='1.5' d='M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41' fill='none'/></svg>");
   left: clamp(var(--gap), calc(var(--switch-w) - var(--knob-size) - var(--gap) - var(--icon-gap) - var(--icon-size)), calc(var(--switch-w) - var(--gap) - var(--icon-size)));
 }
+
 .theme-switch:hover .slider,
 .theme-switch:focus-within .slider {
   transform: translateY(-2px);
-  background: linear-gradient(90deg, #b7866a, rgba(0,0,0,0.06));
+  background: linear-gradient(90deg, #b7866a, rgba(0, 0, 0, 0.06));
 }
+
 .theme-switch:hover .slider::before,
 .theme-switch:focus-within .slider::before {
   transform: scale(1.1);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
 }
+
 .theme-switch:focus-within {
   outline: 3px solid rgba(206, 145, 104, 0.35);
   outline-offset: 4px;
   border-radius: 8px;
+}
+
+/* ===== КНОПКА ПЕРЕКЛЮЧЕНИЯ ВИДА (для админа) ===== */
+.switch-view-btn {
+  border: none;
+  background: transparent;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: inherit;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  min-width: 40px;
+  min-height: 40px;
+}
+
+.switch-view-btn:hover {
+  background: rgba(206, 144, 104, 0.1);
+  transform: scale(1.05);
+}
+
+.switch-view-btn:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.switch-view-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
 }
 
 /* ===== USER ROLE (если используется) ===== */
@@ -874,21 +1017,28 @@ body.dark .slider::after {
   position: relative;
   color: var(--text);
 }
+
 .user-role::after {
   content: "";
   position: absolute;
-  left: 0; right: 0; bottom: -4px;
+  left: 0;
+  right: 0;
+  bottom: -4px;
   height: 2px;
   background: #ce9068;
   transform: scaleX(0);
   transform-origin: left;
   transition: transform 0.25s ease;
 }
-.user-role:hover::after { transform: scaleX(1); }
+
+.user-role:hover::after {
+  transform: scaleX(1);
+}
 
 /* ===== Бургер-меню (базовые стили) ===== */
 .burger-menu-btn {
-  display: none; /* По умолчанию скрыто, показывается только на мобильных */
+  display: none;
+  /* По умолчанию скрыто, показывается только на мобильных */
   align-items: center;
   justify-content: center;
   width: 44px;
@@ -955,14 +1105,24 @@ body.dark .slider::after {
     flex-direction: column;
     gap: 15px;
   }
+
   .enterprise-nav {
+    position: static;
+    /* На мобильных возвращаем обычное позиционирование */
+    transform: none;
+    left: auto;
+    top: auto;
+    /* Сбрасываем вертикальное позиционирование */
     width: 100%;
     order: 3;
   }
+
   .controls {
     order: 2;
     justify-content: center;
+    margin-left: 0;
   }
+
   .logo {
     order: 1;
   }
@@ -1037,8 +1197,13 @@ body.dark .slider::after {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .loading-message {
@@ -1084,8 +1249,13 @@ body.dark .slider::after {
 }
 
 @keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 .progress-text {
@@ -1355,17 +1525,22 @@ body.dark .slider::after {
 .skeleton-line,
 .skeleton-shape {
   background: linear-gradient(90deg,
-    var(--bg-secondary, #1a1a1a) 0%,
-    var(--bg-tertiary, #252525) 50%,
-    var(--bg-secondary, #1a1a1a) 100%);
+      var(--bg-secondary, #1a1a1a) 0%,
+      var(--bg-tertiary, #252525) 50%,
+      var(--bg-secondary, #1a1a1a) 100%);
   background-size: 200% 100%;
   animation: skeleton-loading 1.5s ease-in-out infinite;
   border-radius: 4px;
 }
 
 @keyframes skeleton-loading {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 .skeleton-line {
@@ -1486,18 +1661,32 @@ body.dark .slider::after {
 .skeleton-bar {
   flex: 1;
   background: linear-gradient(180deg,
-    var(--accent, #ce9068) 0%,
-    var(--accent-dark, #b87d5a) 100%);
+      var(--accent, #ce9068) 0%,
+      var(--accent-dark, #b87d5a) 100%);
   border-radius: 4px 4px 0 0;
   animation: skeleton-loading 1.5s ease-in-out infinite;
   min-height: 40px;
 }
 
-.skeleton-bar:nth-child(1) { height: 60%; }
-.skeleton-bar:nth-child(2) { height: 80%; }
-.skeleton-bar:nth-child(3) { height: 45%; }
-.skeleton-bar:nth-child(4) { height: 90%; }
-.skeleton-bar:nth-child(5) { height: 55%; }
+.skeleton-bar:nth-child(1) {
+  height: 60%;
+}
+
+.skeleton-bar:nth-child(2) {
+  height: 80%;
+}
+
+.skeleton-bar:nth-child(3) {
+  height: 45%;
+}
+
+.skeleton-bar:nth-child(4) {
+  height: 90%;
+}
+
+.skeleton-bar:nth-child(5) {
+  height: 55%;
+}
 
 .skeleton-chart-line {
   height: 200px;
@@ -1557,6 +1746,7 @@ body.dark .slider::after {
 
 /* ===== Mobile (<= 767px) ===== */
 @media (max-width: 767px) {
+
   /* Уведомления и ошибки */
   .error-container,
   .toast-container {
@@ -1591,7 +1781,8 @@ body.dark .slider::after {
   }
 
   .enterprise-nav {
-    display: none; /* Скрываем обычную навигацию, будет бургер-меню */
+    display: none;
+    /* Скрываем обычную навигацию, будет бургер-меню */
   }
 
   .controls {
@@ -1601,7 +1792,7 @@ body.dark .slider::after {
   }
 
   /* Скрываем элементы controls на мобильных (кроме бургер-меню) */
-  .controls > *:not(.burger-menu-btn) {
+  .controls>*:not(.burger-menu-btn) {
     display: none;
   }
 
@@ -1610,13 +1801,15 @@ body.dark .slider::after {
   .help-btn,
   .theme-switch,
   .login,
-  .logout {
+  .logout,
+  .switch-view-btn {
     min-width: 44px;
     min-height: 44px;
   }
 
   .about-btn__text {
-    display: none; /* Скрываем текст на мобильных, оставляем только иконку */
+    display: none;
+    /* Скрываем текст на мобильных, оставляем только иконку */
   }
 
   /* Показываем бургер-меню на мобильных */
@@ -1816,6 +2009,7 @@ body.dark .slider::after {
 
 /* ===== Desktop (> 1024px) ===== */
 @media (min-width: 1025px) {
+
   /* Скрываем бургер-меню на десктопе */
   .burger-menu-btn {
     display: none;
@@ -1829,6 +2023,7 @@ body.dark .slider::after {
 /* ===== Touch оптимизация ===== */
 /* Увеличиваем размеры кликабельных элементов для touch устройств */
 @media (hover: none) and (pointer: coarse) {
+
   button,
   a,
   [role="button"],
@@ -1850,10 +2045,12 @@ body.dark .slider::after {
 
 /* Улучшение работы с виртуальной клавиатурой */
 @media (max-width: 1024px) {
+
   input,
   textarea,
   select {
-    font-size: 16px; /* Предотвращает автоматический zoom на iOS */
+    font-size: 16px;
+    /* Предотвращает автоматический zoom на iOS */
   }
 }
 
@@ -1980,6 +2177,7 @@ body.dark .slider::after {
 
 /* Поддержка prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -2065,6 +2263,7 @@ body.dark .online-notification {
 
 /* Мобильная адаптация */
 @media (max-width: 768px) {
+
   .offline-notification,
   .online-notification {
     top: 10px;

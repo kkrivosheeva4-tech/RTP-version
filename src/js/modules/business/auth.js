@@ -23,12 +23,22 @@ window.AuthModule = (function() {
   // ===== ФУНКЦИИ ДЛЯ ПРОВЕРКИ ПРАВ ДОСТУПА =====
 
   /**
-   * Проверяет, имеет ли пользователь роль архитектора или администратора
-   * @returns {boolean} - true, если пользователь имеет роль архитектора или администратора
+   * Проверяет, имеет ли пользователь права на редактирование (архитектор, администратор, директор, РП)
+   * @returns {boolean} - true, если пользователь имеет права на редактирование
    */
   function checkArchitectRole() {
     const role = localStorage.getItem("role");
-    return role === "architect" || role === "admin";
+    // Архитекторы, админы, директоры и РП имеют права на редактирование
+    return role === "architect" || role === "admin" || role === "director" || role === "project_manager";
+  }
+
+  /**
+   * Проверяет, имеет ли пользователь роль директора или руководителя проекта
+   * @returns {boolean} - true, если пользователь имеет роль директора или руководителя проекта
+   */
+  function checkDirectorRole() {
+    const role = localStorage.getItem("role");
+    return role === "director" || role === "project_manager";
   }
 
   // ===== ФУНКЦИИ ДЛЯ РЕНДЕРИНГА ИНТЕРФЕЙСА АУТЕНТИФИКАЦИИ =====
@@ -73,7 +83,7 @@ window.AuthModule = (function() {
       setButtonsVisibility(true);
       logoutContainer.querySelector(".logout").onclick = () => {
         safeLogout();
-        location.reload();
+        window.location.href = 'auth.html';
       };
     } else if (role === "admin") {
       authInfo.innerHTML = `<div class="user-role admin-role" data-tooltip="Перейти в админ-панель" style="cursor: pointer;">Администратор</div>`;
@@ -94,6 +104,22 @@ window.AuthModule = (function() {
         safeLogout();
         location.reload();
       };
+    } else if (role === "director" || role === "project_manager") {
+      authInfo.innerHTML = `<div class="user-role ${role === "director" ? "director-role" : "project-manager-role"}">${role === "director" ? "Директор" : "Руководитель проекта"}</div>`;
+      logoutContainer.innerHTML = `<button class="logout" data-tooltip="Выйти" aria-label="Выйти">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+      <polyline points="16,17 21,12 16,7"/>
+      <!-- Добавляем stroke-dasharray сюда -->
+      <line x1="21" y1="12" x2="9" y2="12" stroke-dasharray="100"/>
+    </svg>
+  </button>`;
+      // Директоры и РП теперь имеют доступ к добавлению/редактированию/удалению технологий и экспорту
+      setButtonsVisibility(true);
+      logoutContainer.querySelector(".logout").onclick = () => {
+        safeLogout();
+        location.reload();
+      };
     } else {
       authInfo.innerHTML = ``;
       logoutContainer.innerHTML = `<button class="login" data-tooltip="Войти" aria-label="Войти">
@@ -110,16 +136,23 @@ window.AuthModule = (function() {
       logoutContainer.querySelector(".login").onclick = () => {
         window.location.href = "auth.html";
       };
+      // Редирект на страницу авторизации, если пользователь не авторизован и находится на странице директора
+      const isDirectorPage = document.body.id === "rmk-director" || window.location.pathname.includes("RMK-director.html");
+      if (isDirectorPage) {
+        window.location.href = "auth.html";
+      }
     }
   }
 
   // Экспорт функций в window для обратной совместимости
   window.checkArchitectRole = checkArchitectRole;
+  window.checkDirectorRole = checkDirectorRole;
   window.renderAuth = renderAuth;
 
   // Возвращаем объект модуля
   return {
     checkArchitectRole,
+    checkDirectorRole,
     renderAuth
   };
 })();

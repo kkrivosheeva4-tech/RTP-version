@@ -178,6 +178,58 @@ window.ExportModule = (function() {
         }
       }
 
+      // Фильтр по вендорам (массив значений)
+      if (filters.vendors && Array.isArray(filters.vendors) && filters.vendors.length > 0) {
+        if (!tech.vendors || !Array.isArray(tech.vendors) || tech.vendors.length === 0) return false;
+
+        // Извлекаем имена вендоров из технологии
+        const techVendorNames = tech.vendors.map(v => {
+          if (typeof v === 'object' && v !== null) {
+            return v.name || v.id || String(v);
+          }
+          return String(v);
+        }).map(name => String(name).trim()).filter(Boolean);
+
+        // Проверяем, есть ли совпадение (без учета регистра)
+        const hasMatchingVendor = techVendorNames.some(vendorName => {
+          return filters.vendors.some(filterVendor => {
+            return String(vendorName).toLowerCase() === String(filterVendor).toLowerCase();
+          });
+        });
+
+        if (!hasMatchingVendor) return false;
+      }
+
+      // Фильтр по интеграторам (массив значений)
+      if (filters.integrators && Array.isArray(filters.integrators) && filters.integrators.length > 0) {
+        if (!tech.vendors || !Array.isArray(tech.vendors) || tech.vendors.length === 0) return false;
+
+        // Собираем все интеграторы из всех вендоров технологии
+        const allIntegrators = [];
+        tech.vendors.forEach(vendor => {
+          if (vendor && typeof vendor === 'object' && vendor.integrators && Array.isArray(vendor.integrators)) {
+            vendor.integrators.forEach(integrator => {
+              const integratorName = typeof integrator === 'object' && integrator !== null
+                ? (integrator.name || integrator.id || String(integrator))
+                : String(integrator);
+              const normalizedName = String(integratorName).trim();
+              if (normalizedName && !allIntegrators.includes(normalizedName)) {
+                allIntegrators.push(normalizedName);
+              }
+            });
+          }
+        });
+
+        // Проверяем, есть ли совпадение (без учета регистра)
+        const hasMatchingIntegrator = allIntegrators.some(integratorName => {
+          return filters.integrators.some(filterIntegrator => {
+            return String(integratorName).toLowerCase() === String(filterIntegrator).toLowerCase();
+          });
+        });
+
+        if (!hasMatchingIntegrator) return false;
+      }
+
       return true;
     });
   }
@@ -339,9 +391,9 @@ window.ExportModule = (function() {
     };
     document.addEventListener('click', closeHandler);
 
-    // Поиск (только для blocks и functions)
+    // Поиск (для blocks, functions, vendors, integrators)
     const fieldName = container.getAttribute('data-field');
-    const hasSearch = fieldName === 'blocks' || fieldName === 'functions';
+    const hasSearch = fieldName === 'blocks' || fieldName === 'functions' || fieldName === 'vendors' || fieldName === 'integrators';
 
     if (searchInput && hasSearch) {
       searchInput.addEventListener('input', (e) => {
@@ -459,7 +511,7 @@ window.ExportModule = (function() {
     }
 
     // Если это поле с множественным выбором, подсвечиваем и его контейнер
-    const multiSelectFields = ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'funcCover', 'priority'];
+    const multiSelectFields = ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'funcCover', 'priority', 'vendors', 'integrators'];
     if (multiSelectFields.includes(fieldName)) {
       const container = document.getElementById(`filter_${fieldName}_container`);
       if (container) {
@@ -1137,25 +1189,141 @@ window.ExportModule = (function() {
       field: 'status',
       source: () => (typeof window.RINGS !== 'undefined' && Array.isArray(window.RINGS)) ? window.RINGS : [],
       placeholder: 'Все статусы'
+    },
+    {
+      field: 'vendors',
+      source: async () => {
+        const vendorSet = new Set();
+
+        // 1. Собираем вендоры из всех технологий
+        const technologies = safeGet('getTechnologies', []);
+        technologies.forEach(tech => {
+          if (tech.vendors && Array.isArray(tech.vendors)) {
+            tech.vendors.forEach(vendor => {
+              // Вендор может быть объектом с полем name или строкой
+              const vendorName = typeof vendor === 'object' && vendor !== null
+                ? (vendor.name || vendor.id || String(vendor))
+                : String(vendor);
+              if (vendorName && vendorName.trim()) {
+                vendorSet.add(vendorName.trim());
+              }
+            });
+          }
+        });
+
+        // 2. Добавляем вендоры из JSON файла (если доступен модуль VendorsFiles)
+        if (typeof window.VendorsFiles !== 'undefined' && typeof window.VendorsFiles.loadVendorsList === 'function') {
+          try {
+            const jsonVendors = await window.VendorsFiles.loadVendorsList();
+            if (Array.isArray(jsonVendors)) {
+              jsonVendors.forEach(vendor => {
+                const vendorName = String(vendor).trim();
+                if (vendorName) vendorSet.add(vendorName);
+              });
+            }
+          } catch (e) {
+            if (window.Logger) window.Logger.warn('Ошибка при загрузке вендоров из JSON', e);
+          }
+        }
+
+        // 3. Добавляем вендоры из localStorage
+        try {
+          const stored = localStorage.getItem('rmk_vendors_list');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed)) {
+              parsed.forEach(vendor => {
+                const vendorName = String(vendor).trim();
+                if (vendorName) vendorSet.add(vendorName);
+              });
+            }
+          }
+        } catch (e) {
+          // Игнорируем ошибки
+        }
+
+        return Array.from(vendorSet).sort();
+      },
+      placeholder: 'Все вендоры'
+    },
+    {
+      field: 'integrators',
+      source: async () => {
+        const integratorSet = new Set();
+
+        // 1. Собираем интеграторы из всех технологий
+        const technologies = safeGet('getTechnologies', []);
+        technologies.forEach(tech => {
+          if (tech.vendors && Array.isArray(tech.vendors)) {
+            tech.vendors.forEach(vendor => {
+              if (vendor && typeof vendor === 'object' && vendor.integrators && Array.isArray(vendor.integrators)) {
+                vendor.integrators.forEach(integrator => {
+                  // Интегратор может быть объектом с полем name или строкой
+                  const integratorName = typeof integrator === 'object' && integrator !== null
+                    ? (integrator.name || integrator.id || String(integrator))
+                    : String(integrator);
+                  if (integratorName && integratorName.trim()) {
+                    integratorSet.add(integratorName.trim());
+                  }
+                });
+              }
+            });
+          }
+        });
+
+        // 2. Добавляем интеграторы из JSON файла (если доступен модуль VendorsFiles)
+        if (typeof window.VendorsFiles !== 'undefined' && typeof window.VendorsFiles.loadIntegratorsList === 'function') {
+          try {
+            const jsonIntegrators = await window.VendorsFiles.loadIntegratorsList();
+            if (Array.isArray(jsonIntegrators)) {
+              jsonIntegrators.forEach(integrator => {
+                const integratorName = String(integrator).trim();
+                if (integratorName) integratorSet.add(integratorName);
+              });
+            }
+          } catch (e) {
+            if (window.Logger) window.Logger.warn('Ошибка при загрузке интеграторов из JSON', e);
+          }
+        }
+
+        // 3. Добавляем интеграторы из localStorage
+        try {
+          const stored = localStorage.getItem('rmk_integrators_list');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed)) {
+              parsed.forEach(integrator => {
+                const integratorName = String(integrator).trim();
+                if (integratorName) integratorSet.add(integratorName);
+              });
+            }
+          }
+        } catch (e) {
+          // Игнорируем ошибки
+        }
+
+        return Array.from(integratorSet).sort();
+      },
+      placeholder: 'Все интеграторы'
     }
   ];
 
   // Функция для заполнения списков фильтров
-  function populateExportFilters() {
+  async function populateExportFilters() {
     // Создаем очередь задач для обработки фильтров по одному
     const tasks = [];
 
     // Добавляем основные фильтры из конфигурации
-    FILTER_CONFIG.forEach(({ field, source, placeholder }) => {
-      tasks.push(() => {
-        const data = source();
+    for (const { field, source, placeholder } of FILTER_CONFIG) {
+      tasks.push(async () => {
+        const data = await (typeof source === 'function' ? source() : Promise.resolve(source()));
         if (Array.isArray(data) && data.length > 0) {
           populateMultiSelect(`filter_${field}_container`, data, placeholder);
         } else if (field === 'techTypes') {
           if (window.Logger) window.Logger.warn('Не удалось загрузить список типов технологий для фильтра экспорта. Проверьте, что данные загружены и window.techTypes или window.TECHTYPE_TO_SHAPE доступны.');
         }
       });
-    });
+    }
 
     // Добавляем заполнение множественного выбора для стоимости внедрения
     const costPromOptions = [
@@ -1188,9 +1356,9 @@ window.ExportModule = (function() {
 
     // Обрабатываем задачи по одной, используя requestAnimationFrame для разбиения работы
     let currentTaskIndex = 0;
-    const processNextTask = () => {
+    const processNextTask = async () => {
       if (currentTaskIndex < tasks.length) {
-        tasks[currentTaskIndex]();
+        await tasks[currentTaskIndex]();
         currentTaskIndex++;
         // Планируем следующую задачу в следующем кадре
         requestAnimationFrame(processNextTask);
@@ -1203,7 +1371,7 @@ window.ExportModule = (function() {
 
   // Функция для включения/отключения фильтров при изменении чекбоксов
   function setupExportFilterToggles() {
-    const multiSelectFields = ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'funcCover', 'priority'];
+    const multiSelectFields = ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'funcCover', 'priority', 'vendors', 'integrators'];
     const singleSelectFields = [];
     const textFields = ['description'];
 
@@ -1360,7 +1528,9 @@ window.ExportModule = (function() {
       techRead: false,
       organRead: false,
       funcCover: false,
-      priority: false
+      priority: false,
+      vendors: false,
+      integrators: false
     };
 
     // Инициализация чекбоксов
@@ -1500,7 +1670,7 @@ window.ExportModule = (function() {
     }
 
     // Проверяем поля с множественным выбором
-    const allMultiSelectFields = ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'funcCover', 'priority'];
+    const allMultiSelectFields = ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'funcCover', 'priority', 'vendors', 'integrators'];
     const fieldLabels = {
       'company': 'Предприятия',
       'blocks': 'Функциональный блок',
@@ -1511,7 +1681,9 @@ window.ExportModule = (function() {
       'techRead': 'Технологическая готовность',
       'organRead': 'Организационная готовность',
       'funcCover': 'Покрытие функций',
-      'priority': 'Приоритет'
+      'priority': 'Приоритет',
+      'vendors': 'Вендору',
+      'integrators': 'Интеграторы'
     };
 
     allMultiSelectFields.forEach(field => {
@@ -1594,7 +1766,7 @@ window.ExportModule = (function() {
         document.querySelectorAll('#exportPdfModal .export-field-item > label input[type="checkbox"], #exportPdfModal .export-field-row > label input[type="checkbox"]').forEach(cb => {
           cb.checked = shouldSelectAll;
           const field = cb.getAttribute('data-field');
-          const multiSelectFields = ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'funcCover', 'priority'];
+          const multiSelectFields = ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'funcCover', 'priority', 'vendors', 'integrators'];
 
           if (multiSelectFields.includes(field)) {
             const container = document.getElementById(`filter_${field}_container`);
@@ -1702,7 +1874,7 @@ window.ExportModule = (function() {
         });
 
         // Собираем значения фильтров
-        const multiSelectFields = ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'funcCover', 'priority'];
+        const multiSelectFields = ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'funcCover', 'priority', 'vendors', 'integrators'];
         const textFields = ['description'];
 
         // Множественный выбор

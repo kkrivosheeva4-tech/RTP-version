@@ -10,6 +10,11 @@
 
   // Форма по типу технологии
   function computeShapeByTechType(techType, TECHTYPE_TO_SHAPE) {
+    // Для директорской страницы всегда используем круг
+    const isDirectorPage = document.body.id === 'rmk-director';
+    if (isDirectorPage) {
+      return 'circle';
+    }
     if (!techType || !TECHTYPE_TO_SHAPE) return null;
     return TECHTYPE_TO_SHAPE[techType] || null;
   }
@@ -24,33 +29,40 @@
 
     if (radarBackgroundRendered) return;
 
-    // Создаем ringLabelsGroup (добавим его в SVG после секторов)
-    const ringLabels = document.createElementNS(SVG_NS, "g");
-    ringLabels.id = "ringLabelsGroup";
-    RINGS.forEach((name, i) => {
-      const r = (i + 1) * RADIUS_STEP;
-      const pos = polarToCartesian(CENTER_X, CENTER_Y, r, 0);
-      const labelGroup = document.createElementNS(SVG_NS, "g");
-      labelGroup.setAttribute("transform", `translate(${pos.x}, ${pos.y})`);
-      const bg = document.createElementNS(SVG_NS, "rect");
-      bg.classList.add("ring-label-bg");
-      const width = RING_LABEL_WIDTH;
-      const height = RING_LABEL_HEIGHT;
-      bg.setAttribute("x", -width / 2);
-      bg.setAttribute("y", -height / 2);
-      bg.setAttribute("width", width);
-      bg.setAttribute("height", height);
-      const txt = document.createElementNS(SVG_NS, "text");
-      txt.classList.add("ring-label");
-      txt.setAttribute("x", 0);
-      txt.setAttribute("y", 0);
-      txt.setAttribute("dominant-baseline", "middle");
-      txt.setAttribute("text-anchor", "middle");
-      txt.textContent = name;
-      labelGroup.appendChild(bg);
-      labelGroup.appendChild(txt);
-      ringLabels.appendChild(labelGroup);
-    });
+    // Проверяем, является ли это директорской страницей
+    const isDirectorPage = document.body.id === 'rmk-director';
+
+    // Создаем ringLabelsGroup (добавим его в SVG после секторов) только для обычной страницы
+    if (!isDirectorPage) {
+      const ringLabels = document.createElementNS(SVG_NS, "g");
+      ringLabels.id = "ringLabelsGroup";
+      RINGS.forEach((name, i) => {
+        const r = (i + 1) * RADIUS_STEP;
+        const pos = polarToCartesian(CENTER_X, CENTER_Y, r, 0);
+        const labelGroup = document.createElementNS(SVG_NS, "g");
+        labelGroup.setAttribute("transform", `translate(${pos.x}, ${pos.y})`);
+        const bg = document.createElementNS(SVG_NS, "rect");
+        bg.classList.add("ring-label-bg");
+        const width = RING_LABEL_WIDTH;
+        const height = RING_LABEL_HEIGHT;
+        bg.setAttribute("x", -width / 2);
+        bg.setAttribute("y", -height / 2);
+        bg.setAttribute("width", width);
+        bg.setAttribute("height", height);
+        const txt = document.createElementNS(SVG_NS, "text");
+        txt.classList.add("ring-label");
+        txt.setAttribute("x", 0);
+        txt.setAttribute("y", 0);
+        txt.setAttribute("dominant-baseline", "middle");
+        txt.setAttribute("text-anchor", "middle");
+        txt.textContent = name;
+        labelGroup.appendChild(bg);
+        labelGroup.appendChild(txt);
+        ringLabels.appendChild(labelGroup);
+      });
+      // Добавляем группу подписей колец ПОСЛЕ секторов (будет добавлено позже)
+      window.ringLabelsGroup = ringLabels;
+    }
 
     // Создаем и добавляем quadrant-group (фон радара и линии)
     QUADRANTS.forEach((q) => {
@@ -229,8 +241,10 @@
       svg.appendChild(g);
     });
 
-    // Добавляем группу подписей колец ПОСЛЕ секторов
-    svg.appendChild(ringLabels);
+    // Добавляем группу подписей колец ПОСЛЕ секторов (только для обычной страницы)
+    if (!isDirectorPage && window.ringLabelsGroup) {
+      svg.appendChild(window.ringLabelsGroup);
+    }
 
     radarBackgroundRendered = true;
     // Очищаем кэш групп квадрантов после создания структуры SVG
@@ -239,6 +253,14 @@
 
   // Легенда фигур технологий по типам
   function renderLegend(config) {
+    // Для директорской страницы легенда не нужна (только круги)
+    const isDirectorPage = document.body.id === 'rmk-director';
+    if (isDirectorPage) {
+      const legend = document.querySelector('.legend');
+      if (legend) legend.innerHTML = '';
+      return;
+    }
+
     const { SVG_NS, starPath } = config;
     const legend = document.querySelector('.legend');
     if (!legend) return;
@@ -301,7 +323,31 @@
     const targetQuadrant = quadrant !== null ? quadrant : tech.quadrant;
     const g = getQuadrantGroup(targetQuadrant);
     if (!g) return;
-    const size = 10;
+
+    // Проверяем, является ли это директорской страницей
+    const isDirectorPage = document.body.id === 'rmk-director';
+
+    // Для директорской страницы размер зависит от количества вендоров
+    // Три разреза: 0-1 вендор (8), 2-3 вендора (14), 4+ вендоров (20)
+    let size;
+    if (isDirectorPage) {
+      const vendorCount = (tech.vendors && Array.isArray(tech.vendors)) ? tech.vendors.length : 0;
+
+      // Определяем размер на основе количества вендоров
+      if (vendorCount <= 1) {
+        // Маленький: 0-1 вендор
+        size = 8;
+      } else if (vendorCount === 2 || vendorCount === 3) {
+        // Средний: 2-3 вендора
+        size = 14;
+      } else {
+        // Большой: 4+ вендоров
+        size = 20;
+      }
+    } else {
+      size = 10;
+    }
+
     let el;
     const shape = computeShapeByTechType(tech.techType, TECHTYPE_TO_SHAPE) || tech.shape || 'circle';
     const dataShape = shape;
@@ -479,11 +525,21 @@
 
     if (window.Logger) window.Logger.debug('renderRadar: start — input data length:', Array.isArray(techData) ? techData.length : 0);
 
-    // Фильтруем технологии по валидности кольца
+    // Проверяем, является ли это директорской страницей
+    const isDirectorPage = document.body.id === 'rmk-director';
+
+    // Фильтруем технологии по валидности
     const validTechs = (Array.isArray(techData) ? techData : [])
       .filter((t) => {
-        const ring = (t && typeof t.level !== 'undefined' && levelToRing && Object.prototype.hasOwnProperty.call(levelToRing, t.level)) ? levelToRing[t.level] : null;
-        return t && ring != null;
+        if (!t) return false;
+        if (isDirectorPage) {
+          // Для директорской страницы проверяем наличие квадрантов (готовность рассчитывается автоматически)
+          return true;
+        } else {
+          // Для обычной страницы проверяем наличие кольца (статуса)
+          const ring = (typeof t.level !== 'undefined' && levelToRing && Object.prototype.hasOwnProperty.call(levelToRing, t.level)) ? levelToRing[t.level] : null;
+          return ring != null;
+        }
       });
 
     if (window.Logger) window.Logger.debug('renderRadar: start — valid techs:', validTechs.length);
@@ -502,10 +558,24 @@
       const shape = computeShapeByTechType(t.techType, TECHTYPE_TO_SHAPE) || 'circle';
 
       techQuadrants.forEach((quadrantId) => {
+        // Для директорской страницы используем поле ring из данных, если указано
+        let ringValue = null;
+        if (isDirectorPage) {
+          if (t.ring !== undefined && t.ring !== null) {
+            ringValue = Number(t.ring);
+            const ringsLength = (window.RINGS && Array.isArray(window.RINGS) && window.RINGS.length > 0) ? window.RINGS.length : 3;
+            if (isNaN(ringValue) || ringValue < 0 || ringValue >= ringsLength) {
+              ringValue = null;
+            }
+          }
+        } else {
+          ringValue = levelToRing[t.level] || null;
+        }
+
         renderData.push({
           ...t,
           quadrant: quadrantId,
-          ring: levelToRing[t.level],
+          ring: ringValue,
           shape: shape,
           x: null,
           y: null

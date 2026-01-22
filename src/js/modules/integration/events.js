@@ -44,15 +44,26 @@
     const themeToggle = document.getElementById("themeToggle");
     if (themeToggle) {
       const savedTheme = localStorage.getItem("theme") || "light";
-      if (savedTheme === "dark") {
-        document.body.classList.add("dark");
+      const isDark = savedTheme === "dark";
+      // Убеждаемся, что есть правильный класс для темы
+      document.body.classList.remove("light", "dark");
+      document.body.classList.add(isDark ? "dark" : "light");
+      if (isDark) {
         themeToggle.checked = true;
       }
 
-      themeToggle.addEventListener("change", () => {
-        document.body.classList.toggle("dark", themeToggle.checked);
-        const newTheme = themeToggle.checked ? "dark" : "light";
+      themeToggle.addEventListener("change", (e) => {
+        e.stopPropagation(); // Останавливаем всплытие события
+        const isDarkNow = themeToggle.checked;
+        // Убираем оба класса и добавляем нужный
+        document.body.classList.remove("light", "dark");
+        document.body.classList.add(isDarkNow ? "dark" : "light");
+        const newTheme = isDarkNow ? "dark" : "light";
         localStorage.setItem("theme", newTheme);
+      });
+      // Также обрабатываем клик на label или обертку переключателя темы
+      themeToggle.addEventListener("click", (e) => {
+        e.stopPropagation(); // Останавливаем всплытие события
       });
     }
 
@@ -472,6 +483,13 @@
 
     // ===== ОБЩИЙ СБРОС ПО КЛИКУ ВНЕ =====
     document.addEventListener("click", (e) => {
+      // Игнорируем клики по переключателю темы и его элементам
+      if (e.target.closest("#themeToggle") || e.target.id === "themeToggle" ||
+          e.target.closest("label[for='themeToggle']") ||
+          e.target.closest(".theme-switch") ||
+          e.target.closest(".theme-toggle-wrapper")) {
+        return;
+      }
       const clickedOnSidebarInteractive =
         e.target.closest(".sidebar-wrapper") ||
         e.target.closest(".sector-item") ||
@@ -558,10 +576,20 @@
     // ===== ДЕТАЛЬНАЯ ПАНЕЛЬ =====
     const closeDetailEl = document.getElementById("closeDetailPanel");
     if (closeDetailEl) {
-      closeDetailEl.addEventListener("click", (e) => {
+      // Используем делегирование событий для надежности, если элемент пересоздается
+      const handleCloseDetail = (e) => {
+        e.preventDefault();
         e.stopPropagation();
-        const detailPanel = DOMCache.get("detailPanel");
+        const detailPanel = DOMCache.get("detailPanel") || document.getElementById("detailPanel");
         if (detailPanel) {
+          // Деактивируем focus trap ПЕРЕД закрытием панели
+          if (window.FocusTrap && typeof window.FocusTrap.release === 'function') {
+            try {
+              window.FocusTrap.release();
+            } catch (err) {
+              if (window.Logger) window.Logger.warn('Ошибка при освобождении focus trap', err);
+            }
+          }
           // Очищаем все inline стили, которые были установлены
           detailPanel.style.removeProperty("visibility");
           detailPanel.style.removeProperty("opacity");
@@ -569,10 +597,8 @@
           detailPanel.style.removeProperty("position");
           detailPanel.style.removeProperty("z-index");
           detailPanel.style.removeProperty("display");
-          // Деактивируем focus trap перед закрытием
-          if (window.FocusTrap && typeof window.FocusTrap.release === 'function') {
-            window.FocusTrap.release();
-          }
+          detailPanel.style.removeProperty("right");
+          detailPanel.style.removeProperty("left");
           // Удаляем класс active
           detailPanel.classList.remove("active");
           // Сбрасываем выбранную технологию
@@ -583,12 +609,23 @@
             window.setCurrentTech(null);
           }
           // Снимаем выделение с blip'ов
-          const svg = DOMCache.get("techRadar");
+          const svg = DOMCache.get("techRadar") || document.getElementById("techRadar");
           if (svg) {
             svg
               .querySelectorAll(".blip.selected")
               .forEach((el) => el.classList.remove("selected"));
           }
+        }
+      };
+
+      // Добавляем обработчик напрямую
+      closeDetailEl.addEventListener("click", handleCloseDetail);
+
+      // Также добавляем обработчик через делегирование на document для надежности
+      // (на случай, если элемент пересоздается при переключении предприятий)
+      document.addEventListener("click", (e) => {
+        if (e.target && (e.target.id === "closeDetailPanel" || e.target.closest("#closeDetailPanel"))) {
+          handleCloseDetail(e);
         }
       });
     }
@@ -744,6 +781,7 @@
 
     document.querySelectorAll(".close-btn").forEach((btn) => {
       btn.addEventListener("click", (e) => {
+        e.stopPropagation();
         const panelId = e.currentTarget.dataset.close;
         const panel = panelId
           ? document.getElementById(panelId)
@@ -1020,6 +1058,13 @@
     let ignoreOutsideClickUntil = 0;
     document.addEventListener("click", (e) => {
       if (Date.now() < ignoreOutsideClickUntil) return;
+      // Игнорируем клики по переключателю темы и его элементам
+      if (e.target.closest("#themeToggle") || e.target.id === "themeToggle" ||
+          e.target.closest("label[for='themeToggle']") ||
+          e.target.closest(".theme-switch") ||
+          e.target.closest(".theme-toggle-wrapper")) {
+        return;
+      }
       const mod = e.target.closest(".modal-panel");
       if (mod) {
         if (mod.id === "reportLoadingModal" || mod.id === "prospectsModal") return;

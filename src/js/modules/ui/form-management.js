@@ -56,6 +56,135 @@
   function initFormEvents() {
     const DOMCache = getDependency("DOMCache");
 
+    // ===== VENDORS -> INTEGRATORS (multi vendors, integrators per vendor) =====
+    function parseSelectedVendors(raw) {
+      const s = String(raw || "").trim();
+      if (!s) return [];
+      if (s.startsWith("[")) {
+        try {
+          const parsed = JSON.parse(s);
+          return Array.isArray(parsed)
+            ? parsed.map(x => String(x || "").trim()).filter(Boolean)
+            : [];
+        } catch (e) {
+          return [];
+        }
+      }
+      return [s].map(x => String(x || "").trim()).filter(Boolean);
+    }
+
+    function vendorKeyFromName(name) {
+      return encodeURIComponent(String(name || "").trim()).replace(/%/g, "_");
+    }
+
+    function getIntegratorsListFromState() {
+      try {
+        if (window.StateManager && typeof window.StateManager.get === "function") {
+          const list = window.StateManager.get("integratorsList");
+          if (Array.isArray(list)) return list.slice();
+        }
+      } catch (e) { /* ignore */ }
+      return [];
+    }
+
+    function setGroupVisible(groupId, visible) {
+      const el = document.getElementById(groupId);
+      if (!el) return;
+      el.style.display = visible ? "" : "none";
+    }
+
+    function renderVendorIntegrators(prefix, existingVendors) {
+      const vendorsFieldId = prefix === "edit" ? "editVendors" : "techVendors";
+      const groupId = prefix === "edit" ? "editVendorIntegratorsGroup" : "techVendorIntegratorsGroup";
+      const containerId = prefix === "edit" ? "editVendorIntegratorsByVendor" : "techVendorIntegratorsByVendor";
+      const container = document.getElementById(containerId);
+      if (!container) return;
+
+      const selectedVendors = parseSelectedVendors(getFormFieldValue(vendorsFieldId));
+      if (selectedVendors.length === 0) {
+        setGroupVisible(groupId, false);
+        container.innerHTML = "";
+        return;
+      }
+
+      setGroupVisible(groupId, true);
+      container.innerHTML = "";
+
+      const integratorsList = getIntegratorsListFromState();
+      const existingMap = new Map();
+      (Array.isArray(existingVendors) ? existingVendors : []).forEach(v => {
+        const vn = (v && typeof v === "object") ? String(v.name || "").trim() : String(v || "").trim();
+        if (!vn) return;
+        const ints = (v && typeof v === "object" && Array.isArray(v.integrators)) ? v.integrators : [];
+        const names = ints
+          .map(i => (i && typeof i === "object" ? i.name : i))
+          .map(x => String(x || "").trim())
+          .filter(Boolean);
+        existingMap.set(vn.toLowerCase(), names);
+      });
+
+      selectedVendors.forEach(vendorName => {
+        const key = vendorKeyFromName(vendorName);
+        const fieldId = `${prefix === "edit" ? "edit" : "tech"}VendorIntegrators__${key}`;
+
+        const row = document.createElement("div");
+        row.className = "vendor-integrators-row";
+        row.style.marginBottom = "10px";
+
+        const title = document.createElement("div");
+        title.style.fontWeight = "600";
+        title.style.marginBottom = "6px";
+        title.textContent = vendorName;
+
+        const select = document.createElement("div");
+        select.className = "custom-select-modal";
+        select.setAttribute("data-field", fieldId);
+        select.setAttribute("tabindex", "0");
+        select.innerHTML = `
+          <div class="select-trigger">
+            <span class="selected-text">Выберите</span>
+            <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+          </div>
+          <ul class="select-options"></ul>
+        `;
+
+        const hidden = document.createElement("input");
+        hidden.type = "hidden";
+        hidden.id = fieldId;
+        hidden.name = fieldId;
+
+        row.appendChild(title);
+        row.appendChild(select);
+        row.appendChild(hidden);
+        container.appendChild(row);
+
+        if (window.Filters && typeof window.Filters.populateSelectForModal === "function") {
+          window.Filters.populateSelectForModal(fieldId, integratorsList, "Выберите");
+        }
+
+        const pre = existingMap.get(vendorName.toLowerCase()) || [];
+        if (typeof window.setCustomSelectValue === "function") {
+          window.setCustomSelectValue(fieldId, pre);
+        } else {
+          hidden.value = pre.length ? JSON.stringify(pre) : "";
+        }
+      });
+    }
+
+    // Hook vendors changes to re-render vendor->integrators rows
+    ["tech", "edit"].forEach((p) => {
+      const vendorsFieldId = p === "edit" ? "editVendors" : "techVendors";
+      const el = document.getElementById(vendorsFieldId);
+      if (el && el.dataset.vendorIntegratorsHooked !== "true") {
+        el.dataset.vendorIntegratorsHooked = "true";
+        el.addEventListener("change", () => renderVendorIntegrators(p), false);
+        el.addEventListener("input", () => renderVendorIntegrators(p), false);
+      }
+      setTimeout(() => renderVendorIntegrators(p), 0);
+    });
+
     // ===== LIVE PRIORITY PREVIEW (EDIT FORM) =====
     function parseLeadingInt(value) {
       if (value === undefined || value === null) return null;
@@ -268,9 +397,35 @@
 
     const cancelEdit = document.getElementById("cancelEdit");
     if (cancelEdit) {
-      cancelEdit.onclick = () => {
-        if (typeof window.hideModal === "function") {
-          window.hideModal("editTechPanel");
+      cancelEdit.onclick = (e) => {
+        e.stopPropagation();
+        const panel = document.getElementById("editTechPanel");
+        if (!panel) return;
+
+        if (
+          typeof window.isFormDirty === "function" &&
+          typeof window.showInternalConfirm === "function" &&
+          typeof window.hideModal === "function"
+        ) {
+          const form = panel.querySelector("form");
+          if (window.isFormDirty(form)) {
+            window.showInternalConfirm(
+              "Вы заполнили/изменили некоторые поля. Уверены, что хотите закрыть? Все изменения будут потеряны.",
+              () => {
+                form?.reset();
+                if (
+                  typeof window.resetCustomSelects === "function"
+                ) {
+                  window.resetCustomSelects("edit");
+                }
+              },
+              panel
+            );
+          } else {
+            window.hideModal(panel);
+          }
+        } else if (typeof window.hideModal === "function") {
+          window.hideModal(panel);
         }
       };
     }
@@ -489,16 +644,16 @@
             currentTech.blocks && currentTech.blocks.length
               ? currentTech.blocks
               : currentTech.block
-              ? [currentTech.block]
-              : []
+                ? [currentTech.block]
+                : []
           );
           window.setCustomSelectValue(
             "editFunc",
             currentTech.functions && currentTech.functions.length
               ? currentTech.functions
               : currentTech.func
-              ? [currentTech.func]
-              : []
+                ? [currentTech.func]
+                : []
           );
           window.setCustomSelectValue(
             "editTechType",
@@ -512,8 +667,8 @@
           const companies = Array.isArray(currentTech.company)
             ? currentTech.company
             : currentTech.company
-            ? [currentTech.company]
-            : [];
+              ? [currentTech.company]
+              : [];
           window.setCustomSelectValue(
             "editCompany",
             companies.length > 0 ? companies : ""
@@ -576,9 +731,9 @@
           currentTech.trlStage !== null
         ) {
           const trlOptions = {
-            1: "1 — Ранняя стадия (исследование)",
-            2: "2 — Разработка (прототип)",
-            3: "3 — Зрелость (готовность к внедрению)",
+            1: "1-Исследовательская",
+            2: "2-Прототип",
+            3: "3-Технология готова к внедрению",
           };
           const trlValue = trlOptions[currentTech.trlStage];
           if (typeof window.setCustomSelectValue === "function") {
@@ -601,6 +756,33 @@
         f.querySelector("#editDesc").value = currentTech.description;
         const exampleDescEl = document.getElementById("editExampleDesc");
         if (exampleDescEl) exampleDescEl.value = currentTech.exampleDesc || "";
+        // Вендоры + интеграторы по каждому вендору
+        try {
+          const vendorNames = Array.isArray(currentTech.vendors)
+            ? currentTech.vendors.map(v => normalizeVendorName(v)).filter(Boolean)
+            : [];
+          if (typeof window.setCustomSelectValue === "function") {
+            window.setCustomSelectValue("editVendors", vendorNames);
+          } else {
+            const hidden = document.getElementById("editVendors");
+            if (hidden) hidden.value = vendorNames.length ? JSON.stringify(vendorNames) : "";
+          }
+          // После установки вендоров — отрисуем блоки интеграторов и префиллим из currentTech.vendors
+          setTimeout(() => {
+            if (typeof renderVendorIntegrators === "function") {
+              renderVendorIntegrators("edit", currentTech.vendors || []);
+            }
+          }, 0);
+        } catch (e) {
+          // ignore
+        }
+        // Загружаем файлы
+        if (window.VendorsFiles) {
+          if (currentTech.files && Array.isArray(currentTech.files)) {
+            window.VendorsFiles.loadFilesIntoForm('editFilesList', currentTech.files, true);
+          }
+        }
+
         // Обновляем видимость полей оценок в зависимости от количества предприятий
         if (typeof window.updateEditTechRatingsVisibility === "function") {
           window.updateEditTechRatingsVisibility(currentTech);
@@ -655,6 +837,106 @@
 
   // ===== FORM HANDLERS =====
   // Обработчики форм для добавления и редактирования технологий, а также добавления блоков
+
+  function normalizeVendorName(v) {
+    if (v == null) return '';
+    if (typeof v === 'object') {
+      const n = v.name || v.id || '';
+      return String(n).trim();
+    }
+    return String(v).trim();
+  }
+
+  function parseVendorsFromField(fieldId) {
+    // Вендор(ы) выбираются в мультиселекте: JSON-массив строк в hidden input.
+    // Интеграторы для каждого вендора хранятся в динамических hidden полях:
+    // techVendorIntegrators__{key} / editVendorIntegrators__{key}
+    const raw = getFormFieldValue(fieldId);
+    const s = String(raw || '').trim();
+    let vendorNames = [];
+    if (!s) vendorNames = [];
+    else if (s.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(s);
+        vendorNames = Array.isArray(parsed) ? parsed.map(x => String(x || '').trim()).filter(Boolean) : [];
+      } catch (e) {
+        vendorNames = [];
+      }
+    } else {
+      vendorNames = [s].map(x => String(x || '').trim()).filter(Boolean);
+    }
+
+    const prefix = fieldId.startsWith('edit') ? 'edit' : 'tech';
+    const vendorKeyFromName = (name) => encodeURIComponent(String(name || '').trim()).replace(/%/g, '_');
+
+    const vendors = vendorNames.map((name, idx) => {
+      const key = vendorKeyFromName(name);
+      const integratorsFieldId = `${prefix}VendorIntegrators__${key}`;
+      const integratorNames = parseStringArrayFromField(integratorsFieldId);
+      return {
+        id: Date.now() + idx,
+        name,
+        integrators: integratorsToObjects(integratorNames),
+      };
+    });
+
+    return vendors;
+  }
+
+  function parseStringArrayFromField(fieldId) {
+    const raw = getFormFieldValue(fieldId);
+    if (!raw || !String(raw).trim()) return [];
+    const s = String(raw).trim();
+    if (s.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(s);
+        return Array.isArray(parsed)
+          ? parsed.map(x => String(x || '').trim()).filter(Boolean)
+          : [];
+      } catch (e) {
+        return [];
+      }
+    }
+    return [s].map(x => String(x || '').trim()).filter(Boolean);
+  }
+
+  function integratorsToObjects(names) {
+    const arr = Array.isArray(names) ? names : [];
+    return arr
+      .map((n, idx) => ({ id: Date.now() + idx, name: String(n || '').trim() }))
+      .filter(x => x.name);
+  }
+
+  function mergeVendorsPreservingIntegrators(existingVendors, selectedVendors) {
+    // Для мультивыбора: сохраняем integrators у тех вендоров, которые остались выбранными,
+    // если для них не выбраны новые интеграторы (через динамические поля).
+    const existing = Array.isArray(existingVendors) ? existingVendors : [];
+    const selected = Array.isArray(selectedVendors) ? selectedVendors : [];
+
+    const existingByName = new Map();
+    existing.forEach(v => {
+      const n = normalizeVendorName(v);
+      if (!n) return;
+      existingByName.set(n.toLowerCase(), v);
+    });
+
+    return selected.map((v, idx) => {
+      const name = normalizeVendorName(v);
+      if (!name) return null;
+      const prev = existingByName.get(name.toLowerCase());
+      if (prev && typeof prev === 'object') {
+        // integrators уже сформированы из динамических полей в parseVendorsFromField,
+        // но если там пусто — оставим старые.
+        const nextIntegrators = Array.isArray(v.integrators) ? v.integrators : [];
+        return {
+          id: prev.id != null ? prev.id : (v && typeof v === 'object' && v.id != null ? v.id : (Date.now() + idx)),
+          name: prev.name ? String(prev.name).trim() : name,
+          integrators: nextIntegrators.length ? nextIntegrators : (Array.isArray(prev.integrators) ? prev.integrators : [])
+        };
+      }
+      return v;
+    }).filter(Boolean);
+  }
 
   // Обработчик формы добавления технологии
   function handleAddTechFormSubmit(e) {
@@ -732,7 +1014,24 @@
       company: companiesVal.length === 1 ? companiesVal[0] : companiesVal,
       description: getFormFieldValue("techDesc").trim(),
       exampleDesc: getFormFieldValue('techExampleDesc').trim(),
+      vendors: parseVendorsFromField('techVendors'),
+      files: []
     };
+
+    // Интеграторы выбираются для каждого вендора в динамических полях (см. parseVendorsFromField)
+
+    // Обработка файлов
+    const filesValue = getFormFieldValue('techFiles');
+    if (filesValue && filesValue.trim()) {
+      try {
+        const files = JSON.parse(filesValue);
+        if (Array.isArray(files) && files.length > 0) {
+          t.files = files;
+        }
+      } catch (e) {
+        if (window.Logger) window.Logger.warn('Ошибка при парсинге файлов', e);
+      }
+    }
 
     t.level = selStatus || ((RINGS && RINGS.length) ? RINGS[0] : 'Используемые');
     t.status = t.level;
@@ -744,15 +1043,18 @@
     const clamp13 = (n) => Math.max(1, Math.min(3, Number(n)));
     // Извлекаем значение покрытия функций из выпадающего списка
     const fc = getFormFieldValue('techFuncCover');
-    if (fc !== undefined && fc !== null && fc !== '' && String(fc).trim() !== '') {
-      const fcMatch = String(fc).match(/^(\d+)/);
+    // Проверяем значение напрямую из DOM, если getFormFieldValue не работает
+    const fcDirect = document.getElementById('techFuncCover');
+    const fcValue = fc || (fcDirect ? fcDirect.value : '');
+    if (fcValue !== undefined && fcValue !== null && fcValue !== '' && String(fcValue).trim() !== '') {
+      const fcMatch = String(fcValue).match(/^(\d+)/);
       if (fcMatch) {
         const fcNum = parseInt(fcMatch[1], 10);
         if (fcNum >= 0 && fcNum <= 3) {
           t.funcCover = fcNum;
         }
       } else {
-        t.funcCover = clamp03(fc);
+        t.funcCover = clamp03(fcValue);
       }
     }
 
@@ -850,7 +1152,7 @@
 
     if (!blockToQuadrant.hasOwnProperty(blockKeyForLookup) || blockToQuadrant[blockKeyForLookup] == null) {
       blockToQuadrant[blockKeyForLookup] = 1;
-      StateAccessors.setBlockToQuadrant({...blockToQuadrant});
+      StateAccessors.setBlockToQuadrant({ ...blockToQuadrant });
       const sidebarSelect = DOMCache.find('.custom-select[data-filter="block"] .select-options');
       if (sidebarSelect) {
         const li = document.createElement('li'); li.textContent = blockKeyForLookup; li.setAttribute('data-value', blockKeyForLookup);
@@ -881,7 +1183,7 @@
     if (!bk || !blockToQuadrantMap || !Object.prototype.hasOwnProperty.call(blockToQuadrantMap, bk) || blockToQuadrantMap[bk] == null) {
       if (window.Logger) window.Logger.warn('addTech: block mapping missing for', bk, '— defaulting to quadrant 1 and adding option');
       blockToQuadrantMap[bk] = 1;
-      StateAccessors.setBlockToQuadrant({...blockToQuadrantMap});
+      StateAccessors.setBlockToQuadrant({ ...blockToQuadrantMap });
       const sidebarSelect = DOMCache.find('.custom-select[data-filter="block"] .select-options');
       if (sidebarSelect) { const li = document.createElement('li'); li.textContent = bk; li.setAttribute('data-value', bk); sidebarSelect.appendChild(li); }
       DOMCache.queryAll('.custom-select-modal[data-field="techBlock"], .custom-select-modal[data-field="editBlock"]').forEach(ms => {
@@ -1021,7 +1323,7 @@
         }
       });
       enterpriseData[currentEnterprise] = [...technologies];
-      StateAccessors.setEnterpriseData({...enterpriseData});
+      StateAccessors.setEnterpriseData({ ...enterpriseData });
       DataLoader.vfsWrite('enterpriseData.json', enterpriseData);
     } catch (err) { if (window.Logger) window.Logger.warn('Не удалось сохранить enterpriseData в VFS', err); }
 
@@ -1051,13 +1353,15 @@
     const newTechTypeVal = getFormFieldValue('editTechType') || existing.techType;
     const newStatus = getFormFieldValue('editStatus').trim() || existing.level || existing.status || '';
     const newShape = window.computeShapeByTechType ? (window.computeShapeByTechType(newTechTypeVal) || 'circle') : 'circle';
+    const selectedVendors = parseVendorsFromField('editVendors');
+    let mergedVendors = mergeVendorsPreservingIntegrators(existing.vendors, selectedVendors);
 
     const rawBlockE = getFormFieldValue("editBlock");
     const rawFuncE = getFormFieldValue("editFunc");
     let blocksValE = rawBlockE;
     let functionsValE = rawFuncE;
-    try { if (rawBlockE && rawBlockE.trim().startsWith('[')) blocksValE = JSON.parse(rawBlockE); } catch (err) {}
-    try { if (rawFuncE && rawFuncE.trim().startsWith('[')) functionsValE = JSON.parse(rawFuncE); } catch (err) {}
+    try { if (rawBlockE && rawBlockE.trim().startsWith('[')) blocksValE = JSON.parse(rawBlockE); } catch (err) { }
+    try { if (rawFuncE && rawFuncE.trim().startsWith('[')) functionsValE = JSON.parse(rawFuncE); } catch (err) { }
 
     // Сохраняем сектор (если он не меняется, оставляем существующий)
     // Сектор может быть строкой или массивом, сохраняем как есть
@@ -1075,6 +1379,8 @@
       shape: newShape,
       description: getFormFieldValue("editDesc"),
       exampleDesc: getFormFieldValue('editExampleDesc').trim(),
+      vendors: mergedVendors,
+      files: existing.files || []
     });
 
     // Сохраняем сектор отдельно, чтобы не перезаписать его, если он был
@@ -1133,6 +1439,19 @@
     const companies = Array.isArray(companiesValE) && companiesValE.length > 0
       ? companiesValE
       : (Array.isArray(existing.company) ? existing.company : (existing.company ? [existing.company] : []));
+
+    // Обработка файлов при редактировании
+    const filesValue = getFormFieldValue('editFiles');
+    if (filesValue && filesValue.trim()) {
+      try {
+        const files = JSON.parse(filesValue);
+        if (Array.isArray(files) && files.length > 0) {
+          technologies[idx].files = files;
+        }
+      } catch (e) {
+        if (window.Logger) window.Logger.warn('Ошибка при парсинге файлов при редактировании', e);
+      }
+    }
 
     // Обновляем поле company в технологии
     technologies[idx].company = companies.length === 1 ? companies[0] : companies;
@@ -1218,30 +1537,30 @@
 
     // Проверяем, нужно ли пересчитывать координаты
     const blockChanged = JSON.stringify(technologies[idx].blocks || [technologies[idx].block]) !==
-                         JSON.stringify(existing.blocks || [existing.block]);
+      JSON.stringify(existing.blocks || [existing.block]);
     const statusChanged = technologies[idx].status !== existing.status ||
-                          technologies[idx].level !== existing.level;
+      technologies[idx].level !== existing.level;
 
     if (blockChanged || statusChanged) {
       // Пересчитываем координаты
       Positioning.computeCoordinates(technologies[idx]);
 
       // Инвалидируем кэш квадрантов
-    // Получаем или создаем quadrantsCache
-    let quadrantsCache = StateAccessors.getQuadrantsCache();
-    if (!quadrantsCache) {
-      // Создаем новый Map если кэш не существует
-      quadrantsCache = new Map();
-      // Пытаемся установить через StateManager, если доступен
-      if (StateManager && StateManager.set) {
-        StateManager.set('quadrantsCache', quadrantsCache);
+      // Получаем или создаем quadrantsCache
+      let quadrantsCache = StateAccessors.getQuadrantsCache();
+      if (!quadrantsCache) {
+        // Создаем новый Map если кэш не существует
+        quadrantsCache = new Map();
+        // Пытаемся установить через StateManager, если доступен
+        if (StateManager && StateManager.set) {
+          StateManager.set('quadrantsCache', quadrantsCache);
+        }
       }
-    }
-    if (quadrantsCache && typeof quadrantsCache.clear === 'function') {
-      quadrantsCache.clear();
-    }
-    const currentVersion = StateAccessors.getQuadrantsCacheVersion() || 0;
-    StateAccessors.setQuadrantsCacheVersion(currentVersion + 1);
+      if (quadrantsCache && typeof quadrantsCache.clear === 'function') {
+        quadrantsCache.clear();
+      }
+      const currentVersion = StateAccessors.getQuadrantsCacheVersion() || 0;
+      StateAccessors.setQuadrantsCacheVersion(currentVersion + 1);
     }
 
     StateAccessors.setTechnologies([...technologies]);
@@ -1316,7 +1635,7 @@
         }
       }
 
-      StateAccessors.setEnterpriseData({...enterpriseData});
+      StateAccessors.setEnterpriseData({ ...enterpriseData });
       DataLoader.vfsWrite('enterpriseData.json', enterpriseData);
     } catch (err) { if (window.Logger) window.Logger.warn('Не удалось сохранить enterpriseData после редактирования', err); }
 
@@ -1489,12 +1808,12 @@
         const nameToBlockId = StateAccessors.getNameToBlockId ? StateAccessors.getNameToBlockId() : {};
         nameToBlockId[blockName] = blockId;
         if (StateAccessors.setNameToBlockId) {
-          StateAccessors.setNameToBlockId({...nameToBlockId});
+          StateAccessors.setNameToBlockId({ ...nameToBlockId });
         }
 
         const blockToQuadrantMap = StateAccessors.getBlockToQuadrant();
         blockToQuadrantMap[blockName] = qId;
-        StateAccessors.setBlockToQuadrant({...blockToQuadrantMap});
+        StateAccessors.setBlockToQuadrant({ ...blockToQuadrantMap });
 
         // Логируем привязку для отладки
         if (window.Logger) {
@@ -1575,7 +1894,7 @@
               }
             });
 
-            StateAccessors.setFunctionToBlockMap({...functionToBlockMap});
+            StateAccessors.setFunctionToBlockMap({ ...functionToBlockMap });
             DataLoader.vfsWrite('functionToBlock.json', functionToBlockMap);
           } catch (err) {
             if (window.Logger) window.Logger.warn('Не удалось сохранить функции и связи', err);

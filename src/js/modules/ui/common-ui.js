@@ -23,7 +23,8 @@
 
   function checkArchitectRole() {
     const role = localStorage.getItem("role");
-    return role === "architect" || role === "admin";
+    // Архитекторы, админы, директоры и РП имеют права на редактирование
+    return role === "architect" || role === "admin" || role === "director" || role === "project_manager";
   }
 
   function renderAuth() {
@@ -81,7 +82,7 @@
       setButtonsVisibility(true);
       logoutContainer.querySelector(".logout").onclick = () => {
         safeLogout();
-        location.reload();
+        window.location.href = 'auth.html';
       };
     } else if (role === "admin") {
       authInfo.innerHTML = `<div class="user-role admin-role" data-tooltip="Перейти в админ-панель" style="cursor: pointer;">Администратор</div>`;
@@ -97,6 +98,50 @@
       if (adminRoleElement) {
         adminRoleElement.onclick = () => window.location.href = 'admin.html';
       }
+      logoutContainer.querySelector(".logout").onclick = () => {
+        safeLogout();
+        location.reload();
+      };
+      // Показываем кнопку переключения между страницами для админа
+      const switchViewBtn = document.getElementById('switchViewBtn');
+      if (switchViewBtn) {
+        switchViewBtn.style.display = 'flex';
+        const isRMKDirectorPage = document.body.id === 'rmk-director' ||
+                                   window.location.pathname.includes('RMK-director.html') ||
+                                   window.location.href.includes('RMK-director.html');
+        if (isRMKDirectorPage) {
+          switchViewBtn.setAttribute('data-tooltip', 'Переключить на страницу для архитекторов');
+          switchViewBtn.setAttribute('aria-label', 'Переключить на страницу для архитекторов');
+          switchViewBtn.onclick = () => {
+            const selectedEnterprise = localStorage.getItem('selectedEnterprise');
+            if (selectedEnterprise) {
+              sessionStorage.setItem('silentEnterpriseNav', '1');
+            }
+            window.location.href = 'RMK.html';
+          };
+        } else {
+          switchViewBtn.setAttribute('data-tooltip', 'Переключить на страницу для директоров');
+          switchViewBtn.setAttribute('aria-label', 'Переключить на страницу для директоров');
+          switchViewBtn.onclick = () => {
+            const selectedEnterprise = localStorage.getItem('selectedEnterprise');
+            if (selectedEnterprise) {
+              sessionStorage.setItem('silentEnterpriseNav', '1');
+            }
+            window.location.href = 'RMK-director.html';
+          };
+        }
+      }
+    } else if (role === "director" || role === "project_manager") {
+      authInfo.innerHTML = `<div class="user-role ${role === "director" ? "director-role" : "project-manager-role"}">${role === "director" ? "Директор" : "Руководитель проекта"}</div>`;
+      logoutContainer.innerHTML = `<button class="logout" data-tooltip="Выйти" aria-label="Выйти">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+      <polyline points="16,17 21,12 16,7"/>
+      <line x1="21" y1="12" x2="9" y2="12" stroke-dasharray="100"/>
+    </svg>
+  </button>`;
+      // Директоры и РП теперь имеют доступ к добавлению/редактированию/удалению технологий и экспорту
+      setButtonsVisibility(true);
       logoutContainer.querySelector(".logout").onclick = () => {
         safeLogout();
         location.reload();
@@ -135,16 +180,38 @@
     const themeToggle = document.getElementById("themeToggle");
     if (!themeToggle) return;
 
-    const savedTheme = localStorage.getItem("theme") || "light";
-    if (savedTheme === "dark") {
-      document.body.classList.add("dark");
-      themeToggle.checked = true;
+    // ВАЖНО: index.html стартует с <body class="dark">, поэтому если theme не сохранена,
+    // нельзя по умолчанию считать "light" — иначе переключатель и фактическая тема расходятся.
+    let savedTheme = null;
+    try {
+      savedTheme = localStorage.getItem("theme");
+    } catch (_) {}
+
+    if (!savedTheme) {
+      savedTheme = document.body.classList.contains("dark") ? "dark" : "light";
+      try {
+        localStorage.setItem("theme", savedTheme);
+      } catch (_) {}
     }
 
-    themeToggle.addEventListener("change", () => {
-      document.body.classList.toggle("dark", themeToggle.checked);
-      const newTheme = themeToggle.checked ? "dark" : "light";
+    const isDark = savedTheme === "dark";
+    // Убеждаемся, что есть правильный класс для темы
+    document.body.classList.remove("light", "dark");
+    document.body.classList.add(isDark ? "dark" : "light");
+    themeToggle.checked = isDark;
+
+    themeToggle.addEventListener("change", (e) => {
+      e.stopPropagation(); // Останавливаем всплытие события
+      const isDarkNow = themeToggle.checked;
+      // Убираем оба класса и добавляем нужный
+      document.body.classList.remove("light", "dark");
+      document.body.classList.add(isDarkNow ? "dark" : "light");
+      const newTheme = isDarkNow ? "dark" : "light";
       localStorage.setItem("theme", newTheme);
+    });
+    // Также обрабатываем клик на label или обертку переключателя темы
+    themeToggle.addEventListener("click", (e) => {
+      e.stopPropagation(); // Останавливаем всплытие события
     });
   }
 

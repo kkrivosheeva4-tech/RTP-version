@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; base-uri 'self';" />
-  <meta name="description" content="Радар технологий - система управления и визуализации технологических решений для предприятий" />
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; base-uri 'self';" />
+  <meta name="description"
+    content="Радар технологий - система управления и визуализации технологических решений для предприятий" />
   <meta name="keywords" content="радар технологий, управление технологиями, визуализация, технологии, предприятия" />
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website" />
@@ -14,7 +17,8 @@
   <!-- Twitter -->
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:title" content="Радар технологий" />
-  <meta name="twitter:description" content="Система управления и визуализации технологических решений для предприятий" />
+  <meta name="twitter:description"
+    content="Система управления и визуализации технологических решений для предприятий" />
   <meta name="twitter:image" content="/assets/images/icon.png" />
   <!-- PWA мета-теги -->
   <meta name="theme-color" content="#ce9068" />
@@ -28,11 +32,13 @@
   <link rel="stylesheet" href="/src/css/common.css">
   <link rel="stylesheet" href="/src/css/about.css">
 </head>
+
 <body class="dark">
   <!-- ===== Хедер ===== -->
   <header role="banner">
     <a class="logo" href="index.html" aria-label="Радар технологий - на главную">
-      <img src="/assets/images/icon.png" alt="Logo" class="logo-img" onerror="this.style.display='none'; this.nextElementSibling?.style.display='inline';" />
+      <img src="/assets/images/icon.png" alt="Logo" class="logo-img"
+        onerror="this.style.display='none'; this.nextElementSibling?.style.display='inline';" />
       <span class="logo-fallback" style="display:none;">РТ</span>
       <span>Радар технологий</span>
     </a>
@@ -46,7 +52,9 @@
     </nav>
     <div class="controls">
       <button class="help-btn" id="helpBtn" data-tooltip="Помощь" aria-label="Помощь">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+          focusable="false">
           <circle cx="12" cy="12" r="10"></circle>
           <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
           <line x1="12" y1="17" x2="12.01" y2="17"></line>
@@ -63,28 +71,29 @@
   </header>
 
   <!-- ===== Главная ===== -->
-<main role="main">
-  <div class="main-header">
-    <div class="selection-hint">
-      <div class="arrow-up">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <polyline points="18,15 12,9 6,15"></polyline>
-        </svg>
+  <main role="main">
+    <div class="main-header">
+      <div class="selection-hint">
+        <div class="arrow-up">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor"
+            stroke-width="2" viewBox="0 0 24 24">
+            <polyline points="18,15 12,9 6,15"></polyline>
+          </svg>
+        </div>
+        <div class="selection-text">Чтобы перейти к радару – выберите предприятие</div>
       </div>
-      <div class="selection-text">Чтобы перейти к радару — выберите предприятие</div>
-    </div>
-    <h1>
-      <span>ИНТЕРАКТИВНАЯ ВИЗУАЛИЗАЦИЯ</span><br>
-      <span>ЦИФРОВОЙ ЗРЕЛОСТИ</span>
-    </h1>
+      <h1>
+        <span>ИНТЕРАКТИВНАЯ ВИЗУАЛИЗАЦИЯ</span><br>
+        <span>ЦИФРОВОЙ ЗРЕЛОСТИ</span>
+      </h1>
 
-  </div>
-  <div id="radarContainer" class="radar-container">
-    <svg id="techRadar" viewBox="0 0 1000 1000" role="img" aria-label="Интерактивный радар технологий"></svg>
-    <div id="quadrantLabels" role="region" aria-label="Подписи квадрантов"></div>
-    <div id="hoverLabel" class="hover-label" role="status" aria-live="polite" aria-atomic="true"></div>
-  </div>
-</main>
+    </div>
+    <div id="radarContainer" class="radar-container">
+      <svg id="techRadar" viewBox="0 0 1000 1000" role="img" aria-label="Интерактивный радар технологий"></svg>
+      <div id="quadrantLabels" role="region" aria-label="Подписи квадрантов"></div>
+      <div id="hoverLabel" class="hover-label" role="status" aria-live="polite" aria-atomic="true"></div>
+    </div>
+  </main>
   <script src="/src/js/modules/ui/common-ui.js"></script>
   <script src="/src/js/modules/ui/offline-handler.js"></script>
   <script src="/src/js/modules/ui/mobile-nav.js"></script>
@@ -93,4 +102,5 @@
   <script src="/src/js/script.js"></script>
 
 </body>
+
 </html>

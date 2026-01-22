@@ -364,6 +364,131 @@
       const exampleEl = detailPanel.querySelector('#panelExampleDesc');
       if (exampleEl) exampleEl.textContent = t.exampleDesc || '—';
 
+      // Вспомогательная функция для форматирования размера файла
+      const formatFileSize = (bytes) => {
+        if (!bytes || bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+      };
+
+      // Вендоры
+      const vendorsEl = detailPanel.querySelector('#panelVendors');
+      if (vendorsEl) {
+        if (t.vendors && Array.isArray(t.vendors) && t.vendors.length > 0) {
+          const esc = (s) => (window.escapeHtml ? window.escapeHtml(String(s ?? '')) : String(s ?? ''));
+          const normalize = (x) => String(x ?? '').trim();
+          const vendors = t.vendors
+            .map(v => ({
+              name: normalize(v && typeof v === 'object' ? (v.name || v.id || '') : v),
+              integrators: (v && typeof v === 'object' && Array.isArray(v.integrators)) ? v.integrators : []
+            }))
+            .filter(v => v.name);
+
+          if (vendors.length === 0) {
+            vendorsEl.innerHTML = '<span class="panel-muted">Вендоры не указаны</span>';
+          } else {
+            vendorsEl.innerHTML = `
+              <div class="vendor-list">
+                ${vendors.map(v => {
+                  const integratorNames = v.integrators
+                    .map(i => (i && typeof i === 'object') ? (i.name || i.id || '') : i)
+                    .map(normalize)
+                    .filter(Boolean);
+
+                  return `
+                    <div class="vendor-card">
+                      <div class="vendor-card__header">
+                        <div class="vendor-name">${esc(v.name)}</div>
+                        ${integratorNames.length ? `<div class="vendor-meta">${integratorNames.length} интегратор(ов)</div>` : `<div class="vendor-meta">интеграторы не указаны</div>`}
+                      </div>
+                      ${integratorNames.length ? `
+                        <div class="vendor-card__integrators">
+                          ${integratorNames.map(n => `<span class="chip chip--integrator">${esc(n)}</span>`).join('')}
+                        </div>
+                      ` : ''}
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            `;
+          }
+        } else {
+          vendorsEl.innerHTML = '<span class="panel-muted">Вендоры не указаны</span>';
+        }
+      }
+
+      // Файлы
+      const filesEl = detailPanel.querySelector('#panelFiles');
+      if (filesEl) {
+        if (t.files && Array.isArray(t.files) && t.files.length > 0) {
+          filesEl.innerHTML = t.files.map(file => {
+            const fileName = file.name || 'Без названия';
+            const fileId = file.id || Date.now();
+            return `
+              <div class="panel-file-item">
+                <div class="panel-file-content">
+                  <div class="panel-file-icon">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M4 2h5.172a2 2 0 0 1 1.414.586l2.828 2.828A2 2 0 0 1 14 6.828V13a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                      <path d="M9 2v4h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                  <div class="panel-file-info">
+                    <div class="panel-file-name">${window.escapeHtml ? window.escapeHtml(fileName) : fileName}</div>
+                    ${file.size ? `<div class="panel-file-size">${formatFileSize(file.size)}</div>` : ''}
+                  </div>
+                </div>
+                <button type="button" class="download-file-btn" data-file-id="${fileId}" aria-label="Скачать файл">
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 4px;">
+                    <path d="M8 11V2M8 11L5 8M8 11L11 8M2 13h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Скачать
+                </button>
+              </div>
+            `;
+          }).join('');
+
+          // Добавляем обработчики для кнопок скачивания
+          filesEl.querySelectorAll('.download-file-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const fileId = btn.dataset.fileId;
+              const file = t.files.find(f => (f.id || Date.now()) == fileId);
+              if (file && file.data) {
+                try {
+                  // Создаем blob из base64
+                  const byteCharacters = atob(file.data);
+                  const byteNumbers = new Array(byteCharacters.length);
+                  for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                  }
+                  const byteArray = new Uint8Array(byteNumbers);
+                  const blob = new Blob([byteArray], { type: file.type || 'application/octet-stream' });
+
+                  // Создаем ссылку для скачивания
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = file.name || 'file';
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                } catch (err) {
+                  if (window.Logger) window.Logger.warn('Ошибка при скачивании файла', err);
+                  if (window.showNotification) {
+                    window.showNotification('Ошибка при скачивании файла', false);
+                  }
+                }
+              }
+            });
+          });
+        } else {
+          filesEl.innerHTML = '<span style="opacity:0.7">Файлы не прикреплены</span>';
+        }
+      }
+
       // Управление кнопкой «Назад к списку технологий» в шапке панели:
       // показываем её только если панель открыта из списка приоритетов сектора
       const backBtn = detailPanel.querySelector('#detailBackFromPriorityBtn');
@@ -382,6 +507,15 @@
       // Но убедимся, что элемент видим
       // Очищаем любые inline стили, которые могут мешать
       detailPanel.style.display = '';
+
+      // Освобождаем старый focus trap перед активацией нового (на случай, если панель уже была открыта)
+      if (window.FocusTrap && typeof window.FocusTrap.release === 'function') {
+        try {
+          window.FocusTrap.release();
+        } catch (e) {
+          // Игнорируем ошибки при освобождении
+        }
+      }
 
       // Добавляем класс active ПЕРЕД установкой inline стилей
       detailPanel.classList.add('active');
@@ -690,6 +824,27 @@
         }
       case 'funcCover':
         return tech.funcCover !== undefined && tech.funcCover !== null ? String(tech.funcCover) : '—';
+      case 'vendors':
+        if (tech.vendors && Array.isArray(tech.vendors) && tech.vendors.length > 0) {
+          return tech.vendors.map(vendor => vendor.name || 'Без названия').filter(Boolean).join(', ') || 'Не указано';
+        }
+        return 'Не указано';
+      case 'integrators':
+        if (tech.vendors && Array.isArray(tech.vendors) && tech.vendors.length > 0) {
+          const allIntegrators = [];
+          tech.vendors.forEach(vendor => {
+            if (vendor.integrators && Array.isArray(vendor.integrators) && vendor.integrators.length > 0) {
+              vendor.integrators.forEach(integrator => {
+                const integratorName = integrator.name || integrator;
+                if (integratorName && !allIntegrators.includes(integratorName)) {
+                  allIntegrators.push(integratorName);
+                }
+              });
+            }
+          });
+          return allIntegrators.length > 0 ? allIntegrators.join(', ') : 'Не указано';
+        }
+        return 'Не указано';
       case 'exampleDesc':
         return tech.exampleDesc || '—';
       default:
@@ -715,7 +870,9 @@
       'priority': 'Приоритет технологии',
       'techRead': 'Технологическая готовность',
       'organRead': 'Организационная готовность',
-      'funcCover': 'Покрытие функций'
+      'funcCover': 'Покрытие функций',
+      'vendors': 'Вендору',
+      'integrators': 'Интеграторы'
     };
     return labels[fieldName] || fieldName;
   }
