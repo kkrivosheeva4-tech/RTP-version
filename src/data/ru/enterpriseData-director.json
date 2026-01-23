@@ -1,7 +1,7 @@
 [
   {
     "id": 1,
-    "name": "MES добычи",
+    "name": "MES",
     "company": "РМК",
     "blocks": [
       1,
@@ -10,24 +10,20 @@
     "functions": [
       "Маркшейдерские работы",
       "Взрывные работы",
-      "Экскавация",
-      "Транспортировка",
-      "Геологические работы",
-      "Оцифровка показателей",
-      "Анализ показателей"
+      "Экскавация"
     ],
     "techTypes": "Интегрированные",
     "status": "Используемые",
-    "trlStage": 3,
+    "trlStage": 1,
     "description": "Система диспетчеризации и управления горными работами с мониторингом KPI.",
-    "techRead": 3,
-    "organRead": 3,
-    "funcCover": 3,
+    "techRead": 1,
+    "organRead": 1,
+    "funcCover": 1,
     "exampleDesc": "Диспетчеризация экскаваторов и автосамосвалов, трекинг рейсов, контроль простоев.",
     "vendors": [
       {
         "id": 1,
-        "name": "Siemens",
+        "name": "ИндаСофт",
         "integrators": [
           {
             "id": 1,
@@ -41,71 +37,77 @@
       },
       {
         "id": 2,
-        "name": "ABB",
+        "name": "PSI",
         "integrators": [
           {
             "id": 3,
             "name": "Ростех"
           }
         ]
-      },
-      {
-        "id": 3,
-        "name": "Rockwell Automation",
-        "integrators": [
-          {
-            "id": 4,
-            "name": "IBM Global Services"
-          },
-          {
-            "id": 5,
-            "name": "Accenture"
-          }
-        ]
-      },
-      {
-        "id": 4,
-        "name": "Honeywell",
-        "integrators": [
-          {
-            "id": 6,
-            "name": "Capgemini"
-          }
-        ]
-      },
-      {
-        "id": 5,
-        "name": "Schneider Electric",
-        "integrators": []
       }
     ],
-    "files": [],
+    "files": [
+      {
+        "name": "Общая_ИндаСофт_ГОК.pptx",
+        "url": "docs/Общая_ИндаСофт_ГОК.pptx",
+        "type": "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+      },
+      {
+        "name": "MES_МАГИСТРАЛЬ.pdf",
+        "url": "docs/MES_МАГИСТРАЛЬ.pdf",
+        "type": "application/pdf"
+      }
+    ],
     "ring": 1
   },
   {
     "id": 2,
-    "name": "Предиктивное ТОиР (ML)",
+    "name": "ТОиР",
     "company": "РМК",
     "blocks": [
       5,
       20
     ],
     "functions": [
-      "ТОиР",
-      "Оцифровка показателей",
-      "Анализ показателей",
-      "Планирование и автоматизация"
+      "ТОиР"
     ],
     "techTypes": "Управление с ML и AI",
     "status": "Внедряемые",
-    "trlStage": 1,
+    "trlStage": 2,
     "description": "Аналитика отказов и предиктивное обслуживание ключевого оборудования на базе ML.",
-    "techRead": 0,
-    "organRead": 0,
-    "funcCover": 2,
+    "techRead": 2,
+    "organRead": 3,
+    "funcCover": 1,
     "exampleDesc": "Прогноз износа подшипников мельниц, предсказание отказов насосов.",
-    "vendors": [],
-    "files": [],
+    "vendors": [
+      {
+        "id": 1,
+        "name": "МТС",
+        "integrators": []
+      },
+      {
+        "id": 2,
+        "name": "IBS",
+        "integrators": []
+      },
+      {
+        "id": 3,
+        "name": "Диатех",
+        "integrators": []
+      }
+    ],
+    "files": [
+      {
+        "name": "Мобильные сотрудники_ТОиР.pdf",
+        "url": "docs/Мобильные сотрудники_ТОиР.pdf",
+        "type": "application/pdf"
+      },
+      {
+        "name": "IBS ТОиР кейсы 2025.pdf",
+        "url": "docs/IBS ТОиР кейсы 2025.pdf",
+        "type": "application/pdf"
+      }
+    ],
     "ring": 2
   },
   {
@@ -143,7 +145,13 @@
         "integrators": []
       }
     ],
-    "files": [],
+    "files": [
+      {
+        "name": "MES_МАГИСТРАЛЬ.pdf",
+        "url": "docs/MES_МАГИСТРАЛЬ.pdf",
+        "type": "application/pdf"
+      }
+    ],
     "ring": 1
   },
   {
@@ -173,7 +181,7 @@
     "vendors": [
       {
         "id": 1,
-        "name": "ABB",
+        "name": "Сапран",
         "integrators": [
           {
             "id": 1,
@@ -187,7 +195,7 @@
       },
       {
         "id": 2,
-        "name": "Siemens",
+        "name": "PSI",
         "integrators": [
           {
             "id": 3,
@@ -221,7 +229,13 @@
         ]
       }
     ],
-    "files": [],
+    "files": [
+      {
+        "name": "MES_МАГИСТРАЛЬ.pdf",
+        "url": "docs/MES_МАГИСТРАЛЬ.pdf",
+        "type": "application/pdf"
+      }
+    ],
     "ring": 1
   },
   {
@@ -267,7 +281,13 @@
         "integrators": []
       }
     ],
-    "files": [],
+    "files": [
+      {
+        "name": "FRONTEND_AUDIT.md",
+        "url": "docs/FRONTEND_AUDIT.md",
+        "type": "text/markdown"
+      }
+    ],
     "ring": 0
   },
   {
@@ -347,7 +367,13 @@
         ]
       }
     ],
-    "files": [],
+    "files": [
+      {
+        "name": "RADAR_POSITIONING_MODEL.md",
+        "url": "docs/RADAR_POSITIONING_MODEL.md",
+        "type": "text/markdown"
+      }
+    ],
     "ring": 1
   },
   {
@@ -572,7 +598,13 @@
         ]
       }
     ],
-    "files": [],
+    "files": [
+      {
+        "name": "MODULES_DOCUMENTATION.md",
+        "url": "docs/MODULES_DOCUMENTATION.md",
+        "type": "text/markdown"
+      }
+    ],
     "ring": 1
   },
   {
@@ -677,7 +709,13 @@
         ]
       }
     ],
-    "files": [],
+    "files": [
+      {
+        "name": "MODULES_DOCUMENTATION.md",
+        "url": "docs/MODULES_DOCUMENTATION.md",
+        "type": "text/markdown"
+      }
+    ],
     "ring": 1
   },
   {
@@ -697,8 +735,8 @@
     "trlStage": 3,
     "description": "Шина данных и конвейеры ETL для обмена и консолидации корпоративных данных.",
     "techRead": 3,
-    "organRead": 2,
-    "funcCover": 2,
+    "organRead": 3,
+    "funcCover": 3,
     "exampleDesc": "Стандартизированные API, очереди, CDC, каталог интеграций.",
     "vendors": [
       {
@@ -715,9 +753,35 @@
             "name": "Capgemini"
           }
         ]
+      },
+      {
+        "id": 3,
+        "name": "PSI",
+        "integrators": [
+          {
+            "id": 2,
+            "name": "Техносерв"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "name": "IBS",
+        "integrators": []
+      },
+      {
+        "id": 5,
+        "name": "Диатех",
+        "integrators": []
       }
     ],
-    "files": [],
+    "files": [
+      {
+        "name": "MODULES_DOCUMENTATION.md",
+        "url": "docs/MODULES_DOCUMENTATION.md",
+        "type": "text/markdown"
+      }
+    ],
     "ring": 1
   },
   {
@@ -827,7 +891,13 @@
     "funcCover": 3,
     "exampleDesc": "Регулирование реагентов по он-лайн сенсорам, баланс воды и пульпы.",
     "vendors": [],
-    "files": [],
+    "files": [
+      {
+        "name": "MES_МАГИСТРАЛЬ.pdf",
+        "url": "docs/MES_МАГИСТРАЛЬ.pdf",
+        "type": "application/pdf"
+      }
+    ],
     "ring": 1
   },
   {
@@ -852,7 +922,13 @@
     "funcCover": 2,
     "exampleDesc": "Сквозная модель: геология → добыча → обогащение.",
     "vendors": [],
-    "files": [],
+    "files": [
+      {
+        "name": "RADAR_POSITIONING_MODEL.md",
+        "url": "docs/RADAR_POSITIONING_MODEL.md",
+        "type": "text/markdown"
+      }
+    ],
     "ring": 1
   },
   {
@@ -937,7 +1013,13 @@
         ]
       }
     ],
-    "files": [],
+    "files": [
+      {
+        "name": "FRONTEND_AUDIT.md",
+        "url": "docs/FRONTEND_AUDIT.md",
+        "type": "text/markdown"
+      }
+    ],
     "ring": 1
   },
   {

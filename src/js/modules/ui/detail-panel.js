@@ -450,26 +450,39 @@
             btn.addEventListener('click', () => {
               const fileId = btn.dataset.fileId;
               const file = t.files.find(f => (f.id || Date.now()) == fileId);
-              if (file && file.data) {
+              if (file) {
                 try {
-                  // Создаем blob из base64
-                  const byteCharacters = atob(file.data);
-                  const byteNumbers = new Array(byteCharacters.length);
-                  for (let i = 0; i < byteCharacters.length; i++) {
-                    byteNumbers[i] = byteCharacters.charCodeAt(i);
-                  }
-                  const byteArray = new Uint8Array(byteNumbers);
-                  const blob = new Blob([byteArray], { type: file.type || 'application/octet-stream' });
+                  // Если файл имеет URL/ссылку, открываем её
+                  if (file.url || file.link) {
+                    const fileUrl = file.url || file.link;
+                    const a = document.createElement('a');
+                    a.href = fileUrl;
+                    a.target = '_blank';
+                    a.rel = 'noopener noreferrer';
+                    a.download = file.name || 'file';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                  } else if (file.data) {
+                    // Создаем blob из base64
+                    const byteCharacters = atob(file.data);
+                    const byteNumbers = new Array(byteCharacters.length);
+                    for (let i = 0; i < byteCharacters.length; i++) {
+                      byteNumbers[i] = byteCharacters.charCodeAt(i);
+                    }
+                    const byteArray = new Uint8Array(byteNumbers);
+                    const blob = new Blob([byteArray], { type: file.type || 'application/octet-stream' });
 
-                  // Создаем ссылку для скачивания
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = file.name || 'file';
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
-                  URL.revokeObjectURL(url);
+                    // Создаем ссылку для скачивания
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = file.name || 'file';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                  }
                 } catch (err) {
                   if (window.Logger) window.Logger.warn('Ошибка при скачивании файла', err);
                   if (window.showNotification) {
