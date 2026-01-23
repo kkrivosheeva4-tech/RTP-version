@@ -1405,6 +1405,11 @@
       } else {
         technologies[idx].funcCover = clamp03(fc);
       }
+    } else {
+      // Если поле пустое, сохраняем существующее значение funcCover из existing
+      if (existing.funcCover !== undefined && existing.funcCover !== null) {
+        technologies[idx].funcCover = existing.funcCover;
+      }
     }
 
     const trlValue = getFormFieldValue('editTrlStage');
@@ -1533,6 +1538,8 @@
           delete technologies[idx].companyRatings;
         }
       }
+      // Важно: funcCover - общее значение для всех предприятий, оно уже сохранено выше (строки 1397-1413)
+      // Не удаляем его, даже если есть индивидуальные оценки для предприятий
     }
 
     // Проверяем, нужно ли пересчитывать координаты

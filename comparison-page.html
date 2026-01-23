@@ -1,0 +1,2197 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Сравнение страниц Радара технологий</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
+        integrity="sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAOnx5S09ydFYWWNSfcEqDTTHgtNA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
+        integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --accent: #ce9068;
+            --accent-dark: #B87333;
+            --accent-light: #E2B686;
+            --copper: #B7866A;
+            --copper-dark: #A37151;
+            --copper-light: #C8977F;
+            --black: #000000;
+            --white: #ffffff;
+            --gray: #808080;
+            --gray-light: #e0e0e0;
+            --gray-dark: #404040;
+            --muted: #6B7280;
+            --bg-light: #ffffff;
+            --bg-dark: #0E0F12;
+            --text-light: #000000;
+            --text-dark: #EAECEE;
+            --card-bg-light: rgba(255, 255, 255, 0.95);
+            --card-bg-dark: rgba(15, 17, 21, 0.95);
+            --border-light: rgba(0, 0, 0, 0.1);
+            --border-dark: rgba(255, 255, 255, 0.1);
+            --shadow-light: rgba(0, 0, 0, 0.1);
+            --shadow-dark: rgba(0, 0, 0, 0.5);
+            --gradient-copper: linear-gradient(135deg, #A37151 0%, #C8977F 100%);
+            --gradient-accent: linear-gradient(135deg, #B87333 0%, #E2B686 100%);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text);
+            background: var(--bg);
+            transition: background 0.3s ease, color 0.3s ease;
+            overflow-x: hidden;
+        }
+
+        body.light {
+            --bg: var(--bg-light);
+            --text: var(--text-light);
+            --card-bg: var(--card-bg-light);
+            --border: var(--border-light);
+            --shadow: var(--shadow-light);
+            background: linear-gradient(135deg, #f5f5f5 0%, #ffffff 100%);
+        }
+
+        body.dark {
+            --bg: var(--bg-dark);
+            --text: var(--text-dark);
+            --card-bg: var(--card-bg-dark);
+            --border: var(--border-dark);
+            --shadow: var(--shadow-dark);
+            background: linear-gradient(135deg, #0E0F12 0%, #1a1b1e 100%);
+        }
+
+        /* Header */
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            padding: 1.5rem 2rem;
+            box-shadow: 0 2px 20px var(--shadow);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .theme-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--text);
+        }
+
+        .theme-toggle:hover {
+            background: var(--accent);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(206, 144, 104, 0.3);
+        }
+
+        /* Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: var(--gradient-copper);
+            background-size: 200% 200%;
+            animation: gradientShift 10s ease infinite;
+            border-radius: 20px;
+            margin-bottom: 3rem;
+            color: white;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 30% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        @keyframes gradientShift {
+
+            0%,
+            100% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+        }
+
+        .hero h1 {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            margin-bottom: 1rem;
+            position: relative;
+            z-index: 1;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            opacity: 0.95;
+            position: relative;
+            z-index: 1;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* Navigation */
+        .nav-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 1rem;
+        }
+
+        .nav-tab {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 1rem;
+            color: var(--text);
+            transition: all 0.3s ease;
+            position: relative;
+            font-weight: 500;
+        }
+
+        .nav-tab:hover {
+            color: var(--accent);
+        }
+
+        .nav-tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        /* Content Sections */
+        .content-section {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 20px var(--shadow);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px var(--shadow);
+        }
+
+        .card h2 {
+            color: var(--accent);
+            margin-bottom: 1.5rem;
+            font-size: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .card h3 {
+            color: var(--accent);
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .card h4 {
+            color: var(--text);
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        /* Comparison Table */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            background: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px var(--shadow);
+        }
+
+        .comparison-table th {
+            background: var(--gradient-copper);
+            color: white;
+            padding: 1.25rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .comparison-table td {
+            padding: 1.25rem;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+
+        .comparison-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .comparison-table tr:hover {
+            background: rgba(206, 144, 104, 0.1);
+        }
+
+        /* Feature List */
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .feature-list li {
+            padding: 0.75rem 0;
+            padding-left: 2rem;
+            position: relative;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+
+        .feature-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: var(--accent);
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        /* Badge */
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+
+        .badge.architect {
+            background: rgba(0, 123, 255, 0.2);
+            color: #007bff;
+        }
+
+        .badge.director {
+            background: rgba(206, 144, 104, 0.2);
+            color: var(--accent);
+        }
+
+        .badge.both {
+            background: rgba(108, 117, 125, 0.2);
+            color: var(--gray);
+        }
+
+        /* Questions Section */
+        .question-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .question-card:hover {
+            border-color: var(--accent);
+            box-shadow: 0 4px 15px rgba(206, 144, 104, 0.2);
+        }
+
+        .question-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+            gap: 1rem;
+        }
+
+        .question-number {
+            background: var(--gradient-copper);
+            color: white;
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .question-text {
+            flex: 1;
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: var(--text);
+        }
+
+        .question-options {
+            margin-top: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .option-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: var(--card-bg);
+        }
+
+        .option-item:hover {
+            border-color: var(--accent);
+            background: rgba(206, 144, 104, 0.05);
+        }
+
+        .option-item input[type="radio"],
+        .option-item input[type="checkbox"] {
+            margin-top: 0.25rem;
+            cursor: pointer;
+            width: 1.25rem;
+            height: 1.25rem;
+            accent-color: var(--accent);
+        }
+
+        .option-item label {
+            flex: 1;
+            cursor: pointer;
+            color: var(--text);
+        }
+
+        .option-item input[type="text"] {
+            flex: 1;
+            padding: 0.5rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--card-bg);
+            color: var(--text);
+            font-size: 0.9rem;
+        }
+
+        /* Custom Answer Field */
+        .custom-answer-section {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 2px dashed var(--border);
+        }
+
+        .custom-answer-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--accent);
+            font-size: 0.95rem;
+        }
+
+        .custom-answer-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            background: var(--card-bg);
+            color: var(--text);
+            font-size: 1rem;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .custom-answer-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(206, 144, 104, 0.1);
+        }
+
+        .custom-answer-input::placeholder {
+            color: var(--muted);
+            opacity: 0.7;
+        }
+
+        /* Progress Bar */
+        .progress-section {
+            position: sticky;
+            top: 80px;
+            z-index: 999;
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 20px var(--shadow);
+            border: 1px solid var(--border);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--gradient-copper);
+            transition: width 0.3s ease;
+            border-radius: 4px;
+        }
+
+        .progress-text {
+            text-align: center;
+            margin-top: 0.5rem;
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        /* Download Button */
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem 2rem;
+            background: var(--gradient-copper);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 2rem;
+            box-shadow: 0 4px 15px rgba(206, 144, 104, 0.3);
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(206, 144, 104, 0.4);
+        }
+
+        .download-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Icons */
+        .icon {
+            width: 24px;
+            height: 24px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        /* Highlight Box */
+        .highlight-box {
+            background: linear-gradient(135deg, rgba(206, 144, 104, 0.1) 0%, rgba(206, 144, 104, 0.05) 100%);
+            border-left: 4px solid var(--accent);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+        }
+
+        .highlight-box strong {
+            color: var(--accent);
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Code Block */
+        .code-block {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .hero {
+                padding: 2rem 1rem;
+            }
+
+            .comparison-table {
+                font-size: 0.9rem;
+            }
+
+            .comparison-table th,
+            .comparison-table td {
+                padding: 0.75rem;
+            }
+
+            .nav-tabs {
+                overflow-x: auto;
+                flex-wrap: nowrap;
+            }
+        }
+
+        /* Scroll Animation */
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-on-scroll {
+            animation: slideInUp 0.6s ease;
+        }
+    </style>
+</head>
+
+<body class="light">
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M12 2v20M2 12h20"></path>
+                </svg>
+                Сравнение страниц Радара технологий
+            </div>
+            <button class="theme-toggle" id="themeToggle" aria-label="Переключить тему">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="5"></circle>
+                    <line x1="12" y1="1" x2="12" y2="3"></line>
+                    <line x1="12" y1="21" x2="12" y2="23"></line>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                    <line x1="1" y1="12" x2="3" y2="12"></line>
+                    <line x1="21" y1="12" x2="23" y2="12"></line>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                </svg>
+                <span id="themeText">Темная тема</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <div class="container">
+        <div class="hero">
+            <h1>Сравнение страниц Радара технологий</h1>
+            <p>Детальный анализ функциональности страниц для архитекторов и директоров с целью определения оптимального
+                решения для бизнес-заказчика</p>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="nav-tabs">
+            <button class="nav-tab active" data-section="overview">Обзор приложения</button>
+            <button class="nav-tab" data-section="architect">Страница архитектора</button>
+            <button class="nav-tab" data-section="director">Страница директора</button>
+            <button class="nav-tab" data-section="comparison">Сравнение</button>
+            <button class="nav-tab" data-section="questions">Вопросы для заказчика</button>
+        </div>
+
+        <!-- Overview Section -->
+        <section id="overview" class="content-section active">
+            <div class="card">
+                <h2>📊 Обзор приложения "Радар технологий"</h2>
+                <p>Приложение "Радар технологий" — это веб-инструмент для визуализации и анализа технологических решений
+                    компании. Оно позволяет:</p>
+
+                <div class="highlight-box">
+                    <strong>Основные возможности:</strong>
+                    <ul class="feature-list">
+                        <li>Визуализация технологий на интерактивном радаре</li>
+                        <li>Фильтрация и поиск технологий по различным критериям</li>
+                        <li>Управление данными о технологиях, вендорах и интеграторах</li>
+                        <li>Экспорт данных в различные форматы (PDF, Excel)</li>
+                        <li>Управление приоритетами технологий</li>
+                        <li>Поддержка нескольких предприятий (РМК, ТГОК, МГОК, КБМ, КМЭЗ, АМК)</li>
+                    </ul>
+                </div>
+
+                <h3>Две версии страницы радара</h3>
+                <p>В приложении существуют две специализированные версии страницы радара, каждая из которых
+                    оптимизирована для своей целевой аудитории:</p>
+
+                <div
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-top: 2rem;">
+                    <div class="card" style="margin: 0;">
+                        <h4 style="color: #007bff; margin-top: 0;">RMK.html — для архитекторов</h4>
+                        <p>Ориентирована на технический анализ и классификацию технологий по стадиям зрелости.</p>
+                        <p><strong>Целевая аудитория:</strong> Технические специалисты, архитекторы решений,
+                            разработчики</p>
+                    </div>
+                    <div class="card" style="margin: 0;">
+                        <h4 style="color: var(--accent); margin-top: 0;">RMK-director.html — для директоров</h4>
+                        <p>Ориентирована на принятие управленческих решений о внедрении технологий.</p>
+                        <p><strong>Целевая аудитория:</strong> Руководители высшего звена, директора, руководители
+                            проектов</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Architect Section -->
+        <section id="architect" class="content-section">
+            <div class="card">
+                <h2>👨‍💻 Страница для архитектора (RMK.html)</h2>
+
+                <h3>Назначение и целевая аудитория</h3>
+                <p>Страница для архитекторов предназначена для технических специалистов, которые занимаются анализом,
+                    классификацией и оценкой технологий с точки зрения их технических характеристик и зрелости.</p>
+
+                <h3>Позиционирование технологий на радаре</h3>
+                <div class="highlight-box">
+                    <strong>Метод позиционирования:</strong>
+                    <ul class="feature-list">
+                        <li>Позиционирование основано на поле <code>ring</code> из данных технологии</li>
+                        <li>Кольца соответствуют стадиям зрелости: <strong>Adopt</strong> (1), <strong>Trial</strong>
+                            (2), <strong>Assess</strong> (3), <strong>Hold</strong> (4)</li>
+                        <li>Радиус определяется номером кольца (1-4)</li>
+                        <li>Угол определяется квадрантом функционального блока</li>
+                        <li>Статическое позиционирование без учета множества факторов</li>
+                    </ul>
+                </div>
+
+                <h3>Визуализация технологий</h3>
+                <div class="highlight-box">
+                    <strong>Характеристики визуализации:</strong>
+                    <ul class="feature-list">
+                        <li><strong>Разные формы в зависимости от типа технологии:</strong>
+                            <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                                <li>Базовые технологии → <strong>треугольник</strong></li>
+                                <li>Интегрированные решения → <strong>круг</strong></li>
+                                <li>Платформенные решения → <strong>квадрат</strong></li>
+                                <li>Управление с ML и AI → <strong>звезда</strong></li>
+                            </ul>
+                        </li>
+                        <li>Фиксированный размер всех элементов</li>
+                        <li>Подписи колец отображаются на радаре (Adopt, Trial, Assess, Hold)</li>
+                        <li>Визуальное различие типов технологий для быстрой идентификации</li>
+                    </ul>
+                </div>
+
+                <h3>Управление данными</h3>
+                <div class="highlight-box">
+                    <strong>Доступная функциональность:</strong>
+                    <ul class="feature-list">
+                        <li>Добавление новых технологий</li>
+                        <li>Редактирование существующих технологий</li>
+                        <li>Удаление технологий</li>
+                        <li>Базовое управление вендорами (если присутствует в данных)</li>
+                        <li>Просмотр информации о технологиях</li>
+                    </ul>
+                </div>
+
+                <h3>Дополнительные инструменты анализа</h3>
+                <div class="highlight-box">
+                    <strong>График перспективных технологий (prospects-chart.js):</strong>
+                    <ul class="feature-list">
+                        <li>Визуализация технологий на графике с осями</li>
+                        <li>Дополнительный инструмент для технического анализа</li>
+                        <li>Детальное изучение характеристик технологий</li>
+                        <li>Сравнение технологий по различным параметрам</li>
+                    </ul>
+                </div>
+
+                <h3>Файл данных</h3>
+                <p>Используется файл <code>enterpriseData.json</code>, который содержит базовую информацию о технологиях
+                    без расширенных полей для вендоров и файлов.</p>
+
+                <h3>Преимущества страницы для архитектора</h3>
+                <ul class="feature-list">
+                    <li>Простота понимания для технических специалистов</li>
+                    <li>Прямая связь с классической моделью технологического радара</li>
+                    <li>Визуальное различие типов технологий</li>
+                    <li>Классическая модель радара с подписями</li>
+                    <li>Дополнительный график для детального анализа</li>
+                </ul>
+
+                <h3>Ограничения</h3>
+                <ul class="feature-list">
+                    <li>Не учитывает готовность к внедрению</li>
+                    <li>Не отражает приоритетность для бизнеса</li>
+                    <li>Статическое позиционирование без учета множества факторов</li>
+                    <li>Нет расширенного управления вендорами</li>
+                    <li>Нет прикрепления файлов к технологиям</li>
+                    <li>Нет управления интеграторами</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Director Section -->
+        <section id="director" class="content-section">
+            <div class="card">
+                <h2>👔 Страница для директора (RMK-director.html)</h2>
+
+                <h3>Назначение и целевая аудитория</h3>
+                <p>Страница для директоров специально разработана для принятия управленческих решений о внедрении
+                    технологий. Она учитывает не только технические характеристики, но и готовность к реализации,
+                    наличие вендоров и интеграторов.</p>
+
+                <h3>Позиционирование технологий на радаре</h3>
+                <div class="highlight-box">
+                    <strong>Математическая модель позиционирования:</strong>
+                    <p>Использует логистическую функцию для расчета "дистанции до внедрения" на основе 4 факторов
+                        готовности:</p>
+                    <ul class="feature-list">
+                        <li><strong>Технологическая готовность (techRead):</strong> 0-3</li>
+                        <li><strong>Организационная готовность (organRead):</strong> 0-3</li>
+                        <li><strong>Покрытие функций (funcCover):</strong> 0-3</li>
+                        <li><strong>TRL стадия (trlStage):</strong> 1-3</li>
+                    </ul>
+                    <p style="margin-top: 1rem;"><strong>Формула расчета:</strong></p>
+                    <div class="code-block">
+                        z_i = Σ(w_k × x_ik) + b<br>
+                        p_i = 1 / (1 + exp(-α × z_i))<br>
+                        r_i = 100 × (1 - p_i)
+                    </div>
+                    <p style="margin-top: 1rem;">Технологии с высокой готовностью располагаются ближе к центру радара.
+                    </p>
+                </div>
+
+                <h3>Визуализация технологий</h3>
+                <div class="highlight-box">
+                    <strong>Характеристики визуализации:</strong>
+                    <ul class="feature-list">
+                        <li><strong>Все технологии отображаются только кругами</strong> — единообразная визуализация
+                        </li>
+                        <li><strong>Динамический размер круга</strong> зависит от количества вендоров:
+                            <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                                <li>Больше вендоров = больший размер круга</li>
+                                <li>Визуально показывает важность технологии для бизнеса</li>
+                                <li>Индикация количества доступных вариантов реализации</li>
+                            </ul>
+                        </li>
+                        <li>Подписи колец отсутствуют — упрощенная визуализация</li>
+                        <li>Фокус на содержании, а не на форме</li>
+                    </ul>
+                </div>
+
+                <h3>Управление данными</h3>
+                <div class="highlight-box">
+                    <strong>Расширенная функциональность:</strong>
+                    <ul class="feature-list">
+                        <li>Все функции страницы архитектора +</li>
+                        <li><strong>Расширенное управление вендорами:</strong>
+                            <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                                <li>Добавление новых вендоров прямо в интерфейсе</li>
+                                <li>Автодополнение из списка существующих вендоров</li>
+                                <li>Сохранение вендоров в localStorage для последующего использования</li>
+                                <li>Множественный выбор вендоров для каждой технологии</li>
+                            </ul>
+                        </li>
+                        <li><strong>Управление интеграторами:</strong>
+                            <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                                <li>Привязка интеграторов к вендорам</li>
+                                <li>Множественный выбор интеграторов для каждого вендора</li>
+                                <li>Отдельное управление интеграторами для каждого вендора</li>
+                            </ul>
+                        </li>
+                        <li><strong>Прикрепление файлов:</strong>
+                            <ul style="margin-top: 0.5rem; padding-left: 1.5rem;">
+                                <li>Загрузка файлов к технологиям</li>
+                                <li>Хранение информации о файлах в данных технологии</li>
+                                <li>Управление списком файлов (добавление, удаление)</li>
+                                <li>Поддержка различных типов файлов (документы, презентации, изображения)</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+
+                <h3>Дополнительные инструменты анализа</h3>
+                <div class="highlight-box">
+                    <strong>График перспективных технологий отсутствует</strong>
+                    <p>Обоснование: Фокус на принятии решений, а не на техническом анализе. Упрощенный интерфейс для
+                        быстрого принятия решений. Основная информация представлена на радаре.</p>
+                </div>
+
+                <h3>Файл данных</h3>
+                <p>Используется файл <code>enterpriseData-director.json</code>, который содержит расширенную информацию
+                    о технологиях с полями <code>vendors</code> и <code>files</code>.</p>
+
+                <h3>Преимущества страницы для директора</h3>
+                <ul class="feature-list">
+                    <li>Отражает реальную готовность к внедрению</li>
+                    <li>Учитывает множественные факторы влияния</li>
+                    <li>Позволяет принимать решения на основе объективных метрик</li>
+                    <li>Динамическое позиционирование, адаптирующееся к изменениям данных</li>
+                    <li>Единообразная визуализация упрощает восприятие</li>
+                    <li>Размер круга сразу показывает важность технологии</li>
+                    <li>Отсутствие подписей колец снижает визуальный шум</li>
+                    <li>Полный контроль над данными о вендорах и интеграторах</li>
+                    <li>Возможность прикреплять документы, презентации, контракты к технологиям</li>
+                    <li>Более полная картина для принятия решений</li>
+                </ul>
+
+                <h3>Особенности</h3>
+                <ul class="feature-list">
+                    <li>Нет визуального различия типов технологий (но это не критично для директоров)</li>
+                    <li>Более сложная модель для понимания (требует объяснения)</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Comparison Section -->
+        <section id="comparison" class="content-section">
+            <div class="card">
+                <h2>⚖️ Детальное сравнение страниц</h2>
+
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Критерий</th>
+                            <th>Страница для архитектора</th>
+                            <th>Страница для директора</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Позиционирование технологий</strong></td>
+                            <td>По кольцам зрелости (Adopt, Trial, Assess, Hold)</td>
+                            <td>По готовности к реализации и внедрению (математическая модель)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Визуализация форм</strong></td>
+                            <td>Разные формы: треугольники, круги, квадраты, звезды (зависит от типа технологии)</td>
+                            <td>Все технологии — только круги</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Размер элементов</strong></td>
+                            <td>Фиксированный размер</td>
+                            <td>Динамический размер в зависимости от количества вендоров</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Подписи колец</strong></td>
+                            <td>Присутствуют (Adopt, Trial, Assess, Hold)</td>
+                            <td>Отсутствуют (упрощенная визуализация)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>График перспективных технологий</strong></td>
+                            <td>Присутствует (prospects-chart.js)</td>
+                            <td>Отсутствует</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Управление вендорами</strong></td>
+                            <td>Базовое (только просмотр и выбор из существующих)</td>
+                            <td>Расширенное (добавление, редактирование, автодополнение, сохранение в localStorage)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Управление интеграторами</strong></td>
+                            <td>Отсутствует</td>
+                            <td>Привязка интеграторов к вендорам, множественный выбор</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Управление файлами</strong></td>
+                            <td>Отсутствует</td>
+                            <td>Прикрепление файлов к технологиям, управление списком файлов</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Файл данных</strong></td>
+                            <td><code>enterpriseData.json</code></td>
+                            <td><code>enterpriseData-director.json</code> (с полями vendors и files)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Математическая модель позиционирования</strong></td>
+                            <td>Простая (на основе кольца из данных)</td>
+                            <td>Сложная (логистическая функция с учетом 4 факторов)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Ориентация</strong></td>
+                            <td>Технический анализ и классификация</td>
+                            <td>Принятие управленческих решений</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Целевая аудитория</strong></td>
+                            <td>Технические специалисты, архитекторы</td>
+                            <td>Руководители, директора, РП</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3 style="margin-top: 3rem;">Ключевые различия в функциональности</h3>
+
+                <div class="highlight-box">
+                    <strong>1. Позиционирование технологий</strong>
+                    <p><strong>Архитектор:</strong> Статическое позиционирование на основе поля ring (1-4),
+                        соответствующего стадиям зрелости. Простое и понятное для технических специалистов.</p>
+                    <p><strong>Директор:</strong> Динамическое позиционирование на основе математической модели,
+                        учитывающей 4 фактора готовности. Технологии с высокой готовностью автоматически перемещаются
+                        ближе к центру.</p>
+                </div>
+
+                <div class="highlight-box">
+                    <strong>2. Визуализация</strong>
+                    <p><strong>Архитектор:</strong> Разные формы для разных типов технологий помогают быстро
+                        идентифицировать тип. Подписи колец обеспечивают контекст.</p>
+                    <p><strong>Директор:</strong> Единообразные круги упрощают восприятие. Размер круга показывает
+                        важность (количество вендоров). Отсутствие подписей снижает визуальный шум.</p>
+                </div>
+
+                <div class="highlight-box">
+                    <strong>3. Управление данными</strong>
+                    <p><strong>Архитектор:</strong> Базовое управление технологиями. Ограниченные возможности работы с
+                        вендорами.</p>
+                    <p><strong>Директор:</strong> Полный контроль над вендорами и интеграторами. Возможность прикреплять
+                        файлы (контракты, презентации, спецификации) к технологиям для полной картины при принятии
+                        решений.</p>
+                </div>
+
+                <div class="highlight-box">
+                    <strong>4. Инструменты анализа</strong>
+                    <p><strong>Архитектор:</strong> График перспективных технологий для детального технического анализа.
+                    </p>
+                    <p><strong>Директор:</strong> Фокус на основном радаре с информацией о готовности и вендорах.
+                        Упрощенный интерфейс для быстрого принятия решений.</p>
+                </div>
+
+                <h3 style="margin-top: 3rem;">Вердикт: Почему страница для директора более удобна</h3>
+
+                <div class="highlight-box"
+                    style="background: linear-gradient(135deg, rgba(206, 144, 104, 0.15) 0%, rgba(206, 144, 104, 0.05) 100%); border-left-color: var(--accent);">
+                    <strong>✅ Ориентация на принятие решений</strong>
+                    <p>Позиционирование по готовности к внедрению позволяет сразу видеть приоритетные технологии.
+                        Учитывает не только техническую, но и организационную готовность.</p>
+                </div>
+
+                <div class="highlight-box"
+                    style="background: linear-gradient(135deg, rgba(206, 144, 104, 0.15) 0%, rgba(206, 144, 104, 0.05) 100%); border-left-color: var(--accent);">
+                    <strong>✅ Объективность</strong>
+                    <p>Математическая модель учитывает множественные факторы и обеспечивает объективную оценку
+                        готовности.</p>
+                </div>
+
+                <div class="highlight-box"
+                    style="background: linear-gradient(135deg, rgba(206, 144, 104, 0.15) 0%, rgba(206, 144, 104, 0.05) 100%); border-left-color: var(--accent);">
+                    <strong>✅ Визуальная ясность</strong>
+                    <p>Упрощенная визуализация (круги, отсутствие подписей) снижает когнитивную нагрузку. Размер круга
+                        показывает важность технологии.</p>
+                </div>
+
+                <div class="highlight-box"
+                    style="background: linear-gradient(135deg, rgba(206, 144, 104, 0.15) 0%, rgba(206, 144, 104, 0.05) 100%); border-left-color: var(--accent);">
+                    <strong>✅ Полнота данных</strong>
+                    <p>Расширенное управление вендорами, интеграторами и файлами обеспечивает полную картину для
+                        принятия решений.</p>
+                </div>
+
+                <div class="highlight-box"
+                    style="background: linear-gradient(135deg, rgba(206, 144, 104, 0.15) 0%, rgba(206, 144, 104, 0.05) 100%); border-left-color: var(--accent);">
+                    <strong>✅ Адаптивность</strong>
+                    <p>Динамическое позиционирование отражает актуальное состояние готовности технологий при изменении
+                        данных.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Questions Section -->
+        <section id="questions" class="content-section">
+            <div class="card">
+                <h2>❓ Вопросы для бизнес-заказчика</h2>
+                <p>Данный раздел содержит вопросы, которые помогут бизнес-заказчику принять обоснованное решение о
+                    выборе основной страницы для приложения "Радар технологий" и определить приоритеты развития проекта.
+                </p>
+            </div>
+
+            <div class="progress-section">
+                <h3 style="margin: 0 0 1rem 0;">Прогресс заполнения</h3>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill" style="width: 0%;"></div>
+                </div>
+                <div class="progress-text" id="progressText">0 из 38 вопросов</div>
+            </div>
+
+            <div id="questionsContainer"></div>
+
+            <div style="text-align: center; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                <button class="download-btn" id="downloadBtn" disabled>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Скачать ответы (TXT)
+                </button>
+                <button class="download-btn" id="downloadPdfBtn" disabled>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Скачать ответы (PDF)
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Theme Toggle
+        const themeToggle = document.getElementById('themeToggle');
+        const themeText = document.getElementById('themeText');
+        const body = document.body;
+
+        // Load theme from localStorage
+        const savedTheme = localStorage.getItem('comparisonPageTheme') || 'light';
+        body.className = savedTheme;
+        updateThemeText();
+
+        themeToggle.addEventListener('click', () => {
+            body.classList.toggle('light');
+            body.classList.toggle('dark');
+            const currentTheme = body.classList.contains('light') ? 'light' : 'dark';
+            localStorage.setItem('comparisonPageTheme', currentTheme);
+            updateThemeText();
+        });
+
+        function updateThemeText() {
+            themeText.textContent = body.classList.contains('light') ? 'Темная тема' : 'Светлая тема';
+        }
+
+        // Navigation Tabs
+        const navTabs = document.querySelectorAll('.nav-tab');
+        const contentSections = document.querySelectorAll('.content-section');
+
+        navTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetSection = tab.dataset.section;
+
+                navTabs.forEach(t => t.classList.remove('active'));
+                contentSections.forEach(s => s.classList.remove('active'));
+
+                tab.classList.add('active');
+                document.getElementById(targetSection).classList.add('active');
+            });
+        });
+
+        // Questions Data
+        const questions = [
+            {
+                id: 1,
+                section: "4.1.1. Основная цель использования приложения",
+                text: "Какая основная цель использования приложения \"Радар технологий\"?",
+                type: "radio",
+                options: [
+                    "Технический анализ и классификация технологий (архитекторская страница)",
+                    "Принятие управленческих решений о внедрении технологий (директорская страница)",
+                    "Обе цели в равной степени"
+                ]
+            },
+            {
+                id: 2,
+                section: "4.1.1. Основная цель использования приложения",
+                text: "Кто является основной целевой аудиторией приложения?",
+                type: "radio",
+                options: [
+                    "Технические специалисты и архитекторы",
+                    "Руководители высшего звена и директора",
+                    "Обе группы пользователей"
+                ]
+            },
+            {
+                id: 3,
+                section: "4.1.1. Основная цель использования приложения",
+                text: "Какие ключевые решения должны приниматься на основе данных радара?",
+                type: "checkbox",
+                options: [
+                    "Классификация технологий по стадиям зрелости",
+                    "Приоритизация технологий для внедрения",
+                    "Оценка готовности к внедрению",
+                    "Выбор вендоров и интеграторов",
+                    "Все перечисленное"
+                ]
+            },
+            {
+                id: 4,
+                section: "4.1.2. Бизнес-ценность и ROI",
+                text: "Какую бизнес-ценность должно приносить приложение?",
+                type: "checkbox",
+                options: [
+                    "Ускорение технического анализа технологий",
+                    "Ускорение принятия решений о внедрении",
+                    "Снижение рисков при выборе технологий",
+                    "Оптимизация бюджета на технологии",
+                    "Все перечисленное"
+                ]
+            },
+            {
+                id: 5,
+                section: "4.1.2. Бизнес-ценность и ROI",
+                text: "Какой метрикой успеха будет измеряться эффективность приложения?",
+                type: "radio",
+                options: [
+                    "Количество проанализированных технологий",
+                    "Скорость принятия решений о внедрении",
+                    "Количество успешно внедренных технологий",
+                    "Экономия бюджета за счет правильного выбора технологий",
+                    "Другое (укажите)"
+                ],
+                hasTextInput: true
+            },
+            {
+                id: 6,
+                section: "4.2.1. Метод позиционирования",
+                text: "Какой метод позиционирования технологий на радаре более важен для бизнеса?",
+                type: "radio",
+                options: [
+                    "Классическое позиционирование по кольцам зрелости (Adopt, Trial, Assess, Hold)",
+                    "Позиционирование по готовности к внедрению (математическая модель)",
+                    "Оба метода в зависимости от контекста"
+                ]
+            },
+            {
+                id: 7,
+                section: "4.2.1. Метод позиционирования",
+                text: "Нужна ли математическая модель, учитывающая множественные факторы готовности?",
+                type: "radio",
+                options: [
+                    "Да, это критично для принятия решений",
+                    "Нет, достаточно простого позиционирования",
+                    "Не уверены, требуется дополнительное обсуждение"
+                ]
+            },
+            {
+                id: 8,
+                section: "4.2.1. Метод позиционирования",
+                text: "Какие факторы готовности наиболее важны для принятия решений?",
+                type: "checkbox",
+                options: [
+                    "Технологическая готовность (techRead)",
+                    "Организационная готовность (organRead)",
+                    "Покрытие функций (funcCover)",
+                    "TRL стадия (trlStage)",
+                    "Все факторы в равной степени"
+                ]
+            },
+            {
+                id: 9,
+                section: "4.2.2. Визуализация и восприятие",
+                text: "Какая визуализация более понятна для целевой аудитории?",
+                type: "radio",
+                options: [
+                    "Разные формы (треугольники, круги, квадраты, звезды) для разных типов технологий",
+                    "Единообразные круги для всех технологий",
+                    "Зависит от роли пользователя"
+                ]
+            },
+            {
+                id: 10,
+                section: "4.2.2. Визуализация и восприятие",
+                text: "Важна ли визуальная индикация важности технологии (размер элемента)?",
+                type: "radio",
+                options: [
+                    "Да, размер должен отражать количество вендоров или важность",
+                    "Нет, все технологии должны быть одинакового размера",
+                    "Не критично"
+                ]
+            },
+            {
+                id: 11,
+                section: "4.2.2. Визуализация и восприятие",
+                text: "Нужны ли подписи колец на радаре?",
+                type: "radio",
+                options: [
+                    "Да, они помогают понять структуру радара",
+                    "Нет, они создают визуальный шум",
+                    "Зависит от версии страницы"
+                ]
+            },
+            {
+                id: 12,
+                section: "4.3.1. Управление вендорами и интеграторами",
+                text: "Нужна ли расширенная функциональность управления вендорами?",
+                type: "radio",
+                options: [
+                    "Да, критично для принятия решений о выборе вендоров",
+                    "Нет, достаточно базовой информации",
+                    "Частично, зависит от роли пользователя"
+                ]
+            },
+            {
+                id: 13,
+                section: "4.3.1. Управление вендорами и интеграторами",
+                text: "Важна ли информация об интеграторах для принятия решений?",
+                type: "radio",
+                options: [
+                    "Да, это влияет на сложность и стоимость внедрения",
+                    "Нет, достаточно информации о вендорах",
+                    "Полезно, но не критично"
+                ]
+            },
+            {
+                id: 14,
+                section: "4.3.1. Управление вендорами и интеграторами",
+                text: "Нужна ли возможность добавлять новых вендоров в систему?",
+                type: "radio",
+                options: [
+                    "Да, это должно быть доступно пользователям",
+                    "Нет, список вендоров должен управляться администраторами",
+                    "Зависит от роли пользователя"
+                ]
+            },
+            {
+                id: 15,
+                section: "4.3.2. Управление файлами",
+                text: "Нужна ли возможность прикреплять файлы к технологиям?",
+                type: "radio",
+                options: [
+                    "Да, критично (контракты, презентации, спецификации)",
+                    "Нет, достаточно текстовой информации",
+                    "Полезно, но не обязательно"
+                ]
+            },
+            {
+                id: 16,
+                section: "4.3.2. Управление файлами",
+                text: "Какие типы файлов должны поддерживаться?",
+                type: "checkbox",
+                options: [
+                    "Документы (PDF, DOC, DOCX)",
+                    "Презентации (PPT, PPTX)",
+                    "Изображения (PNG, JPG)",
+                    "Все типы файлов",
+                    "Другое (укажите)"
+                ],
+                hasTextInput: true
+            },
+            {
+                id: 17,
+                section: "4.3.3. Дополнительные инструменты анализа",
+                text: "Нужен ли график перспективных технологий (prospects-chart)?",
+                type: "radio",
+                options: [
+                    "Да, это важный инструмент для анализа",
+                    "Нет, достаточно основного радара",
+                    "Полезно для технических специалистов, но не для директоров"
+                ]
+            },
+            {
+                id: 18,
+                section: "4.3.3. Дополнительные инструменты анализа",
+                text: "Какие дополнительные инструменты анализа нужны?",
+                type: "checkbox",
+                options: [
+                    "График перспективных технологий",
+                    "Экспорт данных в различные форматы",
+                    "Фильтрация и поиск",
+                    "Аналитические отчеты",
+                    "Все перечисленное"
+                ]
+            },
+            {
+                id: 19,
+                section: "4.4.1. Структура данных",
+                text: "Нужны ли отдельные файлы данных для разных ролей пользователей?",
+                type: "radio",
+                options: [
+                    "Да, директорам нужны дополнительные поля (vendors, files)",
+                    "Нет, достаточно одного файла данных",
+                    "Зависит от требований безопасности"
+                ]
+            },
+            {
+                id: 20,
+                section: "4.4.1. Структура данных",
+                text: "Как должна обеспечиваться синхронизация данных между версиями страниц?",
+                type: "radio",
+                options: [
+                    "Автоматическая синхронизация",
+                    "Ручная синхронизация администратором",
+                    "Раздельные данные для разных ролей"
+                ]
+            },
+            {
+                id: 21,
+                section: "4.4.2. Безопасность и доступ",
+                text: "Должны ли разные роли иметь доступ к разным версиям страниц?",
+                type: "radio",
+                options: [
+                    "Да, архитекторы — к своей странице, директора — к своей",
+                    "Нет, все должны иметь доступ ко всем страницам",
+                    "Администраторы должны иметь доступ ко всем страницам"
+                ]
+            },
+            {
+                id: 22,
+                section: "4.4.2. Безопасность и доступ",
+                text: "Нужна ли возможность переключения между версиями страниц?",
+                type: "radio",
+                options: [
+                    "Да, для администраторов и пользователей с несколькими ролями",
+                    "Нет, каждый пользователь должен видеть только свою версию",
+                    "Зависит от роли пользователя"
+                ]
+            },
+            {
+                id: 23,
+                section: "4.5.1. Приоритеты развития",
+                text: "Какие функции должны быть приоритетными для развития?",
+                type: "checkbox",
+                options: [
+                    "Улучшение математической модели позиционирования",
+                    "Расширение функциональности управления вендорами",
+                    "Добавление новых инструментов анализа",
+                    "Улучшение визуализации",
+                    "Оптимизация производительности",
+                    "Другое (укажите)"
+                ],
+                hasTextInput: true
+            },
+            {
+                id: 24,
+                section: "4.5.1. Приоритеты развития",
+                text: "Планируется ли объединение двух версий страниц в одну универсальную?",
+                type: "radio",
+                options: [
+                    "Да, в будущем",
+                    "Нет, версии должны оставаться раздельными",
+                    "Не определено, требуется обсуждение"
+                ]
+            },
+            {
+                id: 25,
+                section: "4.5.2. Масштабирование и поддержка",
+                text: "Сколько пользователей планируется использовать приложение?",
+                type: "radio",
+                options: [
+                    "До 10 пользователей",
+                    "10-50 пользователей",
+                    "50-100 пользователей",
+                    "Более 100 пользователей"
+                ]
+            },
+            {
+                id: 26,
+                section: "4.5.2. Масштабирование и поддержка",
+                text: "Какая частота обновления данных ожидается?",
+                type: "radio",
+                options: [
+                    "Ежедневно",
+                    "Еженедельно",
+                    "Ежемесячно",
+                    "По мере необходимости"
+                ]
+            },
+            {
+                id: 27,
+                section: "4.5.2. Масштабирование и поддержка",
+                text: "Нужна ли поддержка мобильных устройств?",
+                type: "radio",
+                options: [
+                    "Да, критично",
+                    "Нет, только десктоп",
+                    "Желательно, но не обязательно"
+                ]
+            },
+            {
+                id: 28,
+                section: "4.5.3. Интеграция с другими системами",
+                text: "Планируется ли интеграция с другими корпоративными системами?",
+                type: "checkbox",
+                options: [
+                    "Да, с системой управления проектами",
+                    "Да, с системой бюджетирования",
+                    "Да, с системой управления вендорами",
+                    "Нет, автономное приложение",
+                    "Другое (укажите)"
+                ],
+                hasTextInput: true
+            },
+            {
+                id: 29,
+                section: "4.5.3. Интеграция с другими системами",
+                text: "Нужен ли API для интеграции с внешними системами?",
+                type: "radio",
+                options: [
+                    "Да, критично",
+                    "Нет, не требуется",
+                    "Планируется в будущем"
+                ]
+            },
+            {
+                id: 30,
+                section: "4.6.1. Выбор основной страницы",
+                text: "Какая страница должна быть основной для приложения \"Радар технологий\"?",
+                type: "radio",
+                options: [
+                    "Страница для архитектора (RMK.html)",
+                    "Страница для директора (RMK-director.html)",
+                    "Обе страницы в равной степени",
+                    "Требуется дополнительное обсуждение"
+                ]
+            },
+            {
+                id: 31,
+                section: "4.6.1. Выбор основной страницы",
+                text: "Если выбирается одна основная страница, должна ли вторая оставаться доступной?",
+                type: "radio",
+                options: [
+                    "Да, для специальных случаев использования",
+                    "Нет, можно удалить",
+                    "Зависит от выбранной основной страницы"
+                ]
+            },
+            {
+                id: 32,
+                section: "4.6.2. Критерии принятия решения",
+                text: "Какие критерии являются наиболее важными при выборе страницы?",
+                type: "checkbox",
+                options: [
+                    "Ориентация на принятие решений",
+                    "Простота использования",
+                    "Полнота функциональности",
+                    "Визуальная ясность",
+                    "Техническая сложность реализации",
+                    "Стоимость разработки и поддержки",
+                    "Другое (укажите)"
+                ],
+                hasTextInput: true
+            },
+            {
+                id: 33,
+                section: "4.6.2. Критерии принятия решения",
+                text: "Есть ли ограничения по времени или бюджету, которые влияют на решение?",
+                type: "radio",
+                options: [
+                    "Да, ограничения по времени (укажите)",
+                    "Да, ограничения по бюджету (укажите)",
+                    "Нет ограничений",
+                    "Не определено"
+                ],
+                hasTextInput: true
+            },
+            {
+                id: 34,
+                section: "4.7.1. Общие вопросы",
+                text: "Какие основные проблемы решает приложение \"Радар технологий\"?",
+                type: "checkbox",
+                options: [
+                    "Отсутствие единой картины технологического ландшафта",
+                    "Сложность принятия решений о внедрении технологий",
+                    "Недостаток информации о вендорах и интеграторах",
+                    "Отсутствие объективных метрик готовности к внедрению",
+                    "Другое (укажите)"
+                ],
+                hasTextInput: true
+            },
+            {
+                id: 35,
+                section: "4.7.1. Общие вопросы",
+                text: "Какие риски могут возникнуть при неправильном выборе технологий?",
+                type: "checkbox",
+                options: [
+                    "Финансовые потери",
+                    "Задержки в проектах",
+                    "Технические проблемы при внедрении",
+                    "Потеря конкурентных преимуществ",
+                    "Все перечисленное"
+                ]
+            },
+            {
+                id: 36,
+                section: "4.7.1. Общие вопросы",
+                text: "Как часто планируется проводить обзор технологий на радаре?",
+                type: "radio",
+                options: [
+                    "Ежеквартально",
+                    "Полугодично",
+                    "Ежегодно",
+                    "По мере необходимости",
+                    "Не определено"
+                ]
+            },
+            {
+                id: 37,
+                section: "4.7.2. Метрики и отчетность",
+                text: "Какие отчеты и метрики нужны для руководства?",
+                type: "checkbox",
+                options: [
+                    "Обзор технологий по готовности к внедрению",
+                    "Анализ вендоров и интеграторов",
+                    "Тренды изменения готовности технологий",
+                    "Сравнение технологий по различным критериям",
+                    "Все перечисленное"
+                ]
+            },
+            {
+                id: 38,
+                section: "4.7.2. Метрики и отчетность",
+                text: "Нужна ли возможность экспорта данных для внешнего анализа?",
+                type: "checkbox",
+                options: [
+                    "Да, в Excel",
+                    "Да, в PDF",
+                    "Да, в JSON",
+                    "Да, во все перечисленные форматы",
+                    "Нет, не требуется"
+                ]
+            }
+        ];
+
+        // Render Questions
+        const questionsContainer = document.getElementById('questionsContainer');
+        let currentSection = '';
+
+        questions.forEach((q, index) => {
+            if (currentSection !== q.section) {
+                currentSection = q.section;
+                const sectionHeader = document.createElement('div');
+                sectionHeader.className = 'card';
+                sectionHeader.innerHTML = `<h3>${q.section}</h3>`;
+                questionsContainer.appendChild(sectionHeader);
+            }
+
+            const questionCard = document.createElement('div');
+            questionCard.className = 'question-card';
+            questionCard.dataset.questionId = q.id;
+
+            const questionHeader = document.createElement('div');
+            questionHeader.className = 'question-header';
+
+            const questionNumber = document.createElement('div');
+            questionNumber.className = 'question-number';
+            questionNumber.textContent = q.id;
+
+            const questionText = document.createElement('div');
+            questionText.className = 'question-text';
+            questionText.textContent = q.text;
+
+            questionHeader.appendChild(questionNumber);
+            questionHeader.appendChild(questionText);
+
+            const questionOptions = document.createElement('div');
+            questionOptions.className = 'question-options';
+
+            q.options.forEach((option, optIndex) => {
+                const optionItem = document.createElement('div');
+                optionItem.className = 'option-item';
+
+                const input = document.createElement('input');
+                input.type = q.type;
+                input.name = `question-${q.id}`;
+                input.id = `q${q.id}-opt${optIndex}`;
+                input.value = option;
+                input.dataset.questionId = q.id;
+
+                const label = document.createElement('label');
+                label.htmlFor = `q${q.id}-opt${optIndex}`;
+                label.textContent = option;
+
+                optionItem.appendChild(input);
+                optionItem.appendChild(label);
+
+                if (q.hasTextInput && option.includes('(укажите)')) {
+                    const textInput = document.createElement('input');
+                    textInput.type = 'text';
+                    textInput.placeholder = 'Введите ваш ответ...';
+                    textInput.className = 'text-input-answer';
+                    textInput.dataset.questionId = q.id;
+                    textInput.dataset.optionIndex = optIndex;
+                    optionItem.appendChild(textInput);
+                }
+
+                questionOptions.appendChild(optionItem);
+            });
+
+            // Add custom answer field for each question
+            const customAnswerSection = document.createElement('div');
+            customAnswerSection.className = 'custom-answer-section';
+
+            const customAnswerLabel = document.createElement('label');
+            customAnswerLabel.className = 'custom-answer-label';
+            customAnswerLabel.textContent = 'Собственный ответ (необязательно):';
+            customAnswerLabel.htmlFor = `custom-answer-${q.id}`;
+
+            const customAnswerInput = document.createElement('textarea');
+            customAnswerInput.id = `custom-answer-${q.id}`;
+            customAnswerInput.className = 'custom-answer-input';
+            customAnswerInput.placeholder = 'Введите ваш собственный ответ или дополнительные комментарии к вопросу...';
+            customAnswerInput.dataset.questionId = q.id;
+            customAnswerInput.rows = 3;
+
+            customAnswerSection.appendChild(customAnswerLabel);
+            customAnswerSection.appendChild(customAnswerInput);
+
+            questionCard.appendChild(questionHeader);
+            questionCard.appendChild(questionOptions);
+            questionCard.appendChild(customAnswerSection);
+            questionsContainer.appendChild(questionCard);
+        });
+
+        // Track Answers
+        const answers = {};
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+
+        function updateProgress() {
+            const answeredCount = Object.keys(answers).length;
+            const totalQuestions = questions.length;
+            const percentage = (answeredCount / totalQuestions) * 100;
+
+            progressFill.style.width = `${percentage}%`;
+            progressText.textContent = `${answeredCount} из ${totalQuestions} вопросов`;
+
+            if (answeredCount === totalQuestions) {
+                downloadBtn.disabled = false;
+                downloadPdfBtn.disabled = false;
+            } else {
+                downloadBtn.disabled = true;
+                downloadPdfBtn.disabled = true;
+            }
+        }
+
+        // Listen for answer changes
+        document.addEventListener('change', (e) => {
+            if (e.target.matches('input[type="radio"], input[type="checkbox"]')) {
+                const questionId = parseInt(e.target.dataset.questionId);
+                const question = questions.find(q => q.id === questionId);
+
+                if (question.type === 'radio') {
+                    answers[questionId] = {
+                        questionId: questionId,
+                        question: question.text,
+                        answer: e.target.value,
+                        section: question.section
+                    };
+                } else if (question.type === 'checkbox') {
+                    if (!answers[questionId]) {
+                        answers[questionId] = {
+                            questionId: questionId,
+                            question: question.text,
+                            answer: [],
+                            section: question.section
+                        };
+                    }
+
+                    const checkedOptions = Array.from(document.querySelectorAll(`input[type="checkbox"][name="question-${questionId}"]:checked`))
+                        .map(input => input.value);
+
+                    answers[questionId].answer = checkedOptions;
+
+                    if (checkedOptions.length === 0) {
+                        delete answers[questionId];
+                    }
+                }
+
+                updateProgress();
+            }
+        });
+
+        // Listen for text input changes
+        document.addEventListener('input', (e) => {
+            if (e.target.classList.contains('text-input-answer')) {
+                const questionId = parseInt(e.target.dataset.questionId);
+                const optionIndex = parseInt(e.target.dataset.optionIndex);
+                const question = questions.find(q => q.id === questionId);
+                const option = question.options[optionIndex];
+
+                if (!answers[questionId]) {
+                    answers[questionId] = {
+                        questionId: questionId,
+                        question: question.text,
+                        answer: [],
+                        section: question.section,
+                        textAnswers: {}
+                    };
+                }
+
+                if (!answers[questionId].textAnswers) {
+                    answers[questionId].textAnswers = {};
+                }
+
+                if (e.target.value.trim()) {
+                    answers[questionId].textAnswers[option] = e.target.value.trim();
+                } else {
+                    delete answers[questionId].textAnswers[option];
+                }
+
+                updateProgress();
+            } else if (e.target.classList.contains('custom-answer-input')) {
+                // Handle custom answer input
+                const questionId = parseInt(e.target.dataset.questionId);
+                const question = questions.find(q => q.id === questionId);
+
+                if (!answers[questionId]) {
+                    answers[questionId] = {
+                        questionId: questionId,
+                        question: question.text,
+                        answer: question.type === 'checkbox' ? [] : '',
+                        section: question.section,
+                        customAnswer: ''
+                    };
+                }
+
+                if (e.target.value.trim()) {
+                    answers[questionId].customAnswer = e.target.value.trim();
+                } else {
+                    if (answers[questionId].customAnswer) {
+                        delete answers[questionId].customAnswer;
+                    }
+                }
+
+                // Don't count custom answer as required answer for progress
+                // updateProgress();
+            }
+        });
+
+        // Helper function to expand "Все перечисленное" option
+        function expandAllOptions(answer, question) {
+            if (Array.isArray(answer.answer)) {
+                const hasAllOption = answer.answer.includes('Все перечисленное');
+                if (hasAllOption) {
+                    // Replace "Все перечисленное" with all options except "Все перечисленное"
+                    const allOptions = question.options.filter(opt => opt !== 'Все перечисленное');
+                    const otherOptions = answer.answer.filter(opt => opt !== 'Все перечисленное');
+                    return {
+                        ...answer,
+                        answer: [...otherOptions, ...allOptions],
+                        expanded: true,
+                        originalAnswer: answer.answer
+                    };
+                }
+            } else if (answer.answer === 'Все перечисленное') {
+                const allOptions = question.options.filter(opt => opt !== 'Все перечисленное');
+                return {
+                    ...answer,
+                    answer: allOptions,
+                    expanded: true,
+                    originalAnswer: 'Все перечисленное'
+                };
+            }
+            return answer;
+        }
+
+        // Download Answers as TXT
+        downloadBtn.addEventListener('click', () => {
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            const filename = `answers-${timestamp}.txt`;
+
+            let content = 'ОТВЕТЫ НА ВОПРОСЫ ДЛЯ БИЗНЕС-ЗАКАЗЧИКА\n';
+            content += 'Приложение "Радар технологий"\n';
+            content += `Дата заполнения: ${new Date().toLocaleString('ru-RU')}\n`;
+            content += '='.repeat(80) + '\n\n';
+
+            let currentSection = '';
+            let questionIndex = 0;
+            Object.values(answers)
+                .sort((a, b) => {
+                    const aIndex = questions.findIndex(q => q.section === a.section && q.text === a.question);
+                    const bIndex = questions.findIndex(q => q.section === b.section && q.text === b.question);
+                    return aIndex - bIndex;
+                })
+                .forEach((answer) => {
+                    const questionObj = questions.find(q => q.id === answer.questionId);
+                    const expandedAnswer = expandAllOptions(answer, questionObj);
+
+                    if (currentSection !== answer.section) {
+                        currentSection = answer.section;
+                        content += `\n${currentSection}\n`;
+                        content += '-'.repeat(80) + '\n';
+                    }
+
+                    questionIndex++;
+                    content += `\nВопрос ${questionIndex}: ${answer.question}\n`;
+
+                    if (expandedAnswer.expanded) {
+                        content += 'Примечание: Выбран вариант "Все перечисленное", ниже указаны все пункты:\n';
+                    }
+
+                    if (Array.isArray(expandedAnswer.answer)) {
+                        if (expandedAnswer.answer.length > 0) {
+                            content += 'Ответ:\n';
+                            expandedAnswer.answer.forEach((ans, i) => {
+                                content += `  ${i + 1}. ${ans}\n`;
+                                if (expandedAnswer.textAnswers && expandedAnswer.textAnswers[ans]) {
+                                    content += `     Дополнительно: ${expandedAnswer.textAnswers[ans]}\n`;
+                                }
+                            });
+                        } else {
+                            content += 'Ответ: не выбран\n';
+                        }
+                    } else {
+                        content += `Ответ: ${expandedAnswer.answer || 'не выбран'}\n`;
+                        if (expandedAnswer.textAnswers) {
+                            Object.entries(expandedAnswer.textAnswers).forEach(([key, value]) => {
+                                content += `  Дополнительно (${key}): ${value}\n`;
+                            });
+                        }
+                    }
+
+                    // Add custom answer if exists
+                    if (answer.customAnswer) {
+                        content += `\nСобственный ответ:\n${answer.customAnswer}\n`;
+                    }
+
+                    content += '\n';
+                });
+
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        // Download Answers as PDF using html2canvas
+        downloadPdfBtn.addEventListener('click', async () => {
+            // Show loading indicator
+            downloadPdfBtn.disabled = true;
+            downloadPdfBtn.textContent = 'Генерация PDF...';
+
+            try {
+                // Create hidden container for PDF content
+                const pdfContainer = document.createElement('div');
+                pdfContainer.style.position = 'absolute';
+                pdfContainer.style.left = '-9999px';
+                pdfContainer.style.top = '0';
+                pdfContainer.style.width = '210mm'; // A4 width
+                pdfContainer.style.padding = '20mm';
+                pdfContainer.style.backgroundColor = '#ffffff';
+                pdfContainer.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif';
+                pdfContainer.style.fontSize = '12px';
+                pdfContainer.style.lineHeight = '1.6';
+                pdfContainer.style.color = '#000000';
+                document.body.appendChild(pdfContainer);
+
+                // Build HTML content
+                let htmlContent = `
+                    <style>
+                        .pdf-header {
+                            background: linear-gradient(135deg, #A37151 0%, #C8977F 100%);
+                            color: white;
+                            padding: 20px;
+                            text-align: center;
+                            margin-bottom: 30px;
+                            border-radius: 8px;
+                        }
+                        .pdf-header h1 {
+                            margin: 0 0 10px 0;
+                            font-size: 24px;
+                            font-weight: bold;
+                        }
+                        .pdf-header p {
+                            margin: 5px 0;
+                            font-size: 14px;
+                        }
+                        .pdf-section {
+                            margin: 30px 0 20px 0;
+                            padding: 10px;
+                            background: #6c757d;
+                            color: white;
+                            font-weight: bold;
+                            font-size: 14px;
+                            border-radius: 4px;
+                        }
+                        .pdf-question {
+                            margin: 20px 0 10px 0;
+                            font-weight: bold;
+                            font-size: 13px;
+                            color: #000;
+                        }
+                        .pdf-answer {
+                            margin: 5px 0 5px 20px;
+                            font-size: 11px;
+                            color: #333;
+                        }
+                        .pdf-answer-item {
+                            margin: 3px 0;
+                        }
+                        .pdf-note {
+                            margin: 10px 0 10px 20px;
+                            font-size: 10px;
+                            color: #646464;
+                            font-style: italic;
+                        }
+                        .pdf-custom-answer {
+                            margin: 15px 0 10px 20px;
+                            padding: 10px;
+                            background: #f5f5f5;
+                            border-left: 4px solid #ce9068;
+                            border-radius: 4px;
+                        }
+                        .pdf-custom-answer-label {
+                            font-weight: bold;
+                            color: #ce9068;
+                            font-size: 11px;
+                            margin-bottom: 5px;
+                        }
+                        .pdf-custom-answer-text {
+                            font-size: 11px;
+                            color: #333;
+                            white-space: pre-wrap;
+                            word-wrap: break-word;
+                        }
+                        .pdf-additional {
+                            margin: 3px 0 3px 30px;
+                            font-size: 10px;
+                            color: #646464;
+                        }
+                    </style>
+                    <div class="pdf-header">
+                        <h1>ОТВЕТЫ НА ВОПРОСЫ ДЛЯ БИЗНЕС-ЗАКАЗЧИКА</h1>
+                        <p>Приложение "Радар технологий"</p>
+                        <p>Дата заполнения: ${new Date().toLocaleString('ru-RU')}</p>
+                    </div>
+                `;
+
+                let currentSection = '';
+                let questionIndex = 0;
+
+                const sortedAnswers = Object.values(answers)
+                    .sort((a, b) => {
+                        const aIndex = questions.findIndex(q => q.section === a.section && q.text === a.question);
+                        const bIndex = questions.findIndex(q => q.section === b.section && q.text === b.question);
+                        return aIndex - bIndex;
+                    });
+
+                sortedAnswers.forEach((answer) => {
+                    const questionObj = questions.find(q => q.id === answer.questionId);
+                    const expandedAnswer = expandAllOptions(answer, questionObj);
+
+                    // Section header
+                    if (currentSection !== answer.section) {
+                        currentSection = answer.section;
+                        htmlContent += `<div class="pdf-section">${currentSection}</div>`;
+                    }
+
+                    questionIndex++;
+
+                    // Question
+                    htmlContent += `<div class="pdf-question">${questionIndex}. ${answer.question}</div>`;
+
+                    // Expanded note
+                    if (expandedAnswer.expanded) {
+                        htmlContent += `<div class="pdf-note">Примечание: Выбран вариант "Все перечисленное", ниже указаны все пункты:</div>`;
+                    }
+
+                    // Answer
+                    if (Array.isArray(expandedAnswer.answer)) {
+                        if (expandedAnswer.answer.length > 0) {
+                            htmlContent += '<div class="pdf-answer">';
+                            expandedAnswer.answer.forEach((ans, i) => {
+                                htmlContent += `<div class="pdf-answer-item">${i + 1}. ${ans}</div>`;
+                                if (expandedAnswer.textAnswers && expandedAnswer.textAnswers[ans]) {
+                                    htmlContent += `<div class="pdf-additional">Дополнительно: ${expandedAnswer.textAnswers[ans]}</div>`;
+                                }
+                            });
+                            htmlContent += '</div>';
+                        } else {
+                            htmlContent += '<div class="pdf-answer">Ответ: не выбран</div>';
+                        }
+                    } else {
+                        htmlContent += `<div class="pdf-answer">Ответ: ${expandedAnswer.answer || 'не выбран'}</div>`;
+                        if (expandedAnswer.textAnswers) {
+                            Object.entries(expandedAnswer.textAnswers).forEach(([key, value]) => {
+                                htmlContent += `<div class="pdf-additional">Дополнительно (${key}): ${value}</div>`;
+                            });
+                        }
+                    }
+
+                    // Custom answer
+                    if (answer.customAnswer) {
+                        htmlContent += `
+                            <div class="pdf-custom-answer">
+                                <div class="pdf-custom-answer-label">Собственный ответ:</div>
+                                <div class="pdf-custom-answer-text">${answer.customAnswer}</div>
+                            </div>
+                        `;
+                    }
+
+                    htmlContent += '<div style="margin-bottom: 20px;"></div>';
+                });
+
+                pdfContainer.innerHTML = htmlContent;
+
+                // Wait for rendering
+                await new Promise(resolve => setTimeout(resolve, 100));
+
+                // Render to canvas
+                const canvas = await html2canvas(pdfContainer, {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: '#ffffff',
+                    width: pdfContainer.offsetWidth,
+                    height: pdfContainer.offsetHeight
+                });
+
+                // Create PDF
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const pageWidth = pdf.internal.pageSize.getWidth();
+                const pageHeight = pdf.internal.pageSize.getHeight();
+                const imgWidth = pageWidth;
+                const imgHeight = (canvas.height * pageWidth) / canvas.width;
+
+                let heightLeft = imgHeight;
+                let position = 0;
+
+                // Add first page
+                pdf.addImage(canvas.toDataURL('image/png', 1.0), 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+
+                // Add additional pages if needed
+                while (heightLeft > 0) {
+                    position = heightLeft - imgHeight;
+                    pdf.addPage();
+                    pdf.addImage(canvas.toDataURL('image/png', 1.0), 'PNG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                }
+
+                // Clean up
+                document.body.removeChild(pdfContainer);
+
+                // Save PDF
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+                pdf.save(`answers-${timestamp}.pdf`);
+
+                // Reset button
+                downloadPdfBtn.disabled = false;
+                downloadPdfBtn.innerHTML = `
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Скачать ответы (PDF)
+                `;
+            } catch (error) {
+                console.error('Error generating PDF:', error);
+                alert('Ошибка при создании PDF. Попробуйте еще раз.');
+                downloadPdfBtn.disabled = false;
+                downloadPdfBtn.innerHTML = `
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Скачать ответы (PDF)
+                `;
+            }
+        });
+
+        // Scroll animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animate-on-scroll');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.card, .question-card').forEach(el => {
+            observer.observe(el);
+        });
+
+        // Initialize progress
+        updateProgress();
+    </script>
+</body>
+
+</html>

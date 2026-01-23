@@ -143,9 +143,35 @@
     const bias = -0.5; // Отрицательный сдвиг делает модель более строгой (больше радиус)
 
     // Извлечение и нормализация факторов (s_ik → x_ik)
-    const techRead = tech.techRead !== undefined ? tech.techRead : 0;
-    const organRead = tech.organRead !== undefined ? tech.organRead : 0;
-    const funcCover = tech.funcCover !== undefined ? tech.funcCover : 0;
+    // Учитываем индивидуальные оценки для текущего предприятия, если они есть
+    const companies = Array.isArray(tech.company) ? tech.company : (tech.company ? [tech.company] : []);
+    let techRead, organRead, funcCover;
+
+    // Получаем текущее предприятие из глобальной области или StateAccessors
+    let currentEnterprise = null;
+    if (typeof window !== 'undefined') {
+      if (window.StateAccessors && typeof window.StateAccessors.getCurrentEnterprise === 'function') {
+        currentEnterprise = window.StateAccessors.getCurrentEnterprise();
+      } else if (typeof window.getCurrentEnterprise === 'function') {
+        currentEnterprise = window.getCurrentEnterprise();
+      } else if (typeof window.currentEnterprise !== 'undefined') {
+        currentEnterprise = window.currentEnterprise;
+      }
+    }
+
+    // Если есть несколько предприятий и индивидуальные оценки, используем оценки для текущего предприятия
+    if (companies.length > 1 && tech.companyRatings && typeof tech.companyRatings === 'object' &&
+        currentEnterprise && companies.includes(currentEnterprise) && tech.companyRatings[currentEnterprise]) {
+      const ratings = tech.companyRatings[currentEnterprise];
+      techRead = ratings.techRead !== undefined ? ratings.techRead : (tech.techRead !== undefined ? tech.techRead : 0);
+      organRead = ratings.organRead !== undefined ? ratings.organRead : (tech.organRead !== undefined ? tech.organRead : 0);
+      funcCover = ratings.funcCover !== undefined ? ratings.funcCover : (tech.funcCover !== undefined ? tech.funcCover : 0);
+    } else {
+      techRead = tech.techRead !== undefined ? tech.techRead : 0;
+      organRead = tech.organRead !== undefined ? tech.organRead : 0;
+      funcCover = tech.funcCover !== undefined ? tech.funcCover : 0;
+    }
+
     const trlStage = tech.trlStage !== undefined ? tech.trlStage : 1;
 
     // Нормализация факторов в диапазон [0, 1]

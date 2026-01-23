@@ -272,19 +272,14 @@
       }
 
       // Отображаем funcCover с учетом индивидуальных оценок
+      // funcCover - общее значение для всех предприятий, не хранится в companyRatings
       if (funcCoverEl) {
         if (companies.length > 1 && t.companyRatings && typeof t.companyRatings === 'object') {
-          if (currentEnterprise && companies.includes(currentEnterprise)) {
-            const ratings = (t.companyRatings && t.companyRatings[currentEnterprise]) ? t.companyRatings[currentEnterprise] : null;
-            funcCoverEl.textContent = (ratings && ratings.funcCover !== undefined && ratings.funcCover !== null && ratings.funcCover !== '') ? String(ratings.funcCover) : '—';
-          } else {
-            // fallback: общие значения или значения первого предприятия
-            const firstCompany = companies[0];
-            const ratings = (t.companyRatings && t.companyRatings[firstCompany]) ? t.companyRatings[firstCompany] : {};
-            funcCoverEl.textContent = (ratings.funcCover !== undefined && ratings.funcCover !== null && ratings.funcCover !== '') ? String(ratings.funcCover) : ((t.funcCover ?? '') !== '' ? String(t.funcCover) : '—');
-          }
+          // Для нескольких предприятий funcCover всегда общий, используем t.funcCover
+          funcCoverEl.textContent = (t.funcCover !== undefined && t.funcCover !== null && t.funcCover !== '') ? String(t.funcCover) : '—';
         } else {
-          funcCoverEl.textContent = (t.funcCover ?? '') !== '' ? String(t.funcCover) : '—';
+          // Одно предприятие или нет индивидуальных оценок - показываем общие значения
+          funcCoverEl.textContent = (t.funcCover !== undefined && t.funcCover !== null && t.funcCover !== '') ? String(t.funcCover) : '—';
         }
       }
 
