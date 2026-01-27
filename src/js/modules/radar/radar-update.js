@@ -56,10 +56,12 @@
     const StateAccessors = getStateAccessors();
     const DOMProxy = getDOMProxy();
 
+    const d = Filters.getFilterValues('direction');
     const b = Filters.getFilterValues('block');
     const f = Filters.getFilterValues('function');
-    const tt = Filters.getFilterValues('techType');
+    // Фильтр "Тип технологий" удален
     const l = Filters.getFilterValues('level');
+    const e = Filters.getFilterValues('enterprise');
 
     // Получаем searchInput через DOMProxy
     const searchInput = DOMProxy.createElementProxy("searchInput");
@@ -71,6 +73,16 @@
 
     // Используем DataIndex для быстрой фильтрации
     let filtered = DataIndex.filter((t) => {
+      // Проверяем предприятие (может быть в t.company как строка или массив)
+      if (e.length > 0) {
+        const techCompanies = Array.isArray(t.company) ? t.company : (t.company ? [t.company] : []);
+        if (techCompanies.length === 0 || !techCompanies.some(company => e.includes(company))) return false;
+      }
+      // Проверяем направление (может быть в t.directions или t.direction)
+      if (d.length > 0) {
+        const techDirections = t.directions && Array.isArray(t.directions) ? t.directions : (t.direction ? [t.direction] : []);
+        if (!techDirections.some(direction => d.includes(direction))) return false;
+      }
       // Проверяем блок (может быть в t.block или t.blocks)
       if (b.length > 0) {
         const techBlocks = t.blocks && Array.isArray(t.blocks) ? t.blocks : (t.block ? [t.block] : []);
@@ -81,10 +93,32 @@
         const techFunctions = t.functions && Array.isArray(t.functions) ? t.functions : (t.func ? [t.func] : []);
         if (!techFunctions.some(func => f.includes(func))) return false;
       }
-      // Проверяем тип технологии
-      if (tt.length > 0 && !tt.includes(t.techType)) return false;
-      // Проверяем статус
-      if (l.length > 0 && !l.includes(t.level)) return false;
+      // Фильтр "Тип технологий" удален
+      // Проверяем статус (Внедренная/Невнедренная) на основе isImplemented
+      if (l.length > 0) {
+        // Для технологий с несколькими предприятиями проверяем isImplemented для каждого предприятия
+        const companies = Array.isArray(t.company) ? t.company : (t.company ? [t.company] : []);
+        let isImplemented = false;
+
+        if (companies.length > 1 && t.companyRatings && typeof t.companyRatings === 'object') {
+          // Для нескольких предприятий проверяем, есть ли хотя бы одно с isImplemented = true
+          isImplemented = companies.some(company => {
+            const ratings = t.companyRatings[company];
+            return ratings && ratings.isImplemented === true;
+          });
+        } else {
+          // Для одного предприятия или общего значения
+          if (companies.length === 1 && t.companyRatings && typeof t.companyRatings === 'object') {
+            const ratings = t.companyRatings[companies[0]];
+            isImplemented = ratings && ratings.isImplemented === true;
+          } else {
+            isImplemented = t.isImplemented === true;
+          }
+        }
+
+        const statusValue = isImplemented ? 'Внедренная' : 'Невнедренная';
+        if (!l.includes(statusValue)) return false;
+      }
       return true;
     });
 
@@ -97,6 +131,8 @@
           normalizedFields = [
             String(t.name || ''),
             String(t.description || ''),
+            String(t.direction || ''),
+            ...(t.directions || []),
             String(t.block || ''),
             ...(t.blocks || []),
             String(t.func || ''),
@@ -119,7 +155,7 @@
       }
 
       // Обновляем сайдбар ТОЛЬКО если есть активный поиск или фильтры
-      const hasActiveFilter = b.length > 0 || f.length > 0 || tt.length > 0 || l.length > 0 || q;
+      const hasActiveFilter = e.length > 0 || d.length > 0 || b.length > 0 || f.length > 0 || l.length > 0 || q;
       if (hasActiveFilter) {
         if (typeof window.updateSidebarLists === 'function') {
           window.updateSidebarLists(filtered);

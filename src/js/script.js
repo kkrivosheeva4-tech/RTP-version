@@ -342,7 +342,7 @@
       };
     }
 
-    // Обработчик графика только для обычной страницы RMK.html, не для RMK-director.html
+    // Обработчик графика (prospects-chart) доступен только на RMK-director.html
     if (chartIconBtn && document.body.id !== 'rmk-director') {
       chartIconBtn.onclick = (e) => {
         e.preventDefault();
@@ -714,86 +714,8 @@
   renderInitialAnimation();
 })();
 
-  // --- Enterprise nav: — навигация и авто-активный класс ---
-  (function () {
-    const nav = document.querySelector('.enterprise-nav');
-    if (!nav) return;
-    nav.querySelectorAll('button').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const text = (btn.textContent || '').trim();
-        localStorage.setItem('selectedEnterprise', text);
-
-        const selectionHint = document.querySelector('.selection-hint');
-        if (selectionHint) {
-          selectionHint.style.opacity = '0';
-          selectionHint.style.transform = 'translateY(0px)';
-          setTimeout(() => {
-            if (selectionHint.parentNode) {
-              selectionHint.parentNode.removeChild(selectionHint);
-            }
-          }, 300);
-        }
-
-        // Определяем роль пользователя для выбора правильной страницы
-        const role = localStorage.getItem('role');
-        const isDirectorOrPM = role === 'director' || role === 'project_manager';
-        const isArchitectOrAdmin = role === 'architect' || role === 'admin';
-
-        const isRMKPage = location.pathname.endsWith('RMK.html') || location.pathname.endsWith('/RMK.html') || location.href.includes('RMK.html');
-        const isRMKDirectorPage = location.pathname.endsWith('RMK-director.html') || location.pathname.endsWith('/RMK-director.html') || location.href.includes('RMK-director.html');
-
-        // Если уже на нужной странице, просто обновляем выбор предприятия
-        if (isRMKPage && isArchitectOrAdmin) {
-          document.querySelectorAll('.enterprise-nav button').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          try {
-            window.dispatchEvent(new CustomEvent('enterpriseChanged', { detail: { enterprise: text } }));
-          } catch (err) {
-            try { sessionStorage.setItem('silentEnterpriseNav', '1'); } catch(e){}
-            window.location.href = 'RMK.html';
-          }
-          return;
-        }
-
-        if (isRMKDirectorPage && isDirectorOrPM) {
-          document.querySelectorAll('.enterprise-nav button').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          try {
-            window.dispatchEvent(new CustomEvent('enterpriseChanged', { detail: { enterprise: text } }));
-          } catch (err) {
-            try { sessionStorage.setItem('silentEnterpriseNav', '1'); } catch(e){}
-            window.location.href = 'RMK-director.html';
-          }
-          return;
-        }
-
-        // Перенаправляем на нужную страницу в зависимости от роли
-        try {
-          sessionStorage.setItem('silentEnterpriseNav', '1');
-        } catch (err) {}
-
-        if (isDirectorOrPM) {
-          window.location.href = 'RMK-director.html';
-        } else if (isArchitectOrAdmin) {
-          window.location.href = 'RMK.html';
-        } else {
-          // Для гостей и других ролей - на RMK.html
-          window.location.href = 'RMK.html';
-        }
-      });
-    });
-
-    function markActive() {
-      const selected = localStorage.getItem('selectedEnterprise');
-      nav.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
-      if (selected) {
-        const btn = Array.from(nav.querySelectorAll('button')).find(b => (b.textContent||'').trim() === selected);
-        if (btn) btn.classList.add('active');
-      }
-    }
-    markActive();
-    window.addEventListener('popstate', markActive);
-  })();
+  // --- Enterprise nav: удалена, предприятия теперь управляются через фильтр в левой панели ---
+  // (код удален, так как enterprise-nav больше не используется)
 
   // --- Mobile Navigation и Touch Handlers инициализация ---
   (function() {

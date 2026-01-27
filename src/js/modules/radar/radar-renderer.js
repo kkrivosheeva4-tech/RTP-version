@@ -401,32 +401,77 @@
     el.classList.add(`blip--${dataShape}`);
     g.appendChild(el);
 
-    // Проверяем наличие оценок и добавляем иконку предупреждения, если они отсутствуют
+    // Проверяем наличие предприятий у технологии
     const companies = Array.isArray(tech.company) ? tech.company : (tech.company ? [tech.company] : []);
-    let techRead, organRead, funcCover;
+    const hasEnterprises = companies.length > 0;
 
-    if (companies.length > 1 && tech.companyRatings && typeof tech.companyRatings === 'object' &&
-        currentEnterprise && companies.includes(currentEnterprise) && tech.companyRatings[currentEnterprise]) {
-      const ratings = tech.companyRatings[currentEnterprise];
-      techRead = ratings.techRead !== undefined ? ratings.techRead : tech.techRead;
-      organRead = ratings.organRead !== undefined ? ratings.organRead : tech.organRead;
-      funcCover = ratings.funcCover !== undefined ? ratings.funcCover : tech.funcCover;
+    // Проверяем наличие оценок и добавляем иконку предупреждения, если они отсутствуют
+    // НО только если у технологии есть предприятия
+    let techRead, organRead, funcCover;
+    let techReadFilled = false;
+    let organReadFilled = false;
+
+    // Для технологий с несколькими предприятиями проверяем индивидуальные оценки
+    if (companies.length > 1 && tech.companyRatings && typeof tech.companyRatings === 'object') {
+      // Если есть текущее предприятие и оно в списке предприятий технологии
+      if (currentEnterprise && companies.includes(currentEnterprise)) {
+        const ratings = tech.companyRatings[currentEnterprise];
+        // Используем индивидуальные оценки, если они есть, иначе общие значения
+        techRead = (ratings && ratings.techRead !== undefined && ratings.techRead !== null)
+          ? ratings.techRead
+          : (tech.techRead !== undefined && tech.techRead !== null ? tech.techRead : null);
+        organRead = (ratings && ratings.organRead !== undefined && ratings.organRead !== null)
+          ? ratings.organRead
+          : (tech.organRead !== undefined && tech.organRead !== null ? tech.organRead : null);
+        funcCover = (ratings && ratings.funcCover !== undefined && ratings.funcCover !== null)
+          ? ratings.funcCover
+          : (tech.funcCover !== undefined && tech.funcCover !== null ? tech.funcCover : null);
+        techReadFilled = isRatingFilled(techRead);
+        organReadFilled = isRatingFilled(organRead);
+      } else {
+        // Если текущее предприятие не установлено или не совпадает, проверяем все предприятия
+        // Если хотя бы у одного предприятия нет оценок, подсвечиваем
+        let allHaveRatings = true;
+        for (const company of companies) {
+          const ratings = tech.companyRatings[company];
+          const companyTechRead = (ratings && ratings.techRead !== undefined && ratings.techRead !== null)
+            ? ratings.techRead
+            : (tech.techRead !== undefined && tech.techRead !== null ? tech.techRead : null);
+          const companyOrganRead = (ratings && ratings.organRead !== undefined && ratings.organRead !== null)
+            ? ratings.organRead
+            : (tech.organRead !== undefined && tech.organRead !== null ? tech.organRead : null);
+
+          if (!isRatingFilled(companyTechRead) || !isRatingFilled(companyOrganRead)) {
+            allHaveRatings = false;
+            break;
+          }
+        }
+        // Используем общие значения для отображения
+        techRead = (tech.techRead !== undefined && tech.techRead !== null) ? tech.techRead : null;
+        organRead = (tech.organRead !== undefined && tech.organRead !== null) ? tech.organRead : null;
+        funcCover = (tech.funcCover !== undefined && tech.funcCover !== null) ? tech.funcCover : null;
+        techReadFilled = allHaveRatings && isRatingFilled(techRead);
+        organReadFilled = allHaveRatings && isRatingFilled(organRead);
+      }
     } else {
-      techRead = tech.techRead;
-      organRead = tech.organRead;
-      funcCover = tech.funcCover;
+      // Для одной компании или отсутствия индивидуальных оценок используем общие значения
+      techRead = (tech.techRead !== undefined && tech.techRead !== null) ? tech.techRead : null;
+      organRead = (tech.organRead !== undefined && tech.organRead !== null) ? tech.organRead : null;
+      funcCover = (tech.funcCover !== undefined && tech.funcCover !== null) ? tech.funcCover : null;
+      techReadFilled = isRatingFilled(techRead);
+      organReadFilled = isRatingFilled(organRead);
     }
 
     const hasRatings = isRatingFilled(techRead) || isRatingFilled(organRead) || isRatingFilled(funcCover);
-    const techReadFilled = isRatingFilled(techRead);
-    const organReadFilled = isRatingFilled(organRead);
     const hasReadinessRatings = techReadFilled && organReadFilled;
 
-    if (!hasReadinessRatings) {
+    // Подсвечиваем красным только если у технологии есть предприятия, но нет оценок готовности
+    if (!hasReadinessRatings && hasEnterprises) {
       el.classList.add('blip-incomplete');
     }
 
-    if (!hasRatings) {
+    // Показываем иконку предупреждения только если у технологии есть предприятия, но нет оценок
+    if (!hasRatings && hasEnterprises) {
       const warningGroup = document.createElementNS(SVG_NS, "g");
       warningGroup.classList.add("blip-warning");
       warningGroup.setAttribute("transform", `translate(${pos.x + size + 3}, ${pos.y - size - 3})`);
@@ -525,21 +570,13 @@
 
     if (window.Logger) window.Logger.debug('renderRadar: start — input data length:', Array.isArray(techData) ? techData.length : 0);
 
-    // Проверяем, является ли это директорской страницей
-    const isDirectorPage = document.body.id === 'rmk-director';
-
     // Фильтруем технологии по валидности
+    // Все технологии отображаются на основе математической модели, проверяем только наличие квадрантов
     const validTechs = (Array.isArray(techData) ? techData : [])
       .filter((t) => {
         if (!t) return false;
-        if (isDirectorPage) {
-          // Для директорской страницы проверяем наличие квадрантов (готовность рассчитывается автоматически)
-          return true;
-        } else {
-          // Для обычной страницы проверяем наличие кольца (статуса)
-          const ring = (typeof t.level !== 'undefined' && levelToRing && Object.prototype.hasOwnProperty.call(levelToRing, t.level)) ? levelToRing[t.level] : null;
-          return ring != null;
-        }
+        // Проверяем наличие квадрантов (готовность рассчитывается автоматически через математическую модель)
+        return true;
       });
 
     if (window.Logger) window.Logger.debug('renderRadar: start — valid techs:', validTechs.length);
@@ -557,26 +594,31 @@
 
       const shape = computeShapeByTechType(t.techType, TECHTYPE_TO_SHAPE) || 'circle';
 
-      techQuadrants.forEach((quadrantId) => {
-        // Для директорской страницы используем поле ring из данных, если указано
-        let ringValue = null;
-        if (isDirectorPage) {
-          if (t.ring !== undefined && t.ring !== null) {
-            ringValue = Number(t.ring);
-            const ringsLength = (window.RINGS && Array.isArray(window.RINGS) && window.RINGS.length > 0) ? window.RINGS.length : 3;
-            if (isNaN(ringValue) || ringValue < 0 || ringValue >= ringsLength) {
-              ringValue = null;
-            }
-          }
+      // Вычисляем размер для технологии (нужно для правильного разведения)
+      const isDirectorPage = document.body.id === 'rmk-director';
+      let size;
+      if (isDirectorPage) {
+        const vendorCount = (t.vendors && Array.isArray(t.vendors)) ? t.vendors.length : 0;
+        if (vendorCount <= 1) {
+          size = 8;
+        } else if (vendorCount === 2 || vendorCount === 3) {
+          size = 14;
         } else {
-          ringValue = levelToRing[t.level] || null;
+          size = 20;
         }
+      } else {
+        size = 10;
+      }
 
+      techQuadrants.forEach((quadrantId) => {
+        // Позиция вычисляется через математическую модель, ring не используется
+        // Оставляем ring для обратной совместимости, но он не влияет на позиционирование
         renderData.push({
           ...t,
           quadrant: quadrantId,
-          ring: ringValue,
+          ring: null, // Не используется, позиция вычисляется через математическую модель
           shape: shape,
+          size: size, // Размер для правильного разведения
           x: null,
           y: null
         });

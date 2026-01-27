@@ -1,0 +1,1365 @@
+[
+  {
+    "id": 1,
+    "name": "Единая платформа данных (Data Platform)",
+    "directions": [
+      1
+    ],
+    "block": 18,
+    "function": "Разработка",
+    "description": "Централизованная платформа для сбора, хранения, обработки и анализа данных со всех источников компании. Обеспечивает единую точку доступа к данным и их консолидацию.",
+    "marketExamples": [
+      "Внедрено в крупных горнодобывающих компаниях (Rio Tinto, BHP)",
+      "Используется в металлургических холдингах (ArcelorMittal, Nornickel)",
+      "Применяется в контуре РМК для консолидации данных с предприятий"
+    ],
+    "vendors": [
+      "Microsoft",
+      "SAP",
+      "IBS",
+      "Oracle",
+      "IBM"
+    ],
+    "integrators": [
+      "Accenture",
+      "Deloitte",
+      "Ланит"
+    ],
+    "documentationFiles": [
+      "docs/Data_Platform_Architecture.pdf",
+      "docs/Data_Platform_Implementation_Guide.pdf"
+    ],
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 3,
+        "status": "Внедрена"
+      },
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 3,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 3,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 3,
+        "status": "Невнедренна"
+      }
+    ],
+    "functionCoverage": [
+      "Разработка",
+      "Анализ и мониторинг систем и инфраструктуры",
+      "Аналитика",
+      "Ведение сводной отчетности",
+      "Тестирование и аналитика"
+    ],
+    "trlStage": 3,
+    "status": "Невнедренна"
+  },
+  {
+    "id": 2,
+    "name": "Предиктивная аналитика на основе ИИ",
+    "directions": [
+      2
+    ],
+    "block": 1,
+    "function": "Экскавация",
+    "description": "Использование машинного обучения для прогнозирования износа оборудования, оптимизации процессов добычи и предсказания аварийных ситуаций.",
+    "marketExamples": [
+      "Внедрено в Vale для прогнозирования отказов оборудования",
+      "Применяется в Freeport-McMoRan для оптимизации добычи",
+      "Используется в контуре РМК на пилотных участках"
+    ],
+    "vendors": [
+      "Microsoft",
+      "SAP",
+      "PSI"
+    ],
+    "integrators": [
+      "IBM Global Services",
+      "Capgemini",
+      "Техносерв"
+    ],
+    "documentationFiles": [
+      "docs/AI_Predictive_Analytics_Guide.pdf"
+    ],
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 2,
+        "status": "Внедрена"
+      },
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 3,
+        "status": "Внедрена"
+      }
+    ],
+    "functionCoverage": [
+      "Экскавация",
+      "Транспортировка",
+      "ТОиР",
+      "Анализ показателей"
+    ],
+    "trlStage": 3,
+    "status": "Существующая технология на рынке"
+  },
+  {
+    "id": 3,
+    "name": "Автономные карьерные самосвалы",
+    "directions": [
+      3
+    ],
+    "block": 1,
+    "function": "Транспортировка",
+    "description": "Беспилотные самосвалы для транспортировки руды в карьере с использованием GPS, лидаров и систем компьютерного зрения.",
+    "marketExamples": [
+      "Внедрено в Rio Tinto (Австралия) - более 100 автономных самосвалов",
+      "Используется в BHP (Австралия)",
+      "Применяется в Fortescue Metals Group"
+    ],
+    "vendors": [
+      "Сапран"
+    ],
+    "integrators": [
+      "Accenture",
+      "Ланит",
+      "АйТи"
+    ],
+    "documentationFiles": [
+      "docs/Autonomous_Trucks_Implementation.pdf"
+    ],
+    "enterprises": [
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 4,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      }
+    ],
+    "functionCoverage": [
+      "Транспортировка"
+    ],
+    "trlStage": 2,
+    "status": "Невнедренна"
+  },
+  {
+    "id": 4,
+    "name": "Кибербезопасность и защита критической инфраструктуры",
+    "directions": [
+      4
+    ],
+    "block": 19,
+    "function": "Защита инфраструктуры",
+    "description": "Комплексная система защиты информационной инфраструктуры от кибератак, включающая мониторинг, обнаружение угроз и реагирование на инциденты.",
+    "marketExamples": [
+      "Внедрено в крупных промышленных компаниях (Schneider Electric, Siemens)",
+      "Используется в энергетическом секторе",
+      "Применяется в контуре РМК для защиты АСУ ТП"
+    ],
+    "vendors": [
+      "Лаборатория Касперского",
+      "Ростех",
+      "Microsoft",
+      "Cisco",
+      "Palo Alto Networks"
+    ],
+    "integrators": [
+      "Лаборатория Касперского",
+      "Ростех",
+      "Техносерв"
+    ],
+    "documentationFiles": [
+      "docs/Cybersecurity_Framework.pdf",
+      "docs/ICS_Security_Guide.pdf"
+    ],
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 3,
+        "status": "Внедрена"
+      },
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 2,
+        "status": "Внедрена"
+      },
+      {
+        "enterpriseId": 3,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 3,
+        "status": "Внедрена"
+      }
+    ],
+    "functionCoverage": [
+      "Защита инфраструктуры",
+      "Мониторинг и реагирование на инциденты",
+      "Эксплуатация СЗИ",
+      "Аналитика"
+    ],
+    "trlStage": 3,
+    "status": "Существующая технология на рынке"
+  },
+  {
+    "id": 5,
+    "name": "Цифровые двойники производственных процессов",
+    "directions": [
+      1,
+      2
+    ],
+    "block": 2,
+    "function": "Флотация",
+    "description": "Виртуальные модели обогатительных процессов, позволяющие моделировать и оптимизировать работу оборудования в реальном времени.",
+    "marketExamples": [
+      "Внедрено в Anglo American для оптимизации обогащения",
+      "Используется в Glencore",
+      "Применяется в пилотном режиме на ТГОК"
+    ],
+    "vendors": [
+      "SAP",
+      "PSI",
+      "ИндаСофт"
+    ],
+    "integrators": [
+      "Deloitte",
+      "IBM Global Services",
+      "Ланит"
+    ],
+    "documentationFiles": [
+      "docs/Digital_Twins_Guide.pdf"
+    ],
+    "enterprises": [
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 3,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 3,
+        "status": "Внедрена"
+      }
+    ],
+    "functionCoverage": [
+      "Флотация",
+      "Сгущение концентрата",
+      "Измельчение руды мельницами",
+      "Анализ показателей"
+    ],
+    "trlStage": 2,
+    "status": "Невнедренна"
+  },
+  {
+    "id": 6,
+    "name": "Роботизированная автоматизация процессов (RPA)",
+    "directions": [
+      2
+    ],
+    "block": 12,
+    "function": "Бюджетирование предприятий",
+    "description": "Автоматизация рутинных задач в экономических процессах с использованием программных роботов.",
+    "marketExamples": [
+      "Внедрено в крупных корпорациях для автоматизации финансовых операций",
+      "Используется в банковском секторе",
+      "Применяется в контуре РМК для автоматизации отчетности"
+    ],
+    "vendors": [
+      "Microsoft"
+    ],
+    "integrators": [
+      "Accenture",
+      "Ланит",
+      "АйТи"
+    ],
+    "documentationFiles": [
+      "docs/RPA_Implementation_Guide.pdf"
+    ],
+    "enterprises": [],
+    "functionCoverage": [
+      "Бюджетирование предприятий",
+      "Ведение сводной отчетности",
+      "Ведение бухгалтерии",
+      "Организация тендерной работы"
+    ],
+    "trlStage": 2,
+    "status": "Существующая технология на рынке"
+  },
+  {
+    "id": 7,
+    "name": "Автономные буровые установки",
+    "directions": [
+      3
+    ],
+    "block": 1,
+    "function": "Буровые работы",
+    "description": "Автоматизированные буровые установки, работающие без постоянного присутствия оператора, с дистанционным управлением и мониторингом.",
+    "marketExamples": [
+      "Внедрено в Atlas Copco для автоматизации бурения",
+      "Используется в Sandvik",
+      "Пилотные проекты в горнодобывающей отрасли"
+    ],
+    "vendors": [
+      "PSI"
+    ],
+    "integrators": [
+      "Техносерв",
+      "Ланит"
+    ],
+    "documentationFiles": [
+      "docs/Autonomous_Drilling_Systems.pdf"
+    ],
+    "enterprises": [
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 4,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 3,
+        "status": "Невнедренна"
+      }
+    ],
+    "functionCoverage": [
+      "Буровые работы"
+    ],
+    "trlStage": 3,
+    "status": "Невнедренна"
+  },
+  {
+    "id": 8,
+    "name": "Облачная инфраструктура и гибридные решения",
+    "directions": [
+      4
+    ],
+    "block": 18,
+    "function": "Системное администрирование",
+    "description": "Гибридная облачная инфраструктура для обеспечения масштабируемости, отказоустойчивости и производительности ИТ-систем.",
+    "marketExamples": [
+      "Внедрено в большинстве крупных корпораций",
+      "Используется в промышленных компаниях (General Electric, Siemens)",
+      "Применяется в контуре РМК для критических систем"
+    ],
+    "vendors": [
+      "Microsoft",
+      "Ростелеком",
+      "МТС",
+      "Amazon Web Services",
+      "Google Cloud"
+    ],
+    "integrators": [
+      "Accenture",
+      "Deloitte",
+      "Ланит"
+    ],
+    "documentationFiles": [
+      "docs/Cloud_Infrastructure_Architecture.pdf"
+    ],
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 3,
+        "status": "Внедрена"
+      },
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 3,
+        "status": "Внедрена"
+      },
+      {
+        "enterpriseId": 3,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 3,
+        "status": "Внедрена"
+      }
+    ],
+    "functionCoverage": [
+      "Системное администрирование",
+      "Анализ и мониторинг систем и инфраструктуры",
+      "Разработка",
+      "Тестирование и аналитика"
+    ],
+    "trlStage": 3,
+    "status": "Существующая технология на рынке"
+  },
+  {
+    "id": 9,
+    "name": "Компьютерное зрение для контроля качества",
+    "directions": [
+      2
+    ],
+    "block": 3,
+    "function": "Контроль качества сырья и материалов",
+    "description": "Системы машинного зрения для автоматического контроля качества продукции и сырья на всех этапах производства.",
+    "marketExamples": [
+      "Внедрено в металлургических компаниях (ArcelorMittal, Nucor)",
+      "Используется в автомобильной промышленности",
+      "Применяется на КМЭЗ для контроля качества металла"
+    ],
+    "vendors": [
+      "Microsoft",
+      "SAP"
+    ],
+    "integrators": [
+      "IBM Global Services",
+      "Capgemini",
+      "Техносерв"
+    ],
+    "documentationFiles": [
+      "docs/Computer_Vision_Quality_Control.pdf"
+    ],
+    "enterprises": [
+      {
+        "enterpriseId": 5,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 3,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 6,
+        "status": "Внедрена"
+      }
+    ],
+    "functionCoverage": [
+      "Контроль качества сырья и материалов",
+      "Лабораторные исследования"
+    ],
+    "trlStage": 1,
+    "status": "Невнедренна"
+  },
+  {
+    "id": 10,
+    "name": "Автономные системы управления плавкой",
+    "directions": [
+      3
+    ],
+    "block": 3,
+    "function": "Плавка сырья",
+    "description": "Автоматизированные системы управления плавильными печами с минимальным участием операторов, включая оптимизацию режимов работы.",
+    "marketExamples": [
+      "Внедрено в Outokumpu (Финляндия)",
+      "Используется в Nornickel",
+      "Пилотные проекты в металлургической отрасли"
+    ],
+    "vendors": [
+      "PSI"
+    ],
+    "integrators": [
+      "Deloitte",
+      "Ланит",
+      "АйТи"
+    ],
+    "documentationFiles": [
+      "docs/Autonomous_Smelting_Control.pdf"
+    ],
+    "enterprises": [],
+    "functionCoverage": [
+      "Плавка сырья"
+    ],
+    "trlStage": 2,
+    "status": "Существующая технология на рынке"
+  },
+  {
+    "id": 11,
+    "name": "Блокчейн для отслеживания цепочки поставок",
+    "directions": [
+      4
+    ],
+    "block": 16,
+    "function": "Снабжение",
+    "description": "Распределенная система учета для отслеживания происхождения и движения сырья и материалов по всей цепочке поставок.",
+    "marketExamples": [
+      "Внедрено в De Beers для отслеживания алмазов",
+      "Используется в пищевой промышленности",
+      "Пилотные проекты в горнодобывающей отрасли"
+    ],
+    "vendors": [
+      "Microsoft"
+    ],
+    "integrators": [
+      "Accenture",
+      "Deloitte",
+      "Ланит"
+    ],
+    "documentationFiles": [
+      "docs/Blockchain_Supply_Chain.pdf"
+    ],
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      }
+    ],
+    "functionCoverage": [
+      "Снабжение",
+      "Логистика",
+      "Сбыт"
+    ],
+    "trlStage": 2,
+    "status": "Невнедренна"
+  },
+  {
+    "id": 12,
+    "name": "Интеллектуальное планирование и диспетчеризация",
+    "directions": [
+      1,
+      2
+    ],
+    "block": 20,
+    "function": "Планирование и автоматизация",
+    "description": "Системы на основе ИИ для оптимального планирования производственных процессов, распределения ресурсов и диспетчеризации.",
+    "marketExamples": [
+      "Внедрено в крупных производственных компаниях",
+      "Используется в логистических системах (Amazon, DHL)",
+      "Применяется в контуре РМК для планирования производства"
+    ],
+    "vendors": [
+      "SAP",
+      "Microsoft",
+      "IBS"
+    ],
+    "integrators": [
+      "Accenture",
+      "Deloitte",
+      "Ланит"
+    ],
+    "documentationFiles": [
+      "docs/AI_Planning_Dispatch.pdf"
+    ],
+    "enterprises": [],
+    "functionCoverage": [
+      "Планирование и автоматизация",
+      "Оцифровка показателей",
+      "Анализ показателей"
+    ],
+    "trlStage": 1,
+    "status": "Существующая технология на рынке"
+  },
+  {
+    "id": 13,
+    "name": "Автономные системы технического обслуживания",
+    "directions": [
+      3
+    ],
+    "block": 5,
+    "function": "ТОиР",
+    "description": "Роботизированные системы для проведения технического обслуживания и ремонта оборудования без участия человека или с минимальным участием.",
+    "marketExamples": [
+      "Внедрено в аэрокосмической отрасли",
+      "Используется в энергетике",
+      "Пилотные проекты в горнодобывающей отрасли"
+    ],
+    "vendors": [
+      "PSI"
+    ],
+    "integrators": [
+      "Техносерв",
+      "Ланит",
+      "АйТи"
+    ],
+    "documentationFiles": [
+      "docs/Autonomous_Maintenance_Systems.pdf"
+    ],
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 3,
+        "status": "Невнедренна"
+      }
+    ],
+    "functionCoverage": [
+      "ТОиР"
+    ],
+    "trlStage": 2,
+    "status": "Невнедренна"
+  },
+  {
+    "id": 14,
+    "name": "Системы обнаружения и предотвращения угроз",
+    "directions": [
+      4
+    ],
+    "block": 19,
+    "function": "Мониторинг и реагирование на инциденты",
+    "description": "Продвинутые системы безопасности для обнаружения, анализа и предотвращения кибератак в реальном времени.",
+    "marketExamples": [
+      "Внедрено в финансовом секторе",
+      "Используется в критической инфраструктуре",
+      "Применяется в контуре РМК для защиты АСУ ТП"
+    ],
+    "vendors": [
+      "Лаборатория Касперского"
+    ],
+    "integrators": [
+      "Лаборатория Касперского",
+      "Ростех",
+      "Техносерв"
+    ],
+    "documentationFiles": [
+      "docs/Threat_Detection_Systems.pdf"
+    ],
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 2,
+        "status": "Внедрена"
+      },
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 3,
+        "status": "Внедрена"
+      }
+    ],
+    "functionCoverage": [
+      "Мониторинг и реагирование на инциденты",
+      "Аналитика",
+      "Эксплуатация СЗИ"
+    ],
+    "trlStage": 3,
+    "status": "Существующая технология на рынке"
+  },
+  {
+    "id": 15,
+    "name": "Интеллектуальные системы управления персоналом",
+    "directions": [
+      1,
+      2
+    ],
+    "block": 21,
+    "function": "HR-аналитика",
+    "description": "Системы на основе ИИ для анализа данных о персонале, прогнозирования текучести кадров, оптимизации подбора и развития сотрудников.",
+    "marketExamples": [
+      "Внедрено в крупных корпорациях (IBM, Google)",
+      "Используется в HR-системах (Workday, SAP SuccessFactors)",
+      "Применяется в контуре РМК для управления персоналом"
+    ],
+    "vendors": [
+      "SAP",
+      "Microsoft"
+    ],
+    "integrators": [
+      "Accenture",
+      "Deloitte",
+      "Ланит"
+    ],
+    "documentationFiles": [
+      "docs/AI_HR_Systems.pdf"
+    ],
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 3,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 2,
+        "status": "Внедрена"
+      }
+    ],
+    "functionCoverage": [
+      "HR-аналитика",
+      "Подбора персонала",
+      "мотивация персонала",
+      "аналитика каналов привлечения"
+    ],
+    "trlStage": 3,
+    "status": "Невнедренна"
+  },
+  {
+    "id": 16,
+    "name": "Автономные системы экологического мониторинга",
+    "directions": [
+      3
+    ],
+    "block": 9,
+    "function": "Экологический мониторинга и отчётность",
+    "description": "Автоматизированные системы непрерывного мониторинга состояния окружающей среды с автономными датчиками и передачей данных.",
+    "marketExamples": [
+      "Внедрено в нефтегазовых компаниях",
+      "Используется в химической промышленности",
+      "Пилотные проекты в горнодобывающей отрасли"
+    ],
+    "vendors": [
+      "Сапран",
+      "PSI",
+      "ИндаСофт"
+    ],
+    "integrators": [
+      "Техносерв",
+      "Ланит",
+      "АйТи"
+    ],
+    "documentationFiles": [
+      "docs/Autonomous_Environmental_Monitoring.pdf"
+    ],
+    "enterprises": [],
+    "functionCoverage": [
+      "Экологический мониторинга и отчётность",
+      "Экологический контроль",
+      "Экологический контроль горно-обогатительного, металлургического комплекса"
+    ],
+    "trlStage": 1,
+    "status": "Существующая технология на рынке"
+  },
+  {
+    "id": 17,
+    "name": "Интеграционные платформы и API-менеджмент",
+    "directions": [
+      4
+    ],
+    "block": 18,
+    "function": "Сопровождение цифровых решений",
+    "description": "Платформы для интеграции различных систем и приложений через стандартизированные API, обеспечивающие гибкость и масштабируемость.",
+    "marketExamples": [
+      "Внедрено в большинстве крупных корпораций",
+      "Используется в финансовом секторе",
+      "Применяется в контуре РМК для интеграции систем"
+    ],
+    "vendors": [
+      "Microsoft"
+    ],
+    "integrators": [
+      "Accenture",
+      "Deloitte",
+      "Ланит"
+    ],
+    "documentationFiles": [
+      "docs/Integration_Platforms_Guide.pdf"
+    ],
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 0,
+        "organizationalReadiness": 0,
+        "status": "Внедрена"
+      }
+    ],
+    "functionCoverage": [
+      "Сопровождение цифровых решений",
+      "Разработка",
+      "Тестирование и аналитика"
+    ],
+    "trlStage": 1,
+    "status": "Невнедренна"
+  },
+  {
+    "id": 18,
+    "name": "Машинное обучение для оптимизации обогащения",
+    "directions": [
+      2
+    ],
+    "block": 2,
+    "function": "Измельчение руды мельницами",
+    "description": "Алгоритмы машинного обучения для оптимизации параметров измельчения и обогащения руды, повышения извлечения полезных компонентов.",
+    "marketExamples": [
+      "Внедрено в Anglo American",
+      "Используется в BHP для оптимизации обогащения",
+      "Применяется на МГОК в пилотном режиме"
+    ],
+    "vendors": [
+      "Microsoft"
+    ],
+    "integrators": [
+      "IBM Global Services",
+      "Capgemini",
+      "Ланит"
+    ],
+    "documentationFiles": [
+      "docs/ML_Beneficiation_Optimization.pdf"
+    ],
+    "enterprises": [
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 2,
+        "status": "Внедрена"
+      }
+    ],
+    "functionCoverage": [
+      "Измельчение руды мельницами",
+      "Флотация",
+      "Сгущение концентрата"
+    ],
+    "trlStage": 2,
+    "status": "Существующая технология на рынке"
+  },
+  {
+    "id": 19,
+    "name": "Автономные системы складирования",
+    "directions": [
+      3
+    ],
+    "block": 3,
+    "function": "Складирование готовой продукции",
+    "description": "Роботизированные системы для автоматического складирования, учета и выдачи готовой продукции без участия персонала.",
+    "marketExamples": [
+      "Внедрено в логистических центрах (Amazon, Alibaba)",
+      "Используется в автомобильной промышленности",
+      "Пилотные проекты в металлургии"
+    ],
+    "vendors": [
+      "PSI"
+    ],
+    "integrators": [
+      "Техносерв",
+      "Ланит",
+      "АйТи"
+    ],
+    "documentationFiles": [
+      "docs/Autonomous_Warehousing.pdf"
+    ],
+    "enterprises": [
+      {
+        "enterpriseId": 5,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 6,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 3,
+        "status": "Невнедренна"
+      }
+    ],
+    "functionCoverage": [
+      "Складирование готовой продукции"
+    ],
+    "trlStage": 1,
+    "status": "Невнедренна"
+  },
+  {
+    "id": 20,
+    "name": "Системы резервного копирования и аварийного восстановления",
+    "directions": [
+      4
+    ],
+    "block": 18,
+    "function": "Анализ и мониторинг систем и инфраструктуры",
+    "description": "Комплексные системы для автоматического резервного копирования данных и быстрого восстановления работы систем после сбоев.",
+    "marketExamples": [
+      "Внедрено во всех крупных корпорациях",
+      "Используется в критических системах",
+      "Применяется в контуре РМК для защиты данных"
+    ],
+    "vendors": [
+      "Microsoft"
+    ],
+    "integrators": [
+      "Accenture",
+      "Ланит",
+      "Техносерв"
+    ],
+    "documentationFiles": [
+      "docs/Backup_Disaster_Recovery.pdf"
+    ],
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 3,
+        "status": "Внедрена"
+      },
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 2,
+        "status": "Внедрена"
+      },
+      {
+        "enterpriseId": 3,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 3,
+        "status": "Внедрена"
+      }
+    ],
+    "functionCoverage": [
+      "Анализ и мониторинг систем и инфраструктуры",
+      "Системное администрирование"
+    ],
+    "trlStage": 3,
+    "status": "Существующая технология на рынке"
+  },
+  {
+    "id": 21,
+    "name": "Интеллектуальные системы финансового планирования",
+    "directions": [
+      1,
+      2
+    ],
+    "block": 13,
+    "function": "Бюджетирования денежных потоков",
+    "description": "Системы на основе ИИ для прогнозирования денежных потоков, оптимизации финансового планирования и управления ликвидностью.",
+    "marketExamples": [
+      "Внедрено в финансовых институтах",
+      "Используется в крупных корпорациях",
+      "Применяется в контуре РМК для финансового планирования"
+    ],
+    "vendors": [
+      "SAP",
+      "Microsoft"
+    ],
+    "integrators": [
+      "Accenture",
+      "Deloitte",
+      "Ланит"
+    ],
+    "documentationFiles": [
+      "docs/AI_Financial_Planning.pdf"
+    ],
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 3,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 0,
+        "organizationalReadiness": 0,
+        "status": "Внедрена"
+      }
+    ],
+    "functionCoverage": [
+      "Бюджетирования денежных потоков",
+      "Управление казначейства",
+      "Управление дебиторской и кредиторской задолженностью"
+    ],
+    "trlStage": 1,
+    "status": "Невнедренна"
+  },
+  {
+    "id": 22,
+    "name": "Автономные системы промышленной безопасности",
+    "directions": [
+      3
+    ],
+    "block": 8,
+    "function": "Охраны труда и промышленная безопасность",
+    "description": "Автоматизированные системы мониторинга условий труда, обнаружения опасных ситуаций и автоматического реагирования на них.",
+    "marketExamples": [
+      "Внедрено в нефтегазовой отрасли",
+      "Используется в химической промышленности",
+      "Пилотные проекты в горнодобывающей отрасли"
+    ],
+    "vendors": [
+      "PSI"
+    ],
+    "integrators": [
+      "Техносерв",
+      "Ланит",
+      "АйТи"
+    ],
+    "documentationFiles": [
+      "docs/Autonomous_Industrial_Safety.pdf"
+    ],
+    "enterprises": [],
+    "functionCoverage": [
+      "Охраны труда и промышленная безопасность",
+      "Пожарная безопасность",
+      "Ликвидация аварий"
+    ],
+    "trlStage": 1,
+    "status": "Существующая технология на рынке"
+  },
+  {
+    "id": 23,
+    "name": "Системы управления идентификацией и доступом (IAM)",
+    "directions": [
+      4
+    ],
+    "block": 19,
+    "function": "Эксплуатация СЗИ",
+    "description": "Централизованные системы управления правами доступа пользователей к информационным ресурсам и приложениям.",
+    "marketExamples": [
+      "Внедрено во всех крупных корпорациях",
+      "Используется в государственном секторе",
+      "Применяется в контуре РМК для управления доступом"
+    ],
+    "vendors": [
+      "Лаборатория Касперского"
+    ],
+    "integrators": [
+      "Лаборатория Касперского",
+      "Ростех",
+      "Техносерв"
+    ],
+    "documentationFiles": [
+      "docs/IAM_Systems_Guide.pdf"
+    ],
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 0,
+        "organizationalReadiness": 0,
+        "status": "Внедрена"
+      }
+    ],
+    "functionCoverage": [
+      "Эксплуатация СЗИ",
+      "Защита инфраструктуры"
+    ],
+    "trlStage": 1,
+    "status": "Невнедренна"
+  },
+  {
+    "id": 24,
+    "name": "Интеллектуальные системы стратегического планирования",
+    "directions": [
+      1,
+      2
+    ],
+    "block": 14,
+    "function": "Стратегическое планирование",
+    "description": "Системы на основе ИИ и больших данных для анализа рынков, прогнозирования трендов и поддержки принятия стратегических решений.",
+    "marketExamples": [
+      "Внедрено в консалтинговых компаниях (McKinsey, BCG)",
+      "Используется в крупных корпорациях",
+      "Применяется в контуре РМК для стратегического планирования"
+    ],
+    "vendors": [
+      "SAP",
+      "Microsoft"
+    ],
+    "integrators": [
+      "Accenture",
+      "Deloitte",
+      "Ланит"
+    ],
+    "documentationFiles": [
+      "docs/AI_Strategic_Planning.pdf"
+    ],
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 2,
+        "status": "Внедрена"
+      },
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 3,
+        "status": "Внедрена"
+      }
+    ],
+    "functionCoverage": [
+      "Стратегическое планирование",
+      "Мониторинг и исследование рынков",
+      "Оценка и мониторинг эффективности инвестиционных проектов"
+    ],
+    "trlStage": 2,
+    "status": "Существующая технология на рынке"
+  },
+  {
+    "id": 25,
+    "name": "Автономные системы управления транспортом",
+    "directions": [
+      3
+    ],
+    "block": 7,
+    "function": "Обслуживание транспорта",
+    "description": "Автоматизированные системы управления транспортным парком, включая диспетчеризацию, мониторинг и оптимизацию маршрутов.",
+    "marketExamples": [
+      "Внедрено в логистических компаниях",
+      "Используется в горнодобывающей отрасли (Rio Tinto, BHP)",
+      "Пилотные проекты в контуре РМК"
+    ],
+    "vendors": [
+      "PSI"
+    ],
+    "integrators": [
+      "Техносерв",
+      "Ланит",
+      "АйТи"
+    ],
+    "documentationFiles": [
+      "docs/Autonomous_Transport_Management.pdf"
+    ],
+    "enterprises": [],
+    "functionCoverage": [
+      "Обслуживание транспорта",
+      "Транспортировка"
+    ],
+    "trlStage": 1,
+    "status": "Существующая технология на рынке"
+  },
+  {
+    "id": 26,
+    "name": "Системы мониторинга и управления производительностью",
+    "directions": [
+      4
+    ],
+    "block": 18,
+    "function": "Тестирование и аналитика",
+    "description": "Комплексные системы для мониторинга производительности ИТ-инфраструктуры, приложений и бизнес-процессов в реальном времени.",
+    "marketExamples": [
+      "Внедрено во всех крупных корпорациях",
+      "Используется в облачных провайдерах",
+      "Применяется в контуре РМК для мониторинга систем"
+    ],
+    "vendors": [
+      "Microsoft"
+    ],
+    "integrators": [
+      "Accenture",
+      "Deloitte",
+      "Ланит"
+    ],
+    "documentationFiles": [
+      "docs/Performance_Monitoring_Systems.pdf"
+    ],
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 2,
+        "status": "Внедрена"
+      },
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 3,
+        "status": "Внедрена"
+      }
+    ],
+    "functionCoverage": [
+      "Тестирование и аналитика",
+      "Анализ и мониторинг систем и инфраструктуры"
+    ],
+    "trlStage": 3,
+    "status": "Существующая технология на рынке"
+  },
+  {
+    "id": 27,
+    "name": "Интеллектуальные системы управления закупками",
+    "directions": [
+      1,
+      2
+    ],
+    "block": 16,
+    "function": "Снабжение",
+    "description": "Системы на основе ИИ для оптимизации закупок, прогнозирования потребности в материалах и автоматизации процессов снабжения.",
+    "marketExamples": [
+      "Внедрено в крупных корпорациях",
+      "Используется в ритейле (Amazon, Walmart)",
+      "Применяется в контуре РМК для управления закупками"
+    ],
+    "vendors": [
+      "SAP",
+      "Microsoft"
+    ],
+    "integrators": [
+      "Accenture",
+      "Deloitte",
+      "Ланит"
+    ],
+    "documentationFiles": [
+      "docs/AI_Procurement_Systems.pdf"
+    ],
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 0,
+        "organizationalReadiness": 0,
+        "status": "Внедрена"
+      }
+    ],
+    "functionCoverage": [
+      "Снабжение",
+      "Организация тендерной работы"
+    ],
+    "trlStage": 1,
+    "status": "Невнедренна"
+  },
+  {
+    "id": 28,
+    "name": "Автономные системы строительного контроля",
+    "directions": [
+      3
+    ],
+    "block": 6,
+    "function": "Планирование строительства",
+    "description": "Автоматизированные системы для мониторинга хода строительства, контроля качества работ и соблюдения сроков с использованием дронов и датчиков.",
+    "marketExamples": [
+      "Внедрено в строительных компаниях",
+      "Используется в инфраструктурных проектах",
+      "Пилотные проекты в горнодобывающей отрасли"
+    ],
+    "vendors": [
+      "PSI"
+    ],
+    "integrators": [
+      "Техносерв",
+      "Ланит",
+      "АйТи"
+    ],
+    "documentationFiles": [
+      "docs/Autonomous_Construction_Control.pdf"
+    ],
+    "enterprises": [],
+    "functionCoverage": [
+      "Планирование строительства",
+      "Строительный контроль и аудит"
+    ],
+    "trlStage": 1,
+    "status": "Существующая технология на рынке"
+  },
+  {
+    "id": 29,
+    "name": "Системы шифрования и защиты данных",
+    "directions": [
+      4
+    ],
+    "block": 19,
+    "function": "Аналитика",
+    "description": "Продвинутые системы шифрования данных на всех уровнях: при передаче, хранении и обработке, обеспечивающие конфиденциальность информации.",
+    "marketExamples": [
+      "Внедрено во всех крупных корпорациях",
+      "Используется в финансовом секторе",
+      "Применяется в контуре РМК для защиты данных"
+    ],
+    "vendors": [
+      "Лаборатория Касперского"
+    ],
+    "integrators": [
+      "Лаборатория Касперского",
+      "Ростех",
+      "Техносерв"
+    ],
+    "documentationFiles": [
+      "docs/Encryption_Data_Protection.pdf"
+    ],
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 3,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 2,
+        "status": "Внедрена"
+      }
+    ],
+    "functionCoverage": [
+      "Аналитика",
+      "Защита инфраструктуры"
+    ],
+    "trlStage": 2,
+    "status": "Невнедренна"
+  },
+  {
+    "id": 30,
+    "name": "Интеллектуальные системы управления продажами",
+    "directions": [
+      1,
+      2
+    ],
+    "block": 16,
+    "function": "Продажи",
+    "description": "Системы на основе ИИ для прогнозирования спроса, оптимизации цен, управления клиентскими отношениями и автоматизации продаж.",
+    "marketExamples": [
+      "Внедрено в крупных торговых компаниях",
+      "Используется в B2B-сегменте",
+      "Применяется в контуре РМК для управления продажами"
+    ],
+    "vendors": [
+      "SAP",
+      "Microsoft"
+    ],
+    "integrators": [
+      "Accenture",
+      "Deloitte",
+      "Ланит"
+    ],
+    "documentationFiles": [
+      "docs/AI_Sales_Management.pdf"
+    ],
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 2,
+        "status": "Внедрена"
+      },
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 2,
+        "status": "Внедрена"
+      }
+    ],
+    "functionCoverage": [
+      "Продажи",
+      "Сбыт",
+      "Взаимодействие с заказчиками"
+    ],
+    "trlStage": 2,
+    "status": "Существующая технология на рынке"
+  }
+]

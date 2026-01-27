@@ -187,9 +187,10 @@
     }
 
     // Учитываем фильтры из левой панели и строку поиска
+    const d = getFilterValues('direction');
     const b = getFilterValues('block');
     const f = getFilterValues('function');
-    const tt = getFilterValues('techType');
+    // Фильтр "Тип технологий" удален
     const l = getFilterValues('level');
     // Поиск: используем поле поиска в панели приоритетов (qpSearchInput) или основной поиск (searchInput)
     const qpQuery = (qpSearchInput && qpSearchInput.value ? qpSearchInput.value : '').toLowerCase().trim();
@@ -197,6 +198,11 @@
     const textQuery = qpQuery || sidebarQuery;
 
     let sidebarFilteredTechs = allTechs.filter(t => {
+      // Фильтр по направлениям (t.directions или t.direction)
+      if (d.length > 0) {
+        const techDirections = t.directions && Array.isArray(t.directions) ? t.directions : (t.direction ? [t.direction] : []);
+        if (!techDirections.some(direction => d.includes(direction))) return false;
+      }
       // Фильтр по блокам (t.block или t.blocks)
       if (b.length > 0) {
         const techBlocks = t.blocks && Array.isArray(t.blocks) ? t.blocks : (t.block ? [t.block] : []);
@@ -207,10 +213,32 @@
         const techFunctions = t.functions && Array.isArray(t.functions) ? t.functions : (t.func ? [t.func] : []);
         if (!techFunctions.some(func => f.includes(func))) return false;
       }
-      // Фильтр по типу технологии
-      if (tt.length > 0 && !tt.includes(t.techType)) return false;
-      // Фильтр по статусу/уровню
-      if (l.length > 0 && !l.includes(t.level)) return false;
+      // Фильтр "Тип технологий" удален
+      // Фильтр по статусу (Внедренная/Невнедренная) на основе isImplemented
+      if (l.length > 0) {
+        // Для технологий с несколькими предприятиями проверяем isImplemented для каждого предприятия
+        const companies = Array.isArray(t.company) ? t.company : (t.company ? [t.company] : []);
+        let isImplemented = false;
+
+        if (companies.length > 1 && t.companyRatings && typeof t.companyRatings === 'object') {
+          // Для нескольких предприятий проверяем, есть ли хотя бы одно с isImplemented = true
+          isImplemented = companies.some(company => {
+            const ratings = t.companyRatings[company];
+            return ratings && ratings.isImplemented === true;
+          });
+        } else {
+          // Для одного предприятия или общего значения
+          if (companies.length === 1 && t.companyRatings && typeof t.companyRatings === 'object') {
+            const ratings = t.companyRatings[companies[0]];
+            isImplemented = ratings && ratings.isImplemented === true;
+          } else {
+            isImplemented = t.isImplemented === true;
+          }
+        }
+
+        const statusValue = isImplemented ? 'Внедренная' : 'Невнедренная';
+        if (!l.includes(statusValue)) return false;
+      }
       return true;
     });
 

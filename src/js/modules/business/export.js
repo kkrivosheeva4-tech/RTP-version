@@ -101,10 +101,30 @@ window.ExportModule = (function() {
         if (!filters.techTypes.includes(techType)) return false;
       }
 
-      // Фильтр по статусу (массив значений)
+      // Фильтр по статусу (Внедренная/Невнедренная) на основе isImplemented
       if (filters.status && Array.isArray(filters.status) && filters.status.length > 0) {
-        const techStatus = tech.status || tech.level || '';
-        if (!filters.status.includes(techStatus)) return false;
+        // Для технологий с несколькими предприятиями проверяем isImplemented для каждого предприятия
+        const companies = Array.isArray(tech.company) ? tech.company : (tech.company ? [tech.company] : []);
+        let isImplemented = false;
+
+        if (companies.length > 1 && tech.companyRatings && typeof tech.companyRatings === 'object') {
+          // Для нескольких предприятий проверяем, есть ли хотя бы одно с isImplemented = true
+          isImplemented = companies.some(company => {
+            const ratings = tech.companyRatings[company];
+            return ratings && ratings.isImplemented === true;
+          });
+        } else {
+          // Для одного предприятия или общего значения
+          if (companies.length === 1 && tech.companyRatings && typeof tech.companyRatings === 'object') {
+            const ratings = tech.companyRatings[companies[0]];
+            isImplemented = ratings && ratings.isImplemented === true;
+          } else {
+            isImplemented = tech.isImplemented === true;
+          }
+        }
+
+        const statusValue = isImplemented ? 'Внедренная' : 'Невнедренная';
+        if (!filters.status.includes(statusValue)) return false;
       }
 
       // Фильтр по стоимости (только для перспективных) - множественный выбор

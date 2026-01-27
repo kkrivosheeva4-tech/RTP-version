@@ -1789,7 +1789,57 @@
       // Защита от пустого списка файлов
       if (files.length === 0) return;
 
+      // Константы для ограничения размера файлов
+      const maxFileSize = 10 * 1024 * 1024; // 10 МБ на файл
+      const maxTotalSize = 50 * 1024 * 1024; // 50 МБ на технологию
+
+      // Проверяем общий размер уже загруженных файлов
+      let currentTotalSize = 0;
+      if (window._tempFilesData) {
+        Object.values(window._tempFilesData).forEach(fileData => {
+          if (fileData.size) {
+            currentTotalSize += fileData.size;
+          }
+        });
+      }
+
+      // Проверяем размер каждого нового файла
+      const invalidFiles = [];
+      let newFilesTotalSize = 0;
+
       for (const file of files) {
+        if (file.size > maxFileSize) {
+          invalidFiles.push({ name: file.name, reason: 'Превышен максимальный размер файла (10 МБ)' });
+        } else {
+          newFilesTotalSize += file.size;
+        }
+      }
+
+      // Проверяем общий размер
+      if (currentTotalSize + newFilesTotalSize > maxTotalSize) {
+        const showNotification = window.showNotification || window.DataLoader?.showNotification;
+        if (showNotification) {
+          showNotification(`Превышен максимальный общий размер файлов (50 МБ). Текущий размер: ${(currentTotalSize / (1024 * 1024)).toFixed(2)} МБ`, false);
+        }
+        fileInput.value = '';
+        return;
+      }
+
+      // Показываем ошибки для файлов с превышенным размером
+      if (invalidFiles.length > 0) {
+        const showNotification = window.showNotification || window.DataLoader?.showNotification;
+        invalidFiles.forEach(({ name, reason }) => {
+          if (showNotification) {
+            showNotification(`Файл "${name}": ${reason}`, false);
+          }
+        });
+        // Продолжаем обработку только валидных файлов
+      }
+
+      // Обрабатываем только валидные файлы
+      const validFiles = files.filter(file => file.size <= maxFileSize);
+
+      for (const file of validFiles) {
         try {
           const fileData = await fileToBase64(file);
           window._tempFilesData[fileData.id] = fileData;

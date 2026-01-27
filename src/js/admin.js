@@ -631,18 +631,8 @@ function initializeNavigation() {
       updatePageTitle(section);
     });
   });
-  // Навигация по предприятиям
-  const nav = document.querySelector('.enterprise-nav');
-  if (nav) {
-    nav.querySelectorAll('button').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const text = btn.textContent.trim();
-        if (text === 'РМК') {
-          window.location.href = 'RMK.html';
-        }
-      });
-    });
-  }
+  // Навигация по предприятиям - заменена на кнопку "Радар"
+  // Кнопка "Радар" теперь является прямой ссылкой на RMK-director.html
 }
 function showSection(sectionId) {
   // Скрыть все секции

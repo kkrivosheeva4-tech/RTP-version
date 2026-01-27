@@ -92,8 +92,34 @@
     const getPriorityCategory = window.getPriorityCategory || (() => ({ key: 'none', label: '' }));
     const getPriorityWeakLinkComment = window.getPriorityWeakLinkComment || (() => '');
 
-    const techReadFilled = isRatingFilled(tech.techRead);
-    const organReadFilled = isRatingFilled(tech.organRead);
+    // Получаем текущее предприятие для проверки индивидуальных оценок
+    let currentEnterprise = null;
+    if (typeof window !== 'undefined') {
+      if (window.StateAccessors && typeof window.StateAccessors.getCurrentEnterprise === 'function') {
+        currentEnterprise = window.StateAccessors.getCurrentEnterprise();
+      } else if (typeof window.getCurrentEnterprise === 'function') {
+        currentEnterprise = window.getCurrentEnterprise();
+      } else if (typeof window.currentEnterprise !== 'undefined') {
+        currentEnterprise = window.currentEnterprise;
+      }
+    }
+
+    // Проверяем оценки с учетом индивидуальных оценок для предприятий
+    const companies = Array.isArray(tech.company) ? tech.company : (tech.company ? [tech.company] : []);
+    let techRead, organRead;
+
+    if (companies.length > 1 && tech.companyRatings && typeof tech.companyRatings === 'object' &&
+        currentEnterprise && companies.includes(currentEnterprise) && tech.companyRatings[currentEnterprise]) {
+      const ratings = tech.companyRatings[currentEnterprise];
+      techRead = ratings.techRead !== undefined ? ratings.techRead : tech.techRead;
+      organRead = ratings.organRead !== undefined ? ratings.organRead : tech.organRead;
+    } else {
+      techRead = tech.techRead;
+      organRead = tech.organRead;
+    }
+
+    const techReadFilled = isRatingFilled(techRead);
+    const organReadFilled = isRatingFilled(organRead);
     const hasReadinessRatings = techReadFilled && organReadFilled;
 
     // Если базовые оценки не заполнены — показываем текущее предупреждение.

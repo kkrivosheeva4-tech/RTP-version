@@ -181,68 +181,25 @@
         button.classList.add("active");
         localStorage.setItem("selectedEnterprise", selectedEnterprise);
 
-        // Генерируем событие для плавного перехода (обработчик события вызовет switchEnterprise)
-        window.dispatchEvent(
-          new CustomEvent("enterpriseChanged", {
-            detail: { enterprise: selectedEnterprise },
-          })
-        );
-      });
-    });
-
-    // Плавный локальный переход между предприятиями через событие enterpriseChanged
-    // Защита от повторной регистрации обработчика
-    if (!window._enterpriseChangedHandlerRegistered) {
-      window._enterpriseChangedHandlerRegistered = true;
-
-      let isProcessing = false; // Флаг для предотвращения повторной обработки
-
-      window.addEventListener("enterpriseChanged", (ev) => {
-        try {
-          // Предотвращаем повторную обработку, если уже обрабатываем событие
-          if (isProcessing) {
-            return;
+        // Предприятия теперь управляются через фильтр в левой панели
+        // Обновляем фильтр предприятий
+        const Filters = window.Filters;
+        if (Filters && selectedEnterprise) {
+          const enterpriseSelect = document.querySelector('.custom-select[data-filter="enterprise"]');
+          if (enterpriseSelect) {
+            const hiddenInput = document.getElementById('filter_enterprise');
+            if (hiddenInput) {
+              hiddenInput.value = JSON.stringify([selectedEnterprise]);
+              Filters.renderMultiSelectTags(enterpriseSelect);
+              // Обновляем радар
+              if (typeof window.updateRadar === 'function') {
+                window.updateRadar();
+              }
+            }
           }
-
-          const ent =
-            ev?.detail?.enterprise ||
-            localStorage.getItem("selectedEnterprise");
-          if (
-            typeof window.currentEnterprise !== "undefined" &&
-            (!ent || ent === window.currentEnterprise)
-          )
-            return;
-
-          isProcessing = true;
-
-          // Переключаем предприятие без анимации (плавный переход без мигания)
-          // switchEnterprise уже вызывает updateRadar, поэтому не вызываем его здесь
-          if (typeof window.switchEnterprise === "function") {
-            window.switchEnterprise(ent);
-          }
-          if (typeof window.renderAuth === "function") {
-            window.renderAuth();
-          }
-
-          // Показываем уведомление только при пользовательском действии (не при инициализации)
-          if (
-            ev?.detail?.enterprise &&
-            typeof window !== "undefined" &&
-            window.Toast
-          ) {
-            window.Toast.success(`Переключено на ${ent}`);
-          }
-
-          // Сбрасываем флаг после небольшой задержки
-          setTimeout(() => {
-            isProcessing = false;
-          }, 100);
-        } catch (e) {
-          console.error("Ошибка в обработчике enterpriseChanged:", e);
-          isProcessing = false;
         }
       });
-    }
+    });
 
     // ===== СБРОС ФИЛЬТРОВ =====
     const resetFiltersAndSelection = () => {

@@ -2,7 +2,7 @@
 // Экспортирует функции в window.Modals для использования в RMK2.js
 // Использует глобальные переменные из RMK2.js и функции из других модулей
 
-(function() {
+(function () {
   'use strict';
 
   // Показать модальное окно
@@ -197,11 +197,11 @@
         // Сначала скрываем окно подтверждения, затем выполняем callback и гарантированно закрываем целевую панель
         setTimeout(() => {
           confirmEl.style.display = 'none';
-          try { if (typeof confirmEl._onClose === 'function') confirmEl._onClose(); } catch(e) { console.error(e); }
+          try { if (typeof confirmEl._onClose === 'function') confirmEl._onClose(); } catch (e) { console.error(e); }
           try {
             const related = confirmEl._relatedPanel;
             if (related) hideModal(related);
-          } catch(e) { /* ignore */ }
+          } catch (e) { /* ignore */ }
         }, 220);
       });
     }

@@ -713,49 +713,38 @@ body.dark .logo-img {
   content: url("/assets/images/Vector.png");
 }
 
-/* ===== Навигация предприятий ===== */
-.enterprise-nav {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+/* ===== Кнопка навигации "Радар" ===== */
+.radar-nav-btn {
+  display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 0;
-  border-radius: 8px;
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 8px;
-  height: 100%;
-  width: fit-content;
-  margin: 0 auto;
-  z-index: 1;
-}
-
-.enterprise-nav button {
-  background: transparent;
-  border: 1px solid transparent;
+  justify-content: center;
   padding: 8px 16px;
-  font-size: clamp(18px, 2vw, 16px);
-  cursor: pointer;
-  border-radius: 6px;
-  transition: 0.3s;
-}
-
-body.light .enterprise-nav button:hover {
-  background: #fff;
-  border: 1px solid #C8977F;
-  color: var(--accent);
-}
-
-body.dark .enterprise-nav button {
-  color: #fff;
-}
-
-body.dark .enterprise-nav button:hover {
-  background: #000;
+  font-size: clamp(14px, 1.5vw, 16px);
+  font-weight: 500;
+  color: var(--text);
+  text-decoration: none;
   border: 1px solid var(--accent);
-  color: var(--accent);
+  border-radius: 6px;
+  background: transparent;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  min-height: 40px;
+}
+
+.radar-nav-btn:hover {
+  background: var(--accent);
+  color: var(--bg);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(206, 144, 104, 0.3);
+}
+
+.radar-nav-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(206, 144, 104, 0.2);
+}
+
+.radar-nav-btn span {
+  display: inline-block;
 }
 
 /* ===== Контролы (тема, авторизация) ===== */
@@ -1106,19 +1095,15 @@ body.dark .slider::after {
     gap: 15px;
   }
 
-  .enterprise-nav {
-    position: static;
-    /* На мобильных возвращаем обычное позиционирование */
-    transform: none;
-    left: auto;
-    top: auto;
-    /* Сбрасываем вертикальное позиционирование */
+  .radar-nav-btn {
+    order: 2;
     width: 100%;
-    order: 3;
+    max-width: 200px;
+    margin: 0 auto;
   }
 
   .controls {
-    order: 2;
+    order: 3;
     justify-content: center;
     margin-left: 0;
   }
@@ -1780,10 +1765,6 @@ body.dark .slider::after {
     font-size: clamp(14px, 4vw, 18px);
   }
 
-  .enterprise-nav {
-    display: none;
-    /* Скрываем обычную навигацию, будет бургер-меню */
-  }
 
   .controls {
     gap: 10px;
@@ -1988,14 +1969,6 @@ body.dark .slider::after {
     padding: 10px 3%;
   }
 
-  .enterprise-nav {
-    width: 45%;
-  }
-
-  .enterprise-nav button {
-    padding: 6px 12px;
-    font-size: clamp(14px, 1.8vw, 16px);
-  }
 
   /* Скрываем бургер-меню на планшетах */
   .burger-menu-btn {

@@ -23,7 +23,9 @@
     if (typeof window !== 'undefined' && window.DataLoader) {
       return window.DataLoader;
     }
-    throw new Error('DataLoader не загружен');
+    // Если DataLoader еще не загружен, ждем немного и пробуем снова
+    if (window.Logger) window.Logger.warn('DataLoader не загружен, ожидание...');
+    return null;
   }
 
   function getStateManager() {
@@ -44,7 +46,20 @@
   async function initApp() {
     const DOMCache = getDOMCache();
     const StateAccessors = getStateAccessors();
-    const DataLoader = getDataLoader();
+
+    // Ждем загрузки DataLoader
+    let DataLoader = getDataLoader();
+    let attempts = 0;
+    while (!DataLoader && attempts < 10) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      DataLoader = getDataLoader();
+      attempts++;
+    }
+    if (!DataLoader) {
+      console.error('DataLoader не загружен после ожидания');
+      return;
+    }
+
     const StateManager = getStateManager();
     const DOMProxy = getDOMProxy();
 
@@ -65,14 +80,29 @@
     window.QUADRANTS = window.QUADRANTS || [];
     window.levelToRing = window.levelToRing || {};
 
+    // Теперь все технологии объединены в один массив, поэтому просто устанавливаем фильтр предприятий
     const selectedEnterprise = localStorage.getItem("selectedEnterprise") || "РМК";
-    const enterpriseData = StateAccessors.getEnterpriseData();
-    const enterpriseToSwitch = enterpriseData && enterpriseData[selectedEnterprise] ? selectedEnterprise : "РМК";
+    const enterpriseList = StateAccessors.getEnterpriseList ? StateAccessors.getEnterpriseList() : Object.keys(StateAccessors.getEnterpriseData() || {});
+    const enterpriseToSwitch = enterpriseList.includes(selectedEnterprise) ? selectedEnterprise : (enterpriseList.length > 0 ? enterpriseList[0] : "РМК");
     StateAccessors.setCurrentEnterprise(enterpriseToSwitch);
-    DataLoader.switchEnterprise(enterpriseToSwitch);
 
-    // Синхронизируем nextId после switchEnterprise (он устанавливает nextId в StateManager)
-    const nextId = StateManager.get('nextId') || 1;
+    // Устанавливаем фильтр предприятий
+    const Filters = window.Filters;
+    if (Filters && enterpriseToSwitch) {
+      const enterpriseSelect = document.querySelector('.custom-select[data-filter="enterprise"]');
+      if (enterpriseSelect) {
+        const hiddenInput = document.getElementById('filter_enterprise');
+        if (hiddenInput) {
+          hiddenInput.value = JSON.stringify([enterpriseToSwitch]);
+          Filters.renderMultiSelectTags(enterpriseSelect);
+        }
+      }
+    }
+
+    // Вычисляем nextId из объединенного массива технологий
+    const technologies = StateAccessors.getTechnologies();
+    const nextId = technologies.length > 0 ? Math.max(...technologies.map(t => Number(t.id) || 0)) + 1 : 1;
+    StateManager.set('nextId', nextId);
 
     // Инициализация авторизации
     if (typeof window.renderAuth === 'function') {
@@ -167,8 +197,8 @@
    * Показывает меню помощи
    */
   function showHelpMenu(button) {
-    // Проверяем, находимся ли мы на странице RMK.html
-    const isRMKPage = window.location.pathname.includes('RMK.html') || window.location.href.includes('RMK.html');
+    // Проверяем, находимся ли мы на странице радара (RMK-director.html или RMK.html для обратной совместимости)
+    const isRMKPage = window.location.pathname.includes('RMK-director.html') || window.location.pathname.includes('RMK.html') || window.location.href.includes('RMK-director.html') || window.location.href.includes('RMK.html');
 
     // Создаем выпадающее меню
     const menu = document.createElement('div');

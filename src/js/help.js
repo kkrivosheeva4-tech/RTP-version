@@ -14,7 +14,7 @@
 
   /**
    * Инициализация навигации по предприятиям (для шапки на странице справки)
-   * На странице справки нет радара, поэтому по клику просто сохраняем выбор и переходим на RMK.html.
+   * На странице справки нет радара, поэтому по клику просто сохраняем выбор и переходим на RMK-director.html.
    */
   function initEnterpriseNav() {
     const nav = document.querySelector('.enterprise-nav');
@@ -33,7 +33,7 @@
           sessionStorage.setItem('silentEnterpriseNav', '1');
         } catch (err) {}
 
-        window.location.href = 'RMK.html';
+        window.location.href = 'RMK-director.html';
       });
     });
 
@@ -242,8 +242,8 @@
               existingMenu.remove();
             }
 
-            // Проверяем, находимся ли мы на странице RMK.html
-            const isRMKPage = window.location.pathname.includes('RMK.html') || window.location.href.includes('RMK.html');
+            // Проверяем, находимся ли мы на странице радара (RMK-director.html или RMK.html для обратной совместимости)
+            const isRMKPage = window.location.pathname.includes('RMK-director.html') || window.location.pathname.includes('RMK.html') || window.location.href.includes('RMK-director.html') || window.location.href.includes('RMK.html');
 
             const menu = document.createElement('div');
             menu.className = 'help-menu';

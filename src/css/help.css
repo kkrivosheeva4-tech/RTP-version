@@ -19,26 +19,6 @@ header .controls {
   gap: 12px;
 }
 
-/* Отключаем подсветку активного предприятия на странице справки */
-/* help.css загружается только на странице справки, поэтому можем переопределить стили */
-.enterprise-nav button.active {
-  background: transparent !important;
-  color: var(--text) !important;
-  border-color: transparent !important;
-}
-
-/* Сохраняем hover эффекты */
-body.light .enterprise-nav button.active:hover {
-  background: #fff !important;
-  border: 1px solid #C8977F !important;
-  color: var(--accent) !important;
-}
-
-body.dark .enterprise-nav button.active:hover {
-  background: #000 !important;
-  border: 1px solid var(--accent) !important;
-  color: var(--accent) !important;
-}
 
 .help-main {
   margin-top: var(--header-height);
@@ -399,6 +379,51 @@ kbd {
   font-size: 0.9em;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   color: var(--text);
+}
+
+/* Стили для таблиц в справке */
+.help-card table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+.help-card table thead {
+  background: var(--modal-bg);
+}
+
+.help-card table th {
+  padding: 12px;
+  text-align: left;
+  border: 1px solid var(--input-border);
+  font-weight: 600;
+  color: var(--text);
+  background: var(--modal-bg);
+}
+
+.help-card table td {
+  padding: 12px;
+  border: 1px solid var(--input-border);
+  color: var(--text);
+  opacity: 0.9;
+}
+
+.help-card table tbody tr {
+  transition: background-color 0.2s;
+}
+
+.help-card table tbody tr:hover {
+  background: rgba(206, 144, 104, 0.1);
+}
+
+.help-card table tbody tr:nth-child(even) {
+  background: rgba(206, 144, 104, 0.05);
+}
+
+body.dark .help-card table tbody tr:nth-child(even) {
+  background: rgba(206, 144, 104, 0.08);
 }
 
 /* Адаптивность */

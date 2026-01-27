@@ -112,12 +112,14 @@
         if (isRMKDirectorPage) {
           switchViewBtn.setAttribute('data-tooltip', 'Переключить на страницу для архитекторов');
           switchViewBtn.setAttribute('aria-label', 'Переключить на страницу для архитекторов');
+          // Кнопка переключения между страницами больше не нужна - все работают на RMK-director.html
+          // Оставляем для обратной совместимости, но редирект теперь не требуется
           switchViewBtn.onclick = () => {
             const selectedEnterprise = localStorage.getItem('selectedEnterprise');
             if (selectedEnterprise) {
               sessionStorage.setItem('silentEnterpriseNav', '1');
             }
-            window.location.href = 'RMK.html';
+            window.location.href = 'RMK-director.html';
           };
         } else {
           switchViewBtn.setAttribute('data-tooltip', 'Переключить на страницу для директоров');
@@ -219,8 +221,8 @@
   // Основано на modules/core/app-init.js
 
   function showHelpMenu(button) {
-    // Проверяем, находимся ли мы на странице RMK.html
-    const isRMKPage = window.location.pathname.includes('RMK.html') || window.location.href.includes('RMK.html');
+    // Проверяем, находимся ли мы на странице радара (RMK-director.html или RMK.html для обратной совместимости)
+    const isRMKPage = window.location.pathname.includes('RMK-director.html') || window.location.pathname.includes('RMK.html') || window.location.href.includes('RMK-director.html') || window.location.href.includes('RMK.html');
 
     // Удаляем существующее меню, если есть
     const existingMenu = document.querySelector('.help-menu');

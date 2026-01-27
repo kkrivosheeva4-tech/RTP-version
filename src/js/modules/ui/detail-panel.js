@@ -200,7 +200,7 @@
             return `<span class="multi-tag">${escaped}</span>`;
           }).join(' ');
         } else {
-          companyWrap.innerHTML = '<span style="opacity:0.7">Не указано</span>';
+          companyWrap.innerHTML = '<span style="opacity:0.7; font-style: italic;">Технология не внедрена ни на одном предприятии</span>';
         }
       }
 
@@ -234,10 +234,14 @@
         }
       }
 
-      const techTypeText = t.techType || 'Не указано';
       const descText = t.description || 'Описание отсутствует';
 
-      detailPanel.querySelector('#panelTechType').textContent = techTypeText;
+      // Поле "Тип технологии" удалено из отображения
+      const panelTechType = detailPanel.querySelector('#panelTechType');
+      if (panelTechType) {
+        panelTechType.textContent = '';
+        panelTechType.style.display = 'none';
+      }
       detailPanel.querySelector('#panelDescription').textContent = descText;
 
       // Оценки 0-3
@@ -288,7 +292,11 @@
         trlStageEl.textContent = (t.trlStage !== undefined && t.trlStage !== null && t.trlStage !== '') ? String(t.trlStage) : '—';
       }
 
+      // Проверяем наличие предприятий у технологии
+      const hasEnterprises = companies.length > 0;
+
       // Проверяем заполненность оценок и подсвечиваем кнопку/блок оценок при их отсутствии
+      // ТОЛЬКО если у технологии есть предприятия
       // Для технологий с несколькими предприятиями проверяем оценки текущего предприятия
       let techReadFilled = false;
       let organReadFilled = false;
@@ -312,12 +320,25 @@
       const ratingsSection = detailPanel.querySelector('#panelRatingsSection');
       const ratingsHint = detailPanel.querySelector('#panelRatingsHint');
 
-      if (!hasReadinessRatings) {
+      // Если у технологии нет предприятий, показываем информационное сообщение вместо предупреждения
+      if (!hasEnterprises) {
+        if (editBtn) editBtn.classList.remove('highlight-missing-ratings');
+        if (ratingsSection) ratingsSection.classList.remove('highlight-missing-ratings');
+        if (ratingsHint) {
+          ratingsHint.textContent = 'Технология не внедрена ни на одном предприятии';
+          ratingsHint.style.display = 'block';
+          ratingsHint.style.color = 'var(--text-secondary, #666)';
+          ratingsHint.style.fontStyle = 'italic';
+        }
+      } else if (!hasReadinessRatings) {
+        // Если есть предприятия, но нет оценок - показываем предупреждение
         if (editBtn) editBtn.classList.add('highlight-missing-ratings');
         if (ratingsSection) ratingsSection.classList.add('highlight-missing-ratings');
         if (ratingsHint) {
           ratingsHint.textContent = 'Заполните поля оценок';
           ratingsHint.style.display = 'block';
+          ratingsHint.style.color = '';
+          ratingsHint.style.fontStyle = '';
         }
       } else {
         if (editBtn) editBtn.classList.remove('highlight-missing-ratings');

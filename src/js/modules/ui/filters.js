@@ -63,6 +63,143 @@
     return [];
   }
 
+  // Получить все технологии
+  function getAllTechnologies() {
+    // Пробуем получить через StateManager
+    if (window.StateManager) {
+      const techs = window.StateManager.get('technologies');
+      if (Array.isArray(techs) && techs.length > 0) {
+        return techs;
+      }
+    }
+    // Fallback на window.getTechnologies
+    if (typeof window.getTechnologies === 'function') {
+      const techs = window.getTechnologies();
+      if (Array.isArray(techs) && techs.length > 0) {
+        return techs;
+      }
+    }
+    // Fallback на window.technologies
+    if (Array.isArray(window.technologies) && window.technologies.length > 0) {
+      return window.technologies;
+    }
+    return [];
+  }
+
+  // Получить все уникальные блоки из технологий
+  function getAllUniqueBlocks(allTechnologies) {
+    const blocksSet = new Set();
+    const blockIdToName = window.blockIdToName || {};
+    const nameToBlockId = window.nameToBlockId || {};
+
+    allTechnologies.forEach(tech => {
+      if (!tech) return;
+      const techBlocks = Array.isArray(tech.blocks)
+        ? tech.blocks
+        : (tech.blocks ? [tech.blocks] : [tech.block].filter(Boolean));
+
+      techBlocks.forEach(block => {
+        let blockName = '';
+        if (typeof block === 'number') {
+          // Если блок - это ID, преобразуем в название
+          blockName = blockIdToName[block] || '';
+        } else if (typeof block === 'string') {
+          blockName = block;
+        }
+        if (blockName) blocksSet.add(blockName);
+      });
+    });
+
+    return Array.from(blocksSet).sort();
+  }
+
+  // Получить блоки для выбранных предприятий
+  function getBlocksForEnterprises(selectedEnterprises, allTechnologies) {
+    if (!selectedEnterprises || selectedEnterprises.length === 0) {
+      // Если предприятия не выбраны, показать все блоки
+      return getAllUniqueBlocks(allTechnologies);
+    }
+
+    const blocksSet = new Set();
+    const enterpriseSet = new Set(selectedEnterprises);
+    const blockIdToName = window.blockIdToName || {};
+
+    allTechnologies.forEach(tech => {
+      if (!tech) return;
+      const techEnterprises = Array.isArray(tech.company)
+        ? tech.company
+        : (tech.company ? [tech.company] : []);
+
+      // Проверяем, относится ли технология к выбранным предприятиям
+      const belongsToSelected = techEnterprises.length === 0
+        ? false // Технология без предприятий не учитывается при фильтрации
+        : techEnterprises.some(ent => enterpriseSet.has(ent));
+
+      if (belongsToSelected) {
+        const techBlocks = Array.isArray(tech.blocks)
+          ? tech.blocks
+          : (tech.blocks ? [tech.blocks] : [tech.block].filter(Boolean));
+
+        techBlocks.forEach(block => {
+          // Нормализовать блок (может быть ID или название)
+          let blockName = '';
+          if (typeof block === 'number') {
+            blockName = blockIdToName[block] || '';
+          } else if (typeof block === 'string') {
+            blockName = block;
+          }
+          if (blockName) blocksSet.add(blockName);
+        });
+      }
+    });
+
+    return Array.from(blocksSet).sort();
+  }
+
+  // Получить функции для выбранных предприятий
+  function getFunctionsForEnterprises(selectedEnterprises, allTechnologies) {
+    if (!selectedEnterprises || selectedEnterprises.length === 0) {
+      // Если предприятия не выбраны, показать все функции
+      const functionsSet = new Set();
+      allTechnologies.forEach(tech => {
+        if (!tech) return;
+        const techFunctions = Array.isArray(tech.functions)
+          ? tech.functions
+          : (tech.function ? [tech.function] : []);
+        techFunctions.forEach(func => {
+          if (func) functionsSet.add(func);
+        });
+      });
+      return Array.from(functionsSet).sort();
+    }
+
+    const functionsSet = new Set();
+    const enterpriseSet = new Set(selectedEnterprises);
+
+    allTechnologies.forEach(tech => {
+      if (!tech) return;
+      const techEnterprises = Array.isArray(tech.company)
+        ? tech.company
+        : (tech.company ? [tech.company] : []);
+
+      // Проверяем, относится ли технология к выбранным предприятиям
+      const belongsToSelected = techEnterprises.length === 0
+        ? false // Технология без предприятий не учитывается при фильтрации
+        : techEnterprises.some(ent => enterpriseSet.has(ent));
+
+      if (belongsToSelected) {
+        const techFunctions = Array.isArray(tech.functions)
+          ? tech.functions
+          : (tech.function ? [tech.function] : []);
+        techFunctions.forEach(func => {
+          if (func) functionsSet.add(func);
+        });
+      }
+    });
+
+    return Array.from(functionsSet).sort();
+  }
+
   // Заполнить селект фильтра
   function populateSelect(filterKey, items, placeholderText) {
     const select = document.querySelector(`.custom-select[data-filter="${filterKey}"]`);
@@ -107,27 +244,51 @@
     // "Выбрать все"
     optionsList.appendChild(createSelectAllLi());
 
-    // Если это фильтр блоков и есть зуммированный квадрант, фильтруем блоки
+    // Получаем выбранные предприятия для фильтрации
+    const selectedEnterprises = getFilterValues('enterprise');
+    const allTechnologies = getAllTechnologies();
+
+    // Если это фильтр блоков, фильтруем по предприятиям и квадранту
     let filteredItems = items;
-    if (filterKey === 'block' && typeof window.currentZoomedQuadrant !== 'undefined' && window.currentZoomedQuadrant != null) {
-      const getQuadrantIdForBlock = window.Positioning?.getQuadrantIdForBlock;
-      if (getQuadrantIdForBlock) {
-        filteredItems = items.filter(blockName => {
-          const quadrantId = getQuadrantIdForBlock(blockName);
-          return quadrantId === window.currentZoomedQuadrant;
-        });
+    if (filterKey === 'block') {
+      // Сначала фильтруем по предприятиям
+      if (selectedEnterprises.length > 0) {
+        filteredItems = getBlocksForEnterprises(selectedEnterprises, allTechnologies);
+      } else {
+        // Если предприятия не выбраны, показываем все блоки
+        filteredItems = getAllUniqueBlocks(allTechnologies);
+      }
+
+      // Затем фильтруем по зуммированному квадранту, если есть
+      if (typeof window.currentZoomedQuadrant !== 'undefined' && window.currentZoomedQuadrant != null) {
+        const getQuadrantIdForBlock = window.Positioning?.getQuadrantIdForBlock;
+        if (getQuadrantIdForBlock) {
+          filteredItems = filteredItems.filter(blockName => {
+            const quadrantId = getQuadrantIdForBlock(blockName);
+            return quadrantId === window.currentZoomedQuadrant;
+          });
+        }
       }
     }
 
-    // Если это фильтр функций и выбран блок, фильтруем функции
+    // Если это фильтр функций, фильтруем по предприятиям и блокам
     if (filterKey === 'function') {
-      const selectedBlocks = getFilterValues('block'); // Получаем массив выбранных блоков
+      // Сначала фильтруем по предприятиям
+      if (selectedEnterprises.length > 0) {
+        filteredItems = getFunctionsForEnterprises(selectedEnterprises, allTechnologies);
+      } else {
+        // Если предприятия не выбраны, используем все функции из items
+        filteredItems = items;
+      }
+
+      // Затем фильтруем по выбранным блокам, если они выбраны
+      const selectedBlocks = getFilterValues('block');
       if (selectedBlocks.length > 0 && typeof window.nameToBlockId !== 'undefined' && window.nameToBlockId && typeof window.functionToBlockMap !== 'undefined' && window.functionToBlockMap) {
         const selectedBlockIds = selectedBlocks
           .map(blockName => window.nameToBlockId[blockName])
           .filter(id => id != null);
         if (selectedBlockIds.length > 0) {
-          filteredItems = items.filter(funcName => {
+          filteredItems = filteredItems.filter(funcName => {
             const blockIds = window.functionToBlockMap[funcName];
             if (!blockIds) return false;
             // blockIds может быть числом или массивом чисел
@@ -138,10 +299,31 @@
       }
     }
 
-    filteredItems.forEach(item => {
-      const li = createCheckboxOptionLi(item, item);
-      optionsList.appendChild(li);
-    });
+    // Обработка пустых результатов
+    if (filteredItems.length === 0) {
+      const emptyMessage = document.createElement('li');
+      emptyMessage.className = 'select-empty-message';
+      emptyMessage.style.padding = '10px';
+      emptyMessage.style.color = '#999';
+      emptyMessage.style.fontStyle = 'italic';
+      if (filterKey === 'block') {
+        emptyMessage.textContent = selectedEnterprises.length > 0
+          ? 'Нет блоков для выбранных предприятий'
+          : 'Нет доступных блоков';
+      } else if (filterKey === 'function') {
+        emptyMessage.textContent = selectedEnterprises.length > 0
+          ? 'Нет функций для выбранных предприятий'
+          : 'Нет доступных функций';
+      } else {
+        emptyMessage.textContent = 'Нет доступных элементов';
+      }
+      optionsList.appendChild(emptyMessage);
+    } else {
+      filteredItems.forEach(item => {
+        const li = createCheckboxOptionLi(item, item);
+        optionsList.appendChild(li);
+      });
+    }
 
     // Инициализируем отображение (по умолчанию ничего не выбрано)
     if (hiddenInput) hiddenInput.value = '';
@@ -283,8 +465,15 @@
               window.positionOptions(customSelect);
             }
 
-            // Если это фильтр блоков, обновляем фильтр функций
+            // Если это фильтр предприятий, обновляем фильтры блоков и функций
             const filterKeyInner = customSelect.getAttribute('data-filter');
+            if (filterKeyInner === 'enterprise') {
+              const updateFiltersForEnterprises = window.Filters?.updateFiltersForEnterprises;
+              if (updateFiltersForEnterprises) {
+                updateFiltersForEnterprises();
+              }
+            }
+            // Если это фильтр блоков, обновляем фильтр функций
             if (filterKeyInner === 'block') {
               const updateFunctionFilterForBlock = window.Filters?.updateFunctionFilterForBlock;
               if (updateFunctionFilterForBlock) updateFunctionFilterForBlock(remaining);
@@ -329,6 +518,13 @@
     // соответствовало текущему набору выбранных значений.
     const filterKey = customSelect.getAttribute('data-filter');
     if (filterKey) {
+      // При изменении фильтра предприятий обновляем фильтры блоков и функций
+      if (filterKey === 'enterprise') {
+        const updateFiltersForEnterprises = window.Filters?.updateFiltersForEnterprises;
+        if (updateFiltersForEnterprises) {
+          updateFiltersForEnterprises();
+        }
+      }
       // Дополнительно синхронизируем фильтр функций при изменении блоков
       if (filterKey === 'block') {
         const currentSelected = Array.from(customSelect.querySelectorAll('.select-options li.selected'))
@@ -358,15 +554,23 @@
     // Сохраняем текущие выбранные значения (множественный выбор)
     const currentSelected = getFilterValues('function');
 
-    // Фильтруем функции по выбранным блокам
-    let filteredFunctions = window.functions;
+    // Получаем выбранные предприятия для дополнительной фильтрации
+    const selectedEnterprises = getFilterValues('enterprise');
+    const allTechnologies = getAllTechnologies();
+
+    // Сначала фильтруем функции по выбранным предприятиям
+    let filteredFunctions = selectedEnterprises.length > 0
+      ? getFunctionsForEnterprises(selectedEnterprises, allTechnologies)
+      : window.functions;
+
+    // Затем фильтруем функции по выбранным блокам
     const blockNamesArray = Array.isArray(blockNames) ? blockNames : (blockNames ? [blockNames] : []);
     if (blockNamesArray.length > 0 && typeof window.nameToBlockId !== 'undefined' && window.nameToBlockId) {
       const selectedBlockIds = blockNamesArray
         .map(blockName => window.nameToBlockId[blockName])
         .filter(id => id != null);
       if (selectedBlockIds.length > 0) {
-        filteredFunctions = window.functions.filter(funcName => {
+        filteredFunctions = filteredFunctions.filter(funcName => {
           const blockIds = window.functionToBlockMap[funcName];
           if (!blockIds) return false;
           const funcBlockIds = Array.isArray(blockIds) ? blockIds : [blockIds];
@@ -414,6 +618,136 @@
       if (typeof window.updateRadar === 'function') {
         window.updateRadar();
       }
+    }
+  }
+
+  // Обновить фильтры блоков и функций при изменении фильтра предприятий
+  function updateFiltersForEnterprises() {
+    // Сохраняем текущие выбранные значения
+    const currentSelectedBlocks = getFilterValues('block');
+    const currentSelectedFunctions = getFilterValues('function');
+
+    // Обновляем фильтр блоков - populateSelect сам учтет выбранные предприятия
+    const blockSelect = document.querySelector('.custom-select[data-filter="block"]');
+    if (blockSelect && typeof window.blocksList !== 'undefined' && window.blocksList) {
+      const placeholder = blockSelect.getAttribute('data-placeholder') || 'Функциональный блок';
+      // Передаем полный список - populateSelect сам отфильтрует по предприятиям
+      populateSelect('block', window.blocksList, placeholder);
+
+      // Восстанавливаем выбранные блоки, если они все еще доступны
+      if (currentSelectedBlocks.length > 0) {
+        // Получаем доступные блоки после фильтрации
+        const selectedEnterprises = getFilterValues('enterprise');
+        const allTechnologies = getAllTechnologies();
+        const availableBlocks = selectedEnterprises.length > 0
+          ? getBlocksForEnterprises(selectedEnterprises, allTechnologies)
+          : getAllUniqueBlocks(allTechnologies);
+
+        // Применяем дополнительную фильтрацию по квадранту, если есть
+        let filteredBlocks = availableBlocks;
+        if (typeof window.currentZoomedQuadrant !== 'undefined' && window.currentZoomedQuadrant != null) {
+          const getQuadrantIdForBlock = window.Positioning?.getQuadrantIdForBlock;
+          if (getQuadrantIdForBlock) {
+            filteredBlocks = availableBlocks.filter(blockName => {
+              const quadrantId = getQuadrantIdForBlock(blockName);
+              return quadrantId === window.currentZoomedQuadrant;
+            });
+          }
+        }
+
+        const validBlocks = currentSelectedBlocks.filter(block => filteredBlocks.includes(block));
+        if (validBlocks.length > 0) {
+          const hiddenInput = document.getElementById('filter_block');
+          if (hiddenInput) {
+            hiddenInput.value = JSON.stringify(validBlocks);
+            blockSelect.setAttribute('data-value', hiddenInput.value);
+            // Отмечаем выбранные элементы в списке
+            validBlocks.forEach(blockName => {
+              const li = blockSelect.querySelector(`.select-options li[data-value="${blockName}"]`);
+              if (li) {
+                li.classList.add('selected');
+                const checkbox = li.querySelector('input[type="checkbox"]');
+                if (checkbox) checkbox.checked = true;
+              }
+            });
+            renderMultiSelectTags(blockSelect);
+          }
+        } else {
+          // Если выбранные блоки больше не доступны, очищаем выбор
+          const hiddenInput = document.getElementById('filter_block');
+          if (hiddenInput) {
+            hiddenInput.value = '';
+            blockSelect.setAttribute('data-value', '');
+            renderMultiSelectTags(blockSelect);
+          }
+        }
+      }
+    }
+
+    // Обновляем фильтр функций - populateSelect сам учтет выбранные предприятия и блоки
+    const functionSelect = document.querySelector('.custom-select[data-filter="function"]');
+    if (functionSelect && typeof window.functions !== 'undefined' && window.functions) {
+      const placeholder = functionSelect.getAttribute('data-placeholder') || 'Функция';
+      // Передаем полный список - populateSelect сам отфильтрует по предприятиям и блокам
+      populateSelect('function', window.functions, placeholder);
+
+      // Восстанавливаем выбранные функции, если они все еще доступны
+      if (currentSelectedFunctions.length > 0) {
+        // Получаем доступные функции после фильтрации
+        const selectedEnterprises = getFilterValues('enterprise');
+        const allTechnologies = getAllTechnologies();
+        let availableFunctions = selectedEnterprises.length > 0
+          ? getFunctionsForEnterprises(selectedEnterprises, allTechnologies)
+          : window.functions;
+
+        // Применяем дополнительную фильтрацию по блокам, если они выбраны
+        const selectedBlocks = getFilterValues('block');
+        if (selectedBlocks.length > 0 && typeof window.nameToBlockId !== 'undefined' && window.nameToBlockId && typeof window.functionToBlockMap !== 'undefined' && window.functionToBlockMap) {
+          const selectedBlockIds = selectedBlocks
+            .map(blockName => window.nameToBlockId[blockName])
+            .filter(id => id != null);
+          if (selectedBlockIds.length > 0) {
+            availableFunctions = availableFunctions.filter(funcName => {
+              const blockIds = window.functionToBlockMap[funcName];
+              if (!blockIds) return false;
+              const funcBlockIds = Array.isArray(blockIds) ? blockIds : [blockIds];
+              return funcBlockIds.some(id => selectedBlockIds.includes(id));
+            });
+          }
+        }
+
+        const validFunctions = currentSelectedFunctions.filter(func => availableFunctions.includes(func));
+        if (validFunctions.length > 0) {
+          const hiddenInput = document.getElementById('filter_function');
+          if (hiddenInput) {
+            hiddenInput.value = JSON.stringify(validFunctions);
+            functionSelect.setAttribute('data-value', hiddenInput.value);
+            // Отмечаем выбранные элементы в списке
+            validFunctions.forEach(funcName => {
+              const li = functionSelect.querySelector(`.select-options li[data-value="${funcName}"]`);
+              if (li) {
+                li.classList.add('selected');
+                const checkbox = li.querySelector('input[type="checkbox"]');
+                if (checkbox) checkbox.checked = true;
+              }
+            });
+            renderMultiSelectTags(functionSelect);
+          }
+        } else {
+          // Если выбранные функции больше не доступны, очищаем выбор
+          const hiddenInput = document.getElementById('filter_function');
+          if (hiddenInput) {
+            hiddenInput.value = '';
+            functionSelect.setAttribute('data-value', '');
+            renderMultiSelectTags(functionSelect);
+          }
+        }
+      }
+    }
+
+    // Обновляем радар после изменения фильтров
+    if (typeof window.updateRadar === 'function') {
+      window.updateRadar();
     }
   }
 
@@ -515,7 +849,7 @@
     // Определяем, нужны ли чекбоксы для данного селекта (мультиселекты в модалках)
     const isVendorIntegratorsByVendor = typeof selectId === 'string'
       && (selectId.startsWith('techVendorIntegrators__') || selectId.startsWith('editVendorIntegrators__'));
-    const needsCheckboxes = ['techBlock', 'techFunc', 'editBlock', 'editFunc', 'techVendors', 'editVendors', 'techIntegrators', 'editIntegrators'].includes(selectId)
+    const needsCheckboxes = ['techDirections', 'editDirections', 'techBlock', 'techFunc', 'editBlock', 'editFunc', 'techVendors', 'editVendors', 'techIntegrators', 'editIntegrators'].includes(selectId)
       || isVendorIntegratorsByVendor;
     if (needsCheckboxes) {
       // Если есть select-dropdown, поиск уже есть в HTML, не добавляем
@@ -537,7 +871,7 @@
       optionsList.appendChild(selectAllLi);
     }
     // Для блоков, функций, процессов и предприятий в модалке разрешим множественный выбор
-    const isMulti = ['techSector', 'techBlock', 'editBlock', 'techFunc', 'editFunc', 'techLevel', 'editLevel', 'techCompany', 'editCompany', 'techVendors', 'editVendors', 'techIntegrators', 'editIntegrators'].includes(selectId)
+    const isMulti = ['techSector', 'techDirections', 'editDirections', 'techBlock', 'editBlock', 'techFunc', 'editFunc', 'techLevel', 'editLevel', 'techCompany', 'editCompany', 'techVendors', 'editVendors', 'techIntegrators', 'editIntegrators'].includes(selectId)
       || isVendorIntegratorsByVendor;
     if (isMulti) {
       customSelect.setAttribute('data-multi', 'true');
@@ -668,6 +1002,11 @@
     renderMultiSelectTags,
     updateFunctionFilterForBlock,
     updateBlockFilterForZoomedQuadrant,
+    updateFiltersForEnterprises,
+    getBlocksForEnterprises,
+    getFunctionsForEnterprises,
+    getAllTechnologies,
+    getAllUniqueBlocks,
     setCustomSelectValue,
     resetCustomSelects
   };

@@ -48,8 +48,9 @@ window.FormsModule = (function () {
    * @param {string[]} companies - массив названий предприятий
    * @param {string} containerId - ID контейнера для полей
    * @param {string} prefix - префикс для ID полей ('tech' или 'edit')
+   * @param {boolean} includeExtendedFields - если true, добавляет поля trlStage и isImplemented (только для формы редактирования)
    */
-  function createCompanyRatingsFields(companies, containerId, prefix) {
+  function createCompanyRatingsFields(companies, containerId, prefix, includeExtendedFields = false) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
@@ -61,7 +62,8 @@ window.FormsModule = (function () {
       return;
     }
 
-    if (companies.length === 1) {
+    // Для формы редактирования показываем поля даже для одного предприятия
+    if (companies.length === 1 && !includeExtendedFields) {
       container.style.display = 'none';
       return;
     }
@@ -182,6 +184,88 @@ window.FormsModule = (function () {
       organReadDiv.appendChild(organReadHiddenInput);
       ratingsRow.appendChild(organReadDiv);
 
+      // Добавляем поля trlStage и isImplemented только для формы редактирования
+      if (includeExtendedFields && prefix === 'edit') {
+        // TRL стадия - выпадающий список
+        const trlStageDiv = document.createElement('div');
+        trlStageDiv.style.flex = '1';
+        trlStageDiv.style.display = 'flex';
+        trlStageDiv.style.flexDirection = 'column';
+        trlStageDiv.style.gap = '6px';
+        const trlStageLabel = document.createElement('span');
+        trlStageLabel.textContent = 'TRL стадия';
+        trlStageLabel.style.display = 'block';
+        trlStageLabel.style.marginBottom = '4px';
+        trlStageLabel.style.fontSize = '13px';
+        trlStageLabel.style.fontWeight = '500';
+        const trlStageFieldId = `editTrlStage_${company}`;
+        const trlStageSelect = document.createElement('div');
+        trlStageSelect.className = 'custom-select-modal';
+        trlStageSelect.setAttribute('data-field', trlStageFieldId);
+        trlStageSelect.setAttribute('tabindex', '0');
+        const trlStageSelectTrigger = document.createElement('div');
+        trlStageSelectTrigger.className = 'select-trigger';
+        const trlStageSelectText = document.createElement('span');
+        trlStageSelectText.className = 'selected-text';
+        trlStageSelectText.textContent = 'Выберите стадию';
+        const trlStageSelectArrow = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        trlStageSelectArrow.setAttribute('class', 'arrow');
+        trlStageSelectArrow.setAttribute('width', '12');
+        trlStageSelectArrow.setAttribute('height', '12');
+        trlStageSelectArrow.setAttribute('viewBox', '0 0 12 12');
+        trlStageSelectArrow.setAttribute('fill', 'none');
+        const trlStageSelectArrowPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        trlStageSelectArrowPath.setAttribute('d', 'M3 5L6 8L9 5');
+        trlStageSelectArrowPath.setAttribute('stroke', '#666');
+        trlStageSelectArrowPath.setAttribute('stroke-width', '1.5');
+        trlStageSelectArrowPath.setAttribute('stroke-linecap', 'round');
+        trlStageSelectArrowPath.setAttribute('stroke-linejoin', 'round');
+        trlStageSelectArrow.appendChild(trlStageSelectArrowPath);
+        trlStageSelectTrigger.appendChild(trlStageSelectText);
+        trlStageSelectTrigger.appendChild(trlStageSelectArrow);
+        const trlStageSelectOptions = document.createElement('ul');
+        trlStageSelectOptions.className = 'select-options';
+        trlStageSelect.appendChild(trlStageSelectTrigger);
+        trlStageSelect.appendChild(trlStageSelectOptions);
+        const trlStageHiddenInput = document.createElement('input');
+        trlStageHiddenInput.type = 'hidden';
+        trlStageHiddenInput.id = trlStageFieldId;
+        trlStageHiddenInput.name = trlStageFieldId;
+        trlStageDiv.appendChild(trlStageLabel);
+        trlStageDiv.appendChild(trlStageSelect);
+        trlStageDiv.appendChild(trlStageHiddenInput);
+        ratingsRow.appendChild(trlStageDiv);
+
+        // Чекбокс "Внедрена/Не внедрена"
+        const isImplementedDiv = document.createElement('div');
+        isImplementedDiv.style.flex = '1';
+        isImplementedDiv.style.display = 'flex';
+        isImplementedDiv.style.flexDirection = 'column';
+        isImplementedDiv.style.gap = '6px';
+        isImplementedDiv.style.justifyContent = 'flex-end';
+        const isImplementedLabel = document.createElement('label');
+        isImplementedLabel.style.display = 'flex';
+        isImplementedLabel.style.alignItems = 'center';
+        isImplementedLabel.style.gap = '8px';
+        isImplementedLabel.style.cursor = 'pointer';
+        isImplementedLabel.style.marginTop = '20px';
+        const isImplementedCheckbox = document.createElement('input');
+        isImplementedCheckbox.type = 'checkbox';
+        isImplementedCheckbox.id = `editIsImplemented_${company}`;
+        isImplementedCheckbox.name = `editIsImplemented_${company}`;
+        isImplementedCheckbox.style.width = '18px';
+        isImplementedCheckbox.style.height = '18px';
+        isImplementedCheckbox.style.cursor = 'pointer';
+        const isImplementedText = document.createElement('span');
+        isImplementedText.textContent = 'Внедрена';
+        isImplementedText.style.fontSize = '13px';
+        isImplementedText.style.fontWeight = '500';
+        isImplementedLabel.appendChild(isImplementedCheckbox);
+        isImplementedLabel.appendChild(isImplementedText);
+        isImplementedDiv.appendChild(isImplementedLabel);
+        ratingsRow.appendChild(isImplementedDiv);
+      }
+
       companyGroup.appendChild(ratingsRow);
       container.appendChild(companyGroup);
     });
@@ -191,6 +275,7 @@ window.FormsModule = (function () {
     // Инициализируем выпадающие списки и добавляем tooltips после создания всех элементов
     if (window.Filters && typeof window.Filters.populateSelectForModal === 'function') {
       const ratingOptions = ['0 — Не готова', '1 — Низкая', '2 — Средняя', '3 — Высокая'];
+      const trlOptions = ['1-Исследовательская', '2-Прототип', '3-Технология готова к внедрению'];
       const techReadTooltips = {
         '0 — Не готова': 'Технология находится на начальной стадии, не применима',
         '1 — Низкая': 'Начальная стадия разработки, требуется значительная доработка',
@@ -211,6 +296,12 @@ window.FormsModule = (function () {
 
         window.Filters.populateSelectForModal(techReadFieldId, ratingOptions, 'Выберите оценку');
         window.Filters.populateSelectForModal(organReadFieldId, ratingOptions, 'Выберите оценку');
+
+        // Инициализируем TRL стадию для формы редактирования
+        if (includeExtendedFields && prefix === 'edit') {
+          const trlStageFieldId = `editTrlStage_${company}`;
+          window.Filters.populateSelectForModal(trlStageFieldId, trlOptions, 'Выберите стадию');
+        }
 
         // Добавляем tooltips после небольшой задержки, чтобы элементы были созданы
         setTimeout(() => {
@@ -315,24 +406,35 @@ window.FormsModule = (function () {
     const editTechReadGroup = document.getElementById('editTechReadGroup');
     const editOrganReadGroup = document.getElementById('editOrganReadGroup');
     const editCompanyRatingsContainer = document.getElementById('editCompanyRatingsContainer');
+    const editEnterpriseRatingsGroup = document.getElementById('editEnterpriseRatingsGroup');
+    const editEnterpriseRatingsContainer = document.getElementById('editEnterpriseRatingsContainer');
 
-    if (companies.length === 1) {
-      // Одно предприятие - показываем обычные поля, скрываем динамические
+    if (companies.length === 0) {
+      // Нет предприятий - скрываем все секции оценок по предприятиям
       if (editTechReadGroup) editTechReadGroup.style.display = '';
       if (editOrganReadGroup) editOrganReadGroup.style.display = '';
       if (editCompanyRatingsContainer) editCompanyRatingsContainer.style.display = 'none';
-    } else if (companies.length > 1) {
-      // Несколько предприятий - скрываем обычные поля, показываем динамические
+      if (editEnterpriseRatingsGroup) editEnterpriseRatingsGroup.style.display = 'none';
+    } else {
+      // Есть предприятия - показываем секцию "Оценки по предприятиям"
+      if (editEnterpriseRatingsGroup) editEnterpriseRatingsGroup.style.display = 'block';
       if (editTechReadGroup) editTechReadGroup.style.display = 'none';
       if (editOrganReadGroup) editOrganReadGroup.style.display = 'none';
-      // Создаем динамические поля и заполняем их значениями из companyRatings
-      createCompanyRatingsFields(companies, 'editCompanyRatingsContainer', 'edit');
+      if (editCompanyRatingsContainer) editCompanyRatingsContainer.style.display = 'none';
+
+      // Создаем динамические поля для всех предприятий с расширенными полями (trlStage, isImplemented)
+      createCompanyRatingsFields(companies, 'editEnterpriseRatingsContainer', 'edit', true);
       // Заполняем значения из companyRatings или общих полей в выпадающие списки
       const ratingOptions = {
         0: '0 — Не готова',
         1: '1 — Низкая',
         2: '2 — Средняя',
         3: '3 — Высокая'
+      };
+      const trlOptions = {
+        1: '1-Исследовательская',
+        2: '2-Прототип',
+        3: '3-Технология готова к внедрению'
       };
       // Если tech не передан, пытаемся получить технологию по ID из формы
       if (!tech) {
@@ -352,6 +454,9 @@ window.FormsModule = (function () {
             if (ratings) {
               const techReadFieldId = `editTechRead_${company}`;
               const organReadFieldId = `editOrganRead_${company}`;
+              const trlStageFieldId = `editTrlStage_${company}`;
+              const isImplementedFieldId = `editIsImplemented_${company}`;
+
               if (ratings.techRead !== undefined && ratings.techRead !== null) {
                 const techValue = ratingOptions[ratings.techRead];
                 window.setCustomSelectValue(techReadFieldId, techValue || '');
@@ -364,10 +469,25 @@ window.FormsModule = (function () {
               } else {
                 window.setCustomSelectValue(organReadFieldId, '');
               }
+              if (ratings.trlStage !== undefined && ratings.trlStage !== null) {
+                const trlValue = trlOptions[ratings.trlStage];
+                window.setCustomSelectValue(trlStageFieldId, trlValue || '');
+              } else {
+                window.setCustomSelectValue(trlStageFieldId, '');
+              }
+
+              // Устанавливаем чекбокс isImplemented
+              const isImplementedCheckbox = document.getElementById(isImplementedFieldId);
+              if (isImplementedCheckbox) {
+                isImplementedCheckbox.checked = ratings.isImplemented === true;
+              }
             } else {
               // Используем общие значения
               const techReadFieldId = `editTechRead_${company}`;
               const organReadFieldId = `editOrganRead_${company}`;
+              const trlStageFieldId = `editTrlStage_${company}`;
+              const isImplementedFieldId = `editIsImplemented_${company}`;
+
               if (tech.techRead !== undefined && tech.techRead !== null) {
                 const techValue = ratingOptions[tech.techRead];
                 window.setCustomSelectValue(techReadFieldId, techValue || '');
@@ -380,6 +500,18 @@ window.FormsModule = (function () {
               } else {
                 window.setCustomSelectValue(organReadFieldId, '');
               }
+              if (tech.trlStage !== undefined && tech.trlStage !== null) {
+                const trlValue = trlOptions[tech.trlStage];
+                window.setCustomSelectValue(trlStageFieldId, trlValue || '');
+              } else {
+                window.setCustomSelectValue(trlStageFieldId, '');
+              }
+
+              // Устанавливаем чекбокс isImplemented
+              const isImplementedCheckbox = document.getElementById(isImplementedFieldId);
+              if (isImplementedCheckbox) {
+                isImplementedCheckbox.checked = tech.isImplemented === true;
+              }
             }
           });
         } else {
@@ -387,6 +519,9 @@ window.FormsModule = (function () {
           companies.forEach(company => {
             const techReadFieldId = `editTechRead_${company}`;
             const organReadFieldId = `editOrganRead_${company}`;
+            const trlStageFieldId = `editTrlStage_${company}`;
+            const isImplementedFieldId = `editIsImplemented_${company}`;
+
             if (tech.techRead !== undefined && tech.techRead !== null) {
               const techValue = ratingOptions[tech.techRead];
               window.setCustomSelectValue(techReadFieldId, techValue || '');
@@ -399,14 +534,21 @@ window.FormsModule = (function () {
             } else {
               window.setCustomSelectValue(organReadFieldId, '');
             }
+            if (tech.trlStage !== undefined && tech.trlStage !== null) {
+              const trlValue = trlOptions[tech.trlStage];
+              window.setCustomSelectValue(trlStageFieldId, trlValue || '');
+            } else {
+              window.setCustomSelectValue(trlStageFieldId, '');
+            }
+
+            // Устанавливаем чекбокс isImplemented
+            const isImplementedCheckbox = document.getElementById(isImplementedFieldId);
+            if (isImplementedCheckbox) {
+              isImplementedCheckbox.checked = tech.isImplemented === true;
+            }
           });
         }
       }
-    } else {
-      // Нет предприятий - показываем обычные поля
-      if (editTechReadGroup) editTechReadGroup.style.display = '';
-      if (editOrganReadGroup) editOrganReadGroup.style.display = '';
-      if (editCompanyRatingsContainer) editCompanyRatingsContainer.style.display = 'none';
     }
   }
 
