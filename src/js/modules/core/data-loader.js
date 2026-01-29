@@ -530,8 +530,17 @@
           organRead = normalizeReadiness(firstEnt.organizationalReadiness);
         }
 
-        // Преобразуем functionCoverage (массив) в funcCover (число 1-3)
+        // Преобразуем functionCoverage (массив) в funcCover (число 0-3)
+        // Используем новую логику с учетом процентного покрытия блока
         let funcCover = null;
+
+        // Определяем блоки технологии
+        const techBlockIds = tech.block
+          ? (typeof tech.block === 'number' ? [tech.block] : [])
+          : [];
+
+        // ВАЖНО: funcCover будет рассчитан асинхронно позже
+        // Для начальной загрузки используем старую логику как fallback
         if (Array.isArray(tech.functionCoverage) && tech.functionCoverage.length > 0) {
           const funcCount = tech.functionCoverage.length;
           if (funcCount === 1) {
@@ -540,6 +549,22 @@
             funcCover = 2;
           } else if (funcCount >= 4) {
             funcCover = 3;
+          }
+
+          // Асинхронно пересчитываем funcCover с учетом блоков
+          // Это обновит значение после загрузки данных
+          if (window.FuncCoverUtils && typeof window.FuncCoverUtils.calculateFuncCover === 'function') {
+            window.FuncCoverUtils.calculateFuncCover(tech.functionCoverage, techBlockIds)
+              .then(calculatedFuncCover => {
+                // Обновляем значение в уже созданном объекте
+                if (normalized && normalized.id === tech.id) {
+                  normalized.funcCover = calculatedFuncCover;
+                  console.log(`[DataLoader] Обновлен funcCover для технологии ${tech.id}: ${calculatedFuncCover}`);
+                }
+              })
+              .catch(err => {
+                console.error('[DataLoader] Ошибка расчета funcCover:', err);
+              });
           }
         }
 
@@ -1141,6 +1166,30 @@
       // Запускаем первую попытку
       initFiltersWithRetry(0);
 
+      // Пересчитываем funcCover для всех технологий с использованием нового алгоритма
+      // Это делается асинхронно и не блокирует загрузку
+      const technologiesForRecalc = getState('technologies');
+      if (technologiesForRecalc && technologiesForRecalc.length > 0) {
+        recalculateFuncCoverForAllTechnologies(technologiesForRecalc)
+          .then(() => {
+            console.log('[DataLoader] Пересчет funcCover завершен успешно');
+            // После пересчета обновляем state
+            setState('technologies', [...technologiesForRecalc]);
+            // Обновляем индекс после пересчета
+            const DataIndex = getDataIndex();
+            if (DataIndex) {
+              try {
+                DataIndex.build(technologiesForRecalc);
+              } catch (e) {
+                if (window.Logger) window.Logger.warn('DataIndex.build failed after recalculating funcCover', e);
+              }
+            }
+          })
+          .catch(err => {
+            console.error('[DataLoader] Ошибка при пересчете funcCover:', err);
+          });
+      }
+
       // Скрываем индикатор загрузки при успешной загрузке
       if (loaderId && typeof window !== 'undefined' && window.LoadingManager) {
         window.LoadingManager.hide(loaderId);
@@ -1386,6 +1435,66 @@
     return true;
   }
 
+  /**
+   * Пересчет funcCover для всех технологий с использованием нового алгоритма
+   * на основе процентного покрытия функций в блоках
+   * @param {Array} technologies - Массив технологий для обновления
+   * @returns {Promise<void>}
+   */
+  async function recalculateFuncCoverForAllTechnologies(technologies) {
+    if (!Array.isArray(technologies) || technologies.length === 0) {
+      console.warn('[DataLoader] Нет технологий для пересчета funcCover');
+      return;
+    }
+
+    console.log('[DataLoader] Начинаем пересчет funcCover для всех технологий...');
+
+    // Проверяем наличие модуля FuncCoverUtils
+    if (!window.FuncCoverUtils || typeof window.FuncCoverUtils.calculateFuncCover !== 'function') {
+      console.warn('[DataLoader] Модуль FuncCoverUtils не загружен, пересчет невозможен');
+      return;
+    }
+
+    let updatedCount = 0;
+    const promises = technologies.map(async (tech) => {
+      // Получаем покрытые функции
+      const coveredFunctions = Array.isArray(tech.functionCoverage)
+        ? tech.functionCoverage
+        : (Array.isArray(tech.functions) ? tech.functions : []);
+
+      if (coveredFunctions.length === 0) {
+        return; // Пропускаем технологии без функций
+      }
+
+      // Получаем блоки технологии
+      const blockIds = Array.isArray(tech.blocks) && tech.blocks.length > 0
+        ? tech.blocks.map(b => typeof b === 'number' ? b : parseInt(b)).filter(n => !isNaN(n))
+        : (tech.block ? [typeof tech.block === 'number' ? tech.block : parseInt(tech.block)] : []);
+
+      if (blockIds.length === 0) {
+        return; // Пропускаем технологии без блоков
+      }
+
+      try {
+        // Рассчитываем новое значение funcCover
+        const newFuncCover = await window.FuncCoverUtils.calculateFuncCover(coveredFunctions, blockIds);
+
+        // Обновляем только если значение изменилось
+        if (tech.funcCover !== newFuncCover) {
+          const oldValue = tech.funcCover;
+          tech.funcCover = newFuncCover;
+          updatedCount++;
+          console.log(`[DataLoader] Технология "${tech.name}" (ID: ${tech.id}): funcCover ${oldValue} → ${newFuncCover}`);
+        }
+      } catch (error) {
+        console.error(`[DataLoader] Ошибка при пересчете funcCover для технологии ${tech.id}:`, error);
+      }
+    });
+
+    await Promise.all(promises);
+    console.log(`[DataLoader] Пересчет funcCover завершен. Обновлено технологий: ${updatedCount} из ${technologies.length}`);
+  }
+
   // Экспорт функций в window для обратной совместимости
   window.DataLoader = {
     vfsRead,
@@ -1398,7 +1507,8 @@
     ensureAndPersistNewTech,
     switchEnterprise,
     showNotification,
-    initFilters
+    initFilters,
+    recalculateFuncCoverForAllTechnologies
   };
 
   // Экспорт функции initFilters для ручного вызова

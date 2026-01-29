@@ -159,6 +159,32 @@
   }
 
   /**
+   * Вычисляет размер элемента (радиус в пикселях) на основе технологии
+   * Размер зависит от количества вендоров на директорской странице
+   * @param {Object} tech - Объект технологии
+   * @returns {number} - Размер элемента (радиус в пикселях)
+   */
+  function calculateElementSize(tech) {
+    const isDirectorPage = document.body && document.body.id === 'rmk-director';
+    let size;
+
+    if (isDirectorPage) {
+      const vendorCount = (tech.vendors && Array.isArray(tech.vendors)) ? tech.vendors.length : 0;
+      if (vendorCount <= 1) {
+        size = 8;
+      } else if (vendorCount === 2 || vendorCount === 3) {
+        size = 14;
+      } else {
+        size = 20;
+      }
+    } else {
+      size = 10;
+    }
+
+    return size;
+  }
+
+  /**
    * Вычисляет позицию технологии на радаре в полярных координатах (θ, r)
    * согласно математической модели с логистической функцией.
    *
@@ -221,15 +247,20 @@
 
     // Веса факторов (w_k)
     // Все факторы положительные - "приближающие" (уменьшают радиус)
+    // Веса скалиброваны так, чтобы их сумма = 1.0 для корректного диапазона
     const weights = {
-      techRead: 0.25,      // Технологическая готовность (0-3) → положительный
-      organRead: 0.25,     // Организационная готовность (0-3) → положительный
-      funcCover: 0.15,     // Покрытие функций (0-3) → положительный
+      techRead: 0.30,      // Технологическая готовность (0-3) → положительный
+      organRead: 0.30,     // Организационная готовность (0-3) → положительный
+      funcCover: 0.20,     // Покрытие функций (0-3) → положительный
       trlStage: 0.20       // TRL стадия (1-3) → положительный
     };
+    // Сумма весов = 1.0 ✓
 
     // Сдвиг для калибровки общей строгости модели
-    const bias = -0.5; // Отрицательный сдвиг делает модель более строгой (больше радиус)
+    // bias = -0.6: технология с максимальными параметрами → r ≈ 17% (близко к центру)
+    //              технология со средними параметрами → r ≈ 60% (среднее положение)
+    //              технология с низкими параметрами → r ≈ 92% (у края)
+    const bias = -0.6;
 
     // Извлечение и нормализация факторов (s_ik → x_ik)
     // techRead и organRead вычисляются как среднее значение по выбранным предприятиям из фильтра
@@ -363,12 +394,20 @@
       // Вычисляем funcCover из functionCoverage (массив функций)
       if (Array.isArray(tech.functionCoverage) && tech.functionCoverage.length > 0) {
         const funcCount = tech.functionCoverage.length;
-        if (funcCount === 1) {
-          funcCover = 1;
-        } else if (funcCount >= 2 && funcCount <= 3) {
-          funcCover = 2;
-        } else if (funcCount >= 4) {
-          funcCover = 3;
+
+        // Пытаемся использовать новую логику с учетом блоков
+        if (window.FuncCoverUtils && typeof window.FuncCoverUtils.calculateFuncCoverLegacy === 'function') {
+          // Используем старую логику как fallback (синхронная)
+          funcCover = window.FuncCoverUtils.calculateFuncCoverLegacy(funcCount);
+        } else {
+          // Fallback если модуль не загружен
+          if (funcCount === 1) {
+            funcCover = 1;
+          } else if (funcCount >= 2 && funcCount <= 3) {
+            funcCover = 2;
+          } else if (funcCount >= 4) {
+            funcCover = 3;
+          }
         }
       } else {
         // Если functionCoverage пуст или отсутствует, используем 0
@@ -428,6 +467,8 @@
     const CENTER_Y = window.CENTER_Y || 500;
     const RADIUS_STEP = window.RADIUS_STEP || 140;
     const POSITION_PAD = window.POSITION_PAD || 30;
+    const POSITION_ANGLE_PAD = window.POSITION_ANGLE_PAD || 8;
+    const QUADRANTS = window.QUADRANTS || [];
     const RINGS = window.RINGS || [];
 
     // Всегда используем математическую модель calculateRadarPosition
@@ -444,11 +485,52 @@
     // тем дальше от центра в пикселях
     const radius = POSITION_PAD + (radarPos.radius / 100) * availableRadius;
 
-    // Используем угол из calculateRadarPosition
-    const angle = radarPos.theta;
+    // Вычисляем размер элемента
+    const elementSize = calculateElementSize(tech);
+
+    // Вычисляем угловой размер элемента на вычисленном радиусе
+    const angularSize = calculateAngularSize(elementSize * 1.2, radius);
+
+    // Используем угол из calculateRadarPosition, корректируя с учетом размера элемента
+    let angle = radarPos.theta;
+
+    // Корректируем угол, чтобы элемент не выходил за границы квадранта
+    // Определяем квадрант для технологии
+    const directions = Array.isArray(tech.directions) && tech.directions.length
+      ? tech.directions
+      : (tech.direction ? [tech.direction] : []);
+
+    if (directions.length > 0) {
+      const directionNameOrId = directions[0];
+      const quadrantId = getQuadrantIdForDirection(directionNameOrId);
+
+      if (quadrantId != null) {
+        const q = QUADRANTS.find(q => q.id === quadrantId);
+        if (q) {
+          const angleMin = q.startAngle + POSITION_ANGLE_PAD + angularSize;
+          const angleMax = q.startAngle + 90 - POSITION_ANGLE_PAD - angularSize;
+
+          // Ограничиваем угол с учетом размера элемента
+          if (angle < angleMin) angle = angleMin;
+          if (angle > angleMax) angle = angleMax;
+        }
+      }
+    }
 
     const p = window.polarToCartesian(CENTER_X, CENTER_Y, radius, angle);
     return { x: Math.round(p.x), y: Math.round(p.y) };
+  }
+
+  // Вычисляет угловое смещение для элемента заданного размера на радиусе
+  // Используется для корректировки углов с учетом размера фигур
+  function calculateAngularSize(elementRadius, circleRadius) {
+    if (circleRadius <= 0 || elementRadius <= 0) return 0;
+    // Если элемент больше радиуса, возвращаем максимальное значение
+    if (elementRadius >= circleRadius) return 15; // Ограничиваем разумным значением
+    // Угловой размер = arcsin(elementRadius / circleRadius) в градусах
+    const angleInRadians = Math.asin(Math.min(1, elementRadius / circleRadius));
+    const angleInDegrees = (angleInRadians * 180) / Math.PI;
+    return angleInDegrees;
   }
 
   // Рассчитать позицию технологии для конкретного квадранта
@@ -499,13 +581,22 @@
     const availableRadius = maxR - POSITION_PAD;
     const radius = POSITION_PAD + (radarPos.radius / 100) * availableRadius;
 
+    // Вычисляем размер элемента
+    const elementSize = calculateElementSize(tech);
+
+    // Вычисляем угловой размер элемента на вычисленном радиусе
+    // Добавляем запас (множитель 1.2) для более консервативного позиционирования
+    const angularSize = calculateAngularSize(elementSize * 1.2, radius);
+
     // Для конкретного квадранта переопределяем угол на основе targetQuadrant
+    // с учетом размера элемента
     const GOLDEN_ANGLE = 137.50776405003785;
-    const ANGLE_SPAN = 90 - (POSITION_ANGLE_PAD * 2);
-    const aBase = q.startAngle + POSITION_ANGLE_PAD;
+    // Уменьшаем доступный диапазон с учетом углового размера элемента
+    const ANGLE_SPAN = 90 - (POSITION_ANGLE_PAD * 2) - (angularSize * 2);
+    const aBase = q.startAngle + POSITION_ANGLE_PAD + angularSize;
     const id = Number(tech.id) || 0;
     const directionHash = directionName ? String(directionName).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) : 0;
-    const angleOffset = ((id * GOLDEN_ANGLE + directionHash * 37) % ANGLE_SPAN);
+    const angleOffset = ((id * GOLDEN_ANGLE + directionHash * 37) % Math.max(1, ANGLE_SPAN));
     const angle = aBase + angleOffset;
 
     const p = window.polarToCartesian(CENTER_X, CENTER_Y, radius, angle);
@@ -551,6 +642,17 @@
 
     const MAX_ITER = 80;
 
+    // Вычисляет угловое смещение, необходимое для элемента заданного размера на радиусе
+    function calculateAngularSizeInDegrees(elementRadius, circleRadius) {
+      if (circleRadius <= 0 || elementRadius <= 0) return 0;
+      // Если элемент больше радиуса, возвращаем максимальное значение
+      if (elementRadius >= circleRadius) return 45; // Ограничиваем половиной квадранта
+      // Угловой размер = 2 * arcsin(elementRadius / circleRadius) в градусах
+      const angleInRadians = Math.asin(Math.min(1, elementRadius / circleRadius));
+      const angleInDegrees = (angleInRadians * 180) / Math.PI;
+      return angleInDegrees;
+    }
+
     function clampToSectorRing(t) {
       const q = quadrantById[t.quadrant];
       if (!q) return;
@@ -564,9 +666,6 @@
       const rMin = PAD;
       const rMax = maxR - PAD;
 
-      const angleMin = q.startAngle + ANGLE_PAD;
-      const angleMax = angleMin + ANGLE_SPAN;
-
       const polar = window.cartesianToPolar(CENTER_X, CENTER_Y, t.x, t.y);
       let radius = polar.radius;
       let angle = polar.angle;
@@ -574,10 +673,40 @@
       if (!Number.isFinite(radius)) radius = (rMin + rMax) / 2;
       if (!Number.isFinite(angle)) angle = (angleMin + angleMax) / 2;
 
+      // Ограничиваем радиус
       if (radius < rMin) radius = rMin;
       if (radius > rMax) radius = rMax;
-      if (angle < angleMin) angle = angleMin;
-      if (angle > angleMax) angle = angleMax;
+
+      // Получаем размер элемента (радиус фигуры)
+      const elementSize = (t.size && typeof t.size === 'number') ? t.size : 10;
+
+      // Вычисляем угловой размер элемента на текущем радиусе
+      // Добавляем небольшой запас (множитель 1.1) для гарантированного избежания пересечений
+      const angularSize = calculateAngularSizeInDegrees(elementSize * 1.1, radius);
+
+      // Корректируем границы квадранта с учетом размера элемента
+      // Элемент должен помещаться полностью внутри квадранта
+      const angleMin = q.startAngle + ANGLE_PAD + angularSize;
+      const angleMax = q.startAngle + ANGLE_PAD + ANGLE_SPAN - angularSize;
+
+      // Нормализуем угол относительно квадранта с учетом перехода через 0°
+      // Квадрант 4 пересекает границу 0°/360°, нужна специальная обработка
+      if (q.id === 4) {
+        // Квадрант 4: 270° - 360° (или 270° - 0°)
+        // Если угол в диапазоне [0°, 90°), переводим в [360°-range, 360°)
+        if (angle < 90) {
+          angle += 360;
+        }
+        // Теперь угол в диапазоне [270°, 450°)
+        if (angle < angleMin) angle = angleMin;
+        if (angle > angleMax + 360) angle = angleMax + 360;
+        // Нормализуем обратно в [0°, 360°)
+        while (angle >= 360) angle -= 360;
+      } else {
+        // Квадранты 1, 2, 3: стандартная обработка
+        if (angle < angleMin) angle = angleMin;
+        if (angle > angleMax) angle = angleMax;
+      }
 
       const p = window.polarToCartesian(CENTER_X, CENTER_Y, radius, angle);
       t.x = Math.round(p.x);
@@ -597,7 +726,7 @@
       });
 
       // Предварительное разведение: если технологии имеют идентичные координаты,
-      // слегка разводим их по углу
+      // слегка разводим их по углу с учетом размеров элементов
       const COORDINATE_TOLERANCE = 0.5; // Минимальная разница в координатах для считания идентичными
       for (let i = 0; i < group.length; i++) {
         for (let j = i + 1; j < group.length; j++) {
@@ -612,18 +741,51 @@
             if (q) {
               const ANGLE_PAD = POSITION_ANGLE_PAD;
               const ANGLE_SPAN = 90 - (ANGLE_PAD * 2);
-              const angleMin = q.startAngle + ANGLE_PAD;
 
               // Вычисляем текущие углы
-              const polarA = window.cartesianToPolar(CENTER_X, CENTER_Y, a.x, a.y);
-              const polarB = window.cartesianToPolar(CENTER_X, CENTER_Y, b.x, b.y);
+              let polarA = window.cartesianToPolar(CENTER_X, CENTER_Y, a.x, a.y);
+              let polarB = window.cartesianToPolar(CENTER_X, CENTER_Y, b.x, b.y);
 
-              // Добавляем небольшое смещение по углу на основе ID
-              const angleOffsetA = ((Number(a.id) || 0) * 5) % (ANGLE_SPAN / 4);
-              const angleOffsetB = ((Number(b.id) || 0) * 5) % (ANGLE_SPAN / 4);
+              // Обрабатываем квадрант 4, который пересекает 0°
+              if (q.id === 4) {
+                if (polarA.angle < 90) polarA.angle += 360;
+                if (polarB.angle < 90) polarB.angle += 360;
+              }
 
-              const newAngleA = angleMin + (polarA.angle - angleMin) * 0.9 + angleOffsetA;
-              const newAngleB = angleMin + (polarB.angle - angleMin) * 0.9 + angleOffsetB;
+              // Получаем размеры элементов
+              const sizeA = (a.size && typeof a.size === 'number') ? a.size : 10;
+              const sizeB = (b.size && typeof b.size === 'number') ? b.size : 10;
+
+              // Вычисляем угловые размеры элементов на текущих радиусах
+              const angularSizeA = calculateAngularSizeInDegrees(sizeA * 1.2, polarA.radius);
+              const angularSizeB = calculateAngularSizeInDegrees(sizeB * 1.2, polarB.radius);
+
+              // Корректируем границы с учетом размеров элементов
+              const angleMin = q.startAngle + ANGLE_PAD + Math.max(angularSizeA, angularSizeB);
+              const angleMax = q.startAngle + ANGLE_PAD + ANGLE_SPAN - Math.max(angularSizeA, angularSizeB);
+
+              // Добавляем смещение по углу на основе ID с учетом углового размера
+              const availableSpan = Math.max(1, angleMax - angleMin);
+              const angleOffsetA = ((Number(a.id) || 0) * 5) % (availableSpan / 3);
+              const angleOffsetB = ((Number(b.id) || 0) * 5) % (availableSpan / 3);
+
+              // Вычисляем новые углы с ограничением по квадранту
+              // Учитываем минимальное угловое расстояние между элементами
+              const minAngularDistance = angularSizeA + angularSizeB + 2; // сумма угловых размеров + зазор
+              let newAngleA = angleMin + angleOffsetA;
+              let newAngleB = angleMin + angleOffsetB + minAngularDistance;
+
+              // Ограничиваем углы в пределах квадранта
+              if (newAngleA < angleMin) newAngleA = angleMin;
+              if (newAngleA > angleMax) newAngleA = angleMax;
+              if (newAngleB < angleMin) newAngleB = angleMin;
+              if (newAngleB > angleMax) newAngleB = angleMax;
+
+              // Нормализуем углы для квадранта 4
+              if (q.id === 4) {
+                while (newAngleA >= 360) newAngleA -= 360;
+                while (newAngleB >= 360) newAngleB -= 360;
+              }
 
               const newPosA = window.polarToCartesian(CENTER_X, CENTER_Y, polarA.radius, newAngleA);
               const newPosB = window.polarToCartesian(CENTER_X, CENTER_Y, polarB.radius, newAngleB);
@@ -633,6 +795,7 @@
               b.x = Math.round(newPosB.x);
               b.y = Math.round(newPosB.y);
 
+              // Применяем строгое ограничение в пределах квадранта
               clampToSectorRing(a);
               clampToSectorRing(b);
             }
@@ -853,6 +1016,73 @@
     });
   }
 
+  /**
+   * Утилита для тестирования калибровки модели позиционирования
+   * Вызов в консоли: Positioning.testCalibration({techRead: 3, organRead: 3, funcCover: 3, trlStage: 3})
+   */
+  function testCalibration(params) {
+    const tech = {
+      id: 1,
+      direction: 'Единый центр данных (Data Hub)',
+      directions: ['Единый центр данных (Data Hub)'],
+      techRead: params.techRead !== undefined ? params.techRead : 0,
+      organRead: params.organRead !== undefined ? params.organRead : 0,
+      funcCover: params.funcCover !== undefined ? params.funcCover : 0,
+      trlStage: params.trlStage !== undefined ? params.trlStage : 1,
+      enterprises: []
+    };
+
+    const result = calculateRadarPosition(tech);
+
+    console.log('=== Тест калибровки модели позиционирования ===');
+    console.log('Входные параметры:', {
+      techRead: tech.techRead,
+      organRead: tech.organRead,
+      funcCover: tech.funcCover,
+      trlStage: tech.trlStage
+    });
+    console.log('Результат:', {
+      theta: result.theta.toFixed(2) + '°',
+      radius: result.radius.toFixed(2) + '%',
+      position: result.radius < 30 ? 'Близко к центру' :
+                result.radius < 70 ? 'Среднее положение' :
+                'Далеко от центра'
+    });
+
+    return result;
+  }
+
+  /**
+   * Тестирование калибровки с предустановленными сценариями
+   * Вызов в консоли: Positioning.testAllScenarios()
+   */
+  function testAllScenarios() {
+    console.log('=== Тестирование всех сценариев калибровки ===\n');
+
+    const scenarios = [
+      { name: 'Максимальные параметры', params: { techRead: 3, organRead: 3, funcCover: 3, trlStage: 3 } },
+      { name: 'Высокие параметры', params: { techRead: 2.5, organRead: 2.5, funcCover: 2.5, trlStage: 2.5 } },
+      { name: 'Средние параметры', params: { techRead: 1.5, organRead: 1.5, funcCover: 1.5, trlStage: 2 } },
+      { name: 'Низкие параметры', params: { techRead: 0.5, organRead: 0.5, funcCover: 0.5, trlStage: 1 } },
+      { name: 'Минимальные параметры', params: { techRead: 0, organRead: 0, funcCover: 0, trlStage: 1 } },
+      { name: 'Высокая techRead, остальное низкое', params: { techRead: 3, organRead: 0, funcCover: 0, trlStage: 1 } },
+      { name: 'Высокая organRead, остальное низкое', params: { techRead: 0, organRead: 3, funcCover: 0, trlStage: 1 } },
+      { name: 'Высокая funcCover, остальное низкое', params: { techRead: 0, organRead: 0, funcCover: 3, trlStage: 1 } },
+      { name: 'Высокая trlStage, остальное низкое', params: { techRead: 0, organRead: 0, funcCover: 0, trlStage: 3 } }
+    ];
+
+    const results = scenarios.map(scenario => {
+      const result = testCalibration(scenario.params);
+      return {
+        scenario: scenario.name,
+        radius: result.radius.toFixed(2) + '%'
+      };
+    });
+
+    console.table(results);
+    console.log('\n✅ Тестирование завершено!');
+  }
+
   // Экспорт в window.Positioning
   window.Positioning = {
     frac,
@@ -869,7 +1099,13 @@
     avoidRingLabelOverlap,
     calculateReadinessScore,
     calculateRadiusFromReadiness,
-    calculateRadarPosition
+    calculateRadarPosition,
+    // Новые функции для учета размеров элементов
+    calculateElementSize,
+    calculateAngularSize,
+    // Утилиты для тестирования
+    testCalibration,
+    testAllScenarios
   };
 
 })();

@@ -8,7 +8,7 @@ jsPDF по умолчанию использует встроенные шриф
 ## Локальный способ
 
 1. Скачайте DejaVu Sans (DejaVuSans.ttf) с официального источника: https://www.fontsquirrel.com/fonts/dejavu-sans или https://dejavu-fonts.github.io/
-2. Поместите файл `DejaVuSans.ttf` в папку `fonts/` рядом с `RMK.html`.
+2. Поместите файл `DejaVuSans.ttf` в папку `fonts/` рядом с `RMK-director.html`.
 
 ## Автоматическая загрузка (PowerShell)
 
@@ -55,7 +55,7 @@ jsPDF по умолчанию использует встроенные шриф
 Как добавить:
 
 1. Скачайте DejaVu Sans (DejaVuSans.ttf) с официального источника: https://www.fontsquirrel.com/fonts/dejavu-sans или https://dejavu-fonts.github.io/
-2. Поместите файл `DejaVuSans.ttf` в папку `fonts/` рядом с `RMK.html`.
+2. Поместите файл `DejaVuSans.ttf` в папку `fonts/` рядом с `RMK-director.html`.
 
 Автоматическая загрузка (Windows PowerShell):
 Если вы хотите загрузить шрифт автоматически, выполните из корня проекта:

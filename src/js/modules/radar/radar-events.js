@@ -88,7 +88,7 @@
       if (!quadrantPriorityPanel) quadrantPriorityPanel = document.getElementById("quadrantPriorityPanel");
       if (quadrantPriorityPanel && !qpListEl) qpListEl = quadrantPriorityPanel.querySelector("#qpList");
 
-      // Подсвечиваем соответствующий элемент в модальном окне приоритетных технологий (если открыто)
+      // Подсвечиваем соответствующий элемент в модальном окне списка технологий (если открыто)
       if (
         quadrantPriorityPanel &&
         quadrantPriorityPanel.classList.contains("open") &&
@@ -227,7 +227,7 @@
             if (window.Logger) window.Logger.warn("radar-events.js: detailPanel не найден");
           }
 
-          // При клике по blip НЕ открываем модальное окно приоритетных технологий
+          // При клике по blip НЕ открываем модальное окно списка технологий
           // Только зумируем квадрант, если он еще не зуммирован
           const blockKeyZoom =
             currentTech.blocks && currentTech.blocks.length

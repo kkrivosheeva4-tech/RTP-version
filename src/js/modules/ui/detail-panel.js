@@ -2,8 +2,104 @@
 // Экспортирует функции в window для использования в RMK2.js
 // Использует глобальные переменные из RMK2.js и функции из других модулей
 
-(function() {
+(function () {
   'use strict';
+
+  /**
+   * Получить пояснение для TRL-стадии
+   */
+  function getTrlStageDescription(trlStage) {
+    const trlValue = parseInt(trlStage);
+    switch (trlValue) {
+      case 1:
+        return 'Исследовательская стадия';
+      case 2:
+        return 'Технология на стадии разработки';
+      case 3:
+        return 'Технология готова к внедрению';
+      default:
+        return 'Не указано';
+    }
+  }
+
+  /**
+   * Получить пояснение для покрытия функций
+   */
+  function getFuncCoverDescription(funcCover) {
+    const coverValue = parseInt(funcCover);
+    switch (coverValue) {
+      case 0:
+        return 'Не покрывает необходимые функции';
+      case 1:
+        return 'Низкое покрытие функций блока (до 33%)';
+      case 2:
+        return 'Среднее покрытие функций блока (33-67%)';
+      case 3:
+        return 'Высокое покрытие функций блока (67-100%)';
+      default:
+        return 'Не указано';
+    }
+  }
+
+  /**
+   * Получить пояснение для технологической готовности
+   */
+  function getTechReadDescription(techRead) {
+    const readValue = parseInt(techRead);
+    switch (readValue) {
+      case 0:
+        return 'Технология не готова к использованию';
+      case 1:
+        return 'Начальная технологическая готовность';
+      case 2:
+        return 'Готова к пилотному внедрению';
+      case 3:
+        return 'Готова к промышленному использованию';
+      default:
+        return 'Не указано';
+    }
+  }
+
+  /**
+   * Получить пояснение для организационной готовности
+   */
+  function getOrganReadDescription(organRead) {
+    const readValue = parseInt(organRead);
+    switch (readValue) {
+      case 0:
+        return 'Организация не готова к внедрению';
+      case 1:
+        return 'Начальная организационная готовность';
+      case 2:
+        return 'Организация готова к пилотированию';
+      case 3:
+        return 'Организация полностью готова';
+      default:
+        return 'Не указано';
+    }
+  }
+
+  /**
+   * Создать HTML для отображения оценки с пояснением
+   */
+  function createRatingDisplayHTML(value, description, maxValue = 3) {
+    if (value === undefined || value === null || value === '' || value === '—') {
+      return `
+        <div class="rating-display-content">
+          <span class="rating-display-value">—</span>
+          <span class="rating-display-description">Не указано</span>
+        </div>
+        <span class="rating-display-max">/${maxValue}</span>
+      `;
+    }
+    return `
+      <div class="rating-display-content">
+        <span class="rating-display-value">${value}</span>
+        <span class="rating-display-description">— ${description}</span>
+      </div>
+      <span class="rating-display-max">/${maxValue}</span>
+    `;
+  }
 
   // Получаем зависимости из других модулей и глобальных переменных (ленивая загрузка)
   const getDOMElement = (id) => {
@@ -154,16 +250,16 @@
     const quadrantPriorityPanel = getDOMElement('quadrantPriorityPanel');
     const currentZoomedQuadrant = getCurrentZoomedQuadrant();
 
-    // Если был совершен клик по blip на радаре при открытом модальном окне приоритетных технологий,
-    // то модальное окно приоритетных технологий скрывается, чтобы панель детальной информации не открывалась под ним
-    // Также убеждаемся, что z-index панели выше, чем у модального окна приоритетных технологий
+    // Если был совершен клик по blip на радаре при открытом модальном окне списка технологий,
+    // то модальное окно списка технологий скрывается, чтобы панель детальной информации не открывалась под ним
+    // Также убеждаемся, что z-index панели выше, чем у модального окна списка технологий
     if (source === 'blip' &&
-        quadrantPriorityPanel &&
-        quadrantPriorityPanel.classList.contains('open')) {
+      quadrantPriorityPanel &&
+      quadrantPriorityPanel.classList.contains('open')) {
       closeQuadrantPriorityPanel();
     }
 
-    // Убеждаемся, что z-index панели выше, чем у модального окна приоритетных технологий (10004)
+    // Убеждаемся, что z-index панели выше, чем у модального окна списка технологий (10004)
     if (detailPanel) {
       detailPanel.style.setProperty('z-index', '10005', 'important');
     }
@@ -190,20 +286,6 @@
     if (detailPanel) {
       detailPanel.querySelector('#panelTitle').textContent = t.name || 'Без названия';
 
-      // Теги предприятий (company)
-      const companyWrap = detailPanel.querySelector('#panelCompanyTags');
-      if (companyWrap) {
-        const companies = Array.isArray(t.company) ? t.company : (t.company ? [t.company] : []);
-        if (companies.length) {
-          companyWrap.innerHTML = companies.map(c => {
-            const escaped = window.escapeHtml ? window.escapeHtml(c) : String(c).replace(/[&<>"']/g, m => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[m]);
-            return `<span class="multi-tag">${escaped}</span>`;
-          }).join(' ');
-        } else {
-          companyWrap.innerHTML = '<span style="opacity:0.7; font-style: italic;">Технология не внедрена ни на одном предприятии</span>';
-        }
-      }
-
       // Теги блоков
       const blockWrap = detailPanel.querySelector('#panelBlock');
       const blocksArr = Array.isArray(t.blocks) && t.blocks.length ? t.blocks : (t.block ? [t.block] : []);
@@ -211,7 +293,7 @@
       if (blockWrap) {
         if (blocksArr.length) {
           blockWrap.innerHTML = blocksArr.map(b => {
-            const escaped = window.escapeHtml ? window.escapeHtml(b) : String(b).replace(/[&<>"']/g, m => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[m]);
+            const escaped = window.escapeHtml ? window.escapeHtml(b) : String(b).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
             return `<span class="multi-tag">${escaped}</span>`;
           }).join(' ');
         } else {
@@ -226,7 +308,7 @@
       if (funcWrap) {
         if (functionsArr.length) {
           funcWrap.innerHTML = functionsArr.map(f => {
-            const escaped = window.escapeHtml ? window.escapeHtml(f) : String(f).replace(/[&<>"']/g, m => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'})[m]);
+            const escaped = window.escapeHtml ? window.escapeHtml(f) : String(f).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
             return `<span class="multi-tag">${escaped}</span>`;
           }).join(' ');
         } else {
@@ -242,139 +324,175 @@
         panelTechType.textContent = '';
         panelTechType.style.display = 'none';
       }
-      detailPanel.querySelector('#panelDescription').textContent = descText;
 
-      // Оценки 0-3
-      const techReadEl = detailPanel.querySelector('#panelTechRead');
-      const organReadEl = detailPanel.querySelector('#panelOrganRead');
-      const funcCoverEl = detailPanel.querySelector('#panelFuncCover');
-      const trlStageEl = detailPanel.querySelector('#panelTrlStage');
-
-      // Проверяем, есть ли индивидуальные оценки по предприятиям
+      // Получаем массив предприятий
       const companies = Array.isArray(t.company) ? t.company : (t.company ? [t.company] : []);
       const currentEnterprise = getCurrentEnterprise();
 
-      if (companies.length > 1 && t.companyRatings && typeof t.companyRatings === 'object') {
-        // Несколько предприятий с индивидуальными оценками:
-        // - если текущее предприятие входит в companies, показываем ТОЛЬКО его оценки (если нет — показываем "—")
-        // - иначе (на всякий случай) показываем общий fallback (первое предприятие / общие)
-        if (currentEnterprise && companies.includes(currentEnterprise)) {
-          const ratings = (t.companyRatings && t.companyRatings[currentEnterprise]) ? t.companyRatings[currentEnterprise] : null;
-          if (techReadEl) techReadEl.textContent = (ratings && ratings.techRead !== undefined && ratings.techRead !== null && ratings.techRead !== '') ? String(ratings.techRead) : '—';
-          if (organReadEl) organReadEl.textContent = (ratings && ratings.organRead !== undefined && ratings.organRead !== null && ratings.organRead !== '') ? String(ratings.organRead) : '—';
-        } else {
-          // fallback: общие значения или значения первого предприятия
-          const firstCompany = companies[0];
-          const ratings = (t.companyRatings && t.companyRatings[firstCompany]) ? t.companyRatings[firstCompany] : {};
-          if (techReadEl) techReadEl.textContent = (ratings.techRead !== undefined && ratings.techRead !== null && ratings.techRead !== '') ? String(ratings.techRead) : ((t.techRead ?? '') !== '' ? String(t.techRead) : '—');
-          if (organReadEl) organReadEl.textContent = (ratings.organRead !== undefined && ratings.organRead !== null && ratings.organRead !== '') ? String(ratings.organRead) : ((t.organRead ?? '') !== '' ? String(t.organRead) : '—');
-        }
-      } else {
-        // Одно предприятие или нет индивидуальных оценок - показываем общие значения
-        if (techReadEl) techReadEl.textContent = (t.techRead ?? '') !== '' ? String(t.techRead) : '—';
-        if (organReadEl) organReadEl.textContent = (t.organRead ?? '') !== '' ? String(t.organRead) : '—';
+      // Отображаем TRL и покрытие функций с пояснениями (общие для всех предприятий)
+      const trlStageDisplay = detailPanel.querySelector('#panelTrlStageDisplay');
+      const funcCoverDisplay = detailPanel.querySelector('#panelFuncCoverDisplay');
+
+      if (trlStageDisplay) {
+        const trlValue = t.trlStage;
+        const trlDescription = getTrlStageDescription(trlValue);
+        trlStageDisplay.innerHTML = createRatingDisplayHTML(trlValue, trlDescription, 3);
       }
 
-      // Отображаем funcCover с учетом индивидуальных оценок
-      // funcCover - общее значение для всех предприятий, не хранится в companyRatings
-      if (funcCoverEl) {
-        if (companies.length > 1 && t.companyRatings && typeof t.companyRatings === 'object') {
-          // Для нескольких предприятий funcCover всегда общий, используем t.funcCover
-          funcCoverEl.textContent = (t.funcCover !== undefined && t.funcCover !== null && t.funcCover !== '') ? String(t.funcCover) : '—';
-        } else {
-          // Одно предприятие или нет индивидуальных оценок - показываем общие значения
-          funcCoverEl.textContent = (t.funcCover !== undefined && t.funcCover !== null && t.funcCover !== '') ? String(t.funcCover) : '—';
-        }
+      if (funcCoverDisplay) {
+        const funcCoverValue = t.funcCover;
+        const funcCoverDescription = getFuncCoverDescription(funcCoverValue);
+        funcCoverDisplay.innerHTML = createRatingDisplayHTML(funcCoverValue, funcCoverDescription, 3);
       }
 
-      // Отображаем TRL (общий для всех предприятий)
-      if (trlStageEl) {
-        trlStageEl.textContent = (t.trlStage !== undefined && t.trlStage !== null && t.trlStage !== '') ? String(t.trlStage) : '—';
-      }
-
-      // Проверяем наличие предприятий у технологии
-      const hasEnterprises = companies.length > 0;
-
-      // Проверяем заполненность оценок и подсвечиваем кнопку/блок оценок при их отсутствии
-      // ТОЛЬКО если у технологии есть предприятия
-      // Для технологий с несколькими предприятиями проверяем оценки текущего предприятия
-      let techReadFilled = false;
-      let organReadFilled = false;
-      if (companies.length > 1 && t.companyRatings && typeof t.companyRatings === 'object') {
-        if (currentEnterprise && companies.includes(currentEnterprise)) {
-          const ratings = (t.companyRatings && t.companyRatings[currentEnterprise]) ? t.companyRatings[currentEnterprise] : {};
-          techReadFilled = isRatingFilled(ratings.techRead);
-          organReadFilled = isRatingFilled(ratings.organRead);
-        } else {
-          // fallback: используем общие значения
-          techReadFilled = isRatingFilled(t.techRead);
-          organReadFilled = isRatingFilled(t.organRead);
-        }
-      } else {
-        techReadFilled = isRatingFilled(t.techRead);
-        organReadFilled = isRatingFilled(t.organRead);
-      }
-      const hasReadinessRatings = techReadFilled && organReadFilled;
-
-      const editBtn = detailPanel.querySelector('#editTechBtn');
-      const ratingsSection = detailPanel.querySelector('#panelRatingsSection');
+      // Создаем вкладочную карточку с предприятиями и оценками
+      const enterpriseTabsContainer = detailPanel.querySelector('#panelEnterpriseTabs');
+      const enterpriseContentContainer = detailPanel.querySelector('#panelEnterpriseContent');
       const ratingsHint = detailPanel.querySelector('#panelRatingsHint');
+      const editBtn = detailPanel.querySelector('#editTechBtn');
+      const enterprisesSection = detailPanel.querySelector('#panelEnterprisesSection');
 
-      // Если у технологии нет предприятий, показываем информационное сообщение вместо предупреждения
-      if (!hasEnterprises) {
-        if (editBtn) editBtn.classList.remove('highlight-missing-ratings');
-        if (ratingsSection) ratingsSection.classList.remove('highlight-missing-ratings');
-        if (ratingsHint) {
-          ratingsHint.textContent = 'Технология не внедрена ни на одном предприятии';
-          ratingsHint.style.display = 'block';
-          ratingsHint.style.color = 'var(--text-secondary, #666)';
-          ratingsHint.style.fontStyle = 'italic';
-        }
-      } else if (!hasReadinessRatings) {
-        // Если есть предприятия, но нет оценок - показываем предупреждение
-        if (editBtn) editBtn.classList.add('highlight-missing-ratings');
-        if (ratingsSection) ratingsSection.classList.add('highlight-missing-ratings');
-        if (ratingsHint) {
-          ratingsHint.textContent = 'Заполните поля оценок';
-          ratingsHint.style.display = 'block';
-          ratingsHint.style.color = '';
-          ratingsHint.style.fontStyle = '';
-        }
-      } else {
-        if (editBtn) editBtn.classList.remove('highlight-missing-ratings');
-        if (ratingsSection) ratingsSection.classList.remove('highlight-missing-ratings');
-        if (ratingsHint) {
-          ratingsHint.textContent = '';
-          ratingsHint.style.display = 'none';
-        }
-      }
+      if (enterpriseTabsContainer && enterpriseContentContainer) {
+        // Очищаем старое содержимое
+        enterpriseTabsContainer.innerHTML = '';
+        enterpriseContentContainer.innerHTML = '';
 
-      // Приоритет технологии (0–1 → 0–100%)
-      const prioritySection = detailPanel.querySelector('#panelPrioritySection');
-      const priorityValueEl = detailPanel.querySelector('#panelPriorityValue');
-      const priorityCommentEl = detailPanel.querySelector('#panelPriorityComment');
-      if (prioritySection && priorityValueEl && priorityCommentEl) {
-        // Используем текущее предприятие для вычисления приоритета, если технология с несколькими предприятиями
-        const companies = Array.isArray(t.company) ? t.company : (t.company ? [t.company] : []);
-        const companyForPriority = (companies.length > 1 && currentEnterprise && companies.includes(currentEnterprise)) ? currentEnterprise : null;
-        const priority = computePriority(t, 'mult', companyForPriority);
-        const category = getPriorityCategory(priority);
-
-        prioritySection.classList.remove('priority-low', 'priority-medium', 'priority-high', 'priority-none');
-
-        if (priority == null || category.key === 'none') {
-          priorityValueEl.textContent = 'Приоритет: —';
-          priorityCommentEl.textContent = category.description;
-          prioritySection.classList.add('priority-none');
+        if (companies.length === 0) {
+          // Нет предприятий
+          if (ratingsHint) {
+            ratingsHint.textContent = 'Технология не внедрена ни на одном предприятии';
+            ratingsHint.style.display = 'block';
+            ratingsHint.style.color = 'var(--text-secondary, #666)';
+            ratingsHint.style.fontStyle = 'italic';
+          }
+          if (editBtn) editBtn.classList.remove('highlight-missing-ratings');
+          if (enterprisesSection) enterprisesSection.classList.remove('highlight-missing-ratings');
+          enterpriseContentContainer.innerHTML = '<div class="enterprise-no-data">Технология не внедрена ни на одном предприятии</div>';
         } else {
-          const percent = Math.round(priority * 100);
-          priorityValueEl.textContent = `Приоритет: ${percent}% (${category.label})`;
-          priorityCommentEl.textContent = getPriorityWeakLinkComment(t, companyForPriority);
-          if (category.key === 'low') prioritySection.classList.add('priority-low');
-          else if (category.key === 'medium') prioritySection.classList.add('priority-medium');
-          else if (category.key === 'high') prioritySection.classList.add('priority-high');
+          // Есть предприятия - создаем вкладки
+          let hasAnyRatings = false;
+
+          companies.forEach((company, index) => {
+            // Создаем вкладку
+            const tab = document.createElement('button');
+            tab.className = 'enterprise-tab';
+            tab.type = 'button';
+            tab.dataset.company = company;
+            tab.textContent = company;
+            if (index === 0) tab.classList.add('active');
+
+            // Получаем оценки для этого предприятия
+            let techRead, organRead;
+            if (t.companyRatings && typeof t.companyRatings === 'object' && t.companyRatings[company]) {
+              const ratings = t.companyRatings[company];
+              techRead = ratings.techRead;
+              organRead = ratings.organRead;
+            } else {
+              // Используем общие оценки
+              techRead = t.techRead;
+              organRead = t.organRead;
+            }
+
+            // Проверяем заполненность оценок
+            const techReadFilled = isRatingFilled(techRead);
+            const organReadFilled = isRatingFilled(organRead);
+            if (techReadFilled && organReadFilled) {
+              hasAnyRatings = true;
+            }
+
+            // Обработчик клика на вкладку
+            tab.addEventListener('click', () => {
+              // Убираем активный класс со всех вкладок
+              enterpriseTabsContainer.querySelectorAll('.enterprise-tab').forEach(t => t.classList.remove('active'));
+              tab.classList.add('active');
+
+              // Показываем содержимое для выбранного предприятия
+              showEnterpriseRatings(company);
+            });
+
+            enterpriseTabsContainer.appendChild(tab);
+          });
+
+          // Функция для отображения оценок выбранного предприятия
+          const showEnterpriseRatings = (company) => {
+            let techRead, organRead, isImplemented;
+            if (t.companyRatings && typeof t.companyRatings === 'object' && t.companyRatings[company]) {
+              const ratings = t.companyRatings[company];
+              techRead = ratings.techRead;
+              organRead = ratings.organRead;
+              isImplemented = ratings.isImplemented;
+            } else {
+              // Используем общие оценки
+              techRead = t.techRead;
+              organRead = t.organRead;
+              isImplemented = t.isImplemented;
+            }
+
+            const techReadValue = (techRead !== undefined && techRead !== null && techRead !== '') ? techRead : null;
+            const organReadValue = (organRead !== undefined && organRead !== null && organRead !== '') ? organRead : null;
+
+            const techReadDescription = getTechReadDescription(techReadValue);
+            const organReadDescription = getOrganReadDescription(organReadValue);
+
+            // Определяем статус внедрения
+            const implementationStatus = isImplemented === true ? 'Внедрена' : 'Не внедрена';
+            const implementationClass = isImplemented === true ? 'implemented' : 'not-implemented';
+
+            enterpriseContentContainer.innerHTML = `
+              <div class="enterprise-ratings">
+                <div class="enterprise-status-badge ${implementationClass}">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    ${isImplemented === true
+                ? '<path d="M13.5 4L6 11.5L2.5 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+                : '<path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+              }
+                  </svg>
+                  <span>${implementationStatus}</span>
+                </div>
+                <div class="enterprise-rating-item">
+                  <span class="enterprise-rating-label">Технологическая готовность:</span>
+                  <div class="enterprise-rating-content">
+                    <span class="enterprise-rating-description">${techReadValue !== null ? `${techReadValue} — ${techReadDescription}` : 'Не указано'}</span>
+                    <span class="enterprise-rating-value">/3</span>
+                  </div>
+                </div>
+                <div class="enterprise-rating-item">
+                  <span class="enterprise-rating-label">Организационная готовность:</span>
+                  <div class="enterprise-rating-content">
+                    <span class="enterprise-rating-description">${organReadValue !== null ? `${organReadValue} — ${organReadDescription}` : 'Не указано'}</span>
+                    <span class="enterprise-rating-value">/3</span>
+                  </div>
+                </div>
+              </div>
+            `;
+          };
+
+          // Показываем оценки для первого предприятия
+          showEnterpriseRatings(companies[0]);
+
+          // Проверяем заполненность оценок
+          if (!hasAnyRatings) {
+            if (editBtn) editBtn.classList.add('highlight-missing-ratings');
+            if (enterprisesSection) enterprisesSection.classList.add('highlight-missing-ratings');
+            if (ratingsHint) {
+              ratingsHint.textContent = 'Заполните поля оценок';
+              ratingsHint.style.display = 'block';
+              ratingsHint.style.color = '';
+              ratingsHint.style.fontStyle = '';
+            }
+          } else {
+            if (editBtn) editBtn.classList.remove('highlight-missing-ratings');
+            if (enterprisesSection) enterprisesSection.classList.remove('highlight-missing-ratings');
+            if (ratingsHint) {
+              ratingsHint.textContent = '';
+              ratingsHint.style.display = 'none';
+            }
+          }
         }
       }
+
+      // Описание
+      detailPanel.querySelector('#panelDescription').textContent = descText;
 
       // Пример внедрения
       const exampleEl = detailPanel.querySelector('#panelExampleDesc');
@@ -408,12 +526,12 @@
             vendorsEl.innerHTML = `
               <div class="vendor-list">
                 ${vendors.map(v => {
-                  const integratorNames = v.integrators
-                    .map(i => (i && typeof i === 'object') ? (i.name || i.id || '') : i)
-                    .map(normalize)
-                    .filter(Boolean);
+              const integratorNames = v.integrators
+                .map(i => (i && typeof i === 'object') ? (i.name || i.id || '') : i)
+                .map(normalize)
+                .filter(Boolean);
 
-                  return `
+              return `
                     <div class="vendor-card">
                       <div class="vendor-card__header">
                         <div class="vendor-name">${esc(v.name)}</div>
@@ -426,7 +544,7 @@
                       ` : ''}
                     </div>
                   `;
-                }).join('')}
+            }).join('')}
               </div>
             `;
           }
@@ -588,10 +706,10 @@
         const checkStyle = window.getComputedStyle(detailPanel);
         const transformMatrix = checkStyle.transform;
         const isHidden = checkStyle.visibility === 'hidden' ||
-                        checkStyle.opacity === '0' ||
-                        (transformMatrix && transformMatrix !== 'none' &&
-                         !transformMatrix.includes('translateX(0') &&
-                         !transformMatrix.includes('matrix(1, 0, 0, 1, 0, 0)'));
+          checkStyle.opacity === '0' ||
+          (transformMatrix && transformMatrix !== 'none' &&
+            !transformMatrix.includes('translateX(0') &&
+            !transformMatrix.includes('matrix(1, 0, 0, 1, 0, 0)'));
 
         if (isHidden) {
           // Принудительно показываем через inline стили с !important через setProperty
@@ -602,9 +720,9 @@
           // Проверяем финальное состояние панели
           const finalRect = detailPanel.getBoundingClientRect();
           const isInViewport = finalRect.top >= 0 &&
-                              finalRect.left >= 0 &&
-                              finalRect.right <= window.innerWidth &&
-                              finalRect.bottom <= window.innerHeight;
+            finalRect.left >= 0 &&
+            finalRect.right <= window.innerWidth &&
+            finalRect.bottom <= window.innerHeight;
 
           // Если панель не в видимой области, принудительно позиционируем
           if (!isInViewport && (finalRect.right > window.innerWidth || finalRect.left < 0)) {
@@ -627,9 +745,9 @@
       : (source === 'priority' && currentZoomedQuadrant != null)
         ? currentZoomedQuadrant
         : (() => {
-            const blockKey = (t.blocks && t.blocks.length) ? t.blocks[0] : t.block;
-            return getQuadrantIdForBlock(blockKey);
-          })();
+          const blockKey = (t.blocks && t.blocks.length) ? t.blocks[0] : t.block;
+          return getQuadrantIdForBlock(blockKey);
+        })();
 
     // Попытаемся найти и выделить соответствующий сектор в сайдбаре
     // Индикаторы зрелости заменены на оценки (techRead, organRead, funcCover) и выводятся выше
@@ -731,8 +849,6 @@
           return tech.functions.join(', ') || 'Не указано';
         }
         return tech.func || tech.functions || 'Не указано';
-      case 'techTypes':
-        return tech.techTypes || tech.techType || 'Не указано';
       case 'status':
         return tech.status || tech.level || 'Не указано';
       case 'costProm':
@@ -742,51 +858,6 @@
         return '—';
       case 'description':
         return tech.description || (tech.ref ? `Референс: ${tech.ref}` : '—');
-      case 'priority':
-        try {
-          // Для технологий с несколькими предприятиями показываем приоритет для каждого
-          if (Array.isArray(tech.company) && tech.company.length > 1) {
-            // Получаем список предприятий для отображения приоритета
-            let companiesToShow = tech.company;
-            if (companyFilter && Array.isArray(companyFilter) && companyFilter.length > 0) {
-              companiesToShow = tech.company.filter(c => companyFilter.includes(c));
-            }
-
-            // Если есть данные по предприятиям с индивидуальными оценками
-            if (tech.companyRatings && typeof tech.companyRatings === 'object') {
-              const priorityLines = [];
-              companiesToShow.forEach(company => {
-                const p = computePriority(tech, 'mult', company);
-                if (p != null && !Number.isNaN(p)) {
-                  const percent = Math.round(p * 100);
-                  const cat = getPriorityCategory(p);
-                  priorityLines.push(`${company}: ${percent}% (${cat.label})`);
-                } else {
-                  priorityLines.push(`${company}: —`);
-                }
-              });
-              return priorityLines.join('\n');
-            } else {
-              // Нет индивидуальных оценок - показываем общий приоритет для всех предприятий
-              const p = computePriority(tech, 'mult');
-              if (p == null || Number.isNaN(p)) return '—';
-              const percent = Math.round(p * 100);
-              const cat = getPriorityCategory(p);
-              // Показываем для каждого предприятия одинаковый приоритет
-              const priorityLines = companiesToShow.map(company => `${company}: ${percent}% (${cat.label})`);
-              return priorityLines.join('\n');
-            }
-          } else {
-            // Одно предприятие - стандартное отображение
-            const p = computePriority(tech, 'mult');
-            if (p == null || Number.isNaN(p)) return '—';
-            const percent = Math.round(p * 100);
-            const cat = getPriorityCategory(p);
-            return `${percent}% (${cat.label})`;
-          }
-        } catch (e) {
-          return '—';
-        }
       case 'techRead':
         // Для технологий с несколькими предприятиями показываем значения для каждого
         if (Array.isArray(tech.company) && tech.company.length > 1) {
@@ -892,11 +963,9 @@
       'company': 'Предприятия',
       'blocks': 'Функциональный блок',
       'functions': 'Функции',
-      'techTypes': 'Тип технологии',
       'status': 'Статус',
       'costProm': 'Стоимость внедрения',
       'description': 'Описание',
-      'priority': 'Приоритет технологии',
       'techRead': 'Технологическая готовность',
       'organRead': 'Организационная готовность',
       'funcCover': 'Покрытие функций',

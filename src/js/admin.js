@@ -2,7 +2,9 @@
 let users = [];
 let auditLogs = [];
 let backups = [];
+let enterprises = [];
 let currentUserId = null;
+let currentEnterpriseId = null;
 let currentSection = 'dashboard';
 
 // ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
@@ -24,6 +26,7 @@ const ADMIN_STORAGE = {
   USERS: 'adminUsers',
   AUDIT: 'adminAuditLogs',
   BACKUPS: 'adminBackups',
+  ENTERPRISES: 'adminEnterprises',
   INSTALL_DATE: 'appInstallDate'
 };
 
@@ -57,10 +60,10 @@ function writeStorageJson(key, value) {
 
 function ensureInstallDate() {
   let date = null;
-  try { date = localStorage.getItem(ADMIN_STORAGE.INSTALL_DATE); } catch (_) {}
+  try { date = localStorage.getItem(ADMIN_STORAGE.INSTALL_DATE); } catch (_) { }
   if (!date) {
     date = new Date().toISOString().split('T')[0];
-    try { localStorage.setItem(ADMIN_STORAGE.INSTALL_DATE, date); } catch (_) {}
+    try { localStorage.setItem(ADMIN_STORAGE.INSTALL_DATE, date); } catch (_) { }
   }
   return date;
 }
@@ -218,6 +221,28 @@ function normalizeBackups(list) {
     });
 }
 
+function normalizeEnterprises(list) {
+  if (!Array.isArray(list)) return [];
+  let nextId = 1;
+  const used = new Set();
+  return list
+    .filter(Boolean)
+    .map((e) => {
+      let id = Number(e.id);
+      if (!Number.isFinite(id) || id <= 0 || used.has(id)) {
+        while (used.has(nextId)) nextId += 1;
+        id = nextId++;
+      }
+      used.add(id);
+      return {
+        id,
+        name: (e.name != null ? String(e.name) : '').trim() || `enterprise-${id}`,
+        code: (e.code != null ? String(e.code) : '').trim() || '',
+        description: (e.description != null ? String(e.description) : '').trim() || ''
+      };
+    });
+}
+
 function persistUsers() {
   writeStorageJson(ADMIN_STORAGE.USERS, users);
 }
@@ -230,6 +255,10 @@ function persistBackups() {
   writeStorageJson(ADMIN_STORAGE.BACKUPS, backups);
 }
 
+function persistEnterprises() {
+  writeStorageJson(ADMIN_STORAGE.ENTERPRISES, enterprises);
+}
+
 function loadAdminDataFromStorage() {
   users = normalizeUsers(readStorageJson(ADMIN_STORAGE.USERS, null));
   if (!users.length) {
@@ -239,6 +268,26 @@ function loadAdminDataFromStorage() {
 
   auditLogs = normalizeAuditLogs(readStorageJson(ADMIN_STORAGE.AUDIT, []));
   backups = normalizeBackups(readStorageJson(ADMIN_STORAGE.BACKUPS, []));
+  enterprises = normalizeEnterprises(readStorageJson(ADMIN_STORAGE.ENTERPRISES, null));
+
+  // Если предприятий нет в localStorage, загружаем из JSON-файла
+  if (!enterprises.length) {
+    loadEnterprisesFromJson();
+  }
+}
+
+async function loadEnterprisesFromJson() {
+  try {
+    const response = await fetch('/src/data/ru/enterprises.json');
+    if (!response.ok) return;
+    const data = await response.json();
+    if (Array.isArray(data) && data.length) {
+      enterprises = normalizeEnterprises(data);
+      persistEnterprises();
+    }
+  } catch (e) {
+    if (window.Logger) window.Logger.warn('Failed to load enterprises.json', e);
+  }
 }
 
 function getLoggedInUserName() {
@@ -250,10 +299,10 @@ function getLoggedInUserName() {
 
 function safeLogout() {
   // Не делаем localStorage.clear() — иначе стираются данные админ-панели и настройки приложения.
-  try { localStorage.removeItem('isLoggedIn'); } catch (_) {}
-  try { localStorage.removeItem('username'); } catch (_) {}
-  try { localStorage.removeItem('userName'); } catch (_) {}
-  try { localStorage.removeItem('role'); } catch (_) {}
+  try { localStorage.removeItem('isLoggedIn'); } catch (_) { }
+  try { localStorage.removeItem('username'); } catch (_) { }
+  try { localStorage.removeItem('userName'); } catch (_) { }
+  try { localStorage.removeItem('role'); } catch (_) { }
 }
 
 function computeBytes(str) {
@@ -261,7 +310,7 @@ function computeBytes(str) {
     if (typeof TextEncoder !== 'undefined') {
       return new TextEncoder().encode(String(str)).length;
     }
-  } catch (_) {}
+  } catch (_) { }
   return String(str || '').length;
 }
 
@@ -280,7 +329,7 @@ function deepCloneJson(value) {
   }
 }
 // ===== ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ =====
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
   initializeApp();
 });
 
@@ -316,7 +365,7 @@ function initializeApp() {
   // Переопределяем appendAdminAudit, чтобы она обновляла локальную переменную auditLogs
   if (typeof window.appendAdminAudit === 'function') {
     const originalAppendAdminAudit = window.appendAdminAudit;
-    window.appendAdminAudit = function(action, details) {
+    window.appendAdminAudit = function (action, details) {
       // Вызываем оригинальную функцию для записи в localStorage
       originalAppendAdminAudit(action, details);
       // Обновляем локальную переменную auditLogs
@@ -336,6 +385,7 @@ function initializeApp() {
   initializeAudit();
   initializeExport();
   initializeBackup();
+  initializeEnterprises();
   // Показать дашборд по умолчанию
   showSection('dashboard');
 }
@@ -382,7 +432,7 @@ function initializeAdminShell() {
     if (window.matchMedia && window.matchMedia('(max-width: 820px)').matches) {
       document.body.classList.add('admin-sidebar-collapsed');
     }
-  } catch (_) {}
+  } catch (_) { }
 
   // Прокрутка вверх
   const scrollTopBtn = document.getElementById('adminScrollTop');
@@ -420,6 +470,7 @@ function initializeAdminShell() {
         if (currentSection === 'users') loadUsers();
         if (currentSection === 'audit') loadAuditLogs();
         if (currentSection === 'backup') loadBackups();
+        if (currentSection === 'enterprises') loadEnterprises();
         if (currentSection === 'dashboard') updateDashboardStats();
         if (icon) icon.classList.remove('spin');
         showNotification('Обновлено', 'Раздел обновлён', 'success');
@@ -654,6 +705,10 @@ function showSection(sectionId) {
     if (sectionId === 'dashboard') {
       updateDashboardStats();
     }
+    // При открытии раздела предприятий загружаем данные
+    if (sectionId === 'enterprises') {
+      loadEnterprises();
+    }
   }
 }
 
@@ -665,7 +720,8 @@ function updatePageTitle(sectionId) {
     users: 'Пользователи',
     audit: 'Аудит',
     export: 'Экспорт',
-    backup: 'Бэкапы'
+    backup: 'Бэкапы',
+    enterprises: 'Предприятия'
   };
   titleEl.textContent = titles[sectionId] || 'Админ‑панель';
 }
@@ -1010,7 +1066,7 @@ function loadUsers() {
   const roleFilter = document.getElementById('roleFilter').value;
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(search) ||
-                         user.email.toLowerCase().includes(search);
+      user.email.toLowerCase().includes(search);
     const matchesRole = !roleFilter || user.role === roleFilter;
     return matchesSearch && matchesRole;
   });
@@ -1316,7 +1372,7 @@ function loadAuditLogs() {
     if (needsPersist) {
       persistAuditLogs();
     }
-  } catch (_) {}
+  } catch (_) { }
 
   tbody.innerHTML = '';
   const filteredLogs = getFilteredAuditLogs();
@@ -1428,7 +1484,7 @@ function exportToJSON(data, filename) {
   try {
     const type = String(filename || '').toLowerCase().includes('audit') ? 'audit'
       : String(filename || '').toLowerCase().includes('users') ? 'users'
-      : null;
+        : null;
 
     if (type === 'users' && Array.isArray(data)) {
       payload = data.map(u => ({
@@ -1640,6 +1696,7 @@ function initializeModals() {
     if (e.key === 'Escape') {
       hideModal('userModal');
       hideModal('confirmModal');
+      hideModal('enterpriseModal');
     }
   });
 }
@@ -1746,23 +1803,23 @@ function showNotification(title, message, type = 'info', persistent = false) {
   const notification = document.createElement('div');
   notification.className = `notification ${type}`;
   if (persistent) notification.classList.add('persistent');
-    // Создаем структуру уведомления через createElement (безопаснее чем innerHTML)
-    const notificationTitle = document.createElement('div');
-    notificationTitle.className = 'notification-title';
-    notificationTitle.textContent = title;
+  // Создаем структуру уведомления через createElement (безопаснее чем innerHTML)
+  const notificationTitle = document.createElement('div');
+  notificationTitle.className = 'notification-title';
+  notificationTitle.textContent = title;
 
-    const notificationMessage = document.createElement('div');
-    notificationMessage.className = 'notification-message';
-    notificationMessage.textContent = message;
+  const notificationMessage = document.createElement('div');
+  notificationMessage.className = 'notification-message';
+  notificationMessage.textContent = message;
 
-    const notificationClose = document.createElement('button');
-    notificationClose.className = 'notification-close';
-    notificationClose.textContent = '×';
-    notificationClose.addEventListener('click', () => hideNotification(notification));
+  const notificationClose = document.createElement('button');
+  notificationClose.className = 'notification-close';
+  notificationClose.textContent = '×';
+  notificationClose.addEventListener('click', () => hideNotification(notification));
 
-    notification.appendChild(notificationTitle);
-    notification.appendChild(notificationMessage);
-    notification.appendChild(notificationClose);
+  notification.appendChild(notificationTitle);
+  notification.appendChild(notificationMessage);
+  notification.appendChild(notificationClose);
   // Новые уведомления накладываются поверх старых: appendChild + управляем z-index
   const topZ = parseInt(panel.getAttribute('data-top-z') || '2000', 10) + 1;
   panel.setAttribute('data-top-z', String(topZ));
@@ -1834,6 +1891,223 @@ function addAuditLog(action, details) {
   }
   updateDashboardStats();
 }
+// ===== УПРАВЛЕНИЕ ПРЕДПРИЯТИЯМИ =====
+function initializeEnterprises() {
+  const enterpriseSearch = document.getElementById('enterpriseSearch');
+  const addEnterpriseBtn = document.getElementById('addEnterpriseBtn');
+
+  if (enterpriseSearch) {
+    enterpriseSearch.addEventListener('input', () => filterEnterprises());
+  }
+
+  if (addEnterpriseBtn) {
+    addEnterpriseBtn.addEventListener('click', () => openEnterpriseModal());
+  }
+
+  // Модальное окно предприятия
+  const enterpriseForm = document.getElementById('enterpriseForm');
+  const cancelEnterprise = document.getElementById('cancelEnterprise');
+
+  if (enterpriseForm) {
+    enterpriseForm.addEventListener('submit', handleEnterpriseSubmit);
+  }
+
+  if (cancelEnterprise) {
+    cancelEnterprise.addEventListener('click', () => hideModal('enterpriseModal'));
+  }
+
+  loadEnterprises();
+}
+
+function loadEnterprises() {
+  const tbody = document.getElementById('enterprisesTableBody');
+  if (!tbody) return;
+
+  tbody.innerHTML = '';
+  const search = (document.getElementById('enterpriseSearch')?.value || '').toLowerCase();
+
+  const filteredEnterprises = enterprises.filter(enterprise => {
+    const matchesSearch = enterprise.name.toLowerCase().includes(search) ||
+      enterprise.code.toLowerCase().includes(search) ||
+      (enterprise.description || '').toLowerCase().includes(search);
+    return matchesSearch;
+  });
+
+  filteredEnterprises.forEach(enterprise => {
+    const row = document.createElement('tr');
+
+    // ID
+    const tdId = document.createElement('td');
+    tdId.textContent = enterprise.id;
+    row.appendChild(tdId);
+
+    // Название
+    const tdName = document.createElement('td');
+    tdName.textContent = enterprise.name;
+    row.appendChild(tdName);
+
+    // Код
+    const tdCode = document.createElement('td');
+    const codeBadge = document.createElement('span');
+    codeBadge.className = 'status-badge status-active';
+    codeBadge.textContent = enterprise.code;
+    tdCode.appendChild(codeBadge);
+    row.appendChild(tdCode);
+
+    // Описание
+    const tdDescription = document.createElement('td');
+    tdDescription.textContent = enterprise.description || '—';
+    row.appendChild(tdDescription);
+
+    // Действия
+    const tdActions = document.createElement('td');
+    const actionsDiv = document.createElement('div');
+    actionsDiv.className = 'action-buttons';
+
+    // Кнопка редактирования
+    const editBtn = document.createElement('button');
+    editBtn.className = 'action-btn edit-btn';
+    editBtn.setAttribute('data-tooltip', 'Редактировать');
+    editBtn.setAttribute('data-enterprise-id', enterprise.id);
+    editBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+      </svg>
+    `;
+    editBtn.addEventListener('click', () => editEnterprise(enterprise.id));
+    actionsDiv.appendChild(editBtn);
+
+    // Кнопка удаления
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'action-btn delete-btn';
+    deleteBtn.setAttribute('data-tooltip', 'Удалить');
+    deleteBtn.setAttribute('data-enterprise-id', enterprise.id);
+    deleteBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="3,6 5,6 21,6"></polyline>
+        <path d="M19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path>
+        <line x1="10" y1="11" x2="10" y2="17"></line>
+        <line x1="14" y1="11" x2="14" y2="17"></line>
+      </svg>
+    `;
+    deleteBtn.addEventListener('click', () => deleteEnterprise(enterprise.id));
+    actionsDiv.appendChild(deleteBtn);
+
+    tdActions.appendChild(actionsDiv);
+    row.appendChild(tdActions);
+
+    tbody.appendChild(row);
+  });
+}
+
+function filterEnterprises() {
+  loadEnterprises();
+}
+
+function openEnterpriseModal() {
+  currentEnterpriseId = null;
+  document.getElementById('enterpriseModalTitle').textContent = 'Добавить предприятие';
+  document.getElementById('enterpriseForm').reset();
+
+  // Делаем поля редактируемыми
+  document.getElementById('enterpriseName').removeAttribute('readonly');
+  document.getElementById('enterpriseCode').removeAttribute('readonly');
+  document.getElementById('enterpriseDescription').removeAttribute('readonly');
+
+  showModal('enterpriseModal');
+}
+
+function editEnterprise(enterpriseId) {
+  const enterprise = enterprises.find(e => e.id === enterpriseId);
+  if (!enterprise) return;
+
+  currentEnterpriseId = enterpriseId;
+  document.getElementById('enterpriseModalTitle').textContent = 'Редактировать предприятие';
+  document.getElementById('enterpriseName').value = enterprise.name;
+  document.getElementById('enterpriseCode').value = enterprise.code;
+  document.getElementById('enterpriseDescription').value = enterprise.description || '';
+
+  showModal('enterpriseModal');
+}
+
+function deleteEnterprise(enterpriseId) {
+  const enterprise = enterprises.find(e => e.id === enterpriseId);
+  if (!enterprise) return;
+
+  showConfirmModal(
+    'Удаление предприятия',
+    `Вы уверены, что хотите удалить предприятие "${enterprise.name}"?`,
+    () => {
+      enterprises = enterprises.filter(e => e.id !== enterpriseId);
+      persistEnterprises();
+      loadEnterprises();
+      addAuditLog('delete', `Удалено предприятие "${enterprise.name}" (${enterprise.code})`);
+      showNotification("Успешно", "Предприятие удалено", "success");
+    }
+  );
+}
+
+function handleEnterpriseSubmit(e) {
+  e.preventDefault();
+
+  const formData = {
+    name: document.getElementById('enterpriseName').value.trim(),
+    code: document.getElementById('enterpriseCode').value.trim(),
+    description: document.getElementById('enterpriseDescription').value.trim()
+  };
+
+  // Валидация
+  if (!formData.name || !formData.code) {
+    showNotification("Ошибка", "Заполните все обязательные поля", "error");
+    return;
+  }
+
+  // Проверка на уникальность кода
+  const existingWithCode = enterprises.find(e =>
+    e.code.toLowerCase() === formData.code.toLowerCase() &&
+    e.id !== currentEnterpriseId
+  );
+
+  if (existingWithCode) {
+    showNotification("Ошибка", `Предприятие с кодом "${formData.code}" уже существует`, "error");
+    return;
+  }
+
+  if (currentEnterpriseId) {
+    // Редактирование
+    const enterpriseIndex = enterprises.findIndex(e => e.id === currentEnterpriseId);
+    if (enterpriseIndex !== -1) {
+      const oldData = { ...enterprises[enterpriseIndex] };
+      enterprises[enterpriseIndex] = {
+        ...enterprises[enterpriseIndex],
+        name: formData.name,
+        code: formData.code,
+        description: formData.description
+      };
+      persistEnterprises();
+      loadEnterprises();
+      addAuditLog('update', `Изменено предприятие: ${oldData.name} → ${formData.name}`);
+      showNotification("Успешно", "Предприятие обновлено", "success");
+    }
+  } else {
+    // Создание
+    const newEnterprise = {
+      id: enterprises.length ? (Math.max(...enterprises.map(e => Number(e && e.id) || 0)) + 1) : 1,
+      name: formData.name,
+      code: formData.code,
+      description: formData.description
+    };
+    enterprises.push(newEnterprise);
+    persistEnterprises();
+    loadEnterprises();
+    addAuditLog('create', `Создано новое предприятие: ${formData.name} (${formData.code})`);
+    showNotification("Успешно", "Предприятие создано", "success");
+  }
+
+  hideModal('enterpriseModal');
+}
+
 // Добавляем CSS для анимации скрытия уведомлений
 const style = document.createElement('style');
 style.textContent = `

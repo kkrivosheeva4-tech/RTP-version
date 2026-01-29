@@ -59,6 +59,28 @@
         }, 100);
       }
 
+      // Инициализация менеджера вкладок для формы добавления технологии
+      if (panel.id === 'addTechPanel' && window.TechTabsManager && typeof window.TechTabsManager.init === 'function') {
+        setTimeout(() => {
+          window.TechTabsManager.init();
+        }, 150);
+      }
+
+      // Инициализация менеджера вкладок для формы редактирования технологии
+      if (panel.id === 'editTechPanel' && window.EditTechTabsManager && typeof window.EditTechTabsManager.init === 'function') {
+        console.log('[Modals] Инициализация EditTechTabsManager для editTechPanel');
+        setTimeout(() => {
+          window.EditTechTabsManager.init();
+        }, 150);
+
+        // Инициализация калькулятора покрытия функций для формы редактирования
+        if (window.FuncCoverCalculator && typeof window.FuncCoverCalculator.initForEditForm === 'function') {
+          setTimeout(() => {
+            window.FuncCoverCalculator.initForEditForm();
+          }, 200);
+        }
+      }
+
       // Инициализация управления файлами
       if (window.VendorsFiles) {
         if (panel.id === 'addTechPanel') {

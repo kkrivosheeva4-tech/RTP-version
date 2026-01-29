@@ -473,16 +473,8 @@
           .map(x => (x == null ? '' : String(x)).trim())
           .filter(Boolean);
 
-        // Приоритет по тем же правилам, что и на радаре: используем функцию computePriority,
-        // если она доступна в глобальной области видимости.
+        // Приоритет отключен
         let priority = null;
-        try {
-          if (typeof window.computePriority === 'function') {
-            priority = window.computePriority(t, 'mult');
-          }
-        } catch (e) {
-          priority = null;
-        }
 
         // Интегральная метрика ABC: A*B*C (0–27) и её нормализация в [0,1]
         const abc = a * b * c;

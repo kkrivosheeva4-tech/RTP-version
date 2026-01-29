@@ -95,11 +95,7 @@ window.ExportModule = (function() {
         if (!hasMatchingFunction) return false;
       }
 
-      // Фильтр по типу технологии (массив значений)
-      if (filters.techTypes && Array.isArray(filters.techTypes) && filters.techTypes.length > 0) {
-        const techType = tech.techTypes || tech.techType || '';
-        if (!filters.techTypes.includes(techType)) return false;
-      }
+      // Фильтр по типу технологии удален (все технологии отображаются кругами)
 
       // Фильтр по статусу (Внедренная/Невнедренная) на основе isImplemented
       if (filters.status && Array.isArray(filters.status) && filters.status.length > 0) {
@@ -168,34 +164,6 @@ window.ExportModule = (function() {
       if (filters.funcCover && Array.isArray(filters.funcCover) && filters.funcCover.length > 0) {
         const funcCover = String(tech.funcCover || '');
         if (!filters.funcCover.includes(funcCover)) return false;
-      }
-
-      // Фильтр по приоритету технологии (диапазоны процентов)
-      if (filters.priority && Array.isArray(filters.priority) && filters.priority.length > 0) {
-        // Используем computePriority из RMK2.js (будет доступна после загрузки)
-        if (typeof window.computePriority === 'function') {
-          const p = window.computePriority(tech, 'mult');
-          if (p == null || Number.isNaN(p)) return false;
-
-          const percent = Math.round(p * 100);
-          let matchesAnyRange = false;
-
-          filters.priority.forEach(range => {
-            if (range === 'Высокий (60-100%)' && percent >= 60 && percent <= 100) {
-              matchesAnyRange = true;
-            }
-            if (range === 'Средний (30-60%)' && percent >= 30 && percent < 60) {
-              matchesAnyRange = true;
-            }
-            if (range === 'Низкий (0-30%)' && percent >= 0 && percent < 30) {
-              matchesAnyRange = true;
-            }
-          });
-
-          if (!matchesAnyRange) return false;
-        } else {
-          return false;
-        }
       }
 
       // Фильтр по вендорам (массив значений)
@@ -531,7 +499,7 @@ window.ExportModule = (function() {
     }
 
     // Если это поле с множественным выбором, подсвечиваем и его контейнер
-    const multiSelectFields = ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'funcCover', 'priority', 'vendors', 'integrators'];
+    const multiSelectFields = ['company', 'blocks', 'functions', 'status', 'costProm', 'techRead', 'organRead', 'funcCover', 'priority', 'vendors', 'integrators'];
     if (multiSelectFields.includes(fieldName)) {
       const container = document.getElementById(`filter_${fieldName}_container`);
       if (container) {
@@ -1193,19 +1161,6 @@ window.ExportModule = (function() {
       placeholder: 'Все функции'
     },
     {
-      field: 'techTypes',
-      source: () => {
-        if (typeof window.techTypes !== 'undefined' && Array.isArray(window.techTypes) && window.techTypes.length > 0) {
-          return window.techTypes;
-        }
-        if (typeof window.TECHTYPE_TO_SHAPE !== 'undefined') {
-          return Object.keys(window.TECHTYPE_TO_SHAPE);
-        }
-        return [];
-      },
-      placeholder: 'Все типы'
-    },
-    {
       field: 'status',
       source: () => (typeof window.RINGS !== 'undefined' && Array.isArray(window.RINGS)) ? window.RINGS : [],
       placeholder: 'Все статусы'
@@ -1339,8 +1294,6 @@ window.ExportModule = (function() {
         const data = await (typeof source === 'function' ? source() : Promise.resolve(source()));
         if (Array.isArray(data) && data.length > 0) {
           populateMultiSelect(`filter_${field}_container`, data, placeholder);
-        } else if (field === 'techTypes') {
-          if (window.Logger) window.Logger.warn('Не удалось загрузить список типов технологий для фильтра экспорта. Проверьте, что данные загружены и window.techTypes или window.TECHTYPE_TO_SHAPE доступны.');
         }
       });
     }
@@ -1391,7 +1344,7 @@ window.ExportModule = (function() {
 
   // Функция для включения/отключения фильтров при изменении чекбоксов
   function setupExportFilterToggles() {
-    const multiSelectFields = ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'funcCover', 'priority', 'vendors', 'integrators'];
+    const multiSelectFields = ['company', 'blocks', 'functions', 'status', 'costProm', 'techRead', 'organRead', 'funcCover', 'priority', 'vendors', 'integrators'];
     const singleSelectFields = [];
     const textFields = ['description'];
 

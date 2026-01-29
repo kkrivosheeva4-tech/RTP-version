@@ -70,14 +70,6 @@
         <input type="checkbox" id="themeToggle" />
         <span class="slider"></span>
       </label>
-      <button id="switchViewBtn" class="switch-view-btn" data-tooltip="Переключить на страницу для архитекторов"
-        aria-label="Переключить на страницу для архитекторов" style="display: none;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3">
-          </path>
-        </svg>
-      </button>
       <div id="authInfo"></div>
       <div id="logoutContainer"></div>
     </div>
@@ -248,12 +240,9 @@
       </button>
     </div>
     <div class="tech-info">
+      <!-- 1. Функциональный блок -->
       <div class="info-section">
-        <h3>Предприятие</h3>
-        <div id="panelCompanyTags"></div>
-      </div>
-      <div class="info-section">
-        <h3>Блок
+        <h3>Функциональный блок
           <span class="info-tooltip"
             data-tooltip="Функциональный блок – это группа связанных функций, объединённых общей целью или областью ответственности. Пример: «Основное производство» или «Корпоративное управление»."
             aria-label="Справка о функциональном блоке">
@@ -266,8 +255,10 @@
         </h3>
         <p id="panelBlock"></p>
       </div>
+
+      <!-- 2. Функции -->
       <div class="info-section">
-        <h3>Функция
+        <h3>Функции
           <span class="info-tooltip"
             data-tooltip="Функция – это конкретная задача или роль, выполняемая в рамках функционального блока. Пример: «Управление запасами» или «Мониторинг оборудования»."
             aria-label="Справка о функции">
@@ -280,6 +271,64 @@
         </h3>
         <p id="panelFunction"></p>
       </div>
+
+      <!-- 3. TRL-стадия -->
+      <div class="info-section">
+        <h3>TRL-стадия
+          <span class="info-tooltip"
+            data-tooltip="TRL (Technology Readiness Level) – стадия готовности технологии от 1 до 3. Показывает, насколько технология готова к практическому применению."
+            aria-label="Справка о TRL-стадии">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
+              focusable="false">
+              <path fill="currentColor"
+                d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
+            </svg>
+          </span>
+        </h3>
+        <div class="rating-display" id="panelTrlStageDisplay"></div>
+      </div>
+
+      <!-- 4. Покрытие функций -->
+      <div class="info-section">
+        <h3>Покрытие функций
+          <span class="info-tooltip"
+            data-tooltip="Покрытие функций (0-3) – насколько полно технология покрывает необходимые функции."
+            aria-label="Справка о покрытии функций">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
+              focusable="false">
+              <path fill="currentColor"
+                d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
+            </svg>
+          </span>
+        </h3>
+        <div class="rating-display" id="panelFuncCoverDisplay"></div>
+      </div>
+
+      <!-- 5. Вкладочная карточка с предприятиями и оценками -->
+      <div class="info-section" id="panelEnterprisesSection">
+        <h3>Оценки по предприятиям
+          <span class="info-tooltip"
+            data-tooltip="Здесь отображаются оценки технологической и организационной готовности для каждого предприятия, на котором внедрена технология."
+            aria-label="Справка об оценках по предприятиям">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
+              focusable="false">
+              <path fill="currentColor"
+                d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
+            </svg>
+          </span>
+        </h3>
+        <div id="panelRatingsHint" class="ratings-hint hidden"></div>
+        <div class="enterprise-tabs-container">
+          <div class="enterprise-tabs" id="panelEnterpriseTabs">
+            <!-- Вкладки предприятий будут добавляться динамически -->
+          </div>
+          <div class="enterprise-tab-content" id="panelEnterpriseContent">
+            <!-- Содержимое вкладки будет добавляться динамически -->
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. Описание -->
       <div class="info-section">
         <h3>Описание
           <span class="info-tooltip"
@@ -294,50 +343,12 @@
         </h3>
         <p id="panelDescription"></p>
       </div>
-      <div class="info-section" id="panelRatingsSection">
-        <h3>Оценки
-          <span class="info-tooltip"
-            data-tooltip="Оценки показывают уровень готовности технологии по трём критериям: Технологическая готовность (0-3) – насколько технология готова к использованию технически; Организационная готовность (0-3) – насколько организация готова к внедрению; Покрытие функций (0-3) – насколько полно технология покрывает необходимые функции."
-            aria-label="Справка об оценках">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
-              focusable="false">
-              <path fill="currentColor"
-                d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
-            </svg>
-          </span>
-        </h3>
-        <div id="panelRatingsHint" class="ratings-hint hidden"></div>
-        <ul class="ratings">
-          <li>Технологическая готовность: <span id="panelTechRead"></span>/3</li>
-          <li>Организационная готовность: <span id="panelOrganRead"></span>/3</li>
-          <li>Покрытие функций: <span id="panelFuncCover"></span>/3</li>
-          <li>TRL (стадия готовности технологии): <span id="panelTrlStage"></span>/3</li>
-        </ul>
-      </div>
-      <div class="info-section" id="panelPrioritySection">
-        <h3>Приоритет технологии
-          <span class="info-tooltip"
-            data-tooltip="Приоритет рассчитывается по трём осям: технологическая и организационная готовность (0-3) и укрупнённая TRL‑стадия (1-3). Все показатели нормализуются в диапазон 0-1 и агрегируются в интегральный балл приоритета."
-            aria-label="Справка о приоритете технологии">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
-              focusable="false">
-              <path fill="currentColor"
-                d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
-            </svg>
-          </span>
-        </h3>
-        <p id="panelPriorityValue" class="priority-value">Приоритет: —</p>
-        <p id="panelPriorityComment" class="priority-comment">Недостаточно данных для расчёта приоритета.</p>
-        <p class="priority-help-text">0-0.3 – низкий приоритет; 0.3-0.6 – средний; 0.6-1.0 – высокий.</p>
-      </div>
-      <div class="info-section">
-        <h3>Примеры внедрений</h3>
-        <p id="panelExampleDesc"></p>
-      </div>
+
+      <!-- 7. Вендоры и интеграторы -->
       <div class="info-section" id="panelVendorsSection">
-        <h3>Вендоры
+        <h3>Вендоры и интеграторы
           <span class="info-tooltip"
-            data-tooltip="Вендоры – компании/платформы, которые разрабатывают/поставляют продукт (ПО/оборудование), используемый в технологии. Интеграторы – компании/команды, которые внедряют и настраивают решение в контуре предприятия. Можно выбрать несколько вендоров; для каждого выбранного вендора ниже можно указать интеграторов."
+            data-tooltip="Вендоры – компании/платформы, которые разрабатывают/поставляют продукт (ПО/оборудование), используемый в технологии. Интеграторы – компании/команды, которые внедряют и настраивают решение в контуре предприятия."
             aria-label="Справка о вендорах">
             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
               focusable="false">
@@ -348,6 +359,14 @@
         </h3>
         <div id="panelVendors"></div>
       </div>
+
+      <!-- 8. Примеры внедрений -->
+      <div class="info-section">
+        <h3>Примеры внедрений</h3>
+        <p id="panelExampleDesc"></p>
+      </div>
+
+      <!-- 9. Прикрепленные файлы -->
       <div class="info-section" id="panelFilesSection">
         <h3>Прикрепленные файлы</h3>
         <div id="panelFiles"></div>
@@ -372,11 +391,11 @@
     </div>
   </div>
 
-  <!-- Правая панель приоритета сектора при зуме -->
+  <!-- Правая панель списка технологий сектора при зуме -->
   <div id="quadrantPriorityPanel" class="quadrant-priority-panel" aria-hidden="true">
     <div class="qp-header">
-      <h2 id="qpTitle">Приоритет технологий сектора</h2>
-      <button class="close-btn" id="closeQuadrantPriorityPanel" aria-label="Закрыть панель приоритета">
+      <h2 id="qpTitle"></h2>
+      <button class="close-btn" id="closeQuadrantPriorityPanel" aria-label="Закрыть панель технологий">
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"
           class="close-icon">
           <path d="M15 5L5 15M5 5L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -389,16 +408,16 @@
         <input type="text" id="qpSearchInput" class="qp-search-input" placeholder="Поиск по технологиям..." />
       </div>
       <div class="qp-filters">
-        <span class="qp-filters-label">Статус:</span>
-        <button type="button" class="qp-filter-btn active" data-status="Перспективные">Перспективные</button>
-        <button type="button" class="qp-filter-btn active" data-status="Внедряемые">Внедряемые</button>
-        <button type="button" class="qp-filter-btn active" data-status="Используемые">Используемые</button>
+        <span class="qp-filters-label">Статус внедрения:</span>
+        <button type="button" class="qp-filter-btn active" data-implementation-status="Внедренные">Внедренные</button>
+        <button type="button" class="qp-filter-btn active"
+          data-implementation-status="Невнедренные">Невнедренные</button>
       </div>
       <div id="qpList" class="qp-list"></div>
     </div>
   </div>
 
-  <div id="addTechPanel" class="modal-panel">
+  <div id="addTechPanel" class="modal-panel tabbed-modal">
     <div class="modal-header">
       <h2>Добавить технологию</h2>
       <button class="close-btn" aria-label="Закрыть">
@@ -409,235 +428,339 @@
         </svg>
       </button>
     </div>
+
+    <!-- Вкладки -->
+    <div class="modal-tabs">
+      <div class="tabs-container">
+        <button class="tab-btn active" data-tab="general-info" type="button">
+          <span>Общая информация</span>
+        </button>
+        <div id="enterpriseTabsContainer" class="enterprise-tabs">
+          <!-- Динамические вкладки предприятий будут добавляться здесь -->
+        </div>
+      </div>
+    </div>
+
     <div class="modal-body">
       <form id="addTechForm">
-        <div class="form-group">
-          <label>Название
-            <span class="info-tooltip"
-              data-tooltip="Название технологии – это краткое и понятное наименование, которое отражает суть технологического решения. Пример: «Система управления запасами» или «Платформа для анализа данных»."
-              aria-label="Справка о названии технологии">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
-                focusable="false">
-                <path fill="currentColor"
-                  d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
-              </svg>
-            </span>
-            <span class="required-star" data-tooltip="Это поле является обязательным">*</span>
-          </label>
-          <input type="text" id="techName" required />
-        </div>
-        <div class="form-group">
-          <label>Направления цифрового развития
-            <span class="info-tooltip"
-              data-tooltip="Направления цифрового развития определяют позицию технологии на радаре (квадрант). Выберите одно или несколько направлений, к которым относится технология. Это поле определяет, в каком квадранте радара будет отображаться технология. Примеры: «Единый центр данных (Data Hub)», «Искусственный интеллект во всех процессах»."
-              aria-label="Справка о направлениях цифрового развития">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
-                focusable="false">
-                <path fill="currentColor"
-                  d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
-              </svg>
-            </span>
-            <span class="required-star" data-tooltip="Это поле является обязательным">*</span>
-          </label>
-          <div class="custom-select-modal" data-field="techDirections" tabindex="0">
-            <div class="select-trigger">
-              <span class="selected-text">Выберите</span>
-              <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none"
-                xmlns="http://www.w3.org/2000/svg">
-                <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round"
-                  stroke-linejoin="round" />
-              </svg>
-            </div>
-            <ul class="select-options"></ul>
-          </div>
-          <input type="hidden" id="techDirections" name="techDirections" required />
-        </div>
-        <div class="form-group">
-          <label>Блок
-            <span class="info-tooltip"
-              data-tooltip="Функциональный блок – это группа связанных функций, объединённых общей целью или областью ответственности. Пример: «Основное производство» или «Корпоративное управление». Это поле используется только для фильтрации и не влияет на позицию технологии на радаре."
-              aria-label="Справка о функциональном блоке">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
-                focusable="false">
-                <path fill="currentColor"
-                  d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
-              </svg>
-            </span>
-            <span class="required-star" data-tooltip="Это поле является обязательным">*</span>
-          </label>
-          <div class="custom-select-modal" data-field="techBlock" tabindex="0">
-            <div class="select-trigger">
-              <span class="selected-text">Выберите</span>
-              <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none"
-                xmlns="http://www.w3.org/2000/svg">
-                <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round"
-                  stroke-linejoin="round" />
-              </svg>
-            </div>
-            <ul class="select-options"></ul>
-          </div>
-          <input type="hidden" id="techBlock" name="techBlock" required />
-        </div>
-        <div class="form-group">
-          <label>Функция
-            <span class="info-tooltip"
-              data-tooltip="Функция – это конкретная задача или роль, выполняемая в рамках функционального блока. Пример: «Управление запасами» или «Мониторинг оборудования»."
-              aria-label="Справка о функции">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
-                focusable="false">
-                <path fill="currentColor"
-                  d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
-              </svg>
-            </span>
-            <span class="required-star" data-tooltip="Это поле является обязательным">*</span>
-          </label>
-          <div class="custom-select-modal" data-field="techFunc" tabindex="0">
-            <div class="select-trigger">
-              <span class="selected-text">Выберите</span>
-              <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none"
-                xmlns="http://www.w3.org/2000/svg">
-                <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round"
-                  stroke-linejoin="round" />
-              </svg>
-            </div>
-            <ul class="select-options"></ul>
-          </div>
-          <input type="hidden" id="techFunc" name="techFunc" required />
-        </div>
-        <div class="form-group">
-          <label>Предприятия
-            <span class="info-tooltip"
-              data-tooltip="Предприятия – это список компаний или подразделений, где применяется или планируется применять технологию. Можно выбрать одно или несколько предприятий из списка: РМК, ТГОК, МГОК, КБМ, КМЭЗ, АМК."
-              aria-label="Справка о предприятиях">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
-                focusable="false">
-                <path fill="currentColor"
-                  d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
-              </svg>
-            </span>
-          </label>
-          <div class="custom-select-modal" data-field="techCompany" tabindex="0">
-            <div class="select-trigger">
-              <span class="selected-text">Выберите</span>
-              <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none"
-                xmlns="http://www.w3.org/2000/svg">
-                <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round"
-                  stroke-linejoin="round" />
-              </svg>
-            </div>
-            <ul class="select-options"></ul>
-          </div>
-          <input type="hidden" id="techCompany" name="techCompany" />
-        </div>
-        <div class="form-group">
-          <label>Описание
-            <span class="info-tooltip"
-              data-tooltip="Описание технологии – это краткое изложение её сути, преимуществ и возможного применения в компании. Должно быть понятным и информативным."
-              aria-label="Справка об описании технологии">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
-                focusable="false">
-                <path fill="currentColor"
-                  d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
-              </svg>
-            </span>
-            <span class="required-star" data-tooltip="Это поле является обязательным">*</span>
-          </label>
-          <textarea id="techDesc" rows="3" required></textarea>
-        </div>
-        <div class="form-group">
-          <label>Примеры внедрений на рынке или в контуре
-            <span class="info-tooltip"
-              data-tooltip="Примеры внедрений – это описание реальных случаев использования технологии на рынке или в контуре компании. Помогает понять практическую применимость технологии."
-              aria-label="Справка о примерах внедрений">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
-                focusable="false">
-                <path fill="currentColor"
-                  d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
-              </svg>
-            </span>
-          </label>
-          <textarea id="techExampleDesc" rows="3"></textarea>
-        </div>
-        <div class="form-group" id="techVendorsGroup">
-          <label>Вендоры
-            <span class="info-tooltip"
-              data-tooltip="Вендоры – поставщики продукта/решения. Интеграторы – те, кто внедряет и настраивает решение. Выберите одного или нескольких вендоров; для каждого выбранного вендора ниже можно указать интеграторов."
-              aria-label="Справка о поле вендоров">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
-                focusable="false">
-                <path fill="currentColor"
-                  d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
-              </svg>
-            </span>
-          </label>
-          <div class="custom-select-modal" data-field="techVendors" tabindex="0">
-            <div class="select-trigger">
-              <span class="selected-text">Выберите</span>
-              <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none"
-                xmlns="http://www.w3.org/2000/svg">
-                <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round"
-                  stroke-linejoin="round" />
-              </svg>
-            </div>
-            <ul class="select-options"></ul>
-          </div>
-          <input type="hidden" id="techVendors" name="techVendors" />
-        </div>
-        <div class="form-group" id="techVendorIntegratorsGroup" style="display: none;">
-          <label>Интеграторы</label>
-          <div id="techVendorIntegratorsByVendor"></div>
-        </div>
-        <div class="form-group" id="techFilesGroup">
-          <label>Прикрепленные файлы
-            <span class="info-tooltip"
-              data-tooltip="Прикрепленные файлы – это документы, связанные с технологией (презентации, спецификации, договоры и т.д.). Можно загрузить несколько файлов разных форматов или добавить ссылки на файлы."
-              aria-label="Справка о файлах">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
-                focusable="false">
-                <path fill="currentColor"
-                  d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
-              </svg>
-            </span>
-          </label>
-          <div id="techFilesList" class="files-list">
-            <!-- Список загруженных файлов будет отображаться здесь -->
-          </div>
-          <div class="file-actions-container">
-            <label for="techFilesInput" class="file-input-label">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="17 8 12 3 7 8"></polyline>
-                <line x1="12" y1="3" x2="12" y2="15"></line>
-              </svg>
-              <span>Выбрать файлы</span>
+        <!-- Вкладка "Общая информация" -->
+        <div class="tab-content active" data-tab-content="general-info">
+          <!-- Обязательные поля -->
+          <div class="form-group">
+            <label>Название
+              <span class="info-tooltip"
+                data-tooltip="Название технологии – это краткое и понятное наименование, которое отражает суть технологического решения. Пример: «Система управления запасами» или «Платформа для анализа данных»."
+                aria-label="Справка о названии технологии">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
+                  focusable="false">
+                  <path fill="currentColor"
+                    d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
+                </svg>
+              </span>
+              <span class="required-star" data-tooltip="Это поле является обязательным">*</span>
             </label>
-            <button type="button" id="techAddLinkBtn" class="btn-secondary btn-with-icon file-add-btn">
-              <svg class="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"
-                xmlns="http://www.w3.org/2000/svg">
-                <path d="M10 13h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1M6 3H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h1M6 8h4"
-                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-              <span>Добавить ссылку</span>
-            </button>
+            <input type="text" id="techName" required />
           </div>
-          <div id="techAddLinkContainer" class="add-link-container" style="display: none;">
-            <input type="url" id="techLinkInput" class="link-input" placeholder="Введите URL ссылки на файл..." />
-            <button type="button" id="techConfirmLinkBtn" class="btn-primary btn-small">Добавить</button>
-            <button type="button" id="techCancelLinkBtn" class="btn-secondary btn-small">Отмена</button>
+          <div class="form-group">
+            <label>Направления цифрового развития
+              <span class="info-tooltip"
+                data-tooltip="Направления цифрового развития определяют позицию технологии на радаре (квадрант). Выберите одно или несколько направлений, к которым относится технология. Это поле определяет, в каком квадранте радара будет отображаться технология. Примеры: «Единый центр данных (Data Hub)», «Искусственный интеллект во всех процессах»."
+                aria-label="Справка о направлениях цифрового развития">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
+                  focusable="false">
+                  <path fill="currentColor"
+                    d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
+                </svg>
+              </span>
+              <span class="required-star" data-tooltip="Это поле является обязательным">*</span>
+            </label>
+            <div class="custom-select-modal" data-field="techDirections" tabindex="0">
+              <div class="select-trigger">
+                <span class="selected-text">Выберите</span>
+                <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none"
+                  xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                </svg>
+              </div>
+              <ul class="select-options"></ul>
+            </div>
+            <input type="hidden" id="techDirections" name="techDirections" required />
           </div>
-          <input type="file" id="techFilesInput" multiple style="display: none;" />
-          <input type="hidden" id="techFiles" name="techFiles" />
+          <div class="form-group">
+            <label>Функциональный блок
+              <span class="info-tooltip"
+                data-tooltip="Функциональный блок – это группа связанных функций, объединённых общей целью или областью ответственности. Пример: «Основное производство» или «Корпоративное управление». Это поле используется только для фильтрации и не влияет на позицию технологии на радаре."
+                aria-label="Справка о функциональном блоке">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
+                  focusable="false">
+                  <path fill="currentColor"
+                    d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
+                </svg>
+              </span>
+              <span class="required-star" data-tooltip="Это поле является обязательным">*</span>
+            </label>
+            <div class="custom-select-modal" data-field="techBlock" tabindex="0">
+              <div class="select-trigger">
+                <span class="selected-text">Выберите</span>
+                <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none"
+                  xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                </svg>
+              </div>
+              <ul class="select-options"></ul>
+            </div>
+            <input type="hidden" id="techBlock" name="techBlock" required />
+          </div>
+          <div class="form-group">
+            <label>Функция
+              <span class="info-tooltip"
+                data-tooltip="Функция – это конкретная задача или роль, выполняемая в рамках функционального блока. Пример: «Управление запасами» или «Мониторинг оборудования»."
+                aria-label="Справка о функции">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
+                  focusable="false">
+                  <path fill="currentColor"
+                    d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
+                </svg>
+              </span>
+              <span class="required-star" data-tooltip="Это поле является обязательным">*</span>
+            </label>
+            <div class="custom-select-modal" data-field="techFunc" tabindex="0">
+              <div class="select-trigger">
+                <span class="selected-text">Выберите</span>
+                <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none"
+                  xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                </svg>
+              </div>
+              <ul class="select-options"></ul>
+            </div>
+            <input type="hidden" id="techFunc" name="techFunc" required />
+          </div>
+          <div class="form-group">
+            <label>TRL (стадия готовности технологии)
+              <span class="info-tooltip"
+                data-tooltip="TRL (Technology Readiness Level) – стадия технологической готовности. 1-Исследовательская – ранняя стадия исследований, 2-Прототип – стадия разработки прототипа, 3-Технология готова к внедрению – зрелая стадия, готова к внедрению."
+                aria-label="Справка о TRL">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
+                  focusable="false">
+                  <path fill="currentColor"
+                    d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
+                </svg>
+              </span>
+              <span class="required-star" data-tooltip="Это поле является обязательным">*</span>
+            </label>
+            <div class="custom-select-modal" data-field="techTrlStage" tabindex="0">
+              <div class="select-trigger">
+                <span class="selected-text">Выберите стадию</span>
+                <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none"
+                  xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                </svg>
+              </div>
+              <ul class="select-options">
+                <li data-value="1-Исследовательская">1-Исследовательская</li>
+                <li data-value="2-Прототип">2-Прототип</li>
+                <li data-value="3-Технология готова к внедрению">3-Технология готова к внедрению</li>
+              </ul>
+            </div>
+            <input type="hidden" id="techTrlStage" name="techTrlStage" required />
+          </div>
+          <div class="form-group">
+            <label>Покрытие функций
+              <span class="info-tooltip"
+                data-tooltip="Покрытие функций (0-3) показывает, насколько полно технология покрывает необходимые функции. 0 – не покрывает, 1 – низкое покрытие, 2 – среднее покрытие, 3 – полное покрытие."
+                aria-label="Справка о покрытии функций">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
+                  focusable="false">
+                  <path fill="currentColor"
+                    d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
+                </svg>
+              </span>
+              <span class="required-star" data-tooltip="Это поле является обязательным">*</span>
+            </label>
+            <div class="custom-select-modal" data-field="techFuncCover" tabindex="0">
+              <div class="select-trigger">
+                <span class="selected-text">Выберите оценку</span>
+                <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none"
+                  xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                </svg>
+              </div>
+              <ul class="select-options">
+                <li data-value="0">0 — Не покрывает</li>
+                <li data-value="1">1 — Низкое покрытие</li>
+                <li data-value="2">2 — Среднее покрытие</li>
+                <li data-value="3">3 — Полное покрытие</li>
+              </ul>
+            </div>
+            <input type="hidden" id="techFuncCover" name="techFuncCover" required />
+          </div>
+          <div class="form-group">
+            <label>Описание
+              <span class="info-tooltip"
+                data-tooltip="Описание технологии – это краткое изложение её сути, преимуществ и возможного применения в компании. Должно быть понятным и информативным."
+                aria-label="Справка об описании технологии">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
+                  focusable="false">
+                  <path fill="currentColor"
+                    d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
+                </svg>
+              </span>
+              <span class="required-star" data-tooltip="Это поле является обязательным">*</span>
+            </label>
+            <textarea id="techDesc" rows="4" required></textarea>
+          </div>
+          <div class="form-group">
+            <label>Выбор предприятий
+              <span class="info-tooltip"
+                data-tooltip="Выберите конкретные предприятия или отметьте, что технология применима во всем холдинге. Если технология применима только к отдельным предприятиям, выберите их из списка. Если она универсальна для всего холдинга, отметьте соответствующую галочку."
+                aria-label="Справка об области применения">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
+                  focusable="false">
+                  <path fill="currentColor"
+                    d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
+                </svg>
+              </span>
+              <span class="required-star" data-tooltip="Выберите предприятия или отметьте галочку">*</span>
+            </label>
+            <div class="form-subgroup">
+              <div class="checkbox-group">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="techHoldingWide" name="techHoldingWide" />
+                  <span>Технология применима в холдинге</span>
+                </label>
+              </div>
+              <div class="form-group-or">
+                <span class="or-divider">ИЛИ</span>
+              </div>
+              <div class="form-group-no-margin">
+                <label>Выберите предприятия:</label>
+                <div class="custom-select-modal" data-field="techCompany" tabindex="0">
+                  <div class="select-trigger">
+                    <span class="selected-text">Выберите</span>
+                    <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none"
+                      xmlns="http://www.w3.org/2000/svg">
+                      <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                    </svg>
+                  </div>
+                  <ul class="select-options"></ul>
+                </div>
+                <input type="hidden" id="techCompany" name="techCompany" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Необязательные поля -->
+          <div class="form-section-divider">
+            <span>Дополнительная информация (необязательно)</span>
+          </div>
+
+          <div class="form-group">
+            <label>Примеры внедрений на рынке или в контуре
+              <span class="info-tooltip"
+                data-tooltip="Примеры внедрений – это описание реальных случаев использования технологии на рынке или в контуре компании. Помогает понять практическую применимость технологии. Это поле необязательно."
+                aria-label="Справка о примерах внедрений">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
+                  focusable="false">
+                  <path fill="currentColor"
+                    d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
+                </svg>
+              </span>
+            </label>
+            <textarea id="techExampleDesc" rows="3"></textarea>
+          </div>
+          <div class="form-group" id="techVendorsGroup">
+            <label>Вендоры и интеграторы
+              <span class="info-tooltip"
+                data-tooltip="Вендоры – поставщики продукта/решения. Интеграторы – те, кто внедряет и настраивает решение. Выберите одного или нескольких вендоров; для каждого выбранного вендора ниже можно указать интеграторов. Это поле необязательно."
+                aria-label="Справка о поле вендоров">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
+                  focusable="false">
+                  <path fill="currentColor"
+                    d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
+                </svg>
+              </span>
+            </label>
+            <div class="custom-select-modal" data-field="techVendors" tabindex="0">
+              <div class="select-trigger">
+                <span class="selected-text">Выберите</span>
+                <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none"
+                  xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                </svg>
+              </div>
+              <ul class="select-options"></ul>
+            </div>
+            <input type="hidden" id="techVendors" name="techVendors" />
+          </div>
+          <div class="form-group" id="techVendorIntegratorsGroup" style="display: none;">
+            <label>Интеграторы</label>
+            <div id="techVendorIntegratorsByVendor"></div>
+          </div>
+          <div class="form-group" id="techFilesGroup">
+            <label>Прикрепленные файлы
+              <span class="info-tooltip"
+                data-tooltip="Прикрепленные файлы – это документы, связанные с технологией (презентации, спецификации, договоры и т.д.). Можно загрузить несколько файлов разных форматов или добавить ссылки на файлы. Это поле необязательно."
+                aria-label="Справка о файлах">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
+                  focusable="false">
+                  <path fill="currentColor"
+                    d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
+                </svg>
+              </span>
+            </label>
+            <div id="techFilesList" class="files-list">
+              <!-- Список загруженных файлов будет отображаться здесь -->
+            </div>
+            <div class="file-actions-container">
+              <label for="techFilesInput" class="file-input-label">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                <span>Выбрать файлы</span>
+              </label>
+              <button type="button" id="techAddLinkBtn" class="btn-secondary btn-with-icon file-add-btn">
+                <svg class="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"
+                  xmlns="http://www.w3.org/2000/svg">
+                  <path d="M10 13h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1M6 3H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h1M6 8h4"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <span>Добавить ссылку</span>
+              </button>
+            </div>
+            <div id="techAddLinkContainer" class="add-link-container" style="display: none;">
+              <input type="url" id="techLinkInput" class="link-input" placeholder="Введите URL ссылки на файл..." />
+              <button type="button" id="techConfirmLinkBtn" class="btn-primary btn-small">Добавить</button>
+              <button type="button" id="techCancelLinkBtn" class="btn-secondary btn-small">Отмена</button>
+            </div>
+            <input type="file" id="techFilesInput" multiple style="display: none;" />
+            <input type="hidden" id="techFiles" name="techFiles" />
+          </div>
         </div>
+        <!-- Конец вкладки "Общая информация" -->
+
+        <!-- Динамические вкладки предприятий будут добавляться здесь через JavaScript -->
+        <div id="enterpriseTabsContent"></div>
+
       </form>
     </div>
     <div class="form-actions">
-      <button type="submit" form="addTechForm" class="btn-primary btn-with-icon">
+      <button type="submit" form="addTechForm" class="btn-primary btn-with-icon" id="submitAddTech">
         <svg class="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"
             stroke-linejoin="round" />
         </svg>
-        <span>Добавить</span>
+        <span>Добавить технологию</span>
       </button>
       <button type="button" id="cancelAdd" class="btn-secondary btn-with-icon">
         <svg class="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -647,9 +770,15 @@
         <span>Отмена</span>
       </button>
     </div>
+
+    <!-- Индикатор загрузки -->
+    <div class="form-loading-indicator" id="addTechLoadingIndicator">
+      <div class="spinner"></div>
+      <span>Сохранение...</span>
+    </div>
   </div>
 
-  <div id="editTechPanel" class="modal-panel">
+  <div id="editTechPanel" class="modal-panel tabbed-modal">
     <div class="modal-header">
       <h2>Редактировать технологию</h2>
       <button class="close-btn" data-close="editTechPanel" aria-label="Закрыть">
@@ -660,360 +789,332 @@
         </svg>
       </button>
     </div>
+
+    <!-- Вкладки -->
+    <div class="modal-tabs">
+      <div class="tabs-container">
+        <button class="tab-btn active" data-tab="edit-general-info" type="button">
+          <span>Общая информация</span>
+        </button>
+        <div id="editEnterpriseTabsContainer" class="enterprise-tabs">
+          <!-- Динамические вкладки предприятий будут добавляться здесь -->
+        </div>
+      </div>
+    </div>
+
     <div class="modal-body">
       <form id="editTechForm">
         <input type="hidden" id="editId" />
-        <div class="form-group">
-          <label>Название
-            <span class="info-tooltip"
-              data-tooltip="Название технологии – это краткое и понятное наименование, которое отражает суть технологического решения. Пример: «Система управления запасами» или «Платформа для анализа данных»."
-              aria-label="Справка о названии технологии">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
-                focusable="false">
-                <path fill="currentColor"
-                  d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
-              </svg>
-            </span>
-          </label>
-          <input type="text" id="editName" required />
-        </div>
-        <div class="form-group">
-          <label>Направления цифрового развития
-            <span class="info-tooltip"
-              data-tooltip="Направления цифрового развития определяют позицию технологии на радаре. Выберите одно или несколько направлений, к которым относится технология. Примеры: «Единый центр данных (Data Hub)», «Искусственный интеллект во всех процессах»."
-              aria-label="Справка о направлениях цифрового развития">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
-                focusable="false">
-                <path fill="currentColor"
-                  d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
-              </svg>
-            </span>
-            <span class="required-star" data-tooltip="Это поле является обязательным">*</span>
-          </label>
-          <div class="custom-select-modal" data-field="editDirections" tabindex="0">
-            <div class="select-trigger">
-              <span class="selected-text">Выберите</span>
-              <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none"
-                xmlns="http://www.w3.org/2000/svg">
-                <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round"
-                  stroke-linejoin="round" />
-              </svg>
-            </div>
-            <ul class="select-options"></ul>
-          </div>
-          <input type="hidden" id="editDirections" name="editDirections" required />
-        </div>
-        <div class="form-group">
-          <label>Блок
-            <span class="info-tooltip"
-              data-tooltip="Функциональный блок – это группа связанных функций, объединённых общей целью или областью ответственности. Пример: «Основное производство» или «Корпоративное управление»."
-              aria-label="Справка о функциональном блоке">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
-                focusable="false">
-                <path fill="currentColor"
-                  d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
-              </svg>
-            </span>
-          </label>
-          <div class="custom-select-modal" data-field="editBlock" tabindex="0">
-            <div class="select-trigger">
-              <span class="selected-text">Выберите</span>
-              <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none"
-                xmlns="http://www.w3.org/2000/svg">
-                <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round"
-                  stroke-linejoin="round" />
-              </svg>
-            </div>
-            <ul class="select-options"></ul>
-          </div>
-          <input type="hidden" id="editBlock" name="editBlock" required />
-        </div>
-        <div class="form-group">
-          <label>Функция
-            <span class="info-tooltip"
-              data-tooltip="Функция – это конкретная задача или роль, выполняемая в рамках функционального блока. Пример: «Управление запасами» или «Мониторинг оборудования»."
-              aria-label="Справка о функции">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
-                focusable="false">
-                <path fill="currentColor"
-                  d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
-              </svg>
-            </span>
-          </label>
-          <div class="custom-select-modal" data-field="editFunc" tabindex="0">
-            <div class="select-trigger">
-              <span class="selected-text">Выберите</span>
-              <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none"
-                xmlns="http://www.w3.org/2000/svg">
-                <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round"
-                  stroke-linejoin="round" />
-              </svg>
-            </div>
-            <ul class="select-options"></ul>
-          </div>
-          <input type="hidden" id="editFunc" name="editFunc" required />
-        </div>
-        <div class="form-group">
-          <label>Предприятия
-            <span class="info-tooltip"
-              data-tooltip="Предприятия – это список компаний или подразделений, где применяется или планируется применять технологию. Можно выбрать одно или несколько предприятий из списка: РМК, ТГОК, МГОК, КБМ, КМЭЗ, АМК."
-              aria-label="Справка о предприятиях">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
-                focusable="false">
-                <path fill="currentColor"
-                  d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
-              </svg>
-            </span>
-          </label>
-          <div class="custom-select-modal" data-field="editCompany" tabindex="0">
-            <div class="select-trigger">
-              <span class="selected-text">Выберите</span>
-              <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none"
-                xmlns="http://www.w3.org/2000/svg">
-                <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round"
-                  stroke-linejoin="round" />
-              </svg>
-            </div>
-            <ul class="select-options"></ul>
-          </div>
-          <input type="hidden" id="editCompany" name="editCompany" />
-        </div>
-        <div class="form-group" id="editEnterpriseRatingsGroup" style="display: none;">
-          <label>Оценки по предприятиям
-            <span class="info-tooltip"
-              data-tooltip="Для каждого предприятия можно указать индивидуальные оценки: технологическую готовность (0-3), организационную готовность (0-3), TRL стадию (1-3) и статус внедрения."
-              aria-label="Справка об оценках по предприятиям">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
-                focusable="false">
-                <path fill="currentColor"
-                  d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
-              </svg>
-            </span>
-          </label>
-          <div id="editEnterpriseRatingsContainer">
-            <!-- Динамические поля оценок для каждого предприятия будут добавлены здесь -->
-          </div>
-        </div>
-        <div class="form-group">
-          <label>Оценки (0–3)
-            <span class="info-tooltip"
-              data-tooltip="Оценки показывают уровень готовности технологии по трём критериям: Технологическая готовность (0-3) – насколько технология готова к использованию технически; Организационная готовность (0-3) – насколько организация готова к внедрению; Покрытие функций (0-3) – насколько полно технология покрывает необходимые функции; TRL (1-3) – стадия технологической готовности."
-              aria-label="Справка об оценках">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
-                focusable="false">
-                <path fill="currentColor"
-                  d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
-              </svg>
-            </span>
-          </label>
-          <div class="ratings-row">
-            <div id="editTechReadGroup">
-              <span>Технологическая готовность
-                <span class="info-tooltip"
-                  data-tooltip="Технологическая готовность (0-3) показывает, насколько технология готова к использованию с технической точки зрения. 0 – не готова, 1 – низкая готовность, 2 – средняя готовность, 3 – высокая готовность."
-                  aria-label="Справка о технологической готовности">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 512 512"
-                    aria-hidden="true" focusable="false">
-                    <path fill="currentColor"
-                      d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
-                  </svg>
-                </span>
+
+        <!-- Вкладка "Общая информация" -->
+        <div class="tab-content active" data-tab-content="edit-general-info">
+          <!-- Обязательные поля -->
+          <div class="form-group">
+            <label>Название
+              <span class="info-tooltip"
+                data-tooltip="Название технологии – это краткое и понятное наименование, которое отражает суть технологического решения. Пример: «Система управления запасами» или «Платформа для анализа данных»."
+                aria-label="Справка о названии технологии">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
+                  focusable="false">
+                  <path fill="currentColor"
+                    d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
+                </svg>
               </span>
-              <div class="custom-select-modal" data-field="editTechRead" tabindex="0">
-                <div class="select-trigger">
-                  <span class="selected-text">Выберите оценку</span>
-                  <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none"
-                    xmlns="http://www.w3.org/2000/svg">
-                    <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round"
-                      stroke-linejoin="round" />
-                  </svg>
-                </div>
-                <ul class="select-options"></ul>
-              </div>
-              <input type="hidden" id="editTechRead" name="editTechRead" />
-            </div>
-            <div id="editOrganReadGroup">
-              <span>Организационная готовность
-                <span class="info-tooltip"
-                  data-tooltip="Организационная готовность (0-3) показывает, насколько организация готова к внедрению технологии. Учитываются процессы, компетенции, инфраструктура. 0 – не готова, 1 – низкая готовность, 2 – средняя готовность, 3 – высокая готовность."
-                  aria-label="Справка об организационной готовности">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 512 512"
-                    aria-hidden="true" focusable="false">
-                    <path fill="currentColor"
-                      d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
-                  </svg>
-                </span>
-              </span>
-              <div class="custom-select-modal" data-field="editOrganRead" tabindex="0">
-                <div class="select-trigger">
-                  <span class="selected-text">Выберите оценку</span>
-                  <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none"
-                    xmlns="http://www.w3.org/2000/svg">
-                    <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round"
-                      stroke-linejoin="round" />
-                  </svg>
-                </div>
-                <ul class="select-options"></ul>
-              </div>
-              <input type="hidden" id="editOrganRead" name="editOrganRead" />
-            </div>
-            <div>
-              <span>Покрытие функций
-                <span class="info-tooltip"
-                  data-tooltip="Покрытие функций (0-3) показывает, насколько полно технология покрывает необходимые функции. 0 – не покрывает, 1 – низкое покрытие, 2 – среднее покрытие, 3 – полное покрытие."
-                  aria-label="Справка о покрытии функций">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 512 512"
-                    aria-hidden="true" focusable="false">
-                    <path fill="currentColor"
-                      d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
-                  </svg>
-                </span>
-              </span>
-              <div class="custom-select-modal" data-field="editFuncCover" tabindex="0">
-                <div class="select-trigger">
-                  <span class="selected-text">Выберите оценку</span>
-                  <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none"
-                    xmlns="http://www.w3.org/2000/svg">
-                    <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round"
-                      stroke-linejoin="round" />
-                  </svg>
-                </div>
-                <ul class="select-options"></ul>
-              </div>
-              <input type="hidden" id="editFuncCover" name="editFuncCover" />
-            </div>
-            <div><span>TRL (стадия готовности технологии)
-                <span class="info-tooltip"
-                  data-tooltip="TRL (Technology Readiness Level) – стадия технологической готовности. 1-Исследовательская – ранняя стадия исследований, 2-Прототип – стадия разработки прототипа, 3-Технология готова к внедрению – зрелая стадия, готова к внедрению."
-                  aria-label="Справка о TRL">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 512 512"
-                    aria-hidden="true" focusable="false">
-                    <path fill="currentColor"
-                      d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
-                  </svg>
-                </span>
-              </span>
-              <div class="custom-select-modal" data-field="editTrlStage" tabindex="0">
-                <div class="select-trigger">
-                  <span class="selected-text">Выберите стадию</span>
-                  <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none"
-                    xmlns="http://www.w3.org/2000/svg">
-                    <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round"
-                      stroke-linejoin="round" />
-                  </svg>
-                </div>
-                <ul class="select-options"></ul>
-              </div>
-              <input type="hidden" id="editTrlStage" name="editTrlStage" />
-            </div>
-          </div>
-          <div id="editCompanyRatingsContainer" class="ratings-container">
-            <!-- Динамические поля оценок для каждого предприятия будут добавлены здесь -->
-          </div>
-          <div id="editPriorityPreview" class="edit-priority-preview" aria-live="polite">
-            <div class="priority-value" id="editPriorityValue">Приоритет: –</div>
-            <div class="priority-comment" id="editPriorityComment">Недостаточно данных для расчёта приоритета.</div>
-          </div>
-        </div>
-        <div class="form-group">
-          <label>Описание
-            <span class="info-tooltip"
-              data-tooltip="Описание технологии – это краткое изложение её сути, преимуществ и возможного применения в компании. Должно быть понятным и информативным."
-              aria-label="Справка об описании технологии">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
-                focusable="false">
-                <path fill="currentColor"
-                  d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
-              </svg>
-            </span>
-          </label>
-          <textarea id="editDesc" rows="3" required></textarea>
-        </div>
-        <div class="form-group">
-          <label>Примеры внедрений на рынке или в контуре
-            <span class="info-tooltip"
-              data-tooltip="Примеры внедрений – это описание реальных случаев использования технологии на рынке или в контуре компании. Помогает понять практическую применимость технологии."
-              aria-label="Справка о примерах внедрений">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
-                focusable="false">
-                <path fill="currentColor"
-                  d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
-              </svg>
-            </span>
-          </label>
-          <textarea id="editExampleDesc" rows="3"></textarea>
-        </div>
-        <div class="form-group" id="editVendorsGroup">
-          <label>Вендоры
-            <span class="info-tooltip"
-              data-tooltip="Вендоры – поставщики продукта/решения. Интеграторы – те, кто внедряет и настраивает решение. Выберите одного или нескольких вендоров; для каждого выбранного вендора ниже можно указать интеграторов."
-              aria-label="Справка о поле вендоров">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
-                focusable="false">
-                <path fill="currentColor"
-                  d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
-              </svg>
-            </span>
-          </label>
-          <div class="custom-select-modal" data-field="editVendors" tabindex="0">
-            <div class="select-trigger">
-              <span class="selected-text">Выберите</span>
-              <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none"
-                xmlns="http://www.w3.org/2000/svg">
-                <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round"
-                  stroke-linejoin="round" />
-              </svg>
-            </div>
-            <ul class="select-options"></ul>
-          </div>
-          <input type="hidden" id="editVendors" name="editVendors" />
-        </div>
-        <div class="form-group" id="editVendorIntegratorsGroup" style="display: none;">
-          <label>Интеграторы</label>
-          <div id="editVendorIntegratorsByVendor"></div>
-        </div>
-        <div class="form-group" id="editFilesGroup">
-          <label>Прикрепленные файлы
-            <span class="info-tooltip"
-              data-tooltip="Прикрепленные файлы – это документы, связанные с технологией (презентации, спецификации, договоры и т.д.). Можно загрузить несколько файлов разных форматов или добавить ссылки на файлы."
-              aria-label="Справка о файлах">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
-                focusable="false">
-                <path fill="currentColor"
-                  d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
-              </svg>
-            </span>
-          </label>
-          <div id="editFilesList" class="files-list">
-            <!-- Список загруженных файлов будет отображаться здесь -->
-          </div>
-          <div class="file-actions-container">
-            <label for="editFilesInput" class="file-input-label">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="17 8 12 3 7 8"></polyline>
-                <line x1="12" y1="3" x2="12" y2="15"></line>
-              </svg>
-              <span>Выбрать файлы</span>
+              <span class="required-star" data-tooltip="Это поле является обязательным">*</span>
             </label>
-            <button type="button" id="editAddLinkBtn" class="btn-secondary btn-with-icon file-add-btn">
-              <svg class="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"
-                xmlns="http://www.w3.org/2000/svg">
-                <path d="M10 13h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1M6 3H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h1M6 8h4"
-                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-              <span>Добавить ссылку</span>
-            </button>
+            <input type="text" id="editName" required />
           </div>
-          <div id="editAddLinkContainer" class="add-link-container" style="display: none;">
-            <input type="url" id="editLinkInput" class="link-input" placeholder="Введите URL ссылки на файл..." />
-            <button type="button" id="editConfirmLinkBtn" class="btn-primary btn-small">Добавить</button>
-            <button type="button" id="editCancelLinkBtn" class="btn-secondary btn-small">Отмена</button>
+          <div class="form-group">
+            <label>Направления цифрового развития
+              <span class="info-tooltip"
+                data-tooltip="Направления цифрового развития определяют позицию технологии на радаре (квадрант). Выберите одно или несколько направлений, к которым относится технология. Это поле определяет, в каком квадранте радара будет отображаться технология. Примеры: «Единый центр данных (Data Hub)», «Искусственный интеллект во всех процессах»."
+                aria-label="Справка о направлениях цифрового развития">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
+                  focusable="false">
+                  <path fill="currentColor"
+                    d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
+                </svg>
+              </span>
+              <span class="required-star" data-tooltip="Это поле является обязательным">*</span>
+            </label>
+            <div class="custom-select-modal" data-field="editDirections" tabindex="0">
+              <div class="select-trigger">
+                <span class="selected-text">Выберите</span>
+                <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none"
+                  xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                </svg>
+              </div>
+              <ul class="select-options"></ul>
+            </div>
+            <input type="hidden" id="editDirections" name="editDirections" required />
           </div>
-          <input type="file" id="editFilesInput" multiple style="display: none;" />
-          <input type="hidden" id="editFiles" name="editFiles" />
+          <div class="form-group">
+            <label>Функциональный блок
+              <span class="info-tooltip"
+                data-tooltip="Функциональный блок – это группа связанных функций, объединённых общей целью или областью ответственности. Пример: «Основное производство» или «Корпоративное управление». Это поле используется только для фильтрации и не влияет на позицию технологии на радаре."
+                aria-label="Справка о функциональном блоке">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
+                  focusable="false">
+                  <path fill="currentColor"
+                    d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
+                </svg>
+              </span>
+              <span class="required-star" data-tooltip="Это поле является обязательным">*</span>
+            </label>
+            <div class="custom-select-modal" data-field="editBlock" tabindex="0">
+              <div class="select-trigger">
+                <span class="selected-text">Выберите</span>
+                <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none"
+                  xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                </svg>
+              </div>
+              <ul class="select-options"></ul>
+            </div>
+            <input type="hidden" id="editBlock" name="editBlock" required />
+          </div>
+          <div class="form-group">
+            <label>Функция
+              <span class="info-tooltip"
+                data-tooltip="Функция – это конкретная задача или роль, выполняемая в рамках функционального блока. Пример: «Управление запасами» или «Мониторинг оборудования»."
+                aria-label="Справка о функции">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
+                  focusable="false">
+                  <path fill="currentColor"
+                    d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
+                </svg>
+              </span>
+              <span class="required-star" data-tooltip="Это поле является обязательным">*</span>
+            </label>
+            <div class="custom-select-modal" data-field="editFunc" tabindex="0">
+              <div class="select-trigger">
+                <span class="selected-text">Выберите</span>
+                <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none"
+                  xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                </svg>
+              </div>
+              <ul class="select-options"></ul>
+            </div>
+            <input type="hidden" id="editFunc" name="editFunc" required />
+          </div>
+          <div class="form-group">
+            <label>TRL (стадия готовности технологии)
+              <span class="info-tooltip"
+                data-tooltip="TRL (Technology Readiness Level) – стадия технологической готовности. 1-Исследовательская – ранняя стадия исследований, 2-Прототип – стадия разработки прототипа, 3-Технология готова к внедрению – зрелая стадия, готова к внедрению."
+                aria-label="Справка о TRL">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
+                  focusable="false">
+                  <path fill="currentColor"
+                    d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
+                </svg>
+              </span>
+              <span class="required-star" data-tooltip="Это поле является обязательным">*</span>
+            </label>
+            <div class="custom-select-modal" data-field="editTrlStage" tabindex="0">
+              <div class="select-trigger">
+                <span class="selected-text">Выберите стадию</span>
+                <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none"
+                  xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                </svg>
+              </div>
+              <ul class="select-options">
+                <li data-value="1-Исследовательская">1-Исследовательская</li>
+                <li data-value="2-Прототип">2-Прототип</li>
+                <li data-value="3-Технология готова к внедрению">3-Технология готова к внедрению</li>
+              </ul>
+            </div>
+            <input type="hidden" id="editTrlStage" name="editTrlStage" required />
+          </div>
+          <div class="form-group">
+            <label>Покрытие функций
+              <span class="info-tooltip"
+                data-tooltip="Покрытие функций (0-3) показывает, насколько полно технология покрывает необходимые функции. 0 – не покрывает, 1 – низкое покрытие, 2 – среднее покрытие, 3 – полное покрытие."
+                aria-label="Справка о покрытии функций">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
+                  focusable="false">
+                  <path fill="currentColor"
+                    d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
+                </svg>
+              </span>
+              <span class="required-star" data-tooltip="Это поле является обязательным">*</span>
+            </label>
+            <div class="custom-select-modal" data-field="editFuncCover" tabindex="0">
+              <div class="select-trigger">
+                <span class="selected-text">Выберите оценку</span>
+                <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none"
+                  xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                </svg>
+              </div>
+              <ul class="select-options">
+                <li data-value="0">0 — Не покрывает</li>
+                <li data-value="1">1 — Низкое покрытие</li>
+                <li data-value="2">2 — Среднее покрытие</li>
+                <li data-value="3">3 — Полное покрытие</li>
+              </ul>
+            </div>
+            <input type="hidden" id="editFuncCover" name="editFuncCover" required />
+          </div>
+          <div class="form-group">
+            <label>Описание
+              <span class="info-tooltip"
+                data-tooltip="Описание технологии – это краткое изложение её сути, преимуществ и возможного применения в компании. Должно быть понятным и информативным."
+                aria-label="Справка об описании технологии">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
+                  focusable="false">
+                  <path fill="currentColor"
+                    d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
+                </svg>
+              </span>
+              <span class="required-star" data-tooltip="Это поле является обязательным">*</span>
+            </label>
+            <textarea id="editDesc" rows="4" required></textarea>
+          </div>
+          <div class="form-group">
+            <label>Выбор предприятий
+              <span class="info-tooltip"
+                data-tooltip="Выберите конкретные предприятия или отметьте, что технология применима во всем холдинге. Если технология применима только к отдельным предприятиям, выберите их из списка. Если она универсальна для всего холдинга, отметьте соответствующую галочку."
+                aria-label="Справка об области применения">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
+                  focusable="false">
+                  <path fill="currentColor"
+                    d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
+                </svg>
+              </span>
+              <span class="required-star" data-tooltip="Выберите предприятия или отметьте галочку">*</span>
+            </label>
+            <div class="form-subgroup">
+              <div class="checkbox-group">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="editHoldingWide" name="editHoldingWide" />
+                  <span>Технология применима в холдинге</span>
+                </label>
+              </div>
+              <div class="form-group-or">
+                <span class="or-divider">ИЛИ</span>
+              </div>
+              <div class="form-group-no-margin">
+                <label>Выберите предприятия:</label>
+                <div class="custom-select-modal" data-field="editCompany" tabindex="0">
+                  <div class="select-trigger">
+                    <span class="selected-text">Выберите</span>
+                    <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none"
+                      xmlns="http://www.w3.org/2000/svg">
+                      <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                    </svg>
+                  </div>
+                  <ul class="select-options"></ul>
+                </div>
+                <input type="hidden" id="editCompany" name="editCompany" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Необязательные поля -->
+          <div class="form-section-divider">
+            <span>Дополнительная информация (необязательно)</span>
+          </div>
+
+          <div class="form-group">
+            <label>Примеры внедрений на рынке или в контуре
+              <span class="info-tooltip"
+                data-tooltip="Примеры внедрений – это описание реальных случаев использования технологии на рынке или в контуре компании. Помогает понять практическую применимость технологии. Это поле необязательно."
+                aria-label="Справка о примерах внедрений">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
+                  focusable="false">
+                  <path fill="currentColor"
+                    d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
+                </svg>
+              </span>
+            </label>
+            <textarea id="editExampleDesc" rows="3"></textarea>
+          </div>
+          <div class="form-group" id="editVendorsGroup">
+            <label>Вендоры и интеграторы
+              <span class="info-tooltip"
+                data-tooltip="Вендоры – поставщики продукта/решения. Интеграторы – те, кто внедряет и настраивает решение. Выберите одного или нескольких вендоров; для каждого выбранного вендора ниже можно указать интеграторов. Это поле необязательно."
+                aria-label="Справка о поле вендоров">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
+                  focusable="false">
+                  <path fill="currentColor"
+                    d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
+                </svg>
+              </span>
+            </label>
+            <div class="custom-select-modal" data-field="editVendors" tabindex="0">
+              <div class="select-trigger">
+                <span class="selected-text">Выберите</span>
+                <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none"
+                  xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                </svg>
+              </div>
+              <ul class="select-options"></ul>
+            </div>
+            <input type="hidden" id="editVendors" name="editVendors" />
+          </div>
+          <div class="form-group" id="editVendorIntegratorsGroup" style="display: none;">
+            <label>Интеграторы</label>
+            <div id="editVendorIntegratorsByVendor"></div>
+          </div>
+          <div class="form-group" id="editFilesGroup">
+            <label>Прикрепленные файлы
+              <span class="info-tooltip"
+                data-tooltip="Прикрепленные файлы – это документы, связанные с технологией (презентации, спецификации, договоры и т.д.). Можно загрузить несколько файлов разных форматов или добавить ссылки на файлы. Это поле необязательно."
+                aria-label="Справка о файлах">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
+                  focusable="false">
+                  <path fill="currentColor"
+                    d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
+                </svg>
+              </span>
+            </label>
+            <div id="editFilesList" class="files-list">
+              <!-- Список загруженных файлов будет отображаться здесь -->
+            </div>
+            <div class="file-actions-container">
+              <label for="editFilesInput" class="file-input-label">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                <span>Выбрать файлы</span>
+              </label>
+              <button type="button" id="editAddLinkBtn" class="btn-secondary btn-with-icon file-add-btn">
+                <svg class="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"
+                  xmlns="http://www.w3.org/2000/svg">
+                  <path d="M10 13h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1M6 3H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h1M6 8h4"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <span>Добавить ссылку</span>
+              </button>
+            </div>
+            <div id="editAddLinkContainer" class="add-link-container" style="display: none;">
+              <input type="url" id="editLinkInput" class="link-input" placeholder="Введите URL ссылки на файл..." />
+              <button type="button" id="editConfirmLinkBtn" class="btn-primary btn-small">Добавить</button>
+              <button type="button" id="editCancelLinkBtn" class="btn-secondary btn-small">Отмена</button>
+            </div>
+            <input type="file" id="editFilesInput" multiple style="display: none;" />
+            <input type="hidden" id="editFiles" name="editFiles" />
+          </div>
         </div>
+        <!-- Конец вкладки "Общая информация" -->
+
+        <!-- Динамические вкладки предприятий будут добавляться здесь через JavaScript -->
+        <div id="editEnterpriseTabsContent"></div>
+
       </form>
     </div>
     <div class="form-actions">
@@ -1032,6 +1133,46 @@
         <span>Отмена</span>
       </button>
     </div>
+
+    <!-- Индикатор загрузки -->
+    <div class="form-loading-indicator" id="editTechLoadingIndicator">
+      <div class="spinner"></div>
+      <span>Сохранение...</span>
+    </div>
+  </div>
+
+  <div id="addChoicePopover" class="popover-menu hidden">
+    <button id="chooseAddTech" class="btn-primary btn-with-icon">
+      <svg class="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+          stroke-linejoin="round" />
+      </svg>
+      <span>Добавить новую технологию</span>
+    </button>
+    <button id="chooseAddBlock" class="btn-secondary btn-with-icon">
+      <svg class="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5" />
+        <path d="M5 8h6M8 5v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+      </svg>
+      <span>Добавить функциональный блок</span>
+    </button>
+  </div>
+
+  <div id="addChoicePopover" class="popover-menu hidden">
+    <button id="chooseAddTech" class="btn-primary btn-with-icon">
+      <svg class="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+          stroke-linejoin="round" />
+      </svg>
+      <span>Добавить новую технологию</span>
+    </button>
+    <button id="chooseAddBlock" class="btn-secondary btn-with-icon">
+      <svg class="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5" />
+        <path d="M5 8h6M8 5v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+      </svg>
+      <span>Добавить функциональный блок</span>
+    </button>
   </div>
 
   <div id="addChoicePopover" class="popover-menu hidden">
@@ -1068,7 +1209,7 @@
           <input type="text" id="blockName" required />
         </div>
         <div class="form-group">
-          <label>Сектор</label>
+          <label>Направления</label>
           <div class="custom-select-modal" data-field="blockSector" tabindex="0">
             <div class="select-trigger">
               <span class="selected-text">Выберите</span>
@@ -1079,10 +1220,11 @@
               </svg>
             </div>
             <ul class="select-options">
-              <li data-value="Корпоративное управление и администрация">Корпоративное управление и администрация</li>
-              <li data-value="Основное производство">Основное производство</li>
-              <li data-value="Производственная поддержка и безопасность">Производственная поддержка и безопасность</li>
-              <li data-value="Внешние бизнесы">Внешние бизнесы</li>
+              <li data-value="Единый центр данных (Data Hub)">Единый центр данных (Data Hub)</li>
+              <li data-value="Искусственный интеллект во всех процессах">Искусственный интеллект во всех процессах</li>
+              <li data-value="Автономные комплексы на всех предприятиях">Автономные комплексы на всех предприятиях</li>
+              <li data-value="Надёжная и безопасная цифровая инфраструктура">Надёжная и безопасная цифровая
+                инфраструктура</li>
             </ul>
           </div>
           <input type="hidden" id="blockSector" name="blockSector" required />
@@ -1220,24 +1362,6 @@
           <div class="export-field-item">
             <div class="export-field-row">
               <label>
-                <input type="checkbox" id="field_techTypes" data-field="techTypes">
-                <span>Тип технологии</span>
-              </label>
-              <div class="export-multi-select" id="filter_techTypes_container" data-field="techTypes">
-                <div class="export-multi-select-trigger" tabindex="0">
-                  <span class="export-multi-select-text">Все типы</span>
-                  <span class="export-multi-select-arrow"></span>
-                </div>
-                <div class="export-multi-select-dropdown">
-                  <div class="export-multi-select-options"></div>
-                </div>
-                <input type="hidden" id="filter_techTypes" value="">
-              </div>
-            </div>
-          </div>
-          <div class="export-field-item">
-            <div class="export-field-row">
-              <label>
                 <input type="checkbox" id="field_status" data-field="status" checked>
                 <span>Статус</span>
               </label>
@@ -1313,27 +1437,6 @@
                   <div class="export-multi-select-options"></div>
                 </div>
                 <input type="hidden" id="filter_funcCover" value="">
-              </div>
-            </div>
-          </div>
-          <div class="export-field-item">
-            <div class="export-field-row">
-              <label>
-                <input type="checkbox" id="field_priority" data-field="priority">
-                <span>Приоритет технологии, % (0–100%)</span>
-              </label>
-              <div class="export-multi-select" id="filter_priority_container" data-field="priority">
-                <div class="export-multi-select-trigger" tabindex="0">
-                  <span class="export-multi-select-text">Все приоритеты</span>
-                  <span class="export-multi-select-arrow"></span>
-                </div>
-                <div class="export-multi-select-dropdown">
-                  <div class="export-multi-select-search">
-                    <input type="text" placeholder="Поиск..." autocomplete="off">
-                  </div>
-                  <div class="export-multi-select-options"></div>
-                </div>
-                <input type="hidden" id="filter_priority" value="">
               </div>
             </div>
           </div>
@@ -1476,7 +1579,14 @@
 
   <div id="notificationPanel" class="notification-panel"></div>
   <!-- Все модули загружаются динамически через RMK-director.js -->
+
+  <!-- Утилиты для расчета покрытия функций (должен быть загружен первым) -->
+  <script src="/src/js/modules/utils/func-cover-utils.js"></script>
+
   <script src="/src/js/modules/ui/common-ui.js"></script>
+  <script src="/src/js/modules/ui/tech-tabs-manager.js"></script>
+  <script src="/src/js/modules/ui/edit-tech-tabs-manager.js"></script>
+  <script src="/src/js/modules/ui/func-cover-calculator.js"></script>
   <!-- Проверка доступа: RMK-director.html доступна для всех авторизованных пользователей -->
   <!-- Все роли (архитекторы, директоры, РП, администраторы) работают на одной странице -->
   <script src="/src/js/RMK-director.js"></script>

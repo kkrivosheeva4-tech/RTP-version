@@ -110,7 +110,7 @@
       window.initSelectEvents();
     }
 
-    // ===== ПАНЕЛЬ ПРИОРИТЕТОВ =====
+    // ===== ПАНЕЛЬ СПИСКА ТЕХНОЛОГИЙ =====
     const closeQuadrantPriorityPanelBtn = document.getElementById(
       "closeQuadrantPriorityPanel"
     );
@@ -442,9 +442,9 @@
     document.addEventListener("click", (e) => {
       // Игнорируем клики по переключателю темы и его элементам
       if (e.target.closest("#themeToggle") || e.target.id === "themeToggle" ||
-          e.target.closest("label[for='themeToggle']") ||
-          e.target.closest(".theme-switch") ||
-          e.target.closest(".theme-toggle-wrapper")) {
+        e.target.closest("label[for='themeToggle']") ||
+        e.target.closest(".theme-switch") ||
+        e.target.closest(".theme-toggle-wrapper")) {
         return;
       }
       const clickedOnSidebarInteractive =
@@ -642,9 +642,9 @@
           if (typeof window.setSelectedBlipId === "function") {
             window.setSelectedBlipId(null);
           }
-          // НЕ сбрасываем currentTech, так как мы возвращаемся к списку приоритетных технологий
+          // НЕ сбрасываем currentTech, так как мы возвращаемся к списку технологий
 
-          // Открываем модальное окно приоритетных технологий
+          // Открываем модальное окно со списком технологий
           if (
             typeof window.getCurrentZoomedQuadrant === "function" &&
             typeof window.zoomQuadrant === "function" &&
@@ -659,7 +659,7 @@
               if (g && !g.classList.contains("zoomed-in")) {
                 window.zoomQuadrant(currentZoomed, { source: "priority" });
               }
-              // Открываем модальное окно приоритетных технологий
+              // Открываем модальное окно со списком технологий
               window.openQuadrantPriorityPanel(currentZoomed);
               window.recomputeQuadrantPriorityList(currentZoomed);
             } else {
@@ -669,7 +669,7 @@
             }
           } else {
             if (window.Logger) window.Logger.warn(
-              'Кнопка "Назад": функции для работы с модальным окном приоритетных технологий недоступны'
+              'Кнопка "Назад": функции для работы с модальным окном списка технологий недоступны'
             );
           }
         });
@@ -805,14 +805,6 @@
           if (typeof window.appendAdminAudit === 'function') {
             window.appendAdminAudit('create', 'Открыто модальное окно добавления технологии');
           }
-        }
-        if (
-          typeof window.setCustomSelectValue === "function" &&
-          typeof window.currentEnterprise !== "undefined"
-        ) {
-          window.setCustomSelectValue("techCompany", [
-            window.currentEnterprise,
-          ]);
         }
         // Инициализация фильтрации при открытии модального окна
         if (typeof window.initModalFilters === "function") {
@@ -1017,9 +1009,9 @@
       if (Date.now() < ignoreOutsideClickUntil) return;
       // Игнорируем клики по переключателю темы и его элементам
       if (e.target.closest("#themeToggle") || e.target.id === "themeToggle" ||
-          e.target.closest("label[for='themeToggle']") ||
-          e.target.closest(".theme-switch") ||
-          e.target.closest(".theme-toggle-wrapper")) {
+        e.target.closest("label[for='themeToggle']") ||
+        e.target.closest(".theme-switch") ||
+        e.target.closest(".theme-toggle-wrapper")) {
         return;
       }
       const mod = e.target.closest(".modal-panel");

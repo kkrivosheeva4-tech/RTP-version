@@ -197,8 +197,8 @@
    * Показывает меню помощи
    */
   function showHelpMenu(button) {
-    // Проверяем, находимся ли мы на странице радара (RMK-director.html или RMK.html для обратной совместимости)
-    const isRMKPage = window.location.pathname.includes('RMK-director.html') || window.location.pathname.includes('RMK.html') || window.location.href.includes('RMK-director.html') || window.location.href.includes('RMK.html');
+    // Проверяем, находимся ли мы на странице радара (RMK-director.html)
+    const isRMKPage = window.location.pathname.includes('RMK-director.html') || window.location.href.includes('RMK-director.html');
 
     // Создаем выпадающее меню
     const menu = document.createElement('div');

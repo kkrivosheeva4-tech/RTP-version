@@ -187,6 +187,25 @@
       setTimeout(() => renderVendorIntegrators(p), 0);
     });
 
+    // ===== HOLDING WIDE CHECKBOX HANDLER =====
+    // Обработчик для галочки "Применима в холдинге"
+    const holdingWideCheckbox = document.getElementById('techHoldingWide');
+    if (holdingWideCheckbox) {
+      holdingWideCheckbox.addEventListener('change', () => {
+        const techCompanyField = document.getElementById('techCompany');
+        const holdingWideChecked = holdingWideCheckbox.checked;
+
+        if (holdingWideChecked) {
+          // Если отмечена "Применима в холдинге", очищаем выбор предприятий
+          if (typeof window.setCustomSelectValue === 'function') {
+            window.setCustomSelectValue('techCompany', []);
+          } else if (techCompanyField) {
+            techCompanyField.value = '';
+          }
+        }
+      });
+    }
+
     // ===== LIVE PRIORITY PREVIEW (EDIT FORM) =====
     function parseLeadingInt(value) {
       if (value === undefined || value === null) return null;
@@ -213,129 +232,8 @@
     }
 
     function updateEditTechPriorityPreview() {
-      const preview = document.getElementById("editPriorityPreview");
-      const valueEl = document.getElementById("editPriorityValue");
-      const commentEl = document.getElementById("editPriorityComment");
-      if (!preview || !valueEl || !commentEl) return;
-
-      const computePriority =
-        window.Priorities?.computePriority || window.computePriority;
-      const getPriorityCategory =
-        window.Priorities?.getPriorityCategory || window.getPriorityCategory;
-      const getPriorityWeakLinkComment =
-        window.Priorities?.getPriorityWeakLinkComment ||
-        window.getPriorityWeakLinkComment;
-
-      if (
-        typeof computePriority !== "function" ||
-        typeof getPriorityCategory !== "function" ||
-        typeof getPriorityWeakLinkComment !== "function"
-      ) {
-        return;
-      }
-
-      let existing = null;
-      try {
-        const StateAccessors = getStateAccessors();
-        const id = +getFormFieldValue("editId");
-        if (id) {
-          const techs = StateAccessors.getTechnologies();
-          existing = techs.find((t) => t.id === id) || null;
-        }
-      } catch (e) {
-        existing = null;
-      }
-
-      // Собираем "кандидат" технологии из значений формы + (если есть) существующей технологии.
-      const candidate = Object.assign({}, existing || {});
-
-      // Статус больше не редактируется в форме, используем существующее значение
-      // candidate.status и candidate.level уже установлены из existing выше
-
-      const trlStage = parseLeadingInt(getFormFieldValue("editTrlStage"));
-      if (trlStage != null && trlStage >= 1 && trlStage <= 3) {
-        candidate.trlStage = trlStage;
-      } else {
-        delete candidate.trlStage;
-      }
-
-      const funcCover = parseLeadingInt(getFormFieldValue("editFuncCover"));
-      if (funcCover != null && funcCover >= 0 && funcCover <= 3) {
-        candidate.funcCover = funcCover;
-      } else {
-        // не мешаем вычислению приоритета, если поле пустое
-        if (!existing || existing.funcCover == null) delete candidate.funcCover;
-      }
-
-      // Предприятия: строка или JSON-массив в скрытом поле.
-      const companies = safeParseArrayOrString(getFormFieldValue("editCompany"));
-      if (companies.length === 1) candidate.company = companies[0];
-      else if (companies.length > 1) candidate.company = companies;
-
-      if (companies.length <= 1) {
-        const techRead = parseLeadingInt(getFormFieldValue("editTechRead"));
-        const organRead = parseLeadingInt(getFormFieldValue("editOrganRead"));
-
-        if (techRead != null && techRead >= 0 && techRead <= 3) {
-          candidate.techRead = techRead;
-        } else if (!existing || existing.techRead == null) {
-          delete candidate.techRead;
-        }
-
-        if (organRead != null && organRead >= 0 && organRead <= 3) {
-          candidate.organRead = organRead;
-        } else if (!existing || existing.organRead == null) {
-          delete candidate.organRead;
-        }
-
-        if (candidate.companyRatings) delete candidate.companyRatings;
-      } else {
-        // Для нескольких предприятий: читаем поля *_{company} (если есть) и кладём в companyRatings.
-        const companyRatings = {};
-        let hasAny = false;
-        companies.forEach((c) => {
-          const tr = parseLeadingInt(getFormFieldValue(`editTechRead_${c}`));
-          const or = parseLeadingInt(getFormFieldValue(`editOrganRead_${c}`));
-          const ratings = {};
-          if (tr != null && tr >= 0 && tr <= 3) {
-            ratings.techRead = tr;
-            hasAny = true;
-          }
-          if (or != null && or >= 0 && or <= 3) {
-            ratings.organRead = or;
-            hasAny = true;
-          }
-          if (Object.keys(ratings).length) {
-            companyRatings[c] = ratings;
-          }
-        });
-        if (hasAny) candidate.companyRatings = companyRatings;
-        else if (candidate.companyRatings) delete candidate.companyRatings;
-      }
-
-      const priority = computePriority(candidate, "mult");
-      const category = getPriorityCategory(priority);
-
-      preview.classList.remove(
-        "priority-low",
-        "priority-medium",
-        "priority-high",
-        "priority-none"
-      );
-
-      if (priority == null || category.key === "none") {
-        valueEl.textContent = "Приоритет: —";
-        commentEl.textContent = category.description;
-        preview.classList.add("priority-none");
-      } else {
-        const percent = Math.round(priority * 100);
-        valueEl.textContent = `Приоритет: ${percent}% (${category.label})`;
-        commentEl.textContent = getPriorityWeakLinkComment(candidate);
-        if (category.key === "low") preview.classList.add("priority-low");
-        else if (category.key === "medium")
-          preview.classList.add("priority-medium");
-        else if (category.key === "high") preview.classList.add("priority-high");
-      }
+      // Функция отключена - приоритеты больше не используются
+      return;
     }
 
     // ===== ФОРМЫ =====
@@ -387,6 +285,16 @@
     const cancelAdd = document.getElementById("cancelAdd");
     if (cancelAdd) {
       cancelAdd.onclick = () => {
+        // Сбрасываем форму и очищаем состояние при отмене
+        if (window.TechTabsManager) {
+          if (typeof window.TechTabsManager.resetForm === 'function') {
+            window.TechTabsManager.resetForm();
+          }
+          if (typeof window.TechTabsManager.clearFormState === 'function') {
+            window.TechTabsManager.clearFormState();
+          }
+        }
+
         if (typeof window.hideModal === "function") {
           window.hideModal("addTechPanel");
         }
@@ -663,58 +571,59 @@
                 : []
           );
           // Поля "Тип технологии" и "Статус" удалены из формы редактирования
-          // Устанавливаем предприятия
+          // Устанавливаем галочку "Применима в холдинге" или предприятия
+          const holdingWideCheckbox = document.getElementById("editHoldingWide");
           const companies = Array.isArray(currentTech.company)
             ? currentTech.company
             : currentTech.company
               ? [currentTech.company]
               : [];
-          window.setCustomSelectValue(
-            "editCompany",
-            companies.length > 0 ? companies : ""
-          );
-          // Вызываем renderMultiSelectTags для отображения тегов множественного выбора
-          const editCompanySelect = document.querySelector(
-            '.custom-select-modal[data-field="editCompany"]'
-          );
-          if (
-            editCompanySelect &&
-            typeof window.renderMultiSelectTags === "function"
-          ) {
-            setTimeout(() => {
-              window.renderMultiSelectTags(editCompanySelect);
-            }, 50);
+
+          // Проверяем, применима ли технология в холдинге
+          const isHoldingWide = currentTech.holdingWide === true || currentTech.holdingWide === 'true';
+
+          if (holdingWideCheckbox) {
+            holdingWideCheckbox.checked = isHoldingWide;
+          }
+
+          // Если не применима в холдинге, устанавливаем предприятия
+          if (!isHoldingWide) {
+            window.setCustomSelectValue(
+              "editCompany",
+              companies.length > 0 ? companies : ""
+            );
+            // Вызываем renderMultiSelectTags для отображения тегов множественного выбора
+            const editCompanySelect = document.querySelector(
+              '.custom-select-modal[data-field="editCompany"]'
+            );
+            if (
+              editCompanySelect &&
+              typeof window.renderMultiSelectTags === "function"
+            ) {
+              setTimeout(() => {
+                window.renderMultiSelectTags(editCompanySelect);
+              }, 50);
+            }
+
+            // Загружаем данные предприятий в вкладки через EditTechTabsManager
+            if (currentTech.companyRatings && companies.length > 0) {
+              // Данные будут загружены после создания вкладок в EditTechTabsManager
+              // См. код ниже после showModal
+            }
+          } else {
+            // Если применима в холдинге, очищаем выбор предприятий
+            window.setCustomSelectValue("editCompany", "");
           }
         }
-        // ratings - устанавливаем значения в выпадающие списки
+        // Общие поля оценок
         const ratingOptions = {
-          0: "0 — Не готова",
-          1: "1 — Низкая",
-          2: "2 — Средняя",
-          3: "3 — Высокая",
+          0: "0 — Не покрывает",
+          1: "1 — Низкое покрытие",
+          2: "2 — Среднее покрытие",
+          3: "3 — Полное покрытие",
         };
         if (typeof window.setCustomSelectValue === "function") {
-          // Технологическая готовность
-          if (
-            currentTech.techRead !== undefined &&
-            currentTech.techRead !== null
-          ) {
-            const trValue = ratingOptions[currentTech.techRead];
-            window.setCustomSelectValue("editTechRead", trValue || "");
-          } else {
-            window.setCustomSelectValue("editTechRead", "");
-          }
-          // Организационная готовность
-          if (
-            currentTech.organRead !== undefined &&
-            currentTech.organRead !== null
-          ) {
-            const orValue = ratingOptions[currentTech.organRead];
-            window.setCustomSelectValue("editOrganRead", orValue || "");
-          } else {
-            window.setCustomSelectValue("editOrganRead", "");
-          }
-          // Покрытие функций
+          // Покрытие функций (общее для всей технологии)
           if (
             currentTech.funcCover !== undefined &&
             currentTech.funcCover !== null
@@ -810,6 +719,35 @@
             if (typeof window.appendAdminAudit === 'function' && currentTech) {
               window.appendAdminAudit('update', `Открыто модальное окно редактирования технологии: "${currentTech.name}" (ID: ${currentTech.id})`);
             }
+
+            // Принудительно создаём вкладки предприятий после открытия окна
+            setTimeout(() => {
+              // Вызываем метод напрямую из EditTechTabsManager
+              if (window.EditTechTabsManager && typeof window.EditTechTabsManager.updateTabs === 'function') {
+                window.EditTechTabsManager.updateTabs();
+              }
+
+              // Также триггерим событие change для совместимости
+              const editCompanyInput = document.getElementById("editCompany");
+              if (editCompanyInput && editCompanyInput.value) {
+                const event = new Event('change', { bubbles: true });
+                editCompanyInput.dispatchEvent(event);
+              }
+
+              // Загружаем данные предприятий в созданные вкладки
+              if (currentTech.companyRatings && window.EditTechTabsManager && typeof window.EditTechTabsManager.loadEnterpriseData === 'function') {
+                setTimeout(() => {
+                  window.EditTechTabsManager.loadEnterpriseData(currentTech.companyRatings);
+                }, 150);
+              }
+
+              // Обновляем funcCover на основе выбранных направлений
+              if (window.FuncCoverCalculator && typeof window.FuncCoverCalculator.handleDirectionsChange === 'function') {
+                setTimeout(() => {
+                  window.FuncCoverCalculator.handleDirectionsChange('editDirections', 'editFuncCover');
+                }, 250);
+              }
+            }, 200);
           }
         }, 0);
       }
@@ -946,6 +884,43 @@
     const DataLoader = getDataLoader();
     const Positioning = getPositioning();
 
+    // Показываем индикатор загрузки
+    const loadingIndicator = document.getElementById('addTechLoadingIndicator');
+    if (loadingIndicator) {
+      loadingIndicator.classList.add('active');
+    }
+
+    // Валидация формы через TechTabsManager
+    if (window.TechTabsManager && typeof window.TechTabsManager.validateForm === 'function') {
+      const validation = window.TechTabsManager.validateForm();
+      if (!validation.valid) {
+        const errorMessage = 'Пожалуйста, заполните все обязательные поля:\n' + validation.errors.join('\n');
+        DataLoader.showNotification(errorMessage, false);
+
+        // Скрываем индикатор загрузки при ошибке
+        if (loadingIndicator) {
+          loadingIndicator.classList.remove('active');
+        }
+        return;
+      }
+    }
+
+    // Валидация поля "Область применения" - должна быть либо галочка, либо выбрано предприятие
+    const holdingWideCheckbox = document.getElementById('techHoldingWide');
+    const techCompanyField = document.getElementById('techCompany');
+    const holdingWideChecked = holdingWideCheckbox && holdingWideCheckbox.checked;
+    const companiesSelected = techCompanyField && techCompanyField.value && techCompanyField.value.trim();
+
+    if (!holdingWideChecked && !companiesSelected) {
+      DataLoader.showNotification('Пожалуйста, отметьте "Применима в холдинге" или выберите конкретные предприятия', false);
+
+      // Скрываем индикатор загрузки при ошибке
+      if (loadingIndicator) {
+        loadingIndicator.classList.remove('active');
+      }
+      return;
+    }
+
     // Получаем глобальные переменные
     const RINGS = window.RINGS || [];
     const QUADRANTS = window.QUADRANTS || [];
@@ -1017,6 +992,9 @@
     // Если не выбрано ни одного предприятия, оставляем пустым массивом
     // company: companiesVal.length === 1 ? companiesVal[0] : companiesVal,
 
+    // Получаем TRL стадию
+    const trlStageVal = getFormFieldValue("techTrlStage").trim();
+
     const t = {
       id: nextId++,
       name: getFormFieldValue("techName").trim(),
@@ -1030,6 +1008,8 @@
       techType: '',
       level: '',
       company: companiesVal.length > 0 ? (companiesVal.length === 1 ? companiesVal[0] : companiesVal) : [],
+      holdingWide: holdingWideChecked,
+      trlStage: trlStageVal,
       description: getFormFieldValue("techDesc").trim(),
       exampleDesc: getFormFieldValue('techExampleDesc').trim(),
       vendors: parseVendorsFromField('techVendors'),
@@ -1057,21 +1037,33 @@
     const costVal = Number(getFormFieldValue('techCostProm'));
     if (!Number.isNaN(costVal)) t.costProm = costVal; else delete t.costProm;
 
-    // Автоматический расчет покрытия функций на основе количества выбранных функций
-    // Логика: 1 функция = 1, 2-3 функции = 2, 4+ функций = 3
-    const functionsCount = Array.isArray(rawFuncVal) ? rawFuncVal.length : (rawFuncVal ? 1 : 0);
-    if (functionsCount > 0) {
-      if (functionsCount === 1) {
-        t.funcCover = 1;
-      } else if (functionsCount >= 2 && functionsCount <= 3) {
-        t.funcCover = 2;
-      } else if (functionsCount >= 4) {
-        t.funcCover = 3;
-      }
+    // Получаем покрытие функций из формы
+    const funcCoverVal = getFormFieldValue("techFuncCover").trim();
+    if (funcCoverVal !== '') {
+      t.funcCover = Number(funcCoverVal);
     }
 
-    // ПРИМЕЧАНИЕ: Поля techRead, organRead, trlStage, isImplemented НЕ сохраняются при добавлении технологии
-    // Эти поля заполняются отдельно в карточке редактирования технологии после добавления
+    // Получаем данные из вкладок предприятий через TechTabsManager
+    let enterprisesData = [];
+    if (window.TechTabsManager && typeof window.TechTabsManager.getAllEnterpriseData === 'function') {
+      const enterpriseTabsData = window.TechTabsManager.getAllEnterpriseData();
+
+      // Преобразуем данные в формат для сохранения
+      Object.entries(enterpriseTabsData).forEach(([enterpriseName, data]) => {
+        enterprisesData.push({
+          name: enterpriseName,
+          technologicalReadiness: data.technologicalReadiness ? Number(data.technologicalReadiness) : null,
+          organizationalReadiness: data.organizationalReadiness ? Number(data.organizationalReadiness) : null,
+          isImplemented: Boolean(data.isImplemented)
+        });
+      });
+    }
+
+    // Добавляем данные предприятий в объект технологии
+    if (enterprisesData.length > 0) {
+      t.enterprises = enterprisesData;
+    }
+    // TRL стадия (trlStage) теперь сохраняется при добавлении технологии
 
     // Поле "Тип технологии" удалено из формы добавления
     t.techType = '';
@@ -1187,6 +1179,21 @@
 
     DataLoader.ensureAndPersistNewTech(t);
 
+    // Скрываем индикатор загрузки после успешного сохранения
+    if (loadingIndicator) {
+      loadingIndicator.classList.remove('active');
+    }
+
+    // Очищаем состояние формы из localStorage после успешного сохранения
+    if (window.TechTabsManager && typeof window.TechTabsManager.clearFormState === 'function') {
+      window.TechTabsManager.clearFormState();
+    }
+
+    // Сбрасываем форму
+    if (window.TechTabsManager && typeof window.TechTabsManager.resetForm === 'function') {
+      window.TechTabsManager.resetForm();
+    }
+
     if (typeof window.hideModal === 'function') {
       window.hideModal('addTechPanel');
     }
@@ -1292,6 +1299,31 @@
 
     const RINGS = window.RINGS || [];
 
+    // Валидация обязательных полей
+    const requiredFields = [
+      { id: 'editName', label: 'Название' },
+      { id: 'editDirections', label: 'Направления цифрового развития' },
+      { id: 'editBlock', label: 'Функциональный блок' },
+      { id: 'editFunc', label: 'Функция' },
+      { id: 'editTrlStage', label: 'TRL (стадия готовности технологии)' },
+      { id: 'editFuncCover', label: 'Покрытие функций' },
+      { id: 'editDesc', label: 'Описание' }
+    ];
+
+    const missingFields = [];
+    for (const field of requiredFields) {
+      const element = document.getElementById(field.id);
+      if (!element || !element.value.trim()) {
+        missingFields.push(field.label);
+      }
+    }
+
+    if (missingFields.length > 0) {
+      const errorMessage = 'Пожалуйста, заполните следующие обязательные поля:\n' + missingFields.join('\n');
+      DataLoader.showNotification(errorMessage, false);
+      return;
+    }
+
     const id = +getFormFieldValue("editId");
     const technologies = StateAccessors.getTechnologies();
     const idx = technologies.findIndex(t => t.id === id);
@@ -1369,11 +1401,6 @@
       } else {
         technologies[idx].funcCover = clamp03(fc);
       }
-    } else {
-      // Если поле пустое, сохраняем существующее значение funcCover из existing
-      if (existing.funcCover !== undefined && existing.funcCover !== null) {
-        technologies[idx].funcCover = existing.funcCover;
-      }
     }
 
     const trlValue = getFormFieldValue('editTrlStage');
@@ -1383,17 +1410,14 @@
         const trlNum = parseInt(trlMatch[1], 10);
         if (trlNum >= 1 && trlNum <= 3) {
           technologies[idx].trlStage = trlNum;
-        } else {
-          delete technologies[idx].trlStage;
         }
-      } else {
-        delete technologies[idx].trlStage;
       }
-    } else {
-      delete technologies[idx].trlStage;
     }
 
-    // Извлекаем предприятия из формы редактирования
+    // Извлекаем предприятия из формы редактирования и галочку "holdingWide"
+    const holdingWideCheckbox = document.getElementById("editHoldingWide");
+    const isHoldingWide = holdingWideCheckbox && holdingWideCheckbox.checked;
+
     const rawCompanyE = getFormFieldValue("editCompany");
     let companiesValE = [];
     try {
@@ -1405,9 +1429,11 @@
     } catch (err) {
       if (rawCompanyE) companiesValE = [rawCompanyE];
     }
-    const companies = Array.isArray(companiesValE) && companiesValE.length > 0
-      ? companiesValE
-      : (Array.isArray(existing.company) ? existing.company : (existing.company ? [existing.company] : []));
+    const companies = isHoldingWide
+      ? []
+      : (Array.isArray(companiesValE) && companiesValE.length > 0
+        ? companiesValE
+        : (Array.isArray(existing.company) ? existing.company : (existing.company ? [existing.company] : [])));
 
     // Обработка файлов при редактировании
     const filesValue = getFormFieldValue('editFiles');
@@ -1422,8 +1448,15 @@
       }
     }
 
-    // Обновляем поле company в технологии
+    // Обновляем поле company и holdingWide в технологии
     technologies[idx].company = companies.length === 1 ? companies[0] : companies;
+    technologies[idx].holdingWide = isHoldingWide;
+
+    // Получаем данные из вкладок предприятий (если используется EditTechTabsManager)
+    let enterpriseTabsData = {};
+    if (window.EditTechTabsManager && typeof window.EditTechTabsManager.getAllEnterpriseData === 'function') {
+      enterpriseTabsData = window.EditTechTabsManager.getAllEnterpriseData();
+    }
 
     // Обрабатываем данные по предприятиям (для всех предприятий, даже одного)
     if (companies.length > 0) {
@@ -1432,71 +1465,39 @@
       const clamp13 = (n) => Math.max(1, Math.min(3, Number(n)));
 
       companies.forEach(company => {
-        // Извлекаем значения из выпадающих списков для каждого предприятия
-        const techReadVal = getFormFieldValue(`editTechRead_${company}`);
-        const organReadVal = getFormFieldValue(`editOrganRead_${company}`);
-        const trlStageVal = getFormFieldValue(`editTrlStage_${company}`);
-        const isImplementedCheckbox = document.getElementById(`editIsImplemented_${company}`);
+        // Получаем данные из вкладок предприятий
+        let techReadVal, organReadVal, isImplementedVal;
+
+        if (enterpriseTabsData[company]) {
+          // Используем данные из вкладок
+          techReadVal = enterpriseTabsData[company].technologicalReadiness;
+          organReadVal = enterpriseTabsData[company].organizationalReadiness;
+          isImplementedVal = enterpriseTabsData[company].isImplemented;
+        }
 
         const ratings = {};
 
         // Технологическая готовность (0-3)
-        if (techReadVal !== undefined && techReadVal !== null && techReadVal !== '' && String(techReadVal).trim() !== '') {
-          const trMatch = String(techReadVal).match(/^(\d+)/);
-          if (trMatch) {
-            const trNum = parseInt(trMatch[1], 10);
-            if (trNum >= 0 && trNum <= 3) {
-              ratings.techRead = trNum;
-              hasAnyRatings = true;
-            }
-          } else {
-            const clamped = clamp03(techReadVal);
-            if (!isNaN(clamped)) {
-              ratings.techRead = clamped;
-              hasAnyRatings = true;
-            }
+        if (techReadVal !== undefined && techReadVal !== null && techReadVal !== '') {
+          const trNum = parseInt(techReadVal, 10);
+          if (!isNaN(trNum) && trNum >= 0 && trNum <= 3) {
+            ratings.techRead = trNum;
+            hasAnyRatings = true;
           }
         }
 
         // Организационная готовность (0-3)
-        if (organReadVal !== undefined && organReadVal !== null && organReadVal !== '' && String(organReadVal).trim() !== '') {
-          const orMatch = String(organReadVal).match(/^(\d+)/);
-          if (orMatch) {
-            const orNum = parseInt(orMatch[1], 10);
-            if (orNum >= 0 && orNum <= 3) {
-              ratings.organRead = orNum;
-              hasAnyRatings = true;
-            }
-          } else {
-            const clamped = clamp03(organReadVal);
-            if (!isNaN(clamped)) {
-              ratings.organRead = clamped;
-              hasAnyRatings = true;
-            }
-          }
-        }
-
-        // TRL стадия (1-3)
-        if (trlStageVal !== undefined && trlStageVal !== null && trlStageVal !== '' && String(trlStageVal).trim() !== '') {
-          const trlMatch = String(trlStageVal).match(/^(\d+)/);
-          if (trlMatch) {
-            const trlNum = parseInt(trlMatch[1], 10);
-            if (trlNum >= 1 && trlNum <= 3) {
-              ratings.trlStage = trlNum;
-              hasAnyRatings = true;
-            }
-          } else {
-            const clamped = clamp13(trlStageVal);
-            if (!isNaN(clamped)) {
-              ratings.trlStage = clamped;
-              hasAnyRatings = true;
-            }
+        if (organReadVal !== undefined && organReadVal !== null && organReadVal !== '') {
+          const orNum = parseInt(organReadVal, 10);
+          if (!isNaN(orNum) && orNum >= 0 && orNum <= 3) {
+            ratings.organRead = orNum;
+            hasAnyRatings = true;
           }
         }
 
         // Внедрена/Не внедрена (boolean)
-        if (isImplementedCheckbox) {
-          ratings.isImplemented = isImplementedCheckbox.checked === true;
+        if (isImplementedVal !== undefined) {
+          ratings.isImplemented = isImplementedVal === true;
           hasAnyRatings = true;
         }
 
@@ -1524,17 +1525,14 @@
           if (ratings.organRead !== undefined && ratings.organRead !== null) {
             technologies[idx].organRead = ratings.organRead;
           }
-          if (ratings.trlStage !== undefined && ratings.trlStage !== null) {
-            technologies[idx].trlStage = ratings.trlStage;
-          }
           if (ratings.isImplemented !== undefined) {
             technologies[idx].isImplemented = ratings.isImplemented;
           }
         }
       }
 
-      // Важно: funcCover - общее значение для всех предприятий, оно уже сохранено выше
-      // Не удаляем его, даже если есть индивидуальные оценки для предприятий
+      // Важно: funcCover и trlStage - общие значения для всей технологии, они уже сохранены выше
+      // Не удаляем их, даже если есть индивидуальные оценки для предприятий
     }
 
     // Проверяем, нужно ли пересчитывать координаты
@@ -1697,10 +1695,10 @@
         const nameInput = DOMCache.get('blockName');
         const sectorInput = DOMCache.get('blockSector');
         if (!nameInput) { DataLoader.showNotification('Не найдено поле имени блока (blockName)', false); return; }
-        if (!sectorInput) { DataLoader.showNotification('Не найдено поле выбора сектора (blockSector)', false); return; }
+        if (!sectorInput) { DataLoader.showNotification('Не найдено поле выбора направления (blockSector)', false); return; }
         const blockName = (nameInput.value || '').trim();
 
-        // Получаем значение сектора из кастомного селекта
+        // Получаем значение направления из кастомного селекта
         let sectorName = (sectorInput.value || '').trim();
 
         // Если значение пустое, пробуем получить из атрибута data-value селекта
@@ -1735,7 +1733,7 @@
         }
 
         if (!blockName) { DataLoader.showNotification('Введите имя блока', false); return; }
-        if (!sectorName || sectorName === 'Выберите') { DataLoader.showNotification('Выберите сектор', false); return; }
+        if (!sectorName || sectorName === 'Выберите') { DataLoader.showNotification('Выберите направление', false); return; }
 
         // Получаем QUADRANTS из window или создаем дефолтные значения
         let QUADRANTS_LOCAL = window.QUADRANTS || [];
@@ -1743,10 +1741,10 @@
         // Если QUADRANTS не загружены, используем дефолтные значения
         if (!QUADRANTS_LOCAL || QUADRANTS_LOCAL.length === 0) {
           QUADRANTS_LOCAL = [
-            { id: 1, name: "Корпоративное управление и администрация", startAngle: 0 },
-            { id: 2, name: "Основное производство", startAngle: 90 },
-            { id: 3, name: "Производственная поддержка и безопасность", startAngle: 180 },
-            { id: 4, name: "Внешние бизнесы", startAngle: 270 },
+            { id: 1, name: "Единый центр данных (Data Hub)", startAngle: 0 },
+            { id: 2, name: "Искусственный интеллект во всех процессах", startAngle: 90 },
+            { id: 3, name: "Автономные комплексы на всех предприятиях", startAngle: 180 },
+            { id: 4, name: "Надёжная и безопасная цифровая инфраструктура", startAngle: 270 },
           ];
           if (window.Logger) window.Logger.warn('QUADRANTS не загружены, используются дефолтные значения');
         }

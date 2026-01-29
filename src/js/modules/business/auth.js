@@ -137,7 +137,7 @@ window.AuthModule = (function() {
         window.location.href = "auth.html";
       };
       // Редирект на страницу авторизации, если пользователь не авторизован и находится на странице радара
-      const isRadarPage = document.body.id === "rmk-director" || window.location.pathname.includes("RMK-director.html") || window.location.pathname.includes("RMK.html");
+      const isRadarPage = document.body.id === "rmk-director" || window.location.pathname.includes("RMK-director.html");
       if (isRadarPage) {
         window.location.href = "auth.html";
       }

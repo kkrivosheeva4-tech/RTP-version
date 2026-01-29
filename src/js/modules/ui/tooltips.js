@@ -82,63 +82,13 @@
     };
   }
 
-  // Функция для получения текста подсказки с учетом незаполненных полей
+  // Функция для получения текста подсказки
   function getHoverText(tech) {
     if (!tech) return '';
 
-    // Получаем зависимости из window
-    const isRatingFilled = window.isRatingFilled || (() => false);
-    const computePriority = window.computePriority || (() => null);
-    const getPriorityCategory = window.getPriorityCategory || (() => ({ key: 'none', label: '' }));
-    const getPriorityWeakLinkComment = window.getPriorityWeakLinkComment || (() => '');
-
-    // Получаем текущее предприятие для проверки индивидуальных оценок
-    let currentEnterprise = null;
-    if (typeof window !== 'undefined') {
-      if (window.StateAccessors && typeof window.StateAccessors.getCurrentEnterprise === 'function') {
-        currentEnterprise = window.StateAccessors.getCurrentEnterprise();
-      } else if (typeof window.getCurrentEnterprise === 'function') {
-        currentEnterprise = window.getCurrentEnterprise();
-      } else if (typeof window.currentEnterprise !== 'undefined') {
-        currentEnterprise = window.currentEnterprise;
-      }
-    }
-
-    // Проверяем оценки с учетом индивидуальных оценок для предприятий
-    const companies = Array.isArray(tech.company) ? tech.company : (tech.company ? [tech.company] : []);
-    let techRead, organRead;
-
-    if (companies.length > 1 && tech.companyRatings && typeof tech.companyRatings === 'object' &&
-        currentEnterprise && companies.includes(currentEnterprise) && tech.companyRatings[currentEnterprise]) {
-      const ratings = tech.companyRatings[currentEnterprise];
-      techRead = ratings.techRead !== undefined ? ratings.techRead : tech.techRead;
-      organRead = ratings.organRead !== undefined ? ratings.organRead : tech.organRead;
-    } else {
-      techRead = tech.techRead;
-      organRead = tech.organRead;
-    }
-
-    const techReadFilled = isRatingFilled(techRead);
-    const organReadFilled = isRatingFilled(organRead);
-    const hasReadinessRatings = techReadFilled && organReadFilled;
-
-    // Если базовые оценки не заполнены — показываем текущее предупреждение.
-    if (!hasReadinessRatings) {
-      return `${tech.name}\nНеобходимо заполнить поля оценок!`;
-    }
-
-    const priority = computePriority(tech, 'mult');
-    const category = getPriorityCategory(priority);
-
-    if (priority == null || category.key === 'none') {
-      return `${tech.name}\nНедостаточно данных для расчёта приоритета.`;
-    }
-
-    const percent = Math.round(priority * 100);
-    const weakLinkComment = getPriorityWeakLinkComment(tech);
-
-    // Многострочный hover: название → приоритет → краткий комментарий.
-    return `${tech.name}\nПриоритет: ${percent}% (${category.label})\n${weakLinkComment}`;
+    // Показываем название и описание технологии
+    const description = tech.description ? `\n${tech.description.substring(0, 100)}${tech.description.length > 100 ? '...' : ''}` : '';
+    return `${tech.name}${description}`;
   }
 
   function createDebouncedHover() {

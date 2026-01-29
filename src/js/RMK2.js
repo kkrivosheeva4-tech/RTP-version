@@ -39,7 +39,7 @@ async function loadAllModules() {
     '/src/js/modules/radar/radar-renderer.js',
     '/src/js/modules/radar/quadrant-cache.js',
     '/src/js/modules/radar/quadrants.js',
-    // prospects-chart.js загружается только для обычной страницы RMK.html, не для RMK-director.html
+    // prospects-chart.js больше не используется (устаревший файл)
     ...(document.body.id !== 'rmk-director' ? ['/src/js/modules/radar/prospects-chart.js'] : []),
     '/src/js/modules/radar/radar-wrappers.js',
     '/src/js/modules/radar/radar-update.js',

@@ -9,14 +9,9 @@
   let radarBackgroundRendered = false;
 
   // Форма по типу технологии
+  // Все технологии отображаются кругами для единообразия
   function computeShapeByTechType(techType, TECHTYPE_TO_SHAPE) {
-    // Для директорской страницы всегда используем круг
-    const isDirectorPage = document.body.id === 'rmk-director';
-    if (isDirectorPage) {
-      return 'circle';
-    }
-    if (!techType || !TECHTYPE_TO_SHAPE) return null;
-    return TECHTYPE_TO_SHAPE[techType] || null;
+    return 'circle';
   }
 
   // Отрисовка фона радара (секторы, кольца, подписи)
@@ -348,51 +343,14 @@
       size = 10;
     }
 
-    let el;
-    const shape = computeShapeByTechType(tech.techType, TECHTYPE_TO_SHAPE) || tech.shape || 'circle';
-    const dataShape = shape;
+    // Все технологии отображаются кругами
+    const shape = 'circle';
+    const dataShape = 'circle';
 
-    if (shape === "circle") {
-      el = document.createElementNS(SVG_NS, "circle");
-      el.setAttribute("cx", pos.x);
-      el.setAttribute("cy", pos.y);
-      el.setAttribute("r", size);
-    } else if (shape === "square") {
-      el = document.createElementNS(SVG_NS, "rect");
-      el.setAttribute("x", pos.x - size);
-      el.setAttribute("y", pos.y - size);
-      el.setAttribute("width", size * 2);
-      el.setAttribute("height", size * 2);
-    } else if (shape === "triangle") {
-      el = document.createElementNS(SVG_NS, "path");
-      el.setAttribute("d", `M ${pos.x} ${pos.y - size} L ${pos.x + size} ${pos.y + size} L ${pos.x - size} ${pos.y + size} Z`);
-    } else if (shape === "star") {
-      el = document.createElementNS(SVG_NS, "path");
-      const outer = Math.round(size * 1.3);
-      const inner = Math.round(size * 0.58);
-      el.setAttribute("d", starPath(pos.x, pos.y, outer, inner, 5));
-    }
-
-    if (!el) {
-      if (dataShape === 'circle') {
-        el = document.createElementNS(SVG_NS, "circle");
-        el.setAttribute("cx", pos.x);
-        el.setAttribute("cy", pos.y);
-        el.setAttribute("r", size);
-      } else if (dataShape === 'triangle') {
-        el = document.createElementNS(SVG_NS, "path");
-        el.setAttribute("d", `M ${pos.x} ${pos.y - size} L ${pos.x + size} ${pos.y + size} L ${pos.x - size} ${pos.y + size} Z`);
-      } else if (dataShape === 'star') {
-        el = document.createElementNS(SVG_NS, "path");
-        el.setAttribute("d", starPath(pos.x, pos.y, size, Math.round(size * 0.5), 5));
-      } else {
-        el = document.createElementNS(SVG_NS, "rect");
-        el.setAttribute("x", pos.x - size);
-        el.setAttribute("y", pos.y - size);
-        el.setAttribute("width", size * 2);
-        el.setAttribute("height", size * 2);
-      }
-    }
+    const el = document.createElementNS(SVG_NS, "circle");
+    el.setAttribute("cx", pos.x);
+    el.setAttribute("cy", pos.y);
+    el.setAttribute("r", size);
 
     el.classList.add("blip");
     el.dataset.id = tech.id;
