@@ -1,11 +1,10 @@
 // Модуль позиционирования blip'ов на радаре
-// Экспортирует функции в window.Positioning для использования в RMK2.js
-// Использует глобальные переменные из RMK2.js: CENTER_X, CENTER_Y, RADIUS_STEP,
-// POSITION_PAD, POSITION_ANGLE_PAD, MIN_BLIP_DISTANCE, RING_LABEL_WIDTH,
-// RING_LABEL_HEIGHT, QUADRANTS, RINGS, levelToRing, blockToQuadrant
+// Экспортирует функции в window.Positioning для использования в RMK-director.js
+// Использует глобальные переменные из RMK-director.js: CENTER_X, CENTER_Y, RADIUS_STEP,
+// POSITION_PAD, POSITION_ANGLE_PAD, MIN_BLIP_DISTANCE, QUADRANTS, RINGS, levelToRing, blockToQuadrant
 // Использует функции из radar-utils.js: polarToCartesian, cartesianToPolar
 
-(function() {
+(function () {
   'use strict';
 
   // Вспомогательная функция для дробной части
@@ -85,44 +84,28 @@
         directionQuadrants.forEach(q => quadrantsSet.add(q));
       });
     } else {
-      // Fallback: если направлений нет, используем блоки (для обратной совместимости)
-      // ВАЖНО: это временная мера для обратной совместимости
-      const blocks = Array.isArray(tech.blocks) && tech.blocks.length
-        ? tech.blocks
-        : (tech.block ? [tech.block] : []);
-
-      blocks.forEach(blockKey => {
-        if (window.blockToQuadrant && window.blockToQuadrant[blockKey]) {
-          const m = window.blockToQuadrant[blockKey];
-          if (Array.isArray(m)) {
-            m.filter(q => typeof q === 'number').forEach(q => quadrantsSet.add(q));
-          } else if (typeof m === 'number') {
-            quadrantsSet.add(m);
-          }
-        }
-      });
+      // Если направлений нет, квадрант не может быть определен
+      // Возвращаем пустой массив
     }
 
     return Array.from(quadrantsSet);
   }
 
-  // УСТАРЕВШЕЕ: Получить id квадранта для блока (для обратной совместимости)
-  // НЕ используется для позиционирования, только для фильтрации
+  // Получить id квадранта для блока
+  // УСТАРЕВШЕЕ: блоки больше не привязаны к квадрантам напрямую
+  // Используется только для обратной совместимости, возвращает null
   function getQuadrantIdForBlock(blockKey) {
-    if (!blockKey || !window.blockToQuadrant) return null;
-    const m = window.blockToQuadrant[blockKey];
-    if (Array.isArray(m)) return m.length ? m[0] : null;
-    return (typeof m === 'number') ? m : null;
+    // Блоки больше не привязаны к квадрантам
+    // Квадранты определяются через направления цифрового развития
+    return null;
   }
 
-  // УСТАРЕВШЕЕ: Получить все квадранты для блока (для обратной совместимости)
-  // НЕ используется для позиционирования, только для фильтрации
+  // Получить все квадранты для блока
+  // УСТАРЕВШЕЕ: блоки больше не привязаны к квадрантам напрямую
+  // Используется только для обратной совместимости, возвращает пустой массив
   function getQuadrantsForBlock(blockKey) {
-    if (!blockKey || !window.blockToQuadrant) return [];
-    const m = window.blockToQuadrant[blockKey];
-    if (m == null) return [];
-    if (Array.isArray(m)) return m.filter(q => typeof q === 'number');
-    if (typeof m === 'number') return [m];
+    // Блоки больше не привязаны к квадрантам
+    // Квадранты определяются через направления цифрового развития
     return [];
   }
 
@@ -266,8 +249,8 @@
     // techRead и organRead вычисляются как среднее значение по выбранным предприятиям из фильтра
     // funcCover и trlStage - общие значения для технологии
 
-    let techRead = 0;
-    let organRead = 0;
+    let techRead = null;
+    let organRead = null;
 
     // Получаем выбранные предприятия из фильтра
     let selectedEnterpriseNames = [];
@@ -422,12 +405,14 @@
     // Нормализация факторов в диапазон [0, 1]
     // techRead, organRead, funcCover: 0-3 → x = value/3
     // trlStage: 1-3 → x = (value-1)/2
-    const x_techRead = techRead / 3;
-    const x_organRead = organRead / 3;
+    // Если techRead или organRead не указаны (null), используем 0 (минимальная готовность)
+    const x_techRead = techRead !== null && techRead !== undefined ? (techRead / 3) : 0;
+    const x_organRead = organRead !== null && organRead !== undefined ? (organRead / 3) : 0;
     const x_funcCover = funcCover / 3;
     const x_trlStage = (trlStage - 1) / 2;
 
     // Вычисление сводного показателя: z_i = Σ(w_k * x_ik) + b
+    // Если techRead или organRead не указаны, они не влияют на расчет (x = 0)
     let z_i = 0;
     z_i += weights.techRead * x_techRead;
     z_i += weights.organRead * x_organRead;
@@ -611,6 +596,102 @@
     return tech;
   }
 
+  // Вычисляет угловое смещение, необходимое для элемента заданного размера на радиусе
+  // Используется для корректировки углов с учетом размера фигур
+  function calculateAngularSizeInDegrees(elementRadius, circleRadius) {
+    if (circleRadius <= 0 || elementRadius <= 0) return 0;
+    if (elementRadius >= circleRadius) return 45; // Ограничиваем половиной квадранта
+    const angleInRadians = Math.asin(Math.min(1, elementRadius / circleRadius));
+    const angleInDegrees = (angleInRadians * 180) / Math.PI;
+    return angleInDegrees;
+  }
+
+  /**
+   * Равномерно распределяет технологии по углу в квадранте
+   * @param {Array} group - Массив технологий в квадранте
+   * @param {Object} q - Объект квадранта
+   * @param {Object} quadrantById - Маппинг ID квадранта на объект квадранта
+   */
+  function applyUniformAngleDistribution(group, q, quadrantById) {
+    if (!group || group.length <= 1) return;
+
+    const CENTER_X = window.CENTER_X || 500;
+    const CENTER_Y = window.CENTER_Y || 500;
+    const POSITION_ANGLE_PAD = window.POSITION_ANGLE_PAD || 8;
+    const RADIUS_STEP = window.RADIUS_STEP || 140;
+    const POSITION_PAD = window.POSITION_PAD || 30;
+    const RINGS = window.RINGS || [];
+
+    // Сортируем технологии по радиусу (от центра к краю), затем по ID для стабильности
+    group.sort((a, b) => {
+      const polarA = window.cartesianToPolar(CENTER_X, CENTER_Y, a.x || CENTER_X, a.y || CENTER_Y);
+      const polarB = window.cartesianToPolar(CENTER_X, CENTER_Y, b.x || CENTER_X, b.y || CENTER_Y);
+
+      // Сначала по радиусу
+      if (Math.abs(polarA.radius - polarB.radius) > 1) {
+        return polarA.radius - polarB.radius;
+      }
+      // Затем по ID для стабильности
+      return (Number(a.id) || 0) - (Number(b.id) || 0);
+    });
+
+    // Вычисляем угловой размер элементов для корректировки диапазона
+    const maxR = (Array.isArray(RINGS) && RINGS.length > 0) ? RINGS.length * RADIUS_STEP : 3 * RADIUS_STEP;
+    const rMin = POSITION_PAD;
+    const rMax = maxR - POSITION_PAD;
+
+    // Находим максимальный угловой размер элемента в группе
+    let maxAngularSize = 0;
+    group.forEach(t => {
+      const polar = window.cartesianToPolar(CENTER_X, CENTER_Y, t.x || CENTER_X, t.y || CENTER_Y);
+      const radius = Math.max(rMin, Math.min(rMax, polar.radius));
+      const elementSize = (t.size && typeof t.size === 'number') ? t.size : 10;
+      const angularSize = calculateAngularSizeInDegrees(elementSize * 1.1, radius);
+      maxAngularSize = Math.max(maxAngularSize, angularSize);
+    });
+
+    // Вычисляем доступный угловой диапазон с учетом отступов и размеров элементов
+    const ANGLE_PAD = POSITION_ANGLE_PAD;
+    const ANGLE_SPAN = 90 - (ANGLE_PAD * 2);
+    const angleMin = q.startAngle + ANGLE_PAD + maxAngularSize;
+    const angleMax = q.startAngle + ANGLE_PAD + ANGLE_SPAN - maxAngularSize;
+    const availableAngleSpan = Math.max(1, angleMax - angleMin);
+
+    // Равномерно распределяем углы
+    group.forEach((t, index) => {
+      let targetAngle;
+      if (group.length === 1) {
+        // Если только одна технология, размещаем в центре диапазона
+        targetAngle = (angleMin + angleMax) / 2;
+      } else {
+        // Равномерное распределение: от angleMin до angleMax
+        const ratio = index / (group.length - 1);
+        targetAngle = angleMin + ratio * availableAngleSpan;
+      }
+
+      // Нормализуем угол для квадранта 4 (пересекает 0°/360°)
+      if (q.id === 4) {
+        if (targetAngle < 90) {
+          targetAngle += 360;
+        }
+        while (targetAngle >= 360) targetAngle -= 360;
+      }
+
+      // Получаем текущий радиус технологии
+      const polar = window.cartesianToPolar(CENTER_X, CENTER_Y, t.x || CENTER_X, t.y || CENTER_Y);
+      let radius = polar.radius;
+      if (!Number.isFinite(radius)) {
+        radius = (rMin + rMax) / 2;
+      }
+      radius = Math.max(rMin, Math.min(rMax, radius));
+
+      // Обновляем позицию
+      const newPos = window.polarToCartesian(CENTER_X, CENTER_Y, radius, targetAngle);
+      t.x = Math.round(newPos.x);
+      t.y = Math.round(newPos.y);
+    });
+  }
+
   // Разведение точек внутри каждого сектора и кольца
   function applyNonOverlappingLayout(renderData) {
     const CENTER_X = window.CENTER_X || 500;
@@ -641,17 +722,6 @@
     });
 
     const MAX_ITER = 80;
-
-    // Вычисляет угловое смещение, необходимое для элемента заданного размера на радиусе
-    function calculateAngularSizeInDegrees(elementRadius, circleRadius) {
-      if (circleRadius <= 0 || elementRadius <= 0) return 0;
-      // Если элемент больше радиуса, возвращаем максимальное значение
-      if (elementRadius >= circleRadius) return 45; // Ограничиваем половиной квадранта
-      // Угловой размер = 2 * arcsin(elementRadius / circleRadius) в градусах
-      const angleInRadians = Math.asin(Math.min(1, elementRadius / circleRadius));
-      const angleInDegrees = (angleInRadians * 180) / Math.PI;
-      return angleInDegrees;
-    }
 
     function clampToSectorRing(t) {
       const q = quadrantById[t.quadrant];
@@ -713,15 +783,28 @@
       t.y = Math.round(p.y);
     }
 
-    for (const group of groups.values()) {
-      if (!group || group.length <= 1) continue;
+    for (const [quadrantKey, group] of groups.entries()) {
+      if (!group || group.length === 0) continue;
 
+      // Инициализируем позиции, если они не заданы
       group.forEach(t => {
         if (typeof t.x !== 'number' || typeof t.y !== 'number' || isNaN(t.x) || isNaN(t.y)) {
           const pos = assignFixedPosition(t);
           t.x = pos.x;
           t.y = pos.y;
         }
+      });
+
+      // Получаем объект квадранта
+      const quadrantId = parseInt(quadrantKey, 10);
+      const q = quadrantById[quadrantId];
+      if (!q) continue;
+
+      // Применяем равномерное распределение по углу
+      applyUniformAngleDistribution(group, q, quadrantById);
+
+      // Применяем ограничение квадранта
+      group.forEach(t => {
         clampToSectorRing(t);
       });
 
@@ -935,86 +1018,6 @@
     }
   }
 
-  // Дополнительное разведение технологий относительно подписей колец
-  function avoidRingLabelOverlap(renderData) {
-    // Для директорской страницы не нужно избегать наложения с подписями колец (их нет)
-    const isDirectorPage = document.body.id === 'rmk-director';
-    if (isDirectorPage) return;
-
-    const CENTER_X = window.CENTER_X || 500;
-    const CENTER_Y = window.CENTER_Y || 500;
-    const RADIUS_STEP = window.RADIUS_STEP || 140;
-    const POSITION_ANGLE_PAD = window.POSITION_ANGLE_PAD || 8;
-    const RING_LABEL_WIDTH = window.RING_LABEL_WIDTH || 180;
-    const RING_LABEL_HEIGHT = window.RING_LABEL_HEIGHT || 42;
-    const RINGS = window.RINGS || [];
-    const QUADRANTS = window.QUADRANTS || [];
-
-    if (!Array.isArray(renderData) || !renderData.length) return;
-    if (!Array.isArray(RINGS) || !RINGS.length) return;
-
-    const PADDING = 6;
-    const labelZones = RINGS.map((_, ringIndex) => {
-      const r = (ringIndex + 1) * RADIUS_STEP;
-      const pos = window.polarToCartesian(CENTER_X, CENTER_Y, r, 0);
-      return {
-        ringIndex,
-        centerX: pos.x,
-        centerY: pos.y,
-        radius: r,
-        xMin: pos.x - RING_LABEL_WIDTH / 2 - PADDING,
-        xMax: pos.x + RING_LABEL_WIDTH / 2 + PADDING,
-        yMin: pos.y - RING_LABEL_HEIGHT / 2 - PADDING,
-        yMax: pos.y + RING_LABEL_HEIGHT / 2 + PADDING,
-      };
-    });
-
-    renderData.forEach((t) => {
-      if (!t || t.ring == null || typeof t.x !== "number" || typeof t.y !== "number") return;
-      const zone = labelZones[t.ring];
-      if (!zone) return;
-
-      if (
-        t.x >= zone.xMin &&
-        t.x <= zone.xMax &&
-        t.y >= zone.yMin &&
-        t.y <= zone.yMax
-      ) {
-        const polar = window.cartesianToPolar(CENTER_X, CENTER_Y, t.x, t.y);
-        let radius = polar.radius;
-        if (!Number.isFinite(radius) || radius <= 0) radius = zone.radius;
-
-        const qId = t.quadrant;
-        if (qId !== 1 && qId !== 4) return;
-
-        const side = qId === 4 ? -1 : 1;
-
-        const chord = RING_LABEL_WIDTH;
-        const halfAngleRad = Math.min(
-          Math.PI / 3,
-          Math.max(0, Math.asin(Math.min(1, chord / (2 * radius))))
-        );
-        const halfAngleDeg = (halfAngleRad * 180) / Math.PI;
-
-        const extraGap = 4;
-        let targetAngle = (halfAngleDeg + extraGap) * (side > 0 ? 1 : -1);
-        while (targetAngle < 0) targetAngle += 360;
-        while (targetAngle >= 360) targetAngle -= 360;
-
-        const q = QUADRANTS.find((qq) => qq.id === qId);
-        if (q) {
-          const angleMin = q.startAngle + POSITION_ANGLE_PAD;
-          const angleMax = q.startAngle + 90 - POSITION_ANGLE_PAD;
-          if (targetAngle < angleMin) targetAngle = angleMin;
-          if (targetAngle > angleMax) targetAngle = angleMax;
-        }
-
-        const p = window.polarToCartesian(CENTER_X, CENTER_Y, radius, targetAngle);
-        t.x = Math.round(p.x);
-        t.y = Math.round(p.y);
-      }
-    });
-  }
 
   /**
    * Утилита для тестирования калибровки модели позиционирования
@@ -1045,8 +1048,8 @@
       theta: result.theta.toFixed(2) + '°',
       radius: result.radius.toFixed(2) + '%',
       position: result.radius < 30 ? 'Близко к центру' :
-                result.radius < 70 ? 'Среднее положение' :
-                'Далеко от центра'
+        result.radius < 70 ? 'Среднее положение' :
+          'Далеко от центра'
     });
 
     return result;
@@ -1089,14 +1092,13 @@
     getQuadrantIdForDirection,
     getQuadrantsForDirection,
     getAllQuadrantsForTech,
-    // Устаревшие функции для обратной совместимости (только для фильтрации)
+    // Функции для фильтрации и обработки событий
     getQuadrantIdForBlock,
     getQuadrantsForBlock,
     assignFixedPosition,
     assignFixedPositionForQuadrant,
     computeCoordinates,
     applyNonOverlappingLayout,
-    avoidRingLabelOverlap,
     calculateReadinessScore,
     calculateRadiusFromReadiness,
     calculateRadarPosition,

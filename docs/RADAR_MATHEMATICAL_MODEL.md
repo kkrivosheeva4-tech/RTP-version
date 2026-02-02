@@ -55,19 +55,24 @@
 2. Каждое направление маппится на один или несколько квадрантов через `directionToQuadrant`
 3. Технология может отображаться в нескольких квадрантах одновременно
 
-**Пример кода** (`src/js/modules/radar/positioning.js`, строки 72-107):
+**Пример кода** (`src/js/modules/radar/positioning.js`, строки 71-92):
 ```javascript
 function getAllQuadrantsForTech(tech) {
+  if (!tech) return [];
   const quadrantsSet = new Set();
 
-  const directions = Array.isArray(tech.directions)
+  // Используем направления для определения квадрантов
+  const directions = Array.isArray(tech.directions) && tech.directions.length
     ? tech.directions
     : (tech.direction ? [tech.direction] : []);
 
-  directions.forEach(directionName => {
-    const directionQuadrants = getQuadrantsForDirection(directionName);
-    directionQuadrants.forEach(q => quadrantsSet.add(q));
-  });
+  if (directions.length > 0) {
+    // Если есть направления, используем их
+    directions.forEach(directionName => {
+      const directionQuadrants = getQuadrantsForDirection(directionName);
+      directionQuadrants.forEach(q => quadrantsSet.add(q));
+    });
+  }
 
   return Array.from(quadrantsSet);
 }
@@ -131,9 +136,13 @@ theta = aBase + angleOffset;
 **Особенности расчета techRead и organRead:**
 - Вычисляются как **среднее значение** по выбранным предприятиям из фильтра
 - Если фильтр не применен → используются все предприятия технологии
-- Берутся из массива `tech.enterprises[]`
+- Берутся из массива `tech.enterprises[]`, где каждое предприятие содержит:
+  - `enterpriseId` — ID предприятия
+  - `technologicalReadiness` — технологическая готовность (0-3)
+  - `organizationalReadiness` — организационная готовность (0-3)
+- Если у технологии нет массива `enterprises`, используется fallback на общие значения `tech.techRead` и `tech.organRead` (для обратной совместимости)
 
-**Код** (`positioning.js`, строки 265-388):
+**Код** (`positioning.js`, строки 255-371):
 ```javascript
 // Получаем выбранные предприятия из фильтра
 let selectedEnterpriseNames = [];
@@ -141,25 +150,46 @@ if (window.Filters && typeof window.Filters.getFilterValues === 'function') {
   selectedEnterpriseNames = window.Filters.getFilterValues('enterprise') || [];
 }
 
-// Фильтруем enterprises по выбранным
+// Получаем оценки из массива enterprises
+const enterprises = Array.isArray(tech.enterprises) ? tech.enterprises : [];
+
+// Фильтруем enterprises по выбранным предприятиям
 let filteredEnterprises = enterprises;
 if (selectedEnterpriseNames.length > 0) {
+  // Сопоставляем enterpriseId с названиями через маппинг
   filteredEnterprises = enterprises.filter(ent => {
-    // Проверка соответствия названия предприятия
+    const enterpriseId = ent.enterpriseId;
+    // Находим название через маппинг ID -> название
+    const enterpriseName = enterpriseIdToNameMap[enterpriseId];
     return selectedNamesSet.has(enterpriseName.toLowerCase());
   });
 }
 
-// Вычисляем средние значения
-filteredEnterprises.forEach(ent => {
-  sumTechRead += Number(ent.technologicalReadiness);
-  sumOrganRead += Number(ent.organizationalReadiness);
-  countTechRead++;
-  countOrganRead++;
-});
+// Если после фильтрации не осталось предприятий, используем все (fallback)
+if (filteredEnterprises.length === 0 && enterprises.length > 0) {
+  filteredEnterprises = enterprises;
+}
 
-techRead = countTechRead > 0 ? sumTechRead / countTechRead : 0;
-organRead = countOrganRead > 0 ? sumOrganRead / countOrganRead : 0;
+// Вычисляем средние значения
+if (filteredEnterprises.length > 0) {
+  filteredEnterprises.forEach(ent => {
+    if (ent.technologicalReadiness !== undefined && !isNaN(Number(ent.technologicalReadiness))) {
+      sumTechRead += Number(ent.technologicalReadiness);
+      countTechRead++;
+    }
+    if (ent.organizationalReadiness !== undefined && !isNaN(Number(ent.organizationalReadiness))) {
+      sumOrganRead += Number(ent.organizationalReadiness);
+      countOrganRead++;
+    }
+  });
+
+  techRead = countTechRead > 0 ? sumTechRead / countTechRead : null;
+  organRead = countOrganRead > 0 ? sumOrganRead / countOrganRead : null;
+} else if (enterprises.length === 0) {
+  // Fallback для обратной совместимости
+  techRead = tech.techRead !== undefined ? Number(tech.techRead) : null;
+  organRead = tech.organRead !== undefined ? Number(tech.organRead) : null;
+}
 ```
 
 #### 2. Нормализация (s_ik → x_ik)
@@ -340,66 +370,182 @@ tech.y = Math.round(pos.y);
 
 ### Определение
 
-**Покрытие функций (funcCover)** — показатель того, сколько бизнес-функций покрывает технология.
+**Покрытие функций (funcCover)** — показатель того, насколько полно технология покрывает бизнес-функции в своих блоках.
 
 **Диапазон:** 0-3
-- `0` — функции не указаны
-- `1` — покрывает 1 функцию
-- `2` — покрывает 2-3 функции
-- `3` — покрывает 4+ функций
+- `0` — функции не указаны или покрытие отсутствует
+- `1` — низкое покрытие функций (до 33%)
+- `2` — среднее покрытие функций (33-67%)
+- `3` — высокое покрытие функций (67-100%)
 
 ### Алгоритм расчета
 
-#### Метод 1: Базовый расчет (по количеству функций)
+#### Метод 1: Расчет с учетом блоков (предпочтительный)
 
-Используется как fallback, если более сложный расчет недоступен:
+Если доступен модуль `FuncCoverUtils` и указаны блоки технологии, используется расчет на основе процентного покрытия:
 
+**Алгоритм:**
+
+1. **Проверка входных данных:**
+   - Если `coveredFunctions` пуст → возвращается `0`
+   - Если `blockIds` пуст → используется метод 2 (legacy)
+
+2. **Загружаются данные маппинга** `functionToBlock.json` (связь функций с блоками)
+   - Данные кешируются для последующих вызовов
+   - Подсчитывается количество функций в каждом блоке
+
+3. **Подсчитывается общее количество функций** во всех блоках технологии:
+   ```javascript
+   uniqueBlocks = [...new Set(blockIds)];  // Убираем дубликаты
+   totalFunctionsInBlocks = Σ(количество функций в блоке i)
+   ```
+   - Если `totalFunctionsInBlocks === 0` → возвращается `0`
+
+4. **Вычисляется процент покрытия:**
+   ```javascript
+   coveragePercent = покрытые функции / totalFunctionsInBlocks
+   ```
+
+5. **Преобразование в оценку 0-3:**
+   ```javascript
+   if (coveragePercent === 0) {
+     funcCover = 0;
+   } else if (coveragePercent >= 1.0) {
+     funcCover = 3;  // 100% покрытие
+   } else {
+     funcCover = Math.ceil(coveragePercent * 3);
+     funcCover = Math.max(1, funcCover);  // Минимум 1, если есть функции
+   }
+   return Math.min(3, Math.max(0, funcCover));  // Гарантия диапазона 0-3
+   ```
+
+**Пример:**
+- Технология в блоке с 10 функциями, покрывает 3 функции → 30% → `funcCover = 1`
+- Технология в блоке с 10 функциями, покрывает 5 функций → 50% → `funcCover = 2`
+- Технология в блоке с 10 функциями, покрывает 8 функций → 80% → `funcCover = 3`
+
+**Код** (`func-cover-utils.js`, строки 109-165):
 ```javascript
-const funcCount = tech.functionCoverage.length;
+async function calculateFuncCover(coveredFunctions, blockIds) {
+  // Проверка входных данных
+  if (!Array.isArray(coveredFunctions) || coveredFunctions.length === 0) {
+    return 0;
+  }
 
-if (funcCount === 1) {
-  funcCover = 1;
-} else if (funcCount >= 2 && funcCount <= 3) {
-  funcCover = 2;
-} else if (funcCount >= 4) {
-  funcCover = 3;
+  if (!Array.isArray(blockIds) || blockIds.length === 0) {
+    // Если блоки не указаны, используем старую логику (абсолютное количество)
+    return calculateFuncCoverLegacy(coveredFunctions.length);
+  }
+
+  // Загружаем данные если необходимо
+  if (!blockFunctionCounts) {
+    const ftb = await loadFunctionToBlockData();
+    blockFunctionCounts = calculateBlockFunctionCounts(ftb);
+  }
+
+  // Подсчитываем общее количество функций во всех блоках технологии
+  let totalFunctionsInBlocks = 0;
+  const uniqueBlocks = [...new Set(blockIds)]; // Убираем дубликаты
+
+  uniqueBlocks.forEach(blockId => {
+    const count = blockFunctionCounts[blockId] || 0;
+    totalFunctionsInBlocks += count;
+  });
+
+  if (totalFunctionsInBlocks === 0) {
+    return 0;
+  }
+
+  // Количество покрытых функций
+  const coveredCount = coveredFunctions.length;
+
+  // Процент покрытия
+  const coveragePercent = coveredCount / totalFunctionsInBlocks;
+
+  // Преобразуем процент в оценку 0-3
+  let funcCover;
+  if (coveragePercent === 0) {
+    funcCover = 0;
+  } else if (coveragePercent >= 1.0) {
+    // 100% покрытие = максимальная оценка
+    funcCover = 3;
+  } else {
+    // Округляем вверх: любое покрытие даёт минимум 1
+    funcCover = Math.ceil(coveragePercent * 3);
+    // Гарантируем минимум 1, если есть хотя бы одна функция
+    funcCover = Math.max(1, funcCover);
+  }
+
+  return Math.min(3, Math.max(0, funcCover));
 }
 ```
-
-**Код** (`positioning.js`, строки 404-410):
-```javascript
-if (funcCount === 1) {
-  funcCover = 1;
-} else if (funcCount >= 2 && funcCount <= 3) {
-  funcCover = 2;
-} else if (funcCount >= 4) {
-  funcCover = 3;
-}
-```
-
-#### Метод 2: Расчет с учетом блоков (предпочтительный)
-
-Если доступен модуль `FuncCoverUtils`, используется более сложная логика:
-
-1. Извлекается список функций технологии (`tech.functionCoverage`)
-2. Извлекается список блоков технологии (`tech.blocks`)
-3. Учитывается соответствие функций блокам через `functionToBlock` маппинг
-4. Вычисляется взвешенная оценка покрытия
 
 **Асинхронное обновление** (`data-loader.js`, строки 556-568):
 ```javascript
+// Асинхронно пересчитываем funcCover с учетом блоков
+// Это обновит значение после загрузки данных
 if (window.FuncCoverUtils && typeof window.FuncCoverUtils.calculateFuncCover === 'function') {
   window.FuncCoverUtils.calculateFuncCover(tech.functionCoverage, techBlockIds)
     .then(calculatedFuncCover => {
       // Обновляем значение в уже созданном объекте
-      normalized.funcCover = calculatedFuncCover;
-      console.log(`[DataLoader] Обновлен funcCover для технологии ${tech.id}: ${calculatedFuncCover}`);
+      if (normalized && normalized.id === tech.id) {
+        normalized.funcCover = calculatedFuncCover;
+        console.log(`[DataLoader] Обновлен funcCover для технологии ${tech.id}: ${calculatedFuncCover}`);
+      }
     })
     .catch(err => {
       console.error('[DataLoader] Ошибка расчета funcCover:', err);
     });
 }
 ```
+
+#### Метод 2: Базовый расчет (fallback)
+
+Используется как fallback, если блоки не указаны или модуль `FuncCoverUtils` недоступен:
+
+```javascript
+function calculateFuncCoverLegacy(funcCount) {
+  if (funcCount === 0) return 0;
+  if (funcCount === 1) return 1;
+  if (funcCount >= 2 && funcCount <= 3) return 2;
+  return 3;  // 4+ функций
+}
+```
+
+**Код** (`positioning.js`, строки 375-401):
+```javascript
+// funcCover и trlStage - общие значения для технологии
+// Если funcCover не задан, вычисляем его из functionCoverage
+let funcCover = tech.funcCover !== undefined && tech.funcCover !== null ? tech.funcCover : null;
+if (funcCover === null || funcCover === undefined || funcCover === 0) {
+  // Вычисляем funcCover из functionCoverage (массив функций)
+  if (Array.isArray(tech.functionCoverage) && tech.functionCoverage.length > 0) {
+    const funcCount = tech.functionCoverage.length;
+
+    // Пытаемся использовать новую логику с учетом блоков
+    if (window.FuncCoverUtils && typeof window.FuncCoverUtils.calculateFuncCoverLegacy === 'function') {
+      // Используем старую логику как fallback (синхронная)
+      funcCover = window.FuncCoverUtils.calculateFuncCoverLegacy(funcCount);
+    } else {
+      // Fallback если модуль не загружен
+      if (funcCount === 1) {
+        funcCover = 1;
+      } else if (funcCount >= 2 && funcCount <= 3) {
+        funcCover = 2;
+      } else if (funcCount >= 4) {
+        funcCover = 3;
+      }
+    }
+  } else {
+    // Если functionCoverage пуст или отсутствует, используем 0
+    funcCover = 0;
+  }
+}
+// Гарантируем, что funcCover - число в диапазоне 0-3
+funcCover = Math.max(0, Math.min(3, Number(funcCover) || 0));
+```
+
+**Важно:** При позиционировании используется синхронный расчет funcCover (метод 2, fallback). Полный расчет с учетом блоков (метод 1) выполняется асинхронно в `data-loader.js` и обновляет значение `tech.funcCover` после загрузки данных. Это означает, что при первом рендеринге радара может использоваться упрощенный расчет, который затем уточняется при следующем обновлении.
 
 ### Использование в модели
 
@@ -449,17 +595,14 @@ size = 10; // пикселей (радиус круга)
 - Визуальная значимость пропорциональна зрелости рынка
 - Облегчает идентификацию "зрелых" технологий
 
-**Код** (`positioning.js`, строки 167-185):
+**Код** (`positioning.js`, строки 150-168):
 ```javascript
 function calculateElementSize(tech) {
   const isDirectorPage = document.body && document.body.id === 'rmk-director';
   let size;
 
   if (isDirectorPage) {
-    const vendorCount = (tech.vendors && Array.isArray(tech.vendors))
-      ? tech.vendors.length
-      : 0;
-
+    const vendorCount = (tech.vendors && Array.isArray(tech.vendors)) ? tech.vendors.length : 0;
     if (vendorCount <= 1) {
       size = 8;  // Малый
     } else if (vendorCount === 2 || vendorCount === 3) {
@@ -485,11 +628,17 @@ function calculateElementSize(tech) {
 **Вычисление углового размера:**
 ```javascript
 function calculateAngularSize(elementRadius, circleRadius) {
+  if (circleRadius <= 0 || elementRadius <= 0) return 0;
+  // Если элемент больше радиуса, возвращаем максимальное значение
+  if (elementRadius >= circleRadius) return 15; // Ограничиваем разумным значением
+  // Угловой размер = arcsin(elementRadius / circleRadius) в градусах
   const angleInRadians = Math.asin(Math.min(1, elementRadius / circleRadius));
   const angleInDegrees = (angleInRadians * 180) / Math.PI;
   return angleInDegrees;
 }
 ```
+
+**Примечание:** В коде также используется функция `calculateAngularSizeInDegrees` (строка 601), которая является алиасом для `calculateAngularSize` и используется в алгоритме разведения наложений.
 
 ---
 
@@ -560,7 +709,8 @@ if (dx < COORDINATE_TOLERANCE && dy < COORDINATE_TOLERANCE) {
 **Параметры:**
 ```javascript
 const MIN_BLIP_DISTANCE = 28; // Базовое минимальное расстояние (px)
-const ENHANCED_MAX_ITER = 120; // Количество итераций
+const MAX_ITER = 80; // Базовое количество итераций
+const ENHANCED_MAX_ITER = 120; // Увеличенное количество итераций для основного алгоритма
 ```
 
 **Адаптивное минимальное расстояние:**
@@ -622,8 +772,10 @@ const adaptiveMinDistance = techCount > 10 ? baseMinDistance × 1.3
    clampToSectorRing(b);
    ```
 
-**Код** (`positioning.js`, строки 835-877):
+**Код** (`positioning.js`, строки 820-862):
 ```javascript
+const ENHANCED_MAX_ITER = 120;
+
 for (let iter = 0; iter < ENHANCED_MAX_ITER; iter++) {
   let moved = false;
 
@@ -633,20 +785,20 @@ for (let iter = 0; iter < ENHANCED_MAX_ITER; iter++) {
       const b = group[j];
       const dx = b.x - a.x;
       const dy = b.y - a.y;
-      const distSq = dx × dx + dy × dy;
+      const distSq = dx * dx + dy * dy;
 
       const sizeA = (a.size && typeof a.size === 'number') ? a.size : 10;
       const sizeB = (b.size && typeof b.size === 'number') ? b.size : 10;
       const minDistForPair = sizeA + sizeB + 4;
-      const minDistForPairSq = minDistForPair × minDistForPair;
+      const minDistForPairSq = minDistForPair * minDistForPair;
 
       if (distSq < minDistForPairSq) {
         const dist = Math.sqrt(distSq) || 0.001;
         const overlap = minDistForPair - dist;
 
-        const forceMultiplier = dist < minDistForPair × 0.5 ? 1.5 : 1.0;
-        const shiftX = (dx / dist) × (overlap / 2) × forceMultiplier;
-        const shiftY = (dy / dist) × (overlap / 2) × forceMultiplier;
+        const forceMultiplier = dist < minDistForPair * 0.5 ? 1.5 : 1.0;
+        const shiftX = (dx / dist) * (overlap / 2) * forceMultiplier;
+        const shiftY = (dy / dist) * (overlap / 2) * forceMultiplier;
 
         a.x -= shiftX;
         a.y -= shiftY;
@@ -690,18 +842,7 @@ if (newRadiusB >= rMax) {
 
 ### Этап 5: Избежание наложения с подписями колец
 
-Дополнительная логика для обычной страницы (не директорской):
-
-**Зоны подписей:**
-- Расположены на границе 0° (север) каждого кольца
-- Размер: `180×42` пикселей + отступ 6px
-
-**Алгоритм:**
-1. Для каждой технологии проверяется попадание в зону подписи
-2. Если попадает → технология смещается по углу в сторону от подписи
-3. Применяется только для квадрантов 1 и 4 (где находятся подписи)
-
-**Код** (`positioning.js`, строки 939-1017).
+**Примечание:** В текущей версии системы эта логика может быть реализована в других модулях (например, в модуле рендеринга радара), но не в `positioning.js`. Основной алгоритм разведения наложений сосредоточен на этапах 1-4.
 
 ### Функция ограничения `clampToSectorRing`
 
@@ -738,7 +879,23 @@ function clampToSectorRing(t) {
 }
 ```
 
-**Код** (`positioning.js`, строки 656-714).
+**Код** (`positioning.js`, строки 641-699).
+
+**Особенности обработки квадранта 4:**
+Квадрант 4 пересекает границу 0°/360°, поэтому требуется специальная нормализация углов:
+```javascript
+if (q.id === 4) {
+  // Если угол в диапазоне [0°, 90°), переводим в [360°-range, 360°)
+  if (angle < 90) {
+    angle += 360;
+  }
+  // Ограничиваем в расширенном диапазоне
+  if (angle < angleMin) angle = angleMin;
+  if (angle > angleMax + 360) angle = angleMax + 360;
+  // Нормализуем обратно в [0°, 360°)
+  while (angle >= 360) angle -= 360;
+}
+```
 
 ---
 
@@ -754,7 +911,7 @@ function clampToSectorRing(t) {
 | `RADIUS_STEP` | `140` | Шаг между кольцами (px) |
 | `RINGS` | `3` | Количество колец |
 
-**Определение:** `src/js/RMK2.js`, строки 96-115.
+**Определение:** `src/js/RMK-director.js`, строки 96-118.
 
 ### Параметры позиционирования
 
@@ -790,9 +947,10 @@ function clampToSectorRing(t) {
 
 | Параметр | Значение | Описание |
 |----------|----------|----------|
-| `ENHANCED_MAX_ITER` | `120` | Количество итераций разведения |
+| `MAX_ITER` | `80` | Базовое количество итераций |
+| `ENHANCED_MAX_ITER` | `120` | Увеличенное количество итераций для основного алгоритма |
 | `COORDINATE_TOLERANCE` | `0.5` | Допуск для идентичных координат (px) |
-| `forceMultiplier` | `1.5` / `1.0` | Множитель силы отталкивания |
+| `forceMultiplier` | `1.5` / `1.0` | Множитель силы отталкивания (1.5 для очень близких точек, 1.0 для остальных) |
 
 ---
 
@@ -1033,7 +1191,7 @@ Positioning.testAllScenarios();
 // ✅ Тестирование завершено!
 ```
 
-**Код утилит:** `src/js/modules/radar/positioning.js`, строки 1019-1084.
+**Код утилит:** `src/js/modules/radar/positioning.js`, строки 928-989.
 
 ### Критерии калибровки
 
@@ -1062,6 +1220,10 @@ Positioning.testAllScenarios();
 
 ---
 
-**Документ подготовлен:** 2026-01-29
+**Документ обновлен:** 2026-01-29
 **Версия системы:** РТП-2.3
-**Файл модуля:** `src/js/modules/radar/positioning.js`
+**Основные файлы:**
+- `src/js/modules/radar/positioning.js` — математическая модель и позиционирование
+- `src/js/modules/utils/func-cover-utils.js` — расчет покрытия функций с учетом блоков
+- `src/js/modules/core/data-loader.js` — асинхронное обновление funcCover после загрузки данных
+- `src/js/RMK-director.js` — глобальные константы радара

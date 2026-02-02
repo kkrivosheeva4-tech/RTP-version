@@ -73,12 +73,19 @@
           window.EditTechTabsManager.init();
         }, 150);
 
-        // Инициализация калькулятора покрытия функций для формы редактирования
-        if (window.FuncCoverCalculator && typeof window.FuncCoverCalculator.initForEditForm === 'function') {
+        // Инициализация автоматического расчета покрытия функций для формы редактирования
+        if (window.AutoFuncCover && typeof window.AutoFuncCover.initForEditForm === 'function') {
           setTimeout(() => {
-            window.FuncCoverCalculator.initForEditForm();
+            window.AutoFuncCover.initForEditForm();
           }, 200);
         }
+      }
+
+      // Инициализация автоматического расчета покрытия функций для формы добавления
+      if (panel.id === 'addTechPanel' && window.AutoFuncCover && typeof window.AutoFuncCover.initForAddForm === 'function') {
+        setTimeout(() => {
+          window.AutoFuncCover.initForAddForm();
+        }, 200);
       }
 
       // Инициализация управления файлами

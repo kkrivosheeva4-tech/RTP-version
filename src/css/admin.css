@@ -1381,8 +1381,53 @@ select:focus-visible {
   letter-spacing: 0.2px;
 }
 
-.form-group input[readonly] {
-  opacity: 0.9;
+.form-group input[readonly],
+.form-group .readonly-field {
+  background: color-mix(in srgb, var(--modal-bg) 85%, rgba(206, 144, 104, 0.08)) !important;
+  border-color: rgba(206, 144, 104, 0.2) !important;
+  cursor: not-allowed !important;
+  opacity: 0.85;
+  user-select: none;
+}
+
+/* Светлая тема для readonly полей */
+body.light .form-group input[readonly],
+body.light .form-group .readonly-field {
+  background: #f5f5f5 !important;
+  border-color: rgba(206, 144, 104, 0.25) !important;
+  color: #666;
+}
+
+/* Темная тема для readonly полей */
+body.dark .form-group input[readonly],
+body.dark .form-group .readonly-field {
+  background: rgba(40, 40, 40, 0.6) !important;
+  border-color: rgba(206, 144, 104, 0.2) !important;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Убираем hover и focus эффекты для readonly полей */
+.form-group input[readonly]:hover,
+.form-group .readonly-field:hover {
+  border-color: rgba(206, 144, 104, 0.2) !important;
+  box-shadow: none !important;
+}
+
+.form-group input[readonly]:focus,
+.form-group .readonly-field:focus {
+  border-color: rgba(206, 144, 104, 0.2) !important;
+  box-shadow: none !important;
+  background: color-mix(in srgb, var(--modal-bg) 85%, rgba(206, 144, 104, 0.08)) !important;
+}
+
+body.light .form-group input[readonly]:focus,
+body.light .form-group .readonly-field:focus {
+  background: #f5f5f5 !important;
+}
+
+body.dark .form-group input[readonly]:focus,
+body.dark .form-group .readonly-field:focus {
+  background: rgba(40, 40, 40, 0.6) !important;
 }
 
 .form-group input,

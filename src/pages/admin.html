@@ -57,7 +57,15 @@
           <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
           <line x1="12" y1="17" x2="12.01" y2="17"></line>
         </svg>
-        <span class="help-btn__text">Помощь</span>
+      </button>
+      <button class="notifications-btn" id="notificationsBtn" data-tooltip="Уведомления" aria-label="Уведомления">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+          focusable="false">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+        <span class="notifications-badge" id="notificationsBadge"></span>
       </button>
       <label class="theme-switch" data-tooltip="Переключить тему" aria-label="Переключить тему">
         <input type="checkbox" id="themeToggle" />
@@ -700,6 +708,7 @@
   <script src="/src/js/modules/utils/func-cover-utils.js"></script>
 
   <script src="/src/js/modules/ui/common-ui.js"></script>
+  <script src="/src/js/modules/ui/notifications.js"></script>
   <script src="/src/js/modules/ui/offline-handler.js"></script>
   <script src="/src/js/modules/ui/mobile-nav.js"></script>
   <script src="/src/js/modules/ui/touch-handlers.js"></script>

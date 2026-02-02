@@ -60,8 +60,6 @@
     const RADIUS_STEP = window.RADIUS_STEP || 140;
     const RINGS = window.RINGS || [];
     const QUADRANTS = window.QUADRANTS || [];
-    const RING_LABEL_WIDTH = window.RING_LABEL_WIDTH || 180;
-    const RING_LABEL_HEIGHT = window.RING_LABEL_HEIGHT || 42;
 
     // Получаем svg через DOMProxy
     const DOMProxy = window.DOMProxy;
@@ -77,8 +75,6 @@
       RADIUS_STEP,
       RINGS,
       QUADRANTS,
-      RING_LABEL_WIDTH,
-      RING_LABEL_HEIGHT,
       svg,
       clearQuadrantGroupsCache: QuadrantCache.clearQuadrantGroupsCache,
       polarToCartesian: window.polarToCartesian,
@@ -87,16 +83,6 @@
     });
   }
 
-  // Легенда фигур технологий по типам (используем модуль)
-  function renderLegend() {
-    const RadarRenderer = getRadarRenderer();
-    const SVG_NS = window.SVG_NS || "http://www.w3.org/2000/svg";
-
-    RadarRenderer.renderLegend({
-      SVG_NS,
-      starPath: window.starPath
-    });
-  }
 
   // Функция рендеринга радара (используем модуль)
   function renderRadar(data) {
@@ -129,13 +115,11 @@
       getAllQuadrantsForTech: Positioning.getAllQuadrantsForTech,
       assignFixedPositionForQuadrant: Positioning.assignFixedPositionForQuadrant,
       applyNonOverlappingLayout: Positioning.applyNonOverlappingLayout,
-      avoidRingLabelOverlap: Positioning.avoidRingLabelOverlap,
       getQuadrantGroup: QuadrantCache.getQuadrantGroup,
       computeShapeByTechType,
       TECHTYPE_TO_SHAPE,
       createBlip: createBlipWrapper,
-      renderRadarBackground,
-      renderLegend
+      renderRadarBackground
     });
   }
 
@@ -182,7 +166,6 @@
   const RadarWrappers = {
     computeShapeByTechType,
     renderRadarBackground,
-    renderLegend,
     renderRadar,
     createBlipWrapper,
     createBlip
@@ -193,7 +176,6 @@
     // Экспорт функций в window для обратной совместимости
     window.computeShapeByTechType = computeShapeByTechType;
     window.renderRadarBackground = renderRadarBackground;
-    window.renderLegend = renderLegend;
     window.renderRadar = renderRadar;
     window.createBlipWrapper = createBlipWrapper;
     window.createBlip = createBlip;

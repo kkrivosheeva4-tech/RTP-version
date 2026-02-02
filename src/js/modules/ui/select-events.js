@@ -1515,11 +1515,41 @@
           typeof window.updateModalFunctionsForBlocks === "function"
         ) {
           window.updateModalFunctionsForBlocks(selected, "techFunc");
+          // Обновляем покрытие функций при изменении блоков
+          if (window.AutoFuncCover && typeof window.AutoFuncCover.calculateAndUpdateFuncCover === "function") {
+            setTimeout(() => {
+              window.AutoFuncCover.calculateAndUpdateFuncCover("techFunc", "techBlock", "techFuncCover");
+            }, 50);
+          }
         } else if (
           hiddenInputId === "editBlock" &&
           typeof window.updateModalFunctionsForBlocks === "function"
         ) {
           window.updateModalFunctionsForBlocks(selected, "editFunc");
+          // Обновляем покрытие функций при изменении блоков
+          if (window.AutoFuncCover && typeof window.AutoFuncCover.calculateAndUpdateFuncCover === "function") {
+            setTimeout(() => {
+              window.AutoFuncCover.calculateAndUpdateFuncCover("editFunc", "editBlock", "editFuncCover");
+            }, 50);
+          }
+        } else if (
+          hiddenInputId === "techFunc" &&
+          window.AutoFuncCover &&
+          typeof window.AutoFuncCover.calculateAndUpdateFuncCover === "function"
+        ) {
+          // Обновляем покрытие функций при изменении функций в форме добавления
+          setTimeout(() => {
+            window.AutoFuncCover.calculateAndUpdateFuncCover("techFunc", "techBlock", "techFuncCover");
+          }, 50);
+        } else if (
+          hiddenInputId === "editFunc" &&
+          window.AutoFuncCover &&
+          typeof window.AutoFuncCover.calculateAndUpdateFuncCover === "function"
+        ) {
+          // Обновляем покрытие функций при изменении функций в форме редактирования
+          setTimeout(() => {
+            window.AutoFuncCover.calculateAndUpdateFuncCover("editFunc", "editBlock", "editFuncCover");
+          }, 50);
         }
         return;
       }

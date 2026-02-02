@@ -64,7 +64,15 @@
           <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
           <line x1="12" y1="17" x2="12.01" y2="17"></line>
         </svg>
-        <span class="help-btn__text">Помощь</span>
+      </button>
+      <button class="notifications-btn" id="notificationsBtn" data-tooltip="Уведомления" aria-label="Уведомления">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+          focusable="false">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+        <span class="notifications-badge" id="notificationsBadge"></span>
       </button>
       <label class="theme-switch" data-tooltip="Переключить тему" aria-label="Переключить тему">
         <input type="checkbox" id="themeToggle" />
@@ -572,7 +580,7 @@
           <div class="form-group">
             <label>Покрытие функций
               <span class="info-tooltip"
-                data-tooltip="Покрытие функций (0-3) показывает, насколько полно технология покрывает необходимые функции. 0 – не покрывает, 1 – низкое покрытие, 2 – среднее покрытие, 3 – полное покрытие."
+                data-tooltip="Покрытие функций (0-3) рассчитывается автоматически на основе выбранных функций. 0 – не покрывает, 1 – низкое покрытие, 2 – среднее покрытие, 3 – полное покрытие."
                 aria-label="Справка о покрытии функций">
                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
                   focusable="false">
@@ -580,25 +588,8 @@
                     d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
                 </svg>
               </span>
-              <span class="required-star" data-tooltip="Это поле является обязательным">*</span>
             </label>
-            <div class="custom-select-modal" data-field="techFuncCover" tabindex="0">
-              <div class="select-trigger">
-                <span class="selected-text">Выберите оценку</span>
-                <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none"
-                  xmlns="http://www.w3.org/2000/svg">
-                  <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round"
-                    stroke-linejoin="round" />
-                </svg>
-              </div>
-              <ul class="select-options">
-                <li data-value="0">0 — Не покрывает</li>
-                <li data-value="1">1 — Низкое покрытие</li>
-                <li data-value="2">2 — Среднее покрытие</li>
-                <li data-value="3">3 — Полное покрытие</li>
-              </ul>
-            </div>
-            <input type="hidden" id="techFuncCover" name="techFuncCover" required />
+            <input type="text" id="techFuncCover" name="techFuncCover" readonly class="readonly-field" value="—" />
           </div>
           <div class="form-group">
             <label>Описание
@@ -935,7 +926,7 @@
           <div class="form-group">
             <label>Покрытие функций
               <span class="info-tooltip"
-                data-tooltip="Покрытие функций (0-3) показывает, насколько полно технология покрывает необходимые функции. 0 – не покрывает, 1 – низкое покрытие, 2 – среднее покрытие, 3 – полное покрытие."
+                data-tooltip="Покрытие функций (0-3) рассчитывается автоматически на основе выбранных функций. 0 – не покрывает, 1 – низкое покрытие, 2 – среднее покрытие, 3 – полное покрытие."
                 aria-label="Справка о покрытии функций">
                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 512 512" aria-hidden="true"
                   focusable="false">
@@ -943,25 +934,8 @@
                     d="M464 256a208 208 0 1 0-416 0a208 208 0 1 0 416 0M0 256a256 256 0 1 1 512 0a256 256 0 1 1-512 0m169.8-90.7c7.9-22.3 29.1-37.3 52.8-37.3h58.3c34.9 0 63.1 28.3 63.1 63.1c0 22.6-12.1 43.5-31.7 54.8L280 264.4c-.2 13-10.9 23.6-24 23.6c-13.3 0-24-10.7-24-24v-13.5c0-8.6 4.6-16.5 12.1-20.8l44.3-25.4c4.7-2.7 7.6-7.7 7.6-13.1c0-8.4-6.8-15.1-15.1-15.1h-58.3c-3.4 0-6.4 2.1-7.5 5.3l-.4 1.2c-4.4 12.5-18.2 19-30.6 14.6s-19-18.2-14.6-30.6l.4-1.2zM224 352a32 32 0 1 1 64 0a32 32 0 1 1-64 0" />
                 </svg>
               </span>
-              <span class="required-star" data-tooltip="Это поле является обязательным">*</span>
             </label>
-            <div class="custom-select-modal" data-field="editFuncCover" tabindex="0">
-              <div class="select-trigger">
-                <span class="selected-text">Выберите оценку</span>
-                <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none"
-                  xmlns="http://www.w3.org/2000/svg">
-                  <path d="M3 5L6 8L9 5" stroke="#666" stroke-width="1.5" stroke-linecap="round"
-                    stroke-linejoin="round" />
-                </svg>
-              </div>
-              <ul class="select-options">
-                <li data-value="0">0 — Не покрывает</li>
-                <li data-value="1">1 — Низкое покрытие</li>
-                <li data-value="2">2 — Среднее покрытие</li>
-                <li data-value="3">3 — Полное покрытие</li>
-              </ul>
-            </div>
-            <input type="hidden" id="editFuncCover" name="editFuncCover" required />
+            <input type="text" id="editFuncCover" name="editFuncCover" readonly class="readonly-field" value="—" />
           </div>
           <div class="form-group">
             <label>Описание
@@ -1584,9 +1558,11 @@
   <script src="/src/js/modules/utils/func-cover-utils.js"></script>
 
   <script src="/src/js/modules/ui/common-ui.js"></script>
+  <script src="/src/js/modules/ui/notifications.js"></script>
   <script src="/src/js/modules/ui/tech-tabs-manager.js"></script>
   <script src="/src/js/modules/ui/edit-tech-tabs-manager.js"></script>
   <script src="/src/js/modules/ui/func-cover-calculator.js"></script>
+  <script src="/src/js/modules/ui/auto-func-cover.js"></script>
   <!-- Проверка доступа: RMK-director.html доступна для всех авторизованных пользователей -->
   <!-- Все роли (архитекторы, директоры, РП, администраторы) работают на одной странице -->
   <script src="/src/js/RMK-director.js"></script>

@@ -53,6 +53,7 @@ async function loadAllModules() {
     '/src/js/modules/ui/modal-forms.js',
     '/src/js/modules/ui/report-status.js',
     '/src/js/modules/ui/tooltips.js',  // tooltip + hover
+    '/src/js/modules/ui/notifications.js',  // система уведомлений
     '/src/js/modules/ui/form-management.js',  // form-events + form-handlers
     '/src/js/modules/ui/vendors-files.js',  // управление вендорами и файлами
     '/src/js/modules/ui/loading.js',
@@ -116,8 +117,6 @@ window.RADIUS_STEP = RADIUS_STEP;
 window.POSITION_PAD = POSITION_PAD;
 window.POSITION_ANGLE_PAD = POSITION_ANGLE_PAD;
 window.MIN_BLIP_DISTANCE = MIN_BLIP_DISTANCE;
-window.RING_LABEL_WIDTH = RING_LABEL_WIDTH;
-window.RING_LABEL_HEIGHT = RING_LABEL_HEIGHT;
 // Для директорской страницы все технологии отображаются как круги
 // Экспорт TECHTYPE_TO_SHAPE в window для использования модулями (для совместимости)
 window.TECHTYPE_TO_SHAPE = {

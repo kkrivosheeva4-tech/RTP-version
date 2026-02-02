@@ -6,6 +6,7 @@
   --quadrant-color-q3: rgba(0, 166, 231, 1);
   --quadrant-color-q4: rgba(199, 1, 127, 1);
 }
+
 /* Модальное окно и фон */
 .about-modal {
   /* опциональные локальные настройки (можно переопределять) */
@@ -37,13 +38,19 @@
 
 /* Тонкая подстройка бекдропа под светлую/тёмную тему (проект задаёт body.light / body.dark)
    Используем более сильное затемнение в dark и чуть более мягкое в light */
-body.light .about-backdrop { background: rgba(0,0,0,0.18); }
-body.dark  .about-backdrop { background: rgba(0,0,0,0.52); }
+body.light .about-backdrop {
+  background: rgba(0, 0, 0, 0.18);
+}
+
+body.dark .about-backdrop {
+  background: rgba(0, 0, 0, 0.52);
+}
 
 /* Панель с эффектом стекла */
 .about-panel {
   /* эффект стекла: полупрозрачный фон + blur. Цвета подстраиваются под глобальную тему */
-  background: rgba(255,255,255,var(--bg-opacity)); /* fallback */
+  background: rgba(255, 255, 255, var(--bg-opacity));
+  /* fallback */
   backdrop-filter: blur(8px) saturate(120%);
   color: var(--text, #000);
   border-radius: 16px;
@@ -71,12 +78,13 @@ body.dark  .about-backdrop { background: rgba(0,0,0,0.52); }
 /* Подстройка фона панели под глобальные переменные темы проекта.
    Сохраняем стеклянный эффект, но используем цвета из :root / body.light / body.dark. */
 body.light .about-panel {
-  background: rgba(255,255,255,0.82);
+  background: rgba(255, 255, 255, 0.82);
   border: 1px solid var(--input-border);
   color: var(--text, #000);
 }
+
 body.dark .about-panel {
-  background: rgba(0,0,0,0.48);
+  background: rgba(0, 0, 0, 0.48);
   border: none;
   color: var(--text, #fff);
 }
@@ -102,7 +110,7 @@ body.dark .about-panel {
 }
 
 .about-close:hover {
-  background: var(--close-btn-hover, rgba(0,0,0,0.06));
+  background: var(--close-btn-hover, rgba(0, 0, 0, 0.06));
   transform: scale(1.08);
 }
 
@@ -117,27 +125,33 @@ body.dark .about-panel {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px; /* отступ между иконкой и текстом */
+  gap: 5px;
+  /* отступ между иконкой и текстом */
   border: 0;
   background: transparent;
   color: var(--text);
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  font: inherit; /* наследует шрифт от родителя */
-  position: relative; /* Необходимо для позиционирования псевдоэлемента ::after */
+  font: inherit;
+  /* наследует шрифт от родителя */
+  position: relative;
+  /* Необходимо для позиционирования псевдоэлемента ::after */
 }
 
 .about-btn:after {
   content: "";
   position: absolute;
-  left: 0; right: 0; bottom: -4px;
+  left: 0;
+  right: 0;
+  bottom: -4px;
   height: 2px;
   background: #ce9068;
   transform: scaleX(0);
   transform-origin: left;
   transition: transform 0.25s ease;
 }
+
 .about-btn:hover:after {
   transform: scaleX(1);
 }
@@ -149,7 +163,8 @@ body.dark .about-panel {
 .about-btn svg {
   display: block;
   transition: transform 0.2s ease;
-  flex-shrink: 0; /* предотвращает сжатие иконки при узком контейнере */
+  flex-shrink: 0;
+  /* предотвращает сжатие иконки при узком контейнере */
 }
 
 .about-btn:hover svg {
@@ -168,8 +183,7 @@ body.dark .about-panel {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 8px 14px;
+  gap: 0;
   border: 1px solid transparent;
   background: transparent;
   color: var(--text);
@@ -201,38 +215,7 @@ body.dark .about-panel {
 }
 
 .help-btn__text {
-  position: relative;
-  z-index: 1;
-  transition: color 0.25s ease;
-}
-
-.help-btn__text::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -4px;
-  height: 2px;
-  background: var(--accent);
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 0.25s ease;
-}
-
-.help-btn:hover .help-btn__text::after,
-.help-btn:focus-visible .help-btn__text::after {
-  transform: scaleX(1);
-}
-
-@media (max-width: 768px) {
-  .help-btn {
-    padding: 8px;
-    gap: 0;
-  }
-
-  .help-btn__text {
-    display: none;
-  }
+  display: none;
 }
 
 /* --- МЕНЮ ПОМОЩИ --- */
@@ -276,6 +259,7 @@ body.dark .help-menu {
     opacity: 0;
     transform: translateY(-8px) scale(0.96);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -373,16 +357,19 @@ body.dark .help-menu {
   z-index: 1;
   transition: color 0.2s ease;
 }
+
 .about-content h2 {
   margin-top: 0;
   font-size: 1.8rem;
   color: var(--accent);
   text-decoration: underline;
 }
+
 .about-content h3 {
   font-size: 1.4rem;
   margin-top: 24px;
 }
+
 /* Уровни колец - УБРАНЫ КРУГИ */
 .ring-levels {
   display: flex;
@@ -396,10 +383,12 @@ body.dark .help-menu {
   backdrop-filter: blur(4px);
   transition: transform 0.2s;
 }
-body.dark  .ring-level {
+
+body.dark .ring-level {
   background: rgba(255, 255, 255, 0.219);
   border: none;
 }
+
 body.light .ring-level {
   background: rgba(0, 0, 0, 0.05);
   border: 1px solid var(--input-border);
@@ -425,7 +414,8 @@ body.light .ring-level {
 /* --- СТИЛЬ ДЛЯ ЗАМЕТКИ (УЖЕ БЫЛ, НО НА КОНТРОЛЕ) --- */
 .about-note {
   margin-top: 24px;
-  font-style: italic; /* Курсив */
+  font-style: italic;
+  /* Курсив */
   font-size: 0.85rem;
   color: color-mix(in srgb, var(--text) 75%, transparent);
   padding: 12px;
@@ -452,10 +442,12 @@ body.light .ring-level {
   backdrop-filter: blur(4px);
   transition: transform 0.2s, box-shadow 0.2s;
 }
-body.dark  .feature-card {
+
+body.dark .feature-card {
   background: rgba(255, 255, 255, 0.219);
   border: none;
 }
+
 body.light .feature-card {
   background: rgba(0, 0, 0, 0.05);
   border: 1px solid var(--input-border);
@@ -509,7 +501,8 @@ body.light .feature-card {
 .section-header h4 {
   display: flex;
   align-items: center;
-  gap: 5px; /* отступ между иконкой и текстом */
+  gap: 5px;
+  /* отступ между иконкой и текстом */
   margin: 0 0 8px;
   font-size: 1.1rem;
   color: var(--accent);
@@ -533,10 +526,12 @@ body.light .feature-card {
   backdrop-filter: blur(4px);
   transition: transform 0.2s, box-shadow 0.2s;
 }
-body.dark  .sector-card {
+
+body.dark .sector-card {
   background: rgba(255, 255, 255, 0.219);
   border: none;
 }
+
 body.light .sector-card {
   background: rgba(0, 0, 0, 0.05);
   border: 1px solid var(--input-border);
@@ -557,14 +552,25 @@ body.light .sector-card {
 /* Общий стиль для всех заголовков */
 .sector-card h5 {
   margin: 0 0 8px;
-  font-size: 18px ;
+  font-size: 18px;
 }
 
 /* Цвета по квадрантам */
-.sector-card.q1 h5 { color: var(--quadrant-color-q1); }
-.sector-card.q2 h5 { color: var(--quadrant-color-q2); }
-.sector-card.q3 h5 { color: var(--quadrant-color-q3); }
-.sector-card.q4 h5 { color: var(--quadrant-color-q4); }
+.sector-card.q1 h5 {
+  color: var(--quadrant-color-q1);
+}
+
+.sector-card.q2 h5 {
+  color: var(--quadrant-color-q2);
+}
+
+.sector-card.q3 h5 {
+  color: var(--quadrant-color-q3);
+}
+
+.sector-card.q4 h5 {
+  color: var(--quadrant-color-q4);
+}
 
 .sector-card p {
   margin: 0;
@@ -585,14 +591,17 @@ body.light .sector-card {
   border-radius: 12px;
   backdrop-filter: blur(4px);
 }
-body.dark  .legend-section {
+
+body.dark .legend-section {
   background: rgba(255, 255, 255, 0.219);
   border: none;
 }
+
 body.light .legend-section {
   background: rgba(0, 0, 0, 0.05);
   border: 1px solid var(--input-border);
 }
+
 .legend-section h4 {
   margin: 0 0 8px;
   font-size: 1rem;
@@ -692,14 +701,17 @@ body.light .legend-section {
   backdrop-filter: blur(4px);
   transition: transform 0.2s, box-shadow 0.2s;
 }
-body.dark  .role-card {
+
+body.dark .role-card {
   background: rgba(255, 255, 255, 0.219);
   border: none;
 }
+
 body.light .role-card {
   background: rgba(0, 0, 0, 0.05);
   border: 1px solid var(--input-border);
 }
+
 .role-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
@@ -787,7 +799,7 @@ body.light .tech-item {
   border-top: 1px solid var(--input-border);
 }
 
-.about-footer > div {
+.about-footer>div {
   display: flex;
   align-items: baseline;
   gap: 8px;
@@ -810,6 +822,7 @@ body.light .tech-item {
 
 /* Адаптивность */
 @media (max-width: 768px) {
+
   .feature-cards,
   .sector-cards,
   .role-access {

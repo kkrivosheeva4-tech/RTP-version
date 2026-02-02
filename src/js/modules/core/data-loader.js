@@ -463,8 +463,8 @@
             const companyName = enterprise
               ? (typeof enterprise === 'object' ? enterprise.name : enterprise)
               : (enterprisesData[enterpriseId - 1]
-                  ? (typeof enterprisesData[enterpriseId - 1] === 'object' ? enterprisesData[enterpriseId - 1].name : enterprisesData[enterpriseId - 1])
-                  : `Предприятие ${enterpriseId}`);
+                ? (typeof enterprisesData[enterpriseId - 1] === 'object' ? enterprisesData[enterpriseId - 1].name : enterprisesData[enterpriseId - 1])
+                : `Предприятие ${enterpriseId}`);
 
             if (companyName) {
               companies.push(companyName);
@@ -641,10 +641,41 @@
       }
 
       // Загружаем технологии из technologies.json
+      // Сначала проверяем VFS (localStorage) - если там есть сохраненные технологии, используем их
       let allTechnologies = [];
       const enterpriseData = {};
+      let technologiesFromVfs = null;
 
-      if (fetched['technologies.json'] && Array.isArray(fetched['technologies.json'].data)) {
+      // Проверяем VFS на наличие сохраненных технологий
+      try {
+        technologiesFromVfs = vfsRead('technologies.json');
+        if (technologiesFromVfs && Array.isArray(technologiesFromVfs) && technologiesFromVfs.length > 0) {
+          if (window.Logger) window.Logger.debug('loadData: Загружены технологии из VFS (localStorage)', technologiesFromVfs.length);
+          // Используем технологии из VFS напрямую (они уже в нормализованном формате)
+          allTechnologies = technologiesFromVfs;
+
+          // Восстанавливаем структуру enterpriseData из VFS или создаем заново
+          const enterpriseDataFromVfs = vfsRead('enterpriseData.json');
+          if (enterpriseDataFromVfs && typeof enterpriseDataFromVfs === 'object') {
+            Object.assign(enterpriseData, enterpriseDataFromVfs);
+          } else {
+            // Если enterpriseData нет в VFS, создаем из технологий
+            allTechnologies.forEach(tech => {
+              const companies = Array.isArray(tech.company) ? tech.company : (tech.company ? [tech.company] : []);
+              companies.forEach(company => {
+                if (!enterpriseData[company]) enterpriseData[company] = [];
+                enterpriseData[company].push(tech);
+              });
+            });
+          }
+        }
+      } catch (e) {
+        if (window.Logger) window.Logger.warn('Ошибка при загрузке технологий из VFS', e);
+      }
+
+      // Если в VFS нет технологий, загружаем из файла
+      if (!technologiesFromVfs && fetched['technologies.json'] && Array.isArray(fetched['technologies.json'].data)) {
+        if (window.Logger) window.Logger.debug('loadData: Загружаем технологии из файла technologies.json');
         fetched['technologies.json'].data.forEach(tech => {
           const normalized = normalizeTechnologyFromNewFormat(tech, blockIdToName, enterprisesData);
           allTechnologies.push(normalized);
@@ -656,8 +687,10 @@
             enterpriseData[company].push(normalized);
           });
         });
+      }
 
-        // Сохраняем объединенный массив технологий
+      // Сохраняем объединенный массив технологий
+      if (allTechnologies.length > 0) {
         setState('technologies', allTechnologies);
         // Сохраняем структуру по предприятиям для обратной совместимости
         setState('enterpriseData', enterpriseData);
@@ -755,7 +788,7 @@
         const enterpriseListForModal = enterprisesListData.length > 0
           ? enterprisesListData.map(ent => typeof ent === 'string' ? ent : (ent.name || ent))
           : Object.keys(enterpriseData || {});
-        Filters.populateSelectForModal('techSector', sectorNames, 'Выберите');
+        // Поле techSector удалено из форм
         // Получаем список направлений цифрового развития
         const digitalDirections = getState('digitalDirections') || [];
         const directionsList = Array.isArray(digitalDirections) && digitalDirections.length > 0
@@ -818,16 +851,36 @@
           const selectedStatus = (Array.isArray(RINGS) && RINGS.length ? RINGS[0] : 'Используемые');
 
           const nextId = getState('nextId') || 1;
+
+          // Получаем directions из скрытого поля
+          let directions = [];
+          try {
+            const directionsValue = formData.get('techDirections');
+            if (directionsValue) {
+              directions = JSON.parse(directionsValue);
+              if (!Array.isArray(directions)) {
+                directions = [directions];
+              }
+            }
+          } catch (e) {
+            console.warn('Ошибка парсинга directions:', e);
+          }
+
           const tech = {
             id: nextId,
             name: formData.get('techName'),
-            blocks: [formData.get('techBlock')],
+            directions: directions,
+            block: parseInt(formData.get('techBlock'), 10),
+            blocks: [parseInt(formData.get('techBlock'), 10)],
             functions: [formData.get('techFunc')],
+            functionCoverage: [formData.get('techFunc')],
             techType: '', // Поле удалено из формы
             // Явно сохраняем и status, и level, чтобы фильтры и приоритеты
             // всегда использовали одну и ту же строку статуса.
             status: selectedStatus,
             level: selectedStatus,
+            trlStage: formData.get('techTrlStage'),
+            funcCover: parseInt(formData.get('techFuncCover'), 10) || 0,
             description: formData.get('techDescription')
           };
 
@@ -892,14 +945,33 @@
             (currentTech.level && currentTech.level.toString().trim()) ||
             (Array.isArray(RINGS) && RINGS.length ? RINGS[0] : 'Используемые');
 
+          // Получаем directions из скрытого поля
+          let directions = currentTech.directions || [];
+          try {
+            const directionsValue = formData.get('editDirections');
+            if (directionsValue) {
+              directions = JSON.parse(directionsValue);
+              if (!Array.isArray(directions)) {
+                directions = [directions];
+              }
+            }
+          } catch (e) {
+            console.warn('Ошибка парсинга directions:', e);
+          }
+
           const updatedTech = {
             ...currentTech,
             name: formData.get('editName'),
-            blocks: [formData.get('editBlock')],
+            directions: directions,
+            block: parseInt(formData.get('editBlock'), 10),
+            blocks: [parseInt(formData.get('editBlock'), 10)],
             functions: [formData.get('editFunc')],
-            techType: formData.get('editTechType'),
+            functionCoverage: [formData.get('editFunc')],
+            techType: formData.get('editTechType') || currentTech.techType || '',
             status: selectedStatus,
             level: selectedStatus,
+            trlStage: formData.get('editTrlStage') || currentTech.trlStage,
+            funcCover: parseInt(formData.get('editFuncCover'), 10) || currentTech.funcCover || 0,
             description: formData.get('editDescription')
           };
 
@@ -1065,20 +1137,17 @@
           const vendorsList = getState('vendorsList') || [];
           const integratorsList = getState('integratorsList') || [];
           const modalSelects = [
-            { id: 'techSector', items: sectorNames, placeholder: 'Выберите' },
+            // Поля techSector, techIntegrators удалены из форм
             { id: 'techBlock', items: blocksList, placeholder: 'Выберите' },
             { id: 'techFunc', items: functions, placeholder: 'Выберите' },
             // Поля "Тип технологии" и "Статус" удалены из формы добавления
             { id: 'techCompany', items: modalEnterpriseList, placeholder: 'Выберите' },
             { id: 'techVendors', items: vendorsList, placeholder: 'Выберите' },
-            { id: 'techIntegrators', items: integratorsList, placeholder: 'Выберите' },
             { id: 'editBlock', items: blocksList, placeholder: 'Выберите' },
             { id: 'editFunc', items: functions, placeholder: 'Выберите' },
-            { id: 'editTechType', items: techTypes, placeholder: 'Выберите' },
-            { id: 'editStatus', items: RINGS, placeholder: 'Выберите' },
+            // Поля editTechType, editStatus, editIntegrators удалены из форм
             { id: 'editCompany', items: modalEnterpriseList, placeholder: 'Выберите' },
-            { id: 'editVendors', items: vendorsList, placeholder: 'Выберите' },
-            { id: 'editIntegrators', items: integratorsList, placeholder: 'Выберите' }
+            { id: 'editVendors', items: vendorsList, placeholder: 'Выберите' }
           ];
 
           modalSelects.forEach(({ id, items, placeholder }) => {
@@ -1094,11 +1163,9 @@
 
           // Заполняем списки оценок готовности
           const ratingOptions = ['0 — Не готова', '1 — Низкая', '2 — Средняя', '3 — Высокая'];
-          Filters.populateSelectForModal('techTechRead', ratingOptions, 'Выберите оценку');
-          Filters.populateSelectForModal('techOrganRead', ratingOptions, 'Выберите оценку');
+          // Поля techTechRead, techOrganRead удалены из формы добавления
           Filters.populateSelectForModal('techFuncCover', ratingOptions, 'Выберите оценку');
-          Filters.populateSelectForModal('editTechRead', ratingOptions, 'Выберите оценку');
-          Filters.populateSelectForModal('editOrganRead', ratingOptions, 'Выберите оценку');
+          // Поля editTechRead, editOrganRead удалены из формы редактирования
           Filters.populateSelectForModal('editFuncCover', ratingOptions, 'Выберите оценку');
 
           // Добавляем tooltips для TRL
@@ -1167,27 +1234,35 @@
       initFiltersWithRetry(0);
 
       // Пересчитываем funcCover для всех технологий с использованием нового алгоритма
-      // Это делается асинхронно и не блокирует загрузку
+      // Это делается синхронно перед первым рендерингом, чтобы избежать изменения позиций
       const technologiesForRecalc = getState('technologies');
       if (technologiesForRecalc && technologiesForRecalc.length > 0) {
-        recalculateFuncCoverForAllTechnologies(technologiesForRecalc)
-          .then(() => {
-            console.log('[DataLoader] Пересчет funcCover завершен успешно');
-            // После пересчета обновляем state
-            setState('technologies', [...technologiesForRecalc]);
-            // Обновляем индекс после пересчета
-            const DataIndex = getDataIndex();
-            if (DataIndex) {
-              try {
-                DataIndex.build(technologiesForRecalc);
-              } catch (e) {
-                if (window.Logger) window.Logger.warn('DataIndex.build failed after recalculating funcCover', e);
-              }
-            }
-          })
-          .catch(err => {
-            console.error('[DataLoader] Ошибка при пересчете funcCover:', err);
+        // Пересчитываем funcCover синхронно (await)
+        await recalculateFuncCoverForAllTechnologies(technologiesForRecalc);
+
+        console.log('[DataLoader] Пересчет funcCover завершен успешно');
+
+        // Пересчитываем координаты для всех технологий после обновления funcCover
+        // Это необходимо, так как funcCover влияет на позиционирование
+        const Positioning = getPositioning();
+        if (Positioning && typeof Positioning.computeCoordinates === 'function') {
+          technologiesForRecalc.forEach(tech => {
+            Positioning.computeCoordinates(tech);
           });
+          console.log('[DataLoader] Координаты пересчитаны для всех технологий после обновления funcCover');
+        }
+
+        // После пересчета обновляем state
+        setState('technologies', [...technologiesForRecalc]);
+        // Обновляем индекс после пересчета
+        const DataIndex = getDataIndex();
+        if (DataIndex) {
+          try {
+            DataIndex.build(technologiesForRecalc);
+          } catch (e) {
+            if (window.Logger) window.Logger.warn('DataIndex.build failed after recalculating funcCover', e);
+          }
+        }
       }
 
       // Скрываем индикатор загрузки при успешной загрузке
@@ -1292,6 +1367,14 @@
       }
       setState('technologies', [...technologies]);
 
+      // Сохраняем technologies в VFS (localStorage) для сохранения между перезагрузками
+      try {
+        vfsWrite('technologies.json', technologies);
+        if (window.Logger) window.Logger.debug('ensureAndPersistNewTech: technologies saved to VFS', technologies.length);
+      } catch (e) {
+        if (window.Logger) window.Logger.warn('vfs write technologies.json failed', e);
+      }
+
       // Обновляем enterpriseData для обратной совместимости
       try {
         const enterpriseData = getState('enterpriseData');
@@ -1299,6 +1382,8 @@
         if (enterpriseData && currentEnterprise) {
           enterpriseData[currentEnterprise] = [...getState('technologies')];
           setState('enterpriseData', { ...enterpriseData });
+          // Сохраняем enterpriseData в VFS
+          vfsWrite('enterpriseData.json', enterpriseData);
           if (window.Logger) window.Logger.debug('ensureAndPersistNewTech: enterpriseData updated for', currentEnterprise, 'total techs:', getState('technologies').length);
         }
       } catch (e) { if (window.Logger) window.Logger.warn('update enterpriseData failed', e); }
@@ -1310,6 +1395,20 @@
     // Теперь все технологии объединены в один массив, поэтому просто обновляем фильтр предприятий
     try {
       setState('currentEnterprise', enterpriseName);
+
+      // Сохраняем технологии в VFS при переключении предприятий для надежности
+      try {
+        const technologies = getState('technologies');
+        if (technologies && Array.isArray(technologies)) {
+          vfsWrite('technologies.json', technologies);
+          const enterpriseData = getState('enterpriseData');
+          if (enterpriseData) {
+            vfsWrite('enterpriseData.json', enterpriseData);
+          }
+        }
+      } catch (e) {
+        if (window.Logger) window.Logger.warn('Не удалось сохранить technologies при переключении предприятия', e);
+      }
 
       // Обновляем фильтр предприятий
       const Filters = getFilters();

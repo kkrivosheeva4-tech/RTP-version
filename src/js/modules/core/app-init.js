@@ -1,7 +1,7 @@
 // app-init.js
 // Инициализация приложения
 
-(function() {
+(function () {
   'use strict';
 
   // Ленивая загрузка зависимостей
@@ -186,7 +186,7 @@
     const helpBtn = DOMCache.get('helpBtn');
 
     if (helpBtn) {
-      helpBtn.addEventListener('click', function() {
+      helpBtn.addEventListener('click', function () {
         // Показываем меню помощи с опциями
         showHelpMenu(helpBtn);
       });
@@ -239,7 +239,7 @@
     // Добавляем обработчики (только если кнопка тура существует)
     const tourBtn = menu.querySelector('[data-action="tour"]');
     if (tourBtn && isRMKPage) {
-      tourBtn.addEventListener('click', function(e) {
+      tourBtn.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
         menu.remove();
@@ -340,11 +340,21 @@
           const currentEnterprise = StateAccessors.getCurrentEnterprise();
           const technologies = StateAccessors.getTechnologies();
           enterpriseData[currentEnterprise] = [...technologies];
-          StateAccessors.setEnterpriseData({...enterpriseData});
+          StateAccessors.setEnterpriseData({ ...enterpriseData });
           DataLoader.vfsWrite('enterpriseData.json', enterpriseData);
         } catch (err) { if (window.Logger) window.Logger.warn('Не удалось сохранить enterpriseData после удаления', err); }
 
         DataLoader.showNotification('Технология удалена!', true);
+
+        // Добавляем уведомление в систему уведомлений
+        if (window.Notifications && typeof window.Notifications.add === 'function') {
+          const techName = currentTech?.name || 'Неизвестная технология';
+          // Сохраняем копию технологии перед удалением для отображения в подробностях
+          const oldTech = currentTech ? JSON.parse(JSON.stringify(currentTech)) : null;
+          window.Notifications.add(window.Notifications.TYPES.DELETE, techName, currentTech?.id, {
+            oldTech: oldTech
+          });
+        }
 
         // Логируем удаление технологии (важное действие → должно попадать в журнал аудита)
         try {

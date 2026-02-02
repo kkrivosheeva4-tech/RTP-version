@@ -1,6 +1,6 @@
 # Документация JS файлов (кроме `src/js/modules/`) проекта РТП-2.3
 
-Актуально для состояния репозитория на **2026‑01‑22**.
+Актуально для состояния репозитория на **2026‑01‑29**.
 
 ## Содержание
 
@@ -9,7 +9,7 @@
   - [`src/js/audit-logger.js`](#srcjsaudit-loggerjs)
   - [`src/js/radar-utils.js`](#srcjsradar-utilsjs)
   - [`src/js/script.js`](#srcjsscriptjs)
-  - [`src/js/RMK2.js`](#srcjsrmk2js)
+  - [`src/js/RMK-director.js`](#srcjsrmk-directorjs)
   - [`src/js/auth.js`](#srcjsauthjs)
   - [`src/js/help.js`](#srcjshelpjs)
   - [`src/js/admin.js`](#srcjsadminjs)
@@ -18,8 +18,8 @@
 
 Вне `src/js/modules/` находятся «страничные» и «базовые» скрипты:
 
-- **`RMK2.js`** — загрузчик модулей и слой обратной совместимости для основного радара.
-- **`script.js`** — общий «скрипт шапки/темы/tooltip’ов» и логика некоторых страниц (главная, админка; также загружается в RMK через `RMK2.js`).
+- **`RMK-director.js`** — загрузчик модулей для основной страницы радара `RMK-director.html`. Загружает все модули в правильном порядке и экспортирует константы в `window`.
+- **`script.js`** — общий «скрипт шапки/темы/tooltip'ов» и логика некоторых страниц (главная, админка; также загружается в RMK-director через `RMK-director.js`).
 - **`audit-logger.js`** — единый журнал аудита в `localStorage` + алиасы для всего проекта.
 - **`auth.js`** — авторизация на отдельной странице `auth.html` (в этой странице не используется модуль `modules/business/auth.js`).
 - **`help.js`** — поведение страницы справки `help.html`.
@@ -34,7 +34,7 @@
 
 **Назначение:** централизованный аудит важных действий (логин/логаут/создание/удаление/экспорт/бэкап и т.д.) в `localStorage`.
 
-**Где используется:** подключается на нескольких страницах (`auth.html`, `index.html`, `admin.html`, также грузится на RMK через `RMK2.js`).
+**Где используется:** подключается на нескольких страницах (`auth.html`, `index.html`, `admin.html`, также грузится на RMK-director через `RMK-director.js`).
 
 **Ключи хранения:**
 
@@ -75,7 +75,7 @@
 
 - `window.debounce`, `window.polarToCartesian`, `window.cartesianToPolar`, `window.describeArc`, `window.describeWedge`, `window.starPath`
 
-**Где используется:** на странице `RMK.html` (через `RMK2.js`, который загружает `radar-utils.js` одним из первых) и в модулях позиционирования/рендеринга.
+**Где используется:** на странице `RMK-director.html` (через `RMK-director.js`, который загружает `radar-utils.js` одним из первых) и в модулях позиционирования/рендеринга.
 
 ---
 
@@ -93,7 +93,7 @@
 
 - `src/pages/index.html`
 - `src/pages/admin.html`
-- на `src/pages/RMK.html` этот файл загружается динамически из `RMK2.js` (как «base utility»)
+- на `src/pages/RMK-director.html` этот файл загружается динамически из `RMK-director.js` (как «base utility»)
 
 **Ключи localStorage (по факту использования в файле):**
 
@@ -120,37 +120,37 @@
 
 **Важно про пересечения с модульным кодом:**
 
-- На RMK‑странице есть также модуль `src/js/modules/business/auth.js`, который тоже экспортирует `window.renderAuth`.
-  Из-за порядка загрузки (см. `RMK2.js`) **модульная версия `renderAuth` может переопределить функцию из `script.js`**.
+- На RMK-director странице есть также модуль `src/js/modules/business/auth.js`, который тоже экспортирует `window.renderAuth`.
+  Из-за порядка загрузки (см. `RMK-director.js`) **модульная версия `renderAuth` может переопределить функцию из `script.js`**.
 
 ---
 
-### `src/js/RMK2.js`
+### `src/js/RMK-director.js`
 
-**Назначение:** основной «загрузчик и интегратор» для `src/pages/RMK.html`.
+**Назначение:** основной «загрузчик и интегратор» для `src/pages/RMK-director.html`.
 
 Файл выполняет две роли:
 
 1. **Загружает все модульные скрипты** из `src/js/modules/**` в строгом порядке (динамические `<script>` с `async=false`).
-2. Оставляет/поддерживает **слой обратной совместимости**: экспортирует в `window` ряд констант, геттеров/сеттеров и функций, которые ожидает «старый» код.
+2. Экспортирует в `window` константы радара и глобальные переменные для использования модулями.
 
 **Главные части:**
 
 - `loadModule(src)` — загрузка одного скрипта
-- `loadAllModules()` — последовательная загрузка списка модулей (включая `audit-logger.js`, `script.js`, `radar-utils.js`)
-- Константы радара: `CENTER_X`, `CENTER_Y`, `RADIUS_STEP`, и т.п. (экспортируются в `window.*`)
-- `initRMK2()` — основная инициализация после загрузки модулей (подключение `requireGlobalModule`, получение зависимостей, инициализация `StateManager`, прокидывание функций)
+- `loadAllModules()` — последовательная загрузка списка модулей (включая `audit-logger.js`, `script.js`, `radar-utils.js` и все модули из `src/js/modules/`)
+- Константы радара: `CENTER_X`, `CENTER_Y`, `RADIUS_STEP`, `POSITION_PAD`, `POSITION_ANGLE_PAD`, `MIN_BLIP_DISTANCE`, `RING_LABEL_WIDTH/HEIGHT` (экспортируются в `window.*`)
+- `TECHTYPE_TO_SHAPE` — для директорской страницы все технологии отображаются как круги
 
-**Экспорт в `window` (примерно что прокидывается):**
+**Экспорт в `window`:**
 
-- геометрия/конфиг: `CENTER_X`, `CENTER_Y`, `RADIUS_STEP`, `POSITION_PAD`, `MIN_BLIP_DISTANCE`, `RING_LABEL_WIDTH/HEIGHT`, `TECHTYPE_TO_SHAPE`
-- синхронизированные данные: `RINGS`, `QUADRANTS`, `levelToRing`, `technologies`, `enterpriseData`, `currentEnterprise`, и др.
-- алиасы/совместимость: `window.getFilterValues`, `window.getTechnologies`, `window.updateRadar`, `window.renderRadar`, `window.createBlip`, `window.getTechById`, …
+- геометрия/конфиг: `CENTER_X`, `CENTER_Y`, `RADIUS_STEP`, `POSITION_PAD`, `POSITION_ANGLE_PAD`, `MIN_BLIP_DISTANCE`, `RING_LABEL_WIDTH`, `RING_LABEL_HEIGHT`, `TECHTYPE_TO_SHAPE`
+- синхронизированные данные: `RINGS`, `QUADRANTS`, `levelToRing` (инициализируются после загрузки данных в `app-init.js`)
 
-**Глобальное состояние:**
+**Особенности:**
 
-- использует `StateManager` как источник правды,
-- но после загрузки данных дублирует часть ключей в `window.*` (для старых вызовов).
+- **Не загружает** `prospects-chart.js` для директорской страницы
+- Инициализация приложения происходит автоматически в `core/app-init.js` после загрузки всех модулей
+- Все роли (архитекторы, директоры, РП, администраторы) используют эту страницу
 
 **Зависимости:**
 
@@ -192,7 +192,7 @@
 **Назначение:** логика страницы `src/pages/help.html`:
 
 - тема (переключение `body.light/body.dark`);
-- навигация по предприятиям: по клику сохраняет `selectedEnterprise` и делает переход на `RMK.html`;
+- навигация по предприятиям: по клику сохраняет `selectedEnterprise` и делает переход на `RMK-director.html`;
 - поиск по справке (скрытие/показ секций + подсветка `<mark.help-search-highlight>`);
 - «липкая» навигация по разделам и подсветка активного раздела при скролле внутри `.help-content`;
 - инициализация авторизации в шапке: вызывает `window.renderAuth()`, а если её нет — подгружает `/src/js/modules/business/auth.js`.

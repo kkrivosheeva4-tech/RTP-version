@@ -738,15 +738,20 @@
       });
     }
 
-    // Определяем квадрант для отображения: используем переданный квадрант или вычисляем из первого блока
+    // Определяем квадрант для отображения: используем переданный квадрант или вычисляем из направлений
     // Если источник - 'priority', используем текущий зуммированный квадрант, если он есть
     const q = sourceQuadrant != null
       ? sourceQuadrant
       : (source === 'priority' && currentZoomedQuadrant != null)
         ? currentZoomedQuadrant
         : (() => {
-          const blockKey = (t.blocks && t.blocks.length) ? t.blocks[0] : t.block;
-          return getQuadrantIdForBlock(blockKey);
+          // Используем направления для определения квадранта
+          const getAllQuadrantsForTech = window.Positioning?.getAllQuadrantsForTech || window.getAllQuadrantsForTech;
+          if (getAllQuadrantsForTech && typeof getAllQuadrantsForTech === 'function') {
+            const quadrants = getAllQuadrantsForTech(t);
+            return quadrants.length > 0 ? quadrants[0] : null;
+          }
+          return null;
         })();
 
     // Попытаемся найти и выделить соответствующий сектор в сайдбаре
@@ -797,7 +802,8 @@
 
     // Выполним зум в квадрант, из которого был клик (или в первый доступный)
     // Если источник - 'priority' и сектор уже зуммирован, не применяем зум повторно
-    if (q != null) {
+    // Если источник - 'add', не делаем зум (уже сброшен в form-management.js)
+    if (q != null && source !== 'add') {
       if (source === 'priority' && getCurrentZoomedQuadrant() === q) {
         // Сектор уже зуммирован, просто убедимся, что он правильно отображается
         const g = document.querySelector(`.quadrant-group.q${q}`);

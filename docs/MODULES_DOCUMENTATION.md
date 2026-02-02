@@ -1,18 +1,19 @@
 # Документация модулей проекта РТП-2.3 (`src/js/modules/`)
 
-Обновлено: **2026‑01‑22**
+Обновлено: **2026‑01‑29**
 Цель документа: дать максимально подробное описание каждого файла в `src/js/modules/`, его API, зависимостей и роли в приложении.
 
 ## Содержание
 
 - [Архитектурные принципы](#архитектурные-принципы)
-- [Порядок загрузки модулей (RMK.html)](#порядок-загрузки-модулей-rmkhtml)
+- [Порядок загрузки модулей (RMK-director.html)](#порядок-загрузки-модулей-rmk-directorhtml)
 - [Соглашения и общие понятия](#соглашения-и-общие-понятия)
   - [Состояние (StateManager)](#состояние-statemanager)
   - [DOM доступ (DOMCache и DOMProxy)](#dom-доступ-domcache-и-domproxy)
   - [События (EventManager, events.js)](#события-eventmanager-eventsjs)
   - [Нотификации и ошибки](#нотификации-и-ошибки)
 - [Core](#core)
+  - [`core/logger.js`](#coreloggerjs)
   - [`core/dom-utils.js`](#coredom-utilsjs)
   - [`core/core-utils.js`](#corecore-utilsjs)
   - [`core/state-manager.js`](#corestate-managerjs)
@@ -41,15 +42,19 @@
   - [`ui/report-status.js`](#uireport-statusjs)
   - [`ui/tooltips.js`](#uitooltipsjs)
   - [`ui/toast.js`](#uitoastjs)
+  - [`ui/notifications.js`](#uinotificationsjs)
   - [`ui/skeleton.js`](#uiskeletonjs)
   - [`ui/loading.js`](#uiloadingjs)
   - [`ui/error-display.js`](#uierror-displayjs)
+  - [`ui/focus-trap.js`](#uifocus-trapjs)
+  - [`ui/vendors-files.js`](#uivendors-filesjs)
   - [`ui/mobile-nav.js`](#uimobile-navjs)
   - [`ui/touch-handlers.js`](#uitouch-handlersjs)
   - [`ui/keyboard-nav.js`](#uikeyboard-navjs)
   - [`ui/aria-manager.js`](#uiaria-managerjs)
   - [`ui/onboarding.js`](#uionboardingjs)
   - [`ui/contextual-hints.js`](#uicontextual-hintsjs)
+  - [`ui/offline-handler.js`](#uioffline-handlerjs)
 - [Business](#business)
   - [`business/auth.js`](#businessauthjs)
   - [`business/priorities.js`](#businessprioritiesjs)
@@ -60,7 +65,7 @@
 ## Архитектурные принципы
 
 1. **Модули — это IIFE + экспорт в `window`.**
-   Практически все файлы оборачиваются в `(function(){ ... })()` и публикуют API через `window.*`. Это даёт обратную совместимость со «старым» кодом (например, `RMK2.js` или inline‑вызовами).
+   Практически все файлы оборачиваются в `(function(){ ... })()` и публикуют API через `window.*`. Это даёт обратную совместимость со «старым» кодом (например, `RMK-director.js` или inline‑вызовами).
 
 2. **Никакой сборки/импорта.**
    Нет `import`/`export` (ESM). Зависимости — через проверку наличия `window.X` (ленивые `getDependency()`).
@@ -71,22 +76,25 @@
 4. **UI реагирует на изменения через подписки и события.**
    `state-utils.js` подписывает UI на изменения ключей состояния, `integration/events.js` связывает клики/ввод/зум с изменением состояния и перерисовкой.
 
-## Порядок загрузки модулей (RMK.html)
+## Порядок загрузки модулей (RMK-director.html)
 
-Страница `src/pages/RMK.html` подключает **только** `RMK2.js`.
-Дальше `RMK2.js` загружает все модули последовательно (см. массив `modules` в `loadAllModules()`).
+Страница `src/pages/RMK-director.html` подключает **только** `RMK-director.js`.
+Дальше `RMK-director.js` загружает все модули последовательно (см. массив `modules` в `loadAllModules()`).
 
-Высокоуровневый порядок:
+**Примечание:** Страница `src/pages/RMK.html` больше не существует — она была заменена на `RMK-director.html` для всех ролей пользователей.
 
-- base: `audit-logger.js`, `script.js`, `radar-utils.js`
-- core: `dom-utils` → `core-utils` → `state-manager` → `data-loader` → `state-utils` → `data-indexing`
-- ui (раньше): `detail-panel` (нужен до `radar-wrappers`)
-- radar: `positioning` → `radar-renderer` → `quadrant-cache` → `quadrants` → `prospects-chart` → `radar-wrappers` → `radar-update`
-- ui (остальные): filters/modals/forms/sidebar/.../onboarding/contextual-hints
-- business: export/auth/priorities
-- split‑handlers: `ui/select-events`, `radar/radar-events`
-- integration: `integration/events`
-- init: `core/app-init`
+Высокоуровневый порядок загрузки:
+
+- **base**: `audit-logger.js`, `script.js`, `radar-utils.js`
+- **core**: `logger.js` → `dom-utils` → `core-utils` → `state-manager` → `data-loader` → `state-utils` → `data-indexing`
+- **ui (раньше)**: `detail-panel` (нужен до `radar-wrappers`)
+- **radar**: `positioning` → `radar-renderer` → `quadrant-cache` → `quadrants` → `radar-wrappers` → `radar-update`
+  - **Примечание:** `prospects-chart.js` **НЕ загружается** для директорской страницы
+- **ui (остальные)**: `filters` → `focus-trap` → `modals` → `forms` → `sidebar` → `modal-forms` → `report-status` → `tooltips` → `notifications` → `form-management` → `vendors-files` → `loading` → `error-display` → `toast` → `skeleton` → `mobile-nav` → `touch-handlers` → `keyboard-nav` → `aria-manager` → `onboarding` → `contextual-hints` → `offline-handler`
+- **business**: `export` → `auth` → `priorities`
+- **split‑handlers**: `ui/select-events` → `radar/radar-events`
+- **integration**: `integration/events`
+- **init**: `core/app-init` (загружается последним)
 
 ## Соглашения и общие понятия
 
@@ -130,6 +138,29 @@
 ---
 
 ## Core
+
+### `core/logger.js`
+
+**Назначение:** обертка для логирования с проверкой окружения (dev/prod). Предотвращает вывод логов в production для улучшения производительности.
+
+**Определение режима разработки:**
+- Проверяет `hostname` (localhost, 127.0.0.1, *.local)
+- Проверяет параметр `?dev=true` в URL
+- Проверяет meta-тег `<meta name="app-mode" content="development">`
+- По умолчанию считается production режим
+
+**Экспорт в `window`:**
+- `window.Logger`:
+  - `log(...args)` — обертка для `console.log` (только в dev)
+  - `error(...args)` — обертка для `console.error` (всегда)
+  - `warn(...args)` — обертка для `console.warn` (только в dev)
+  - `info(...args)` — обертка для `console.info` (только в dev)
+  - `debug(...args)` — обертка для `console.debug` (только в dev)
+  - `isDevMode()` — проверка режима разработки
+
+**Ключевая идея:** автоматическое отключение избыточного логирования в production для улучшения производительности.
+
+---
 
 ### `core/dom-utils.js`
 
@@ -422,7 +453,7 @@
 
 **Назначение:** слой совместимости: предоставляет «старые» функции (`renderRadar`, `createBlip`, …), прокидывая реализацию в `RadarRenderer`.
 
-**Причина существования:** в проекте есть код, который обращается к глобальным функциям напрямую (например, `RMK2.js`, `events.js`, старые обработчики).
+**Причина существования:** в проекте есть код, который обращается к глобальным функциям напрямую (например, `RMK-director.js`, `events.js`, старые обработчики).
 
 **Экспорт:**
 
@@ -497,7 +528,7 @@
 
 **DOM‑контракты (ключевые):**
 
-- кнопка открытия: `#toggleProspectsChartBtn` (скрытая в RMK.html, кликается также по `#chartIconBtn`)
+- кнопка открытия: `#toggleProspectsChartBtn` (не используется на RMK-director.html, модуль не загружается для директорской страницы)
 - модалка: `#prospectsModal`
 - закрытие: `#closeProspectsBtn`
 - SVG графика: `#prospectsChartSvg`
@@ -628,7 +659,7 @@
   - валидация обязательных полей,
   - интеграция с `DataLoader.ensureAndPersistNewTech`, `switchEnterprise`, `updateRadar`, `Toast`, `appendAdminAudit`.
 
-**Сильная зависимость от DOM‑ID** (формы в `RMK.html`):
+**Сильная зависимость от DOM‑ID** (формы в `RMK-director.html`):
 
 - `addTechForm`, `editTechForm` и множество `tech*` / `edit*` полей (включая hidden поля кастомных селектов).
 
@@ -719,7 +750,7 @@
 
 **Назначение:** модальный индикатор статуса генерации отчёта.
 
-**DOM‑контракты (в RMK.html):**
+**DOM‑контракты (в RMK-director.html):**
 
 - модалка `#reportLoadingModal`
 - элементы `#loadingSpinner`, `#loadingSuccess`, `#loadingError`, `#loadingText`, `#loadingErrorMessage`
@@ -942,6 +973,80 @@
 - позиционирование подсказки по `getBoundingClientRect`
 
 **Экспорт:** `window.ContextualHints = { init, showHint, ... }` (точный набор — в хвосте файла).
+
+---
+
+### `ui/focus-trap.js`
+
+**Назначение:** управление фокусом в модальных окнах и диалогах. Реализует focus trap и восстановление фокуса для улучшения доступности.
+
+**Основные функции:**
+- `trapFocus(container)` — активирует focus trap для модального окна
+- `releaseFocus()` — деактивирует focus trap и восстанавливает фокус на сохранённый элемент
+- `getFocusableElements(container)` — получает все фокусируемые элементы внутри контейнера
+
+**Особенности:**
+- Автоматически перехватывает Tab/Shift+Tab для циклического перемещения фокуса внутри модалки
+- Сохраняет элемент, который имел фокус до открытия модалки
+- Фильтрует скрытые элементы (display: none, visibility: hidden, opacity: 0)
+- Поддерживает все стандартные фокусируемые элементы (a, button, input, textarea, select, [tabindex])
+
+**Экспорт:** `window.FocusTrap = { trapFocus, releaseFocus, getFocusableElements }`.
+
+---
+
+### `ui/notifications.js`
+
+**Назначение:** система уведомлений для отображения различных типов сообщений пользователю.
+
+**Особенности:**
+- Интегрируется с `Toast` для отображения уведомлений
+- Поддерживает различные типы уведомлений (success, error, warning, info)
+- Может использоваться как альтернатива или дополнение к `Toast`
+
+**Экспорт:** `window.Notifications` (точный API зависит от реализации).
+
+---
+
+### `ui/vendors-files.js`
+
+**Назначение:** управление вендорами и файлами для технологий на директорской странице.
+
+**Основные функции:**
+- Добавление/удаление вендоров к технологии
+- Добавление/удаление интеграторов к технологии
+- Прикрепление файлов к технологии
+- Валидация и обработка файлов
+
+**Особенности:**
+- Работает только на странице `RMK-director.html`
+- Интегрируется с формами добавления/редактирования технологий
+- Сохраняет данные в `enterpriseData-director.json`
+
+**Экспорт:** `window.VendorsFiles` (точный API зависит от реализации).
+
+---
+
+### `ui/offline-handler.js`
+
+**Назначение:** обработка online/offline событий с уведомлениями пользователю.
+
+**Основные функции:**
+- Отслеживание состояния соединения (online/offline)
+- Показ уведомления при потере соединения
+- Показ уведомления при восстановлении соединения
+- Автоматическое скрытие уведомлений
+
+**Особенности:**
+- Использует события `online` и `offline` браузера
+- Создаёт визуальные уведомления с иконками
+- Поддерживает ARIA-атрибуты для доступности (`role="alert"`, `aria-live="assertive"`)
+- Анимации появления/исчезновения уведомлений
+
+**DOM-контракты:**
+- Создаёт элементы `.offline-notification` и `.online-notification` динамически
+
+**Экспорт:** `window.OfflineHandler = { init, ... }` (точный набор — в хвосте файла).
 
 ---
 

@@ -169,12 +169,6 @@
     const legendEl = document.querySelector(".legend");
     if (legendEl) legendEl.classList.add("hidden");
 
-    // Применяем трансформацию через CSS
-    const ringLabelsGroup = document.getElementById("ringLabelsGroup");
-    if (ringLabelsGroup) {
-      ringLabelsGroup.classList.remove("hidden");
-      ringLabelsGroup.setAttribute("data-zoomed-quadrant", qId);
-    }
 
     // Сохраняем текущий зуммированный квадрант через StateManager
     setCurrentZoomedQuadrant(qId);
@@ -211,12 +205,6 @@
     // Восстанавливаем видимость легенды
     const legendEl = document.querySelector(".legend");
     if (legendEl) legendEl.classList.remove("hidden");
-
-    // Убираем атрибут с информацией о зуме
-    const ringLabelsGroup = document.getElementById("ringLabelsGroup");
-    if (ringLabelsGroup) {
-      ringLabelsGroup.removeAttribute("data-zoomed-quadrant");
-    }
 
     // Сбрасываем текущий зуммированный квадрант
     setCurrentZoomedQuadrant(null);

@@ -464,7 +464,11 @@
         e.target.closest(".controls") ||
         e.target.closest("#techRadar") ||
         e.target.closest(".detail-panel") ||
-        e.target.closest("#quadrantPriorityPanel")
+        e.target.closest("#quadrantPriorityPanel") ||
+        e.target.closest("#notificationDetailsModal") ||
+        e.target.closest(".notification-details-modal") ||
+        e.target.closest("#notificationsPanel") ||
+        e.target.closest(".notifications-panel")
       ) {
         return;
       }

@@ -1,6 +1,6 @@
 // Модуль рендеринга радара технологий
-// Экспортирует функции в window.RadarRenderer для использования в RMK2.js
-// Использует глобальные переменные из RMK2.js и функции из других модулей
+// Экспортирует функции в window.RadarRenderer для использования в RMK-director.js
+// Использует глобальные переменные из RMK-director.js и функции из других модулей
 
 (function() {
   'use strict';
@@ -18,46 +18,11 @@
   function renderRadarBackground(config) {
     const {
       SVG_NS, CENTER_X, CENTER_Y, RADIUS_STEP, RINGS, QUADRANTS,
-      RING_LABEL_WIDTH, RING_LABEL_HEIGHT, svg, clearQuadrantGroupsCache,
+      svg, clearQuadrantGroupsCache,
       polarToCartesian, describeArc, describeWedge
     } = config;
 
     if (radarBackgroundRendered) return;
-
-    // Проверяем, является ли это директорской страницей
-    const isDirectorPage = document.body.id === 'rmk-director';
-
-    // Создаем ringLabelsGroup (добавим его в SVG после секторов) только для обычной страницы
-    if (!isDirectorPage) {
-      const ringLabels = document.createElementNS(SVG_NS, "g");
-      ringLabels.id = "ringLabelsGroup";
-      RINGS.forEach((name, i) => {
-        const r = (i + 1) * RADIUS_STEP;
-        const pos = polarToCartesian(CENTER_X, CENTER_Y, r, 0);
-        const labelGroup = document.createElementNS(SVG_NS, "g");
-        labelGroup.setAttribute("transform", `translate(${pos.x}, ${pos.y})`);
-        const bg = document.createElementNS(SVG_NS, "rect");
-        bg.classList.add("ring-label-bg");
-        const width = RING_LABEL_WIDTH;
-        const height = RING_LABEL_HEIGHT;
-        bg.setAttribute("x", -width / 2);
-        bg.setAttribute("y", -height / 2);
-        bg.setAttribute("width", width);
-        bg.setAttribute("height", height);
-        const txt = document.createElementNS(SVG_NS, "text");
-        txt.classList.add("ring-label");
-        txt.setAttribute("x", 0);
-        txt.setAttribute("y", 0);
-        txt.setAttribute("dominant-baseline", "middle");
-        txt.setAttribute("text-anchor", "middle");
-        txt.textContent = name;
-        labelGroup.appendChild(bg);
-        labelGroup.appendChild(txt);
-        ringLabels.appendChild(labelGroup);
-      });
-      // Добавляем группу подписей колец ПОСЛЕ секторов (будет добавлено позже)
-      window.ringLabelsGroup = ringLabels;
-    }
 
     // Создаем и добавляем quadrant-group (фон радара и линии)
     QUADRANTS.forEach((q) => {
@@ -236,77 +201,11 @@
       svg.appendChild(g);
     });
 
-    // Добавляем группу подписей колец ПОСЛЕ секторов (только для обычной страницы)
-    if (!isDirectorPage && window.ringLabelsGroup) {
-      svg.appendChild(window.ringLabelsGroup);
-    }
-
     radarBackgroundRendered = true;
     // Очищаем кэш групп квадрантов после создания структуры SVG
     if (clearQuadrantGroupsCache) clearQuadrantGroupsCache();
   }
 
-  // Легенда фигур технологий по типам
-  function renderLegend(config) {
-    // Для директорской страницы легенда не нужна (только круги)
-    const isDirectorPage = document.body.id === 'rmk-director';
-    if (isDirectorPage) {
-      const legend = document.querySelector('.legend');
-      if (legend) legend.innerHTML = '';
-      return;
-    }
-
-    const { SVG_NS, starPath } = config;
-    const legend = document.querySelector('.legend');
-    if (!legend) return;
-    const items = [
-      { label: 'Базовые', shape: 'triangle' },
-      { label: 'Интегрированные', shape: 'circle' },
-      { label: 'Платформенные решения', shape: 'square' },
-      { label: 'Управление с ML и AI', shape: 'star' },
-    ];
-    const wrap = document.createElement('div');
-    wrap.className = 'legend-items';
-    items.forEach(it => {
-      const row = document.createElement('div');
-      row.className = 'legend-item';
-      const svgEl = document.createElementNS(SVG_NS, 'svg');
-      svgEl.setAttribute('width', '28');
-      svgEl.setAttribute('height', '28');
-      svgEl.setAttribute('viewBox', '0 0 40 40');
-      let shapeEl;
-      if (it.shape === 'circle') {
-        shapeEl = document.createElementNS(SVG_NS, 'circle');
-        shapeEl.setAttribute('cx', '20');
-        shapeEl.setAttribute('cy', '20');
-        shapeEl.setAttribute('r', '12');
-      } else if (it.shape === 'square') {
-        shapeEl = document.createElementNS(SVG_NS, 'rect');
-        shapeEl.setAttribute('x', '10');
-        shapeEl.setAttribute('y', '10');
-        shapeEl.setAttribute('width', '22');
-        shapeEl.setAttribute('height', '22');
-      } else if (it.shape === 'triangle') {
-        shapeEl = document.createElementNS(SVG_NS, 'path');
-        shapeEl.setAttribute('d', `M 20 8 L 30 28 L 10 28 Z`);
-      } else if (it.shape === 'star') {
-        shapeEl = document.createElementNS(SVG_NS, 'path');
-        shapeEl.setAttribute('d', starPath(21, 21, 15, 5, 5));
-      }
-      if (shapeEl) {
-        shapeEl.setAttribute('class', `legend-icon legend-icon--${it.shape}`);
-        svgEl.appendChild(shapeEl);
-      }
-      const text = document.createElement('span');
-      text.className = 'legend-label';
-      text.textContent = it.label;
-      row.appendChild(svgEl);
-      row.appendChild(text);
-      wrap.appendChild(row);
-    });
-    legend.innerHTML = '';
-    legend.appendChild(wrap);
-  }
 
   // Создание blip'а (точки технологии на радаре)
   function createBlip(tech, pos, quadrant, config) {
@@ -510,17 +409,15 @@
     const {
       technologies, levelToRing, QUADRANTS, svg, selectedBlipId,
       attachBlipHoverHandlers, getAllQuadrantsForTech, assignFixedPositionForQuadrant,
-      applyNonOverlappingLayout, avoidRingLabelOverlap, getQuadrantGroup,
+      applyNonOverlappingLayout, getQuadrantGroup,
       computeShapeByTechType, TECHTYPE_TO_SHAPE, createBlip: createBlipFn,
-      renderRadarBackground: renderRadarBackgroundFn, renderLegend: renderLegendFn
+      renderRadarBackground: renderRadarBackgroundFn
     } = config;
 
     const techData = data || technologies;
 
     // Отрисовываем фон один раз
     renderRadarBackgroundFn(config);
-    // Обновляем легенду
-    try { renderLegendFn(config); } catch (e) { /* ignore */ }
 
     // Собираем все элементы для удаления в один список
     const blipsToRemove = svg.querySelectorAll('.blip, .blip-warning');
@@ -605,7 +502,6 @@
     Object.keys(renderDataByQuadrant).forEach(quadrantId => {
       const quadrantData = renderDataByQuadrant[quadrantId];
       applyNonOverlappingLayout(quadrantData);
-      avoidRingLabelOverlap(quadrantData);
     });
 
     // Создаём blip'ы в SVG
@@ -654,7 +550,6 @@
   // Экспорт в window.RadarRenderer
   window.RadarRenderer = {
     renderRadarBackground,
-    renderLegend,
     renderRadar,
     createBlip,
     computeShapeByTechType,

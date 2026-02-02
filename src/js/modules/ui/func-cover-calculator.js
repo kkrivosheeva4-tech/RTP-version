@@ -48,7 +48,7 @@
     function updateFuncCoverField(funcCoverFieldId, value) {
         const funcCoverInput = document.getElementById(funcCoverFieldId);
         if (!funcCoverInput) {
-            console.warn(`[FuncCoverCalculator] Поле ${funcCoverFieldId} не найдено`);
+            // Не выводим warning, так как поле может быть необязательным
             return;
         }
 
@@ -119,11 +119,11 @@
 
         // Добавляем обработчик изменения
         directionsInput.addEventListener('change', () => {
-            handleDirectionsChange('techDirections', 'funcCover');
+            handleDirectionsChange('techDirections', 'techFuncCover');
         });
 
         // Инициализируем значение при загрузке
-        handleDirectionsChange('techDirections', 'funcCover');
+        handleDirectionsChange('techDirections', 'techFuncCover');
     }
 
     /**

@@ -141,9 +141,22 @@
     });
 
     // Обновление радара при изменении technologies
-    StateManager.subscribeToKey('technologies', () => {
+    StateManager.subscribeToKey('technologies', (newTechnologies) => {
       if (typeof window.rebuildTechnologiesIndex === 'function') {
         window.rebuildTechnologiesIndex();
+      }
+
+      // Автоматически сохраняем технологии в VFS (localStorage) при любом изменении
+      try {
+        if (newTechnologies && Array.isArray(newTechnologies)) {
+          if (typeof window.vfsWrite === 'function') {
+            window.vfsWrite('technologies.json', newTechnologies);
+          } else if (window.DataLoader && typeof window.DataLoader.vfsWrite === 'function') {
+            window.DataLoader.vfsWrite('technologies.json', newTechnologies);
+          }
+        }
+      } catch (e) {
+        if (window.Logger) window.Logger.warn('Не удалось сохранить technologies в VFS при изменении', e);
       }
 
       if (!isModalOpen(DOMCache)) {
