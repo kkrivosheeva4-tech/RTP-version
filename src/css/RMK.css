@@ -1784,9 +1784,37 @@ body.dark .modal-body .custom-select-modal .select-dropdown {
   filter: drop-shadow(0 0 14px #ff4444);
 }
 
+/* ОБНОВЛЕНО (2026-01-29): Улучшенная визуальная индикация отсутствующих данных */
+/* Подсветка для технологий с отсутствующими данными (детальная индикация) */
+.blip-missing-data {
+  stroke: #ff9800;
+  stroke-width: 2;
+  stroke-dasharray: 4, 2;
+  opacity: 0.9;
+  filter: drop-shadow(0 0 4px #ff9800);
+  transition: stroke-width 0.2s ease, filter 0.2s ease;
+}
+
+.blip-missing-data:hover {
+  stroke-width: 2.5;
+  filter: drop-shadow(0 0 8px #ff9800);
+  opacity: 1;
+}
+
+/* Комбинированная индикация: неполные данные + отсутствующие данные */
+.blip-incomplete.blip-missing-data {
+  stroke: #ff6600;
+  stroke-width: 2.5;
+  stroke-dasharray: 4, 2;
+  filter: drop-shadow(0 0 8px #ff6600);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .blip-incomplete {
     animation: none;
+  }
+  .blip-missing-data {
+    stroke-dasharray: none;
   }
 }
 
@@ -1815,6 +1843,21 @@ body.dark .blip-incomplete {
 
 body.dark .blip-incomplete:hover {
   filter: drop-shadow(0 0 16px #ff6666);
+}
+
+/* ОБНОВЛЕНО (2026-01-29): Стили для темной темы */
+body.dark .blip-missing-data {
+  stroke: #ffaa44;
+  filter: drop-shadow(0 0 6px #ffaa44);
+}
+
+body.dark .blip-missing-data:hover {
+  filter: drop-shadow(0 0 10px #ffaa44);
+}
+
+body.dark .blip-incomplete.blip-missing-data {
+  stroke: #ff8844;
+  filter: drop-shadow(0 0 10px #ff8844);
 }
 
 /* Selected (chosen) blip has a soft pulse */

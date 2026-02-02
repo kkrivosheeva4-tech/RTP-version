@@ -35,6 +35,9 @@ async function loadAllModules() {
     // UI модули (detail-panel должен быть загружен до radar-wrappers, так как использует showDetail)
     '/src/js/modules/ui/detail-panel.js',
 
+    // Utils модули (должны быть загружены до radar модулей)
+    '/src/js/modules/utils/func-cover-utils.js',  // ОБНОВЛЕНО: Учет важности функций в funcCover
+
     // Radar модули
     '/src/js/modules/radar/positioning.js',
     '/src/js/modules/radar/radar-renderer.js',
@@ -72,6 +75,16 @@ async function loadAllModules() {
     '/src/js/modules/business/export.js',
     '/src/js/modules/business/auth.js',
     '/src/js/modules/business/priorities.js',
+
+    // Analytics модули (аналитика модели)
+    '/src/js/modules/analytics/model-analytics.js',
+    '/src/js/modules/analytics/weight-optimizer.js',  // ОБНОВЛЕНО: Автоматическая оптимизация весов
+    '/src/js/modules/analytics/missing-data-predictor.js',  // ОБНОВЛЕНО: Улучшенная обработка отсутствующих данных
+    '/src/js/modules/analytics/temporal-dynamics.js',  // ОБНОВЛЕНО: Учет временной динамики
+    '/src/js/modules/analytics/adaptive-calibration.js',  // ОБНОВЛЕНО: Адаптивная калибровка параметров
+
+    // Radar модули (оптимизация)
+    '/src/js/modules/radar/spatial-index.js',  // ОБНОВЛЕНО: Пространственные индексы для оптимизации разведения
 
     // Integration модули (events должен быть загружен после всех зависимостей)
     // Новые модули обработчиков событий (загружаются перед events.js)

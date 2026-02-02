@@ -322,9 +322,26 @@
     const hasRatings = isRatingFilled(techRead) || isRatingFilled(organRead) || isRatingFilled(funcCover);
     const hasReadinessRatings = techReadFilled && organReadFilled;
 
+    // ОБНОВЛЕНО (2026-01-29): Улучшенная визуальная индикация отсутствующих данных
+    // Получаем детальную информацию об отсутствующих данных
+    let missingDataInfo = null;
+    if (window.Positioning && typeof window.Positioning.getMissingDataInfo === 'function') {
+      missingDataInfo = window.Positioning.getMissingDataInfo(tech);
+    }
+
     // Подсвечиваем красным только если у технологии есть предприятия, но нет оценок готовности
     if (!hasReadinessRatings && hasEnterprises) {
       el.classList.add('blip-incomplete');
+    }
+
+    // ОБНОВЛЕНО (2026-01-29): Добавляем класс для детальной индикации отсутствующих данных
+    if (missingDataInfo && missingDataInfo.hasMissingData) {
+      el.classList.add('blip-missing-data');
+      // Добавляем data-атрибуты для детальной информации
+      el.dataset.missingFactors = missingDataInfo.missingFactors.join(',');
+      if (missingDataInfo.missingEnterprises.length > 0) {
+        el.dataset.missingEnterprises = missingDataInfo.missingEnterprises.join(',');
+      }
     }
 
     // Показываем иконку предупреждения только если у технологии есть предприятия, но нет оценок
@@ -354,7 +371,24 @@
       warningGroup.appendChild(exclamation);
 
       const title = document.createElementNS(SVG_NS, "title");
-      title.textContent = "Заполните поля оценок";
+      // ОБНОВЛЕНО (2026-01-29): Детальное сообщение об отсутствующих данных
+      let titleText = "Заполните поля оценок";
+      if (missingDataInfo && missingDataInfo.hasMissingData) {
+        const missingLabels = {
+          'techRead': 'технологическая готовность',
+          'organRead': 'организационная готовность',
+          'funcCover': 'покрытие функций',
+          'trlStage': 'TRL стадия'
+        };
+        const missingList = missingDataInfo.missingFactors
+          .map(f => missingLabels[f] || f)
+          .join(', ');
+        titleText = `Отсутствуют данные: ${missingList}`;
+        if (missingDataInfo.missingEnterprises.length > 0) {
+          titleText += ` (предприятия: ${missingDataInfo.missingEnterprises.join(', ')})`;
+        }
+      }
+      title.textContent = titleText;
       warningGroup.appendChild(title);
 
       g.appendChild(warningGroup);
@@ -442,8 +476,19 @@
     validTechs.forEach((t) => {
       const techQuadrants = getAllQuadrantsForTech(t);
 
+      // ОБНОВЛЕНО (2026-01-29): Технологии без направлений теперь имеют fallback квадрант
+      // Если квадрантов все еще нет, это означает проблему с данными
       if (techQuadrants.length === 0) {
-        if (window.Logger) window.Logger.debug('renderRadar: tech has no quadrants', { id: t.id, name: t.name });
+        if (window.Logger) {
+          window.Logger.warn('renderRadar: tech has no quadrants after fallback', {
+            id: t.id,
+            name: t.name,
+            directions: t.directions,
+            direction: t.direction,
+            blocks: t.blocks,
+            block: t.block
+          });
+        }
         return;
       }
 

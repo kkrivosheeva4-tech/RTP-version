@@ -146,6 +146,11 @@
         window.rebuildTechnologiesIndex();
       }
 
+      // ОБНОВЛЕНО (2026-01-29): Очищаем кеш позиций при изменении данных
+      if (window.Positioning && typeof window.Positioning.clearPositionCache === 'function') {
+        window.Positioning.clearPositionCache();
+      }
+
       // Автоматически сохраняем технологии в VFS (localStorage) при любом изменении
       try {
         if (newTechnologies && Array.isArray(newTechnologies)) {

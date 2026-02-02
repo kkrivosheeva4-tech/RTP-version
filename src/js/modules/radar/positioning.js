@@ -7,6 +7,48 @@
 (function () {
   'use strict';
 
+  // ОБНОВЛЕНО (2026-01-29): Кеш для расчетов позиций технологий
+  // Кеширует результаты расчета позиций для улучшения производительности
+  const positionCache = new Map();
+  const CACHE_VERSION = '1.0'; // Версия кеша для инвалидации при изменении модели
+
+  /**
+   * Генерация ключа кеша для технологии
+   * @param {Object} tech - Объект технологии
+   * @returns {string} Ключ кеша
+   */
+  function getCacheKey(tech) {
+    if (!tech || !tech.id) return null;
+
+    // Создаем ключ на основе ID и основных параметров, влияющих на позицию
+    const techRead = tech.techRead !== undefined ? tech.techRead : 'null';
+    const organRead = tech.organRead !== undefined ? tech.organRead : 'null';
+    const funcCover = tech.funcCover !== undefined ? tech.funcCover : 'null';
+    const trlStage = tech.trlStage !== undefined ? tech.trlStage : 'null';
+    const directions = Array.isArray(tech.directions) ? tech.directions.join(',') : (tech.direction || '');
+
+    // Учитываем предприятия, если они есть
+    let enterprisesKey = '';
+    if (Array.isArray(tech.enterprises) && tech.enterprises.length > 0) {
+      enterprisesKey = tech.enterprises.map(e =>
+        `${e.enterpriseId || ''}:${e.technologicalReadiness || ''}:${e.organizationalReadiness || ''}`
+      ).join('|');
+    }
+
+    return `${CACHE_VERSION}:${tech.id}:${techRead}:${organRead}:${funcCover}:${trlStage}:${directions}:${enterprisesKey}`;
+  }
+
+  /**
+   * Очистка кеша позиций
+   * Вызывается при изменении данных или параметров модели
+   */
+  function clearPositionCache() {
+    positionCache.clear();
+    if (window.Logger && typeof window.Logger.debug === 'function') {
+      window.Logger.debug('[Positioning] Кеш позиций очищен');
+    }
+  }
+
   // Вспомогательная функция для дробной части
   function frac(n) {
     return n - Math.floor(n);
@@ -68,6 +110,7 @@
   }
 
   // Получить все уникальные квадранты для технологии на основе направлений
+  // ОБНОВЛЕНО (2026-01-29): Добавлен fallback механизм для технологий без направлений
   function getAllQuadrantsForTech(tech) {
     if (!tech) return [];
     const quadrantsSet = new Set();
@@ -83,9 +126,33 @@
         const directionQuadrants = getQuadrantsForDirection(directionName);
         directionQuadrants.forEach(q => quadrantsSet.add(q));
       });
-    } else {
-      // Если направлений нет, квадрант не может быть определен
-      // Возвращаем пустой массив
+    }
+
+    // ОБНОВЛЕНО (2026-01-29): Fallback механизм для технологий без направлений
+    // Если направлений нет, пробуем использовать блоки или размещаем в квадранте 1 (по умолчанию)
+    if (quadrantsSet.size === 0) {
+      // Пробуем найти квадрант через блоки (для обратной совместимости)
+      const blocks = Array.isArray(tech.blocks) && tech.blocks.length
+        ? tech.blocks
+        : (tech.block ? [tech.block] : []);
+
+      if (blocks.length > 0 && window.blockToQuadrant) {
+        blocks.forEach(block => {
+          const quadrantId = window.blockToQuadrant[block];
+          if (typeof quadrantId === 'number') {
+            quadrantsSet.add(quadrantId);
+          }
+        });
+      }
+
+      // Если все еще нет квадранта, размещаем в квадранте 1 (по умолчанию)
+      // Это позволяет технологии отображаться на радаре даже без направлений
+      if (quadrantsSet.size === 0) {
+        if (window.Logger && typeof window.Logger.warn === 'function') {
+          window.Logger.warn(`[Positioning] Технология ${tech.id || tech.name || 'unknown'} не имеет направлений, размещаем в квадранте 1 (по умолчанию)`);
+        }
+        quadrantsSet.add(1); // Квадрант 1 по умолчанию
+      }
     }
 
     return Array.from(quadrantsSet);
@@ -168,6 +235,131 @@
   }
 
   /**
+   * Определение отсутствующих данных в технологии
+   * ОБНОВЛЕНО (2026-01-29): Добавлена функция для визуальной индикации неполноты данных
+   *
+   * @param {Object} tech - Объект технологии
+   * @returns {Object} Объект с информацией об отсутствующих данных
+   */
+  function getMissingDataInfo(tech) {
+    if (!tech) {
+      return {
+        hasMissingData: true,
+        missingFactors: ['techRead', 'organRead', 'funcCover', 'trlStage'],
+        missingEnterprises: []
+      };
+    }
+
+    const missingFactors = [];
+    const missingEnterprises = [];
+
+    // Проверяем наличие данных о предприятиях
+    const enterprises = Array.isArray(tech.enterprises) ? tech.enterprises : [];
+    const hasEnterprises = enterprises.length > 0;
+
+    // Проверяем techRead и organRead
+    if (hasEnterprises) {
+      // Проверяем оценки по предприятиям
+      let hasTechRead = false;
+      let hasOrganRead = false;
+      const enterprisesWithoutData = [];
+
+      enterprises.forEach(ent => {
+        if (ent && typeof ent === 'object') {
+          const hasTechReadValue = ent.technologicalReadiness !== undefined &&
+                                   ent.technologicalReadiness !== null &&
+                                   !isNaN(Number(ent.technologicalReadiness));
+          const hasOrganReadValue = ent.organizationalReadiness !== undefined &&
+                                    ent.organizationalReadiness !== null &&
+                                    !isNaN(Number(ent.organizationalReadiness));
+
+          if (hasTechReadValue) hasTechRead = true;
+          if (hasOrganReadValue) hasOrganRead = true;
+
+          if (!hasTechReadValue || !hasOrganReadValue) {
+            enterprisesWithoutData.push(ent.enterpriseId || 'unknown');
+          }
+        }
+      });
+
+      if (!hasTechRead) missingFactors.push('techRead');
+      if (!hasOrganRead) missingFactors.push('organRead');
+      if (enterprisesWithoutData.length > 0) {
+        missingEnterprises.push(...enterprisesWithoutData);
+      }
+    } else {
+      // Проверяем общие значения (fallback)
+      if (tech.techRead === undefined || tech.techRead === null) {
+        missingFactors.push('techRead');
+      }
+      if (tech.organRead === undefined || tech.organRead === null) {
+        missingFactors.push('organRead');
+      }
+    }
+
+    // Проверяем funcCover
+    if ((tech.funcCover === undefined || tech.funcCover === null || tech.funcCover === 0) &&
+        (!Array.isArray(tech.functionCoverage) || tech.functionCoverage.length === 0)) {
+      missingFactors.push('funcCover');
+    }
+
+    // Проверяем trlStage
+    if (tech.trlStage === undefined || tech.trlStage === null) {
+      missingFactors.push('trlStage');
+    }
+
+    return {
+      hasMissingData: missingFactors.length > 0,
+      missingFactors: missingFactors,
+      missingEnterprises: [...new Set(missingEnterprises)], // Убираем дубликаты
+      hasEnterprises: hasEnterprises
+    };
+  }
+
+  /**
+   * Валидация и нормализация входных значений факторов готовности
+   *
+   * @param {*} value - Значение для валидации
+   * @param {string} factorName - Название фактора (для логирования)
+   * @param {number} min - Минимальное допустимое значение
+   * @param {number} max - Максимальное допустимое значение
+   * @param {number} defaultValue - Значение по умолчанию при отсутствии данных
+   * @returns {number|null} - Валидированное значение или null если данные отсутствуют
+   */
+  function validateAndNormalizeFactor(value, factorName, min, max, defaultValue = null) {
+    // Если значение явно null или undefined, возвращаем null (отсутствие данных)
+    if (value === null || value === undefined) {
+      return null;
+    }
+
+    // Преобразуем в число
+    const numValue = Number(value);
+
+    // Проверяем на NaN
+    if (isNaN(numValue)) {
+      if (window.Logger && typeof window.Logger.warn === 'function') {
+        window.Logger.warn(`[Positioning] Некорректное значение ${factorName}: ${value}. Используется значение по умолчанию.`);
+      } else {
+        console.warn(`[Positioning] Некорректное значение ${factorName}: ${value}. Используется значение по умолчанию.`);
+      }
+      return defaultValue;
+    }
+
+    // Проверяем диапазон
+    if (numValue < min || numValue > max) {
+      if (window.Logger && typeof window.Logger.warn === 'function') {
+        window.Logger.warn(`[Positioning] Значение ${factorName} (${numValue}) выходит за допустимый диапазон [${min}, ${max}]. Ограничено до границ диапазона.`);
+      } else {
+        console.warn(`[Positioning] Значение ${factorName} (${numValue}) выходит за допустимый диапазон [${min}, ${max}]. Ограничено до границ диапазона.`);
+      }
+      // Ограничиваем до границ диапазона
+      return Math.max(min, Math.min(max, numValue));
+    }
+
+    return numValue;
+  }
+
+  /**
    * Вычисляет позицию технологии на радаре в полярных координатах (θ, r)
    * согласно математической модели с логистической функцией.
    *
@@ -188,9 +380,17 @@
    * 3. Сводный показатель: z_i = Σ(w_k * x_ik) + b
    * 4. Логистическая функция: p_i = 1 / (1 + exp(-α * z_i))
    * 5. Радиус: r_i = 100 * (1 - p_i), затем масштабирование с гарантией (0, 100)
+   *
+   * ВАЛИДАЦИЯ (обновлено 2026-01-29):
+   * - Все входные значения факторов валидируются на корректность диапазонов
+   * - Некорректные значения логируются и ограничиваются до допустимых границ
+   * - Отсутствующие данные (null/undefined) обрабатываются явно
    */
   function calculateRadarPosition(tech) {
     if (!tech) {
+      if (window.Logger && typeof window.Logger.warn === 'function') {
+        window.Logger.warn('[Positioning] calculateRadarPosition вызвана с null/undefined технологией');
+      }
       return { theta: 0, radius: 50 };
     }
 
@@ -225,25 +425,54 @@
     }
 
     // === ВЫЧИСЛЕНИЕ РАДИУСА (r) ===
-    // Параметры модели
-    const ALPHA = 4; // Параметр чувствительности логистической функции (3-5)
+    // ОБНОВЛЕНО (2026-01-29): Конфигурируемые параметры модели
+    // Параметры можно переопределить через window.RadarModelConfig
+
+    // Параметр чувствительности логистической функции
+    const ALPHA = (window.RadarModelConfig && window.RadarModelConfig.alpha !== undefined)
+      ? window.RadarModelConfig.alpha
+      : 4; // Значение по умолчанию
 
     // Веса факторов (w_k)
     // Все факторы положительные - "приближающие" (уменьшают радиус)
     // Веса скалиброваны так, чтобы их сумма = 1.0 для корректного диапазона
-    const weights = {
+    const defaultWeights = {
       techRead: 0.30,      // Технологическая готовность (0-3) → положительный
       organRead: 0.30,     // Организационная готовность (0-3) → положительный
       funcCover: 0.20,     // Покрытие функций (0-3) → положительный
       trlStage: 0.20       // TRL стадия (1-3) → положительный
     };
-    // Сумма весов = 1.0 ✓
+
+    // Получаем веса из конфигурации или используем значения по умолчанию
+    let weights = defaultWeights;
+    if (window.RadarModelConfig && window.RadarModelConfig.weights) {
+      weights = Object.assign({}, defaultWeights, window.RadarModelConfig.weights);
+
+      // Нормализуем веса, чтобы их сумма была равна 1.0
+      const sum = weights.techRead + weights.organRead + weights.funcCover + weights.trlStage;
+      if (Math.abs(sum - 1.0) > 0.001) {
+        if (window.Logger && typeof window.Logger.warn === 'function') {
+          window.Logger.warn(`[Positioning] Сумма весов факторов (${sum.toFixed(3)}) не равна 1.0. Выполняется нормализация.`);
+        } else {
+          console.warn(`[Positioning] Сумма весов факторов (${sum.toFixed(3)}) не равна 1.0. Выполняется нормализация.`);
+        }
+        const normalizationFactor = 1.0 / sum;
+        weights = {
+          techRead: weights.techRead * normalizationFactor,
+          organRead: weights.organRead * normalizationFactor,
+          funcCover: weights.funcCover * normalizationFactor,
+          trlStage: weights.trlStage * normalizationFactor
+        };
+      }
+    }
 
     // Сдвиг для калибровки общей строгости модели
     // bias = -0.6: технология с максимальными параметрами → r ≈ 17% (близко к центру)
     //              технология со средними параметрами → r ≈ 60% (среднее положение)
     //              технология с низкими параметрами → r ≈ 92% (у края)
-    const bias = -0.6;
+    const bias = (window.RadarModelConfig && window.RadarModelConfig.bias !== undefined)
+      ? window.RadarModelConfig.bias
+      : -0.6; // Значение по умолчанию
 
     // Извлечение и нормализация факторов (s_ik → x_ik)
     // techRead и organRead вычисляются как среднее значение по выбранным предприятиям из фильтра
@@ -337,16 +566,31 @@
 
       filteredEnterprises.forEach(ent => {
         if (ent && typeof ent === 'object') {
-          const techReadValue = ent.technologicalReadiness;
-          const organReadValue = ent.organizationalReadiness;
+          // Валидация technologicalReadiness
+          const techReadValue = validateAndNormalizeFactor(
+            ent.technologicalReadiness,
+            `technologicalReadiness (tech.id=${tech.id || 'unknown'})`,
+            0,
+            3,
+            null // null означает отсутствие данных, не используем значение по умолчанию
+          );
 
-          if (techReadValue !== undefined && techReadValue !== null && !isNaN(Number(techReadValue))) {
-            sumTechRead += Number(techReadValue);
+          if (techReadValue !== null) {
+            sumTechRead += techReadValue;
             countTechRead++;
           }
 
-          if (organReadValue !== undefined && organReadValue !== null && !isNaN(Number(organReadValue))) {
-            sumOrganRead += Number(organReadValue);
+          // Валидация organizationalReadiness
+          const organReadValue = validateAndNormalizeFactor(
+            ent.organizationalReadiness,
+            `organizationalReadiness (tech.id=${tech.id || 'unknown'})`,
+            0,
+            3,
+            null // null означает отсутствие данных
+          );
+
+          if (organReadValue !== null) {
+            sumOrganRead += organReadValue;
             countOrganRead++;
           }
         }
@@ -362,28 +606,45 @@
     } else if (enterprises.length === 0) {
       // Если у технологии нет enterprises, но есть общие techRead и organRead (для обратной совместимости)
       // Используем их как fallback, но это не рекомендуется - оценки должны быть для предприятий
-      if (tech.techRead !== undefined && tech.techRead !== null && !isNaN(Number(tech.techRead))) {
-        techRead = Number(tech.techRead);
-      }
-      if (tech.organRead !== undefined && tech.organRead !== null && !isNaN(Number(tech.organRead))) {
-        organRead = Number(tech.organRead);
-      }
+      techRead = validateAndNormalizeFactor(
+        tech.techRead,
+        `tech.techRead (tech.id=${tech.id || 'unknown'})`,
+        0,
+        3,
+        null
+      );
+      organRead = validateAndNormalizeFactor(
+        tech.organRead,
+        `tech.organRead (tech.id=${tech.id || 'unknown'})`,
+        0,
+        3,
+        null
+      );
     }
 
     // funcCover и trlStage - общие значения для технологии
     // Если funcCover не задан, вычисляем его из functionCoverage
     let funcCover = tech.funcCover !== undefined && tech.funcCover !== null ? tech.funcCover : null;
-    if (funcCover === null || funcCover === undefined || funcCover === 0) {
-      // Вычисляем funcCover из functionCoverage (массив функций)
-      if (Array.isArray(tech.functionCoverage) && tech.functionCoverage.length > 0) {
-        const funcCount = tech.functionCoverage.length;
 
-        // Пытаемся использовать новую логику с учетом блоков
-        if (window.FuncCoverUtils && typeof window.FuncCoverUtils.calculateFuncCoverLegacy === 'function') {
-          // Используем старую логику как fallback (синхронная)
-          funcCover = window.FuncCoverUtils.calculateFuncCoverLegacy(funcCount);
+      // ОБНОВЛЕНО (2026-01-29): Исправлена асинхронность расчета funcCover
+      // ОБНОВЛЕНО: Добавлен учет важности функций
+      // Теперь используем синхронный расчет с предзагруженными данными
+      if (funcCover === null || funcCover === undefined || funcCover === 0) {
+        // Вычисляем funcCover из functionCoverage (массив функций)
+        if (Array.isArray(tech.functionCoverage) && tech.functionCoverage.length > 0) {
+          const blockIds = Array.isArray(tech.blocks) ? tech.blocks : (tech.block ? (Array.isArray(tech.block) ? tech.block : [tech.block]) : []);
+
+          // Пытаемся использовать синхронный расчет с учетом блоков и важности функций
+          if (window.FuncCoverUtils && typeof window.FuncCoverUtils.calculateFuncCoverSync === 'function') {
+            // Используем синхронный метод, который работает с предзагруженными данными
+            // Включаем учет важности функций по умолчанию
+            funcCover = window.FuncCoverUtils.calculateFuncCoverSync(tech.functionCoverage, blockIds, { useWeights: true });
+        } else if (window.FuncCoverUtils && typeof window.FuncCoverUtils.calculateFuncCoverLegacy === 'function') {
+          // Fallback на legacy расчет
+          funcCover = window.FuncCoverUtils.calculateFuncCoverLegacy(tech.functionCoverage.length);
         } else {
           // Fallback если модуль не загружен
+          const funcCount = tech.functionCoverage.length;
           if (funcCount === 1) {
             funcCover = 1;
           } else if (funcCount >= 2 && funcCount <= 3) {
@@ -397,19 +658,100 @@
         funcCover = 0;
       }
     }
-    // Гарантируем, что funcCover - число в диапазоне 0-3
-    funcCover = Math.max(0, Math.min(3, Number(funcCover) || 0));
 
-    const trlStage = tech.trlStage !== undefined ? tech.trlStage : 1;
+    // Валидация funcCover
+    funcCover = validateAndNormalizeFactor(
+      funcCover,
+      `funcCover (tech.id=${tech.id || 'unknown'})`,
+      0,
+      3,
+      0 // Значение по умолчанию - отсутствие покрытия
+    );
+    // Если валидация вернула null, используем 0
+    if (funcCover === null) {
+      funcCover = 0;
+    }
+
+    // Валидация trlStage
+    const trlStage = validateAndNormalizeFactor(
+      tech.trlStage,
+      `trlStage (tech.id=${tech.id || 'unknown'})`,
+      1,
+      3,
+      1 // Значение по умолчанию - минимальная стадия
+    );
+    // Если валидация вернула null, используем 1
+    const trlStageValue = trlStage !== null ? trlStage : 1;
+
+    // ОБНОВЛЕНО: Улучшенная обработка отсутствующих данных с использованием ML-предсказаний
+    // Если данные отсутствуют, пробуем предсказать их с помощью k-NN или регрессии
+    if ((techRead === null || techRead === undefined) && window.MissingDataPredictor) {
+      // Получаем все технологии для обучения
+      let allTechnologies = [];
+      if (window.StateAccessors && typeof window.StateAccessors.getTechnologies === 'function') {
+        allTechnologies = window.StateAccessors.getTechnologies() || [];
+      }
+
+      if (allTechnologies.length >= 5) {
+        // Используем k-NN для предсказания
+        const prediction = window.MissingDataPredictor.kNNPrediction(tech, allTechnologies, 'techRead', 5);
+        if (prediction !== null) {
+          techRead = prediction;
+          if (window.Logger && typeof window.Logger.debug === 'function') {
+            window.Logger.debug(`[Positioning] techRead предсказано для технологии ${tech.id || 'unknown'}: ${prediction.toFixed(2)}`);
+          }
+        }
+      }
+    }
+
+    if ((organRead === null || organRead === undefined) && window.MissingDataPredictor) {
+      let allTechnologies = [];
+      if (window.StateAccessors && typeof window.StateAccessors.getTechnologies === 'function') {
+        allTechnologies = window.StateAccessors.getTechnologies() || [];
+      }
+
+      if (allTechnologies.length >= 5) {
+        const prediction = window.MissingDataPredictor.kNNPrediction(tech, allTechnologies, 'organRead', 5);
+        if (prediction !== null) {
+          organRead = prediction;
+          if (window.Logger && typeof window.Logger.debug === 'function') {
+            window.Logger.debug(`[Positioning] organRead предсказано для технологии ${tech.id || 'unknown'}: ${prediction.toFixed(2)}`);
+          }
+        }
+      }
+    }
 
     // Нормализация факторов в диапазон [0, 1]
     // techRead, organRead, funcCover: 0-3 → x = value/3
     // trlStage: 1-3 → x = (value-1)/2
-    // Если techRead или organRead не указаны (null), используем 0 (минимальная готовность)
-    const x_techRead = techRead !== null && techRead !== undefined ? (techRead / 3) : 0;
-    const x_organRead = organRead !== null && organRead !== undefined ? (organRead / 3) : 0;
+    // ОБНОВЛЕНО (2026-01-29): Улучшенная обработка отсутствующих данных
+    // Вместо использования 0, используем средние значения для интерполяции
+    // Это позволяет различать "отсутствие данных" и "минимальная готовность"
+    let x_techRead, x_organRead;
+
+    if (techRead !== null && techRead !== undefined) {
+      x_techRead = techRead / 3;
+    } else {
+      // Используем среднее значение для интерполяции вместо 0
+      // Это позволяет технологии иметь более справедливую позицию при отсутствии данных
+      x_techRead = 0.5; // Среднее значение (1.5 / 3)
+      if (window.Logger && typeof window.Logger.debug === 'function') {
+        window.Logger.debug(`[Positioning] techRead отсутствует для технологии ${tech.id || 'unknown'}, используется среднее значение 0.5`);
+      }
+    }
+
+    if (organRead !== null && organRead !== undefined) {
+      x_organRead = organRead / 3;
+    } else {
+      // Используем среднее значение для интерполяции вместо 0
+      x_organRead = 0.5; // Среднее значение (1.5 / 3)
+      if (window.Logger && typeof window.Logger.debug === 'function') {
+        window.Logger.debug(`[Positioning] organRead отсутствует для технологии ${tech.id || 'unknown'}, используется среднее значение 0.5`);
+      }
+    }
+
     const x_funcCover = funcCover / 3;
-    const x_trlStage = (trlStage - 1) / 2;
+    const x_trlStage = (trlStageValue - 1) / 2;
 
     // Вычисление сводного показателя: z_i = Σ(w_k * x_ik) + b
     // Если techRead или organRead не указаны, они не влияют на расчет (x = 0)
@@ -447,6 +789,7 @@
 
   // Рассчитать позицию технологии
   // Всегда использует математическую модель с логистической функцией
+  // ОБНОВЛЕНО (2026-01-29): Добавлено кеширование результатов
   function assignFixedPosition(tech) {
     const CENTER_X = window.CENTER_X || 500;
     const CENTER_Y = window.CENTER_Y || 500;
@@ -455,6 +798,16 @@
     const POSITION_ANGLE_PAD = window.POSITION_ANGLE_PAD || 8;
     const QUADRANTS = window.QUADRANTS || [];
     const RINGS = window.RINGS || [];
+
+    // ОБНОВЛЕНО (2026-01-29): Проверяем кеш перед расчетом
+    const cacheKey = getCacheKey(tech);
+    if (cacheKey && positionCache.has(cacheKey)) {
+      const cached = positionCache.get(cacheKey);
+      // Проверяем, что кешированная позиция актуальна
+      if (cached && typeof cached.x === 'number' && typeof cached.y === 'number') {
+        return cached;
+      }
+    }
 
     // Всегда используем математическую модель calculateRadarPosition
     // с логистической функцией для вычисления позиции
@@ -585,7 +938,22 @@
     const angle = aBase + angleOffset;
 
     const p = window.polarToCartesian(CENTER_X, CENTER_Y, radius, angle);
-    return { x: Math.round(p.x), y: Math.round(p.y) };
+    const result = { x: Math.round(p.x), y: Math.round(p.y) };
+
+    // ОБНОВЛЕНО (2026-01-29): Сохраняем результат в кеш
+    const cacheKey = getCacheKey(tech);
+    if (cacheKey) {
+      positionCache.set(cacheKey, result);
+      // Ограничиваем размер кеша (максимум 1000 записей)
+      if (positionCache.size > 1000) {
+        // Удаляем самые старые записи (первая половина)
+        const entries = Array.from(positionCache.entries());
+        const toDelete = entries.slice(0, Math.floor(entries.length / 2));
+        toDelete.forEach(([key]) => positionCache.delete(key));
+      }
+    }
+
+    return result;
   }
 
   // Рассчитать координаты для технологии и записать в объект
@@ -608,6 +976,8 @@
 
   /**
    * Равномерно распределяет технологии по углу в квадранте
+   * ОБНОВЛЕНО (2026-01-29): Сохраняет математически рассчитанную позицию,
+   * применяя разведение только при наложениях
    * @param {Array} group - Массив технологий в квадранте
    * @param {Object} q - Объект квадранта
    * @param {Object} quadrantById - Маппинг ID квадранта на объект квадранта
@@ -615,12 +985,32 @@
   function applyUniformAngleDistribution(group, q, quadrantById) {
     if (!group || group.length <= 1) return;
 
+    // ОБНОВЛЕНО (2026-01-29): Сохраняем математически рассчитанные углы
+    // Вместо полного перераспределения, применяем разведение только при наложениях
+    // Это сохраняет связь между готовностью и позицией
+
     const CENTER_X = window.CENTER_X || 500;
     const CENTER_Y = window.CENTER_Y || 500;
     const POSITION_ANGLE_PAD = window.POSITION_ANGLE_PAD || 8;
     const RADIUS_STEP = window.RADIUS_STEP || 140;
     const POSITION_PAD = window.POSITION_PAD || 30;
     const RINGS = window.RINGS || [];
+
+    // ОБНОВЛЕНО (2026-01-29): Группируем технологии по радиусу
+    // Технологии с одинаковым радиусом (в пределах допуска) могут быть перераспределены
+    // Технологии с разным радиусом сохраняют свою математически рассчитанную позицию
+    const RADIUS_TOLERANCE = 5; // Допуск для группировки по радиусу (пиксели)
+
+    // Группируем технологии по радиусу
+    const radiusGroups = new Map();
+    group.forEach(t => {
+      const polar = window.cartesianToPolar(CENTER_X, CENTER_Y, t.x || CENTER_X, t.y || CENTER_Y);
+      const radiusKey = Math.floor(polar.radius / RADIUS_TOLERANCE);
+      if (!radiusGroups.has(radiusKey)) {
+        radiusGroups.set(radiusKey, []);
+      }
+      radiusGroups.get(radiusKey).push(t);
+    });
 
     // Сортируем технологии по радиусу (от центра к краю), затем по ID для стабильности
     group.sort((a, b) => {
@@ -657,16 +1047,36 @@
     const angleMax = q.startAngle + ANGLE_PAD + ANGLE_SPAN - maxAngularSize;
     const availableAngleSpan = Math.max(1, angleMax - angleMin);
 
-    // Равномерно распределяем углы
+    // ОБНОВЛЕНО (2026-01-29): Применяем равномерное распределение только для технологий
+    // с одинаковым радиусом (в пределах допуска)
+    // Для остальных сохраняем математически рассчитанную позицию
     group.forEach((t, index) => {
+      const polar = window.cartesianToPolar(CENTER_X, CENTER_Y, t.x || CENTER_X, t.y || CENTER_Y);
+      const currentRadius = polar.radius;
+      const currentAngle = polar.angle;
+
+      // Проверяем, есть ли другие технологии с таким же радиусом
+      const sameRadiusTechs = group.filter(other => {
+        const otherPolar = window.cartesianToPolar(CENTER_X, CENTER_Y, other.x || CENTER_X, other.y || CENTER_Y);
+        return Math.abs(otherPolar.radius - currentRadius) < RADIUS_TOLERANCE;
+      });
+
       let targetAngle;
-      if (group.length === 1) {
-        // Если только одна технология, размещаем в центре диапазона
-        targetAngle = (angleMin + angleMax) / 2;
+      if (sameRadiusTechs.length > 1) {
+        // Если есть технологии с таким же радиусом, применяем равномерное распределение
+        const sameRadiusIndex = sameRadiusTechs.indexOf(t);
+        if (sameRadiusTechs.length === 1) {
+          targetAngle = (angleMin + angleMax) / 2;
+        } else {
+          const ratio = sameRadiusIndex / (sameRadiusTechs.length - 1);
+          targetAngle = angleMin + ratio * availableAngleSpan;
+        }
       } else {
-        // Равномерное распределение: от angleMin до angleMax
-        const ratio = index / (group.length - 1);
-        targetAngle = angleMin + ratio * availableAngleSpan;
+        // Если радиус уникален, сохраняем математически рассчитанный угол
+        // с небольшой корректировкой для соответствия квадранту
+        targetAngle = currentAngle;
+        if (targetAngle < angleMin) targetAngle = angleMin;
+        if (targetAngle > angleMax) targetAngle = angleMax;
       }
 
       // Нормализуем угол для квадранта 4 (пересекает 0°/360°)
@@ -677,9 +1087,8 @@
         while (targetAngle >= 360) targetAngle -= 360;
       }
 
-      // Получаем текущий радиус технологии
-      const polar = window.cartesianToPolar(CENTER_X, CENTER_Y, t.x || CENTER_X, t.y || CENTER_Y);
-      let radius = polar.radius;
+      // Получаем текущий радиус технологии (используем уже вычисленный currentRadius)
+      let radius = currentRadius;
       if (!Number.isFinite(radius)) {
         radius = (rMin + rMax) / 2;
       }
@@ -689,6 +1098,12 @@
       const newPos = window.polarToCartesian(CENTER_X, CENTER_Y, radius, targetAngle);
       t.x = Math.round(newPos.x);
       t.y = Math.round(newPos.y);
+
+      // ОБНОВЛЕНО (2026-01-29): Обновляем кеш при изменении позиции
+      const cacheKey = getCacheKey(t);
+      if (cacheKey) {
+        positionCache.set(cacheKey, { x: t.x, y: t.y });
+      }
     });
   }
 
@@ -886,6 +1301,31 @@
         }
       }
 
+      // ОБНОВЛЕНО: Использование пространственных индексов для оптимизации
+      // Если доступен модуль SpatialIndex, используем его для ускорения при большом количестве технологий
+      if (window.SpatialIndex && typeof window.SpatialIndex.optimizeLayoutWithSpatialIndex === 'function' && group.length > 20) {
+        const maxR = (Array.isArray(RINGS) && RINGS.length > 0) ? RINGS.length * RADIUS_STEP : 3 * RADIUS_STEP;
+        const bounds = {
+          x: CENTER_X - maxR,
+          y: CENTER_Y - maxR,
+          width: maxR * 2,
+          height: maxR * 2
+        };
+
+        window.SpatialIndex.optimizeLayoutWithSpatialIndex(group, bounds, {
+          maxIterations: 80,
+          dampingFactor: 0.98,
+          convergenceThreshold: 0.1
+        });
+
+        // Применяем ограничение квадранта после оптимизации
+        group.forEach(t => {
+          clampToSectorRing(t);
+        });
+
+        continue; // Переходим к следующему квадранту
+      }
+
       // Адаптивное минимальное расстояние в зависимости от количества технологий в квадранте
       // Чем больше технологий, тем больше должно быть минимальное расстояние
       const techCount = group.length;
@@ -912,10 +1352,21 @@
           : baseMinDistance;
 
       const MIN_BLIP_DISTANCE_SQ = adaptiveMinDistance * adaptiveMinDistance;
-      // Увеличиваем количество итераций для лучшего разведения
-      const ENHANCED_MAX_ITER = 120;
+
+      // ОБНОВЛЕНО (2026-01-29): Оптимизация алгоритма разведения
+      // Адаптивное количество итераций в зависимости от количества технологий
+      const BASE_MAX_ITER = 80;
+      const ENHANCED_MAX_ITER = Math.min(150, BASE_MAX_ITER + Math.floor(techCount / 5));
+
+      // Порог сходимости: если максимальное смещение меньше этого значения, считаем что сходимость достигнута
+      const CONVERGENCE_THRESHOLD = 0.1; // пикселей
+
+      // Коэффициент затухания для стабильности (уменьшается с каждой итерацией)
+      let dampingFactor = 1.0;
+      const DAMPING_DECAY = 0.98; // Уменьшаем силу с каждой итерацией
 
       for (let iter = 0; iter < ENHANCED_MAX_ITER; iter++) {
+        let maxMovement = 0; // Максимальное смещение в этой итерации
         let moved = false;
 
         // Используем более агрессивное разведение для близких точек
@@ -940,8 +1391,16 @@
 
               // Увеличиваем силу отталкивания для очень близких точек
               const forceMultiplier = dist < minDistForPair * 0.5 ? 1.5 : 1.0;
-              const shiftX = (dx / dist) * (overlap / 2) * forceMultiplier;
-              const shiftY = (dy / dist) * (overlap / 2) * forceMultiplier;
+
+              // Применяем затухание для стабильности
+              const shiftX = (dx / dist) * (overlap / 2) * forceMultiplier * dampingFactor;
+              const shiftY = (dy / dist) * (overlap / 2) * forceMultiplier * dampingFactor;
+
+              // Сохраняем старые позиции для расчета смещения
+              const oldAX = a.x;
+              const oldAY = a.y;
+              const oldBX = b.x;
+              const oldBY = b.y;
 
               a.x -= shiftX;
               a.y -= shiftY;
@@ -951,12 +1410,26 @@
               clampToSectorRing(a);
               clampToSectorRing(b);
 
+              // Вычисляем фактическое смещение после clamp
+              const movementA = Math.sqrt((a.x - oldAX) ** 2 + (a.y - oldAY) ** 2);
+              const movementB = Math.sqrt((b.x - oldBX) ** 2 + (b.y - oldBY) ** 2);
+              maxMovement = Math.max(maxMovement, movementA, movementB);
+
               moved = true;
             }
           }
         }
 
-        if (!moved) break;
+        // Проверка сходимости: если максимальное смещение меньше порога, останавливаемся
+        if (!moved || maxMovement < CONVERGENCE_THRESHOLD) {
+          if (window.Logger && typeof window.Logger.debug === 'function') {
+            window.Logger.debug(`[Positioning] Алгоритм разведения сошелся за ${iter + 1} итераций (maxMovement: ${maxMovement.toFixed(3)})`);
+          }
+          break;
+        }
+
+        // Уменьшаем коэффициент затухания для следующей итерации
+        dampingFactor *= DAMPING_DECAY;
       }
 
       // Финальная проверка: если после всех итераций остались наложения,
@@ -1086,7 +1559,7 @@
     console.log('\n✅ Тестирование завершено!');
   }
 
-  // Экспорт в window.Positioning
+    // Экспорт в window.Positioning
   window.Positioning = {
     frac,
     getQuadrantIdForDirection,
@@ -1105,6 +1578,10 @@
     // Новые функции для учета размеров элементов
     calculateElementSize,
     calculateAngularSize,
+    // ОБНОВЛЕНО (2026-01-29): Функция для определения отсутствующих данных
+    getMissingDataInfo,
+    // ОБНОВЛЕНО (2026-01-29): Функции для управления кешем
+    clearPositionCache,
     // Утилиты для тестирования
     testCalibration,
     testAllScenarios
