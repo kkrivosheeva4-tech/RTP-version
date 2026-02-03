@@ -110,6 +110,19 @@
       }
 
       setGroupVisible(groupId, true);
+
+      // Сохраняем текущие значения интеграторов ПЕРЕД очисткой контейнера
+      const savedIntegratorsValues = new Map();
+      container.querySelectorAll('input[type="hidden"][id^="' + prefix + 'VendorIntegrators__"]').forEach(input => {
+        const fieldId = input.id;
+        const value = input.value || '';
+        if (value) {
+          // Извлекаем имя вендора из fieldId для сопоставления
+          const vendorKey = fieldId.replace(prefix + 'VendorIntegrators__', '');
+          savedIntegratorsValues.set(vendorKey.toLowerCase(), value);
+        }
+      });
+
       container.innerHTML = "";
 
       const integratorsList = getIntegratorsListFromState();
@@ -166,9 +179,33 @@
           window.Filters.populateSelectForModal(fieldId, integratorsList, "Выберите");
         }
 
-        const pre = existingMap.get(vendorName.toLowerCase()) || [];
+        // Восстанавливаем значение: сначала из existingMap (если передано), затем из savedIntegratorsValues
+        const vendorKey = vendorKeyFromName(vendorName);
+        let pre = existingMap.get(vendorName.toLowerCase()) || [];
+
+        // Если есть сохраненное значение из текущей формы, используем его
+        const savedValue = savedIntegratorsValues.get(vendorKey.toLowerCase());
+        if (savedValue) {
+          try {
+            // Пытаемся распарсить сохраненное значение
+            if (savedValue.trim().startsWith('[')) {
+              const parsed = JSON.parse(savedValue);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                pre = parsed;
+              }
+            } else if (savedValue.trim()) {
+              pre = [savedValue.trim()];
+            }
+          } catch (e) {
+            // Если не удалось распарсить, используем значение из existingMap
+          }
+        }
+
         if (typeof window.setCustomSelectValue === "function") {
-          window.setCustomSelectValue(fieldId, pre);
+          // Используем requestAnimationFrame для гарантии, что DOM обновлен
+          requestAnimationFrame(() => {
+            window.setCustomSelectValue(fieldId, pre);
+          });
         } else {
           hidden.value = pre.length ? JSON.stringify(pre) : "";
         }
@@ -556,14 +593,52 @@
         f.querySelector("#editName").value = currentTech.name;
         if (typeof window.setCustomSelectValue === "function") {
           // Заполняем направления цифрового развития
+          // Преобразуем ID направлений в названия для отображения в селекте
+          let directionsToSet = [];
+          const directionsFromTech = currentTech.directions && currentTech.directions.length
+            ? currentTech.directions
+            : currentTech.direction
+              ? [currentTech.direction]
+              : [];
+
+          // Получаем список направлений для преобразования ID в названия
+          const digitalDirections = window.StateManager && typeof window.StateManager.get === 'function'
+            ? window.StateManager.get('digitalDirections') || []
+            : (window.digitalDirections || []);
+
+          // Преобразуем ID в названия
+          directionsToSet = directionsFromTech.map(dirId => {
+            // Если уже строка (название), возвращаем как есть
+            if (typeof dirId === 'string') {
+              return dirId;
+            }
+            // Если число (ID), ищем название
+            const id = typeof dirId === 'number' ? dirId : Number(dirId);
+            if (!isNaN(id)) {
+              const direction = digitalDirections.find(d =>
+                d && typeof d === 'object' && d.id === id
+              );
+              return direction && direction.name ? direction.name : dirId;
+            }
+            return dirId;
+          }).filter(Boolean);
+
           window.setCustomSelectValue(
             "editDirections",
-            currentTech.directions && currentTech.directions.length
-              ? currentTech.directions
-              : currentTech.direction
-                ? [currentTech.direction]
-                : []
+            directionsToSet
           );
+          // Вызываем renderMultiSelectTags для отображения тегов множественного выбора направлений
+          const editDirectionsSelect = document.querySelector(
+            '.custom-select-modal[data-field="editDirections"]'
+          );
+          if (
+            editDirectionsSelect &&
+            typeof window.renderMultiSelectTags === "function"
+          ) {
+            setTimeout(() => {
+              window.renderMultiSelectTags(editDirectionsSelect);
+            }, 50);
+          }
           const selectedBlocks = currentTech.blocks && currentTech.blocks.length
             ? currentTech.blocks
             : currentTech.block
@@ -590,21 +665,23 @@
                   ? [currentTech.func]
                   : []
             );
+
+            // Обновляем покрытие функций ПОСЛЕ установки функций
+            // (поле read-only, рассчитывается автоматически от выбора функций)
+            // Используем задержку, чтобы убедиться, что функции установлены
+            if (
+              window.AutoFuncCover &&
+              typeof window.AutoFuncCover.calculateAndUpdateFuncCover === "function"
+            ) {
+              setTimeout(() => {
+                window.AutoFuncCover.calculateAndUpdateFuncCover(
+                  "editFunc",
+                  "editBlock",
+                  "editFuncCover"
+                );
+              }, 100);
+            }
           }, 50);
-          // Обновляем покрытие функций сразу после установки функций/блоков
-          // (поле read-only, рассчитывается автоматически от выбора функций)
-          if (
-            window.AutoFuncCover &&
-            typeof window.AutoFuncCover.calculateAndUpdateFuncCover === "function"
-          ) {
-            setTimeout(() => {
-              window.AutoFuncCover.calculateAndUpdateFuncCover(
-                "editFunc",
-                "editBlock",
-                "editFuncCover"
-              );
-            }, 0);
-          }
           // Поля "Тип технологии" и "Статус" удалены из формы редактирования
           // Устанавливаем галочку "Применима в холдинге" или предприятия
           const holdingWideCheckbox = document.getElementById("editHoldingWide");
@@ -658,7 +735,12 @@
           3: "3 — Полное покрытие",
         };
         // Покрытие функций теперь рассчитывается автоматически на основе выбранных функций
-        // Не устанавливаем значение вручную, оно будет рассчитано при открытии формы
+        // Сначала устанавливаем начальное значение из данных технологии, затем пересчитаем после установки функций
+        if (currentTech.funcCover !== undefined && currentTech.funcCover !== null) {
+          if (window.AutoFuncCover && typeof window.AutoFuncCover.updateFuncCoverField === "function") {
+            window.AutoFuncCover.updateFuncCoverField("editFuncCover", currentTech.funcCover);
+          }
+        }
         // Устанавливаем значение TRL в кастомный селект
         if (
           currentTech.trlStage !== undefined &&
@@ -1328,7 +1410,7 @@
           companies: companies
         });
       } catch (error) {
-        console.error('Ошибка при добавлении уведомления:', error);
+        // Ошибка при добавлении уведомления
         // Если ошибка, пробуем через небольшую задержку
         setTimeout(() => {
           if (window.Notifications && typeof window.Notifications.add === 'function') {
@@ -1351,7 +1433,7 @@
           });
         } else if (attempts >= maxAttempts) {
           clearInterval(checkInterval);
-          console.warn('Модуль уведомлений не загружен после', maxAttempts, 'попыток');
+          // Модуль уведомлений не загружен
         }
       }, 200);
     }
@@ -1435,9 +1517,28 @@
     } catch (err) {
       directionsValE = rawDirectionsE;
     }
-    const directionsArrayE = Array.isArray(directionsValE)
+    let directionsArrayE = Array.isArray(directionsValE)
       ? directionsValE.map(d => (typeof d === 'string' ? d.trim() : d)).filter(Boolean)
       : ((typeof directionsValE === 'string' && directionsValE.trim()) ? [directionsValE.trim()] : []);
+
+    // Преобразуем названия направлений обратно в ID для сохранения
+    // Получаем список направлений для преобразования названий в ID
+    const digitalDirections = window.StateManager && typeof window.StateManager.get === 'function'
+      ? window.StateManager.get('digitalDirections') || []
+      : (window.digitalDirections || []);
+
+    // Преобразуем названия в ID
+    directionsArrayE = directionsArrayE.map(dirName => {
+      // Если уже число (ID), возвращаем как есть
+      if (typeof dirName === 'number') {
+        return dirName;
+      }
+      // Если строка (название), ищем ID
+      const direction = digitalDirections.find(d =>
+        d && typeof d === 'object' && d.name === dirName
+      );
+      return direction && direction.id !== undefined ? direction.id : dirName;
+    }).filter(d => d !== null && d !== undefined);
 
     // Сохраняем сектор (если он не меняется, оставляем существующий)
     // Сектор может быть строкой или массивом, сохраняем как есть
@@ -2131,27 +2232,9 @@
           StateAccessors.setNameToBlockId({ ...nameToBlockId });
         }
 
-        const blockToQuadrantMap = StateAccessors.getBlockToQuadrant();
-        blockToQuadrantMap[blockName] = qId;
-        StateAccessors.setBlockToQuadrant({ ...blockToQuadrantMap });
-
-        // Логируем привязку для отладки
-        if (window.Logger) {
-          window.Logger.debug('Привязка блока к квадранту:', {
-            blockName,
-            sectorName,
-            quadrantId: qId,
-            quadrantName: quad ? quad.name : 'не определено',
-            blockToQuadrant: blockToQuadrantMap[blockName]
-          });
-        }
-
-        // Проверяем, что привязка произошла
-        const verifyMap = StateAccessors.getBlockToQuadrant();
-        if (verifyMap[blockName] !== qId) {
-          if (window.Logger) window.Logger.error('ОШИБКА: блок не привязан к квадранту!', { blockName, expected: qId, actual: verifyMap[blockName] });
-          DataLoader.showNotification('Ошибка при сохранении привязки блока к сектору', false);
-        }
+        // УДАЛЕНО (2026-01-29): Привязка блоков к квадрантам больше не используется
+        // Блоки являются отдельными критериями технологии и могут быть в любом квадранте
+        // Квадранты определяются только через направления цифрового развития
 
         // Обновляем blocksList (массив строк для селектов)
         const blocksList = StateAccessors.getBlocksList();
@@ -2222,19 +2305,9 @@
         }
 
         // Сохраняем блоки
-        const finalBlockToQuadrant = StateAccessors.getBlockToQuadrant();
+        // УДАЛЕНО (2026-01-29): blockToQuadrant.json больше не сохраняется
+        // Блоки не привязаны к квадрантам, они являются отдельными критериями технологии
         DataLoader.vfsWrite('bloks.json', blocksData);
-        DataLoader.vfsWrite('blockToQuadrant.json', finalBlockToQuadrant);
-
-        // Проверяем финальную привязку после сохранения
-        if (window.Logger) {
-          window.Logger.debug('Финальная проверка привязки после сохранения:', {
-            blockName,
-            quadrantId: finalBlockToQuadrant[blockName],
-            expected: qId,
-            allBlocks: Object.keys(finalBlockToQuadrant).length
-          });
-        }
 
         // Обновляем фильтры и модальные формы с актуальными данными
         const blocksListUpdated = StateAccessors.getBlocksList();
@@ -2250,13 +2323,11 @@
           }
         }
 
-        // Сначала синхронизируем данные с window и StateManager для гарантии актуальности
-        const blockToQuadrantUpdated = StateAccessors.getBlockToQuadrant();
+        // Синхронизируем данные с window и StateManager для гарантии актуальности
+        // УДАЛЕНО (2026-01-29): blockToQuadrant больше не синхронизируется
         window.blocksList = blocksListUpdated;
-        window.blockToQuadrant = blockToQuadrantUpdated;
         if (window.StateManager && window.StateManager.set) {
           window.StateManager.set('blocksList', blocksListUpdated);
-          window.StateManager.set('blockToQuadrant', blockToQuadrantUpdated);
         }
 
         // Обновляем модальные формы
@@ -2298,7 +2369,6 @@
                     // Еще раз получаем актуальные данные перед вызовом
                     if (window.StateAccessors) {
                       window.blocksList = window.StateAccessors.getBlocksList() || blocksListUpdated;
-                      window.blockToQuadrant = window.StateAccessors.getBlockToQuadrant() || blockToQuadrantUpdated;
                     }
                     window.updateModalBlocksForSectors(selectedSectors);
                   }, 50);

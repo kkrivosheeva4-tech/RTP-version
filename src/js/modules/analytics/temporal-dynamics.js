@@ -5,7 +5,7 @@
 (function(window) {
   'use strict';
 
-  console.log('[TemporalDynamics] Инициализация модуля');
+  // Модуль TemporalDynamics инициализирован
 
   const STORAGE_KEY = 'rtp_tech_history';
   const STORAGE_VERSION = '1.0';
@@ -54,7 +54,7 @@
         localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
       }
     } catch (e) {
-      console.warn('[TemporalDynamics] Ошибка сохранения истории:', e);
+      // Ошибка сохранения истории
     }
   }
 
@@ -75,7 +75,7 @@
         }
       }
     } catch (e) {
-      console.warn('[TemporalDynamics] Ошибка загрузки истории:', e);
+      // Ошибка загрузки истории
     }
 
     return [];
@@ -238,7 +238,7 @@
         decliningPercent: techIds.length > 0 ? (declining / techIds.length) * 100 : 0
       };
     } catch (e) {
-      console.warn('[TemporalDynamics] Ошибка получения статистики:', e);
+      // Ошибка получения статистики
       return null;
     }
   }
@@ -253,6 +253,6 @@
     getGlobalStatistics: getGlobalStatistics
   };
 
-  console.log('[TemporalDynamics] Модуль загружен');
+  // Модуль TemporalDynamics загружен
 
 })(window);

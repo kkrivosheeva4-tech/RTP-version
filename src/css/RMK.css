@@ -1318,6 +1318,81 @@ body.dark .modal-body .custom-select-modal .select-options {
   font-weight: 600;
 }
 
+/* Стили для опции "Добавить новый" */
+.custom-select-modal .select-options li.add-new-option {
+  padding: 8px;
+  border-top: 1px solid var(--input-border);
+  margin-top: 4px;
+  background: var(--input-bg);
+}
+
+.custom-select-modal .select-options li.add-new-option:hover {
+  background: var(--input-bg);
+}
+
+.custom-select-modal .select-options .add-new-option-content {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.custom-select-modal .select-options .add-new-input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  background: var(--input-bg);
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.custom-select-modal .select-options .add-new-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-10);
+}
+
+.custom-select-modal .select-options .add-new-btn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  background: var(--accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.custom-select-modal .select-options .add-new-btn:hover {
+  background: var(--accent-hover, #b87d5a);
+  border-color: var(--accent-hover, #b87d5a);
+}
+
+.custom-select-modal .select-options .add-new-btn:active {
+  background: var(--accent-active, #a36d4a);
+  border-color: var(--accent-active, #a36d4a);
+}
+
+.custom-select-modal .select-options .add-new-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+body.dark .custom-select-modal .select-options li.add-new-option {
+  border-top-color: var(--input-border);
+  background: var(--input-bg);
+}
+
+body.dark .custom-select-modal .select-options li.add-new-option:hover {
+  background: var(--input-bg);
+}
+
 .custom-select-modal .select-options li.select-option-item.selected,
 .custom-select-modal .select-options li.select-option-item:hover {
   background: var(--accent-08);

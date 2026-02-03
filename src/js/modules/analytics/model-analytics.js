@@ -12,7 +12,7 @@
 (function() {
   'use strict';
 
-  console.log('[ModelAnalytics] Инициализация модуля аналитики модели');
+  // Модуль ModelAnalytics инициализирован
 
   /**
    * Вычисление коэффициента корреляции Пирсона между двумя массивами
@@ -621,7 +621,7 @@
             radii.push(pos.radius);
           }
         } catch (e) {
-          console.warn('[ModelAnalytics] Ошибка при вычислении позиции для технологии', tech.id, e);
+          // Ошибка при вычислении позиции для технологии
         }
       }
     });
@@ -648,7 +648,7 @@
    * @returns {Object} Полный отчет об анализе
    */
   function performFullAnalysis(technologies, options = {}) {
-    console.log('[ModelAnalytics] Начало полного анализа модели...');
+    // Начало полного анализа модели
 
     const correlations = analyzeFactorCorrelations(technologies);
     const qualityMetrics = calculateQualityMetrics(technologies);
@@ -668,7 +668,7 @@
       }
     };
 
-    console.log('[ModelAnalytics] Анализ завершен', report);
+    // Анализ завершен
     return report;
   }
 
@@ -682,6 +682,6 @@
     calculateCorrelation
   };
 
-  console.log('[ModelAnalytics] Модуль загружен');
+    // Модуль ModelAnalytics загружен
 
 })();

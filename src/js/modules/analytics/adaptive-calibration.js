@@ -5,7 +5,7 @@
 (function(window) {
   'use strict';
 
-  console.log('[AdaptiveCalibration] Инициализация модуля');
+  // Модуль AdaptiveCalibration инициализирован
 
   /**
    * Анализ распределения факторов готовности
@@ -156,14 +156,14 @@
    */
   function calibrateModel(technologies, options = {}) {
     if (!technologies || technologies.length < 10) {
-      console.warn('[AdaptiveCalibration] Недостаточно данных для калибровки (минимум 10 технологий)');
+      // Недостаточно данных для калибровки
       return {
         alpha: 4,
         bias: -0.6
       };
     }
 
-    console.log('[AdaptiveCalibration] Начало адаптивной калибровки');
+    // Начало адаптивной калибровки
 
     // Анализируем распределение
     const distributionStats = analyzeDistribution(technologies);
@@ -172,7 +172,7 @@
     const alpha = calibrateAlpha(distributionStats);
     const bias = calibrateBias(distributionStats, options.targetDistribution);
 
-    console.log(`[AdaptiveCalibration] Калибровка завершена: alpha=${alpha}, bias=${bias.toFixed(2)}`);
+    // Калибровка завершена
 
     return {
       alpha: alpha,
@@ -201,7 +201,7 @@
       window.RadarModelConfig.bias = calibratedParams.bias;
     }
 
-    console.log('[AdaptiveCalibration] Параметры применены к модели');
+    // Параметры применены к модели
   }
 
   // Публичный API
@@ -213,6 +213,6 @@
     calibrateBias: calibrateBias
   };
 
-  console.log('[AdaptiveCalibration] Модуль загружен');
+  // Модуль AdaptiveCalibration загружен
 
 })(window);

@@ -56,7 +56,7 @@
       attempts++;
     }
     if (!DataLoader) {
-      console.error('DataLoader не загружен после ожидания');
+      // DataLoader не загружен после ожидания
       return;
     }
 

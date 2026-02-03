@@ -5,7 +5,7 @@
 (function(window) {
   'use strict';
 
-  console.log('[MissingDataPredictor] Инициализация модуля');
+  // Модуль MissingDataPredictor инициализирован
 
   /**
    * Вычисление евклидова расстояния между двумя технологиями
@@ -164,7 +164,7 @@
         return Math.max(0, Math.min(3, denormalized));
       }
     } catch (e) {
-      console.warn('[MissingDataPredictor] Ошибка регрессии:', e);
+      // Ошибка регрессии
       return null;
     }
   }
@@ -227,6 +227,6 @@
     linearRegressionPrediction: linearRegressionPrediction
   };
 
-  console.log('[MissingDataPredictor] Модуль загружен');
+  // Модуль MissingDataPredictor загружен
 
 })(window);

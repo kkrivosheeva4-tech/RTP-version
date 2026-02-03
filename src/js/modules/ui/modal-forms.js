@@ -20,7 +20,8 @@
   }
 
   // Обновление списка функциональных блоков в модалке добавления/редактирования технологии
-  // в зависимости от выбранных секторов
+  // ОБНОВЛЕНО (2026-01-29): Блоки больше не фильтруются по квадрантам
+  // Все блоки доступны для всех квадрантов, так как они являются отдельными критериями технологии
   function updateModalBlocksForSectors(sectorNames) {
     const DOMCache = getDOMCache();
     const Filters = getFilters();
@@ -28,45 +29,27 @@
 
     // Получаем зависимости из window
     const getBlocksList = window.getBlocksList || (() => []);
-    const getBlockToQuadrant = window.getBlockToQuadrant || (() => ({}));
-    const QUADRANTS = window.QUADRANTS || [];
     const updateModalFunctionsForBlocks = window.updateModalFunctionsForBlocks;
 
     // Получаем актуальные данные из StateAccessors, если доступны
     let blocksList;
-    let blockToQuadrant;
     if (window.StateAccessors) {
       try {
         blocksList = window.StateAccessors.getBlocksList ? window.StateAccessors.getBlocksList() : getBlocksList();
-        blockToQuadrant = window.StateAccessors.getBlockToQuadrant ? window.StateAccessors.getBlockToQuadrant() : getBlockToQuadrant();
-        // Также проверяем window.blocksList и window.blockToQuadrant для обратной совместимости
         if (!blocksList || blocksList.length === 0) {
           blocksList = window.blocksList || getBlocksList();
-        }
-        if (!blockToQuadrant || Object.keys(blockToQuadrant).length === 0) {
-          blockToQuadrant = window.blockToQuadrant || getBlockToQuadrant();
         }
       } catch (e) {
         // Fallback к window функциям если StateAccessors недоступен
         blocksList = window.blocksList || getBlocksList();
-        blockToQuadrant = window.blockToQuadrant || getBlockToQuadrant();
       }
     } else {
       // Fallback к window функциям
       blocksList = window.blocksList || getBlocksList();
-      blockToQuadrant = window.blockToQuadrant || getBlockToQuadrant();
     }
 
     if (!Array.isArray(blocksList) || blocksList.length === 0) {
       if (window.Logger) window.Logger.warn('updateModalBlocksForSectors: blocksList пуст или не массив');
-      return;
-    }
-    if (!Array.isArray(QUADRANTS) || QUADRANTS.length === 0) {
-      if (window.Logger) window.Logger.warn('updateModalBlocksForSectors: QUADRANTS пуст');
-      return;
-    }
-    if (!blockToQuadrant || Object.keys(blockToQuadrant).length === 0) {
-      if (window.Logger) window.Logger.warn('updateModalBlocksForSectors: blockToQuadrant пуст');
       return;
     }
 
@@ -89,66 +72,9 @@
       }
     }
 
-    // Нормализуем входные данные: всегда получаем массив секторов
-    let sectorArray = [];
-    if (Array.isArray(sectorNames)) {
-      sectorArray = sectorNames.filter(s => s != null && String(s).trim() !== '');
-    } else if (sectorNames) {
-      sectorArray = [sectorNames];
-    }
-
-    let allowedBlocks = blocksList.slice();
-
-    if (sectorArray.length > 0) {
-      // Маппинг "имя сектора" -> id квадранта
-      const sectorNameToId = {};
-      QUADRANTS.forEach(q => {
-        if (q && q.name != null && q.id != null) {
-          sectorNameToId[String(q.name).trim()] = q.id;
-        }
-      });
-
-      const selectedQuadrantIds = sectorArray
-        .map(name => {
-          const trimmed = String(name).trim();
-          return sectorNameToId[trimmed];
-        })
-        .filter(id => id != null);
-
-      if (selectedQuadrantIds.length > 0) {
-        // Фильтруем блоки: показываем блоки, которые относятся к ЛЮБОМУ из выбранных квадрантов
-        allowedBlocks = blocksList.filter(blockName => {
-          // Еще раз получаем актуальные данные для каждого блока
-          let currentBlockToQuadrant = blockToQuadrant;
-          if (window.StateAccessors && window.StateAccessors.getBlockToQuadrant) {
-            try {
-              currentBlockToQuadrant = window.StateAccessors.getBlockToQuadrant();
-            } catch (e) {
-              // Используем переданные данные если StateAccessors недоступен
-            }
-          }
-          const m = currentBlockToQuadrant[blockName];
-          if (m == null) {
-            // Если блока нет в blockToQuadrant, но он есть в blocksList, возможно это новый блок
-            // Пробуем найти его квадрант через nameToBlockId и blocksList
-            if (window.Logger) window.Logger.debug(`updateModalBlocksForSectors: блок "${blockName}" не найден в blockToQuadrant`);
-            return false;
-          }
-          // blockToQuadrant может содержать массив квадрантов или одно значение
-          const blockQuadrants = Array.isArray(m) ? m : [m];
-          // Проверяем, есть ли пересечение между квадрантами блока и выбранными квадрантами
-          const matches = blockQuadrants.some(blockQuadrantId => selectedQuadrantIds.includes(blockQuadrantId));
-          if (window.Logger && matches) {
-            window.Logger.debug(`updateModalBlocksForSectors: блок "${blockName}" соответствует квадрантам:`, blockQuadrants, 'выбранные:', selectedQuadrantIds);
-          }
-          return matches;
-        });
-
-        if (window.Logger) {
-          window.Logger.debug('updateModalBlocksForSectors: всего блоков:', blocksList.length, 'разрешено:', allowedBlocks.length, 'для квадрантов:', selectedQuadrantIds);
-        }
-      }
-    }
+    // ОБНОВЛЕНО (2026-01-29): Все блоки доступны для всех квадрантов
+    // Блоки больше не фильтруются по квадрантам, так как они являются отдельными критериями технологии
+    const allowedBlocks = blocksList.slice();
 
     // Перестраиваем список опций в модальном селекте блоков
     const existingSearch = optionsList.querySelector('.select-search');

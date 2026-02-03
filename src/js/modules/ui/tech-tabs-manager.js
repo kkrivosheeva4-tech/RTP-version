@@ -15,7 +15,7 @@
    * Инициализация менеджера вкладок
    */
   function initTabs() {
-    console.log('[TechTabsManager] Инициализация менеджера вкладок');
+    // Инициализация менеджера вкладок
 
     // Устанавливаем обработчики на основную вкладку
     const generalTab = document.querySelector('.tab-btn[data-tab="general-info"]');
@@ -166,7 +166,7 @@
       ).filter(Boolean);
     }
 
-    console.log('[TechTabsManager] Выбранные предприятия:', selectedCompanies);
+    // Выбранные предприятия обновлены
 
     // Удаляем вкладки для невыбранных предприятий
     const currentTabs = Array.from(enterpriseTabs.keys());
@@ -193,7 +193,7 @@
       return;
     }
 
-    console.log('[TechTabsManager] Добавление вкладки для предприятия:', enterpriseName);
+    // Добавление вкладки для предприятия
 
     // Создаем вкладку в заголовке
     const tabBtn = createTabButton(enterpriseName);
@@ -356,7 +356,7 @@
    * @param {string} tabId - ID вкладки
    */
   function switchTab(tabId) {
-    console.log('[TechTabsManager] Переключение на вкладку:', tabId);
+    // Переключение на вкладку
 
     // Сохраняем данные текущей вкладки
     saveCurrentTabData();
@@ -396,7 +396,7 @@
     const tabData = enterpriseTabs.get(enterpriseName);
     if (!tabData) return;
 
-    console.log('[TechTabsManager] Удаление вкладки:', enterpriseName);
+    // Удаление вкладки
 
     // Удаляем элементы из DOM
     if (tabData.button) tabData.button.remove();
@@ -415,7 +415,7 @@
    * Удаление всех вкладок предприятий
    */
   function clearAllEnterpriseTabs() {
-    console.log('[TechTabsManager] Удаление всех вкладок предприятий');
+    // Удаление всех вкладок предприятий
 
     const enterpriseNames = Array.from(enterpriseTabs.keys());
     enterpriseNames.forEach(name => {
@@ -541,9 +541,9 @@
         timestamp: Date.now()
       };
       localStorage.setItem('techFormState', JSON.stringify(state));
-      console.log('[TechTabsManager] Состояние формы сохранено');
+      // Состояние формы сохранено
     } catch (e) {
-      console.error('[TechTabsManager] Ошибка сохранения состояния:', e);
+      // Ошибка сохранения состояния
     }
   }
 
@@ -564,7 +564,7 @@
         return;
       }
 
-      console.log('[TechTabsManager] Загружено состояние формы из localStorage');
+      // Загружено состояние формы из localStorage
 
       // Восстанавливаем данные предприятий
       if (state.enterpriseData) {
@@ -591,7 +591,7 @@
         });
       }
     } catch (e) {
-      console.error('[TechTabsManager] Ошибка загрузки состояния:', e);
+      // Ошибка загрузки состояния
     }
   }
 
@@ -601,9 +601,9 @@
   function clearFormState() {
     try {
       localStorage.removeItem('techFormState');
-      console.log('[TechTabsManager] Состояние формы очищено');
+      // Состояние формы очищено
     } catch (e) {
-      console.error('[TechTabsManager] Ошибка очистки состояния:', e);
+      // Ошибка очистки состояния
     }
   }
 
@@ -670,7 +670,7 @@
    * Сброс формы
    */
   function resetForm() {
-    console.log('[TechTabsManager] Сброс формы');
+    // Сброс формы
 
     // Очищаем все вкладки предприятий
     clearAllEnterpriseTabs();
@@ -699,6 +699,6 @@
     getActiveTab: () => activeTab
   };
 
-  console.log('[TechTabsManager] Модуль загружен');
+  // Модуль TechTabsManager загружен
 
 })(window);

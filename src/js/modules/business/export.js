@@ -97,7 +97,7 @@ window.ExportModule = (function() {
 
       // Фильтр по типу технологии удален (все технологии отображаются кругами)
 
-      // Фильтр по статусу (Внедренная/Невнедренная) на основе isImplemented
+      // Фильтр по статусу (Внедренные/Невнедренные) на основе isImplemented
       if (filters.status && Array.isArray(filters.status) && filters.status.length > 0) {
         // Для технологий с несколькими предприятиями проверяем isImplemented для каждого предприятия
         const companies = Array.isArray(tech.company) ? tech.company : (tech.company ? [tech.company] : []);
@@ -119,7 +119,7 @@ window.ExportModule = (function() {
           }
         }
 
-        const statusValue = isImplemented ? 'Внедренная' : 'Невнедренная';
+        const statusValue = isImplemented ? 'Внедренные' : 'Невнедренные';
         if (!filters.status.includes(statusValue)) return false;
       }
 
@@ -160,10 +160,10 @@ window.ExportModule = (function() {
         if (!filters.organRead.includes(organRead)) return false;
       }
 
-      // Фильтр по покрытию функций - множественный выбор
-      if (filters.funcCover && Array.isArray(filters.funcCover) && filters.funcCover.length > 0) {
-        const funcCover = String(tech.funcCover || '');
-        if (!filters.funcCover.includes(funcCover)) return false;
+      // Фильтр по TRL-стадии - множественный выбор
+      if (filters.trlStage && Array.isArray(filters.trlStage) && filters.trlStage.length > 0) {
+        const trlStage = String(tech.trlStage || '');
+        if (!filters.trlStage.includes(trlStage)) return false;
       }
 
       // Фильтр по вендорам (массив значений)
@@ -379,9 +379,9 @@ window.ExportModule = (function() {
     };
     document.addEventListener('click', closeHandler);
 
-    // Поиск (для blocks, functions, vendors, integrators)
+    // Поиск (для blocks, functions, vendors, integrators, status, techRead, organRead, trlStage)
     const fieldName = container.getAttribute('data-field');
-    const hasSearch = fieldName === 'blocks' || fieldName === 'functions' || fieldName === 'vendors' || fieldName === 'integrators';
+    const hasSearch = fieldName === 'blocks' || fieldName === 'functions' || fieldName === 'vendors' || fieldName === 'integrators' || fieldName === 'status' || fieldName === 'techRead' || fieldName === 'organRead' || fieldName === 'trlStage';
 
     if (searchInput && hasSearch) {
       searchInput.addEventListener('input', (e) => {
@@ -499,7 +499,7 @@ window.ExportModule = (function() {
     }
 
     // Если это поле с множественным выбором, подсвечиваем и его контейнер
-    const multiSelectFields = ['company', 'blocks', 'functions', 'status', 'costProm', 'techRead', 'organRead', 'funcCover', 'priority', 'vendors', 'integrators'];
+    const multiSelectFields = ['company', 'blocks', 'functions', 'status', 'costProm', 'techRead', 'organRead', 'trlStage', 'priority', 'vendors', 'integrators'];
     if (multiSelectFields.includes(fieldName)) {
       const container = document.getElementById(`filter_${fieldName}_container`);
       if (container) {
@@ -1120,7 +1120,7 @@ window.ExportModule = (function() {
         if (window.Logger) window.Logger.warn('Ошибка при логировании экспорта:', err);
       }
     } catch (error) {
-      console.error('Ошибка при генерации отчёта (canvas flow):', error);
+      // Ошибка при генерации отчёта (canvas flow)
 
       // Скрываем индикатор загрузки при ошибке
       if (loaderId && typeof window !== 'undefined' && window.LoadingManager) {
@@ -1162,7 +1162,7 @@ window.ExportModule = (function() {
     },
     {
       field: 'status',
-      source: () => (typeof window.RINGS !== 'undefined' && Array.isArray(window.RINGS)) ? window.RINGS : [],
+      source: () => ['Внедренные', 'Невнедренные'],
       placeholder: 'Все статусы'
     },
     {
@@ -1309,12 +1309,18 @@ window.ExportModule = (function() {
       populateMultiSelect('filter_costProm_container', costPromOptions, 'Все значения');
     });
 
-    // Добавляем заполнение множественного выбора для технологической готовности, организационной готовности, покрытия функций
+    // Добавляем заполнение множественного выбора для технологической готовности, организационной готовности, TRL-стадии
     const ratingOptions = ['0', '1', '2', '3'];
-    ['techRead', 'organRead', 'funcCover'].forEach(fieldName => {
+    ['techRead', 'organRead'].forEach(fieldName => {
       tasks.push(() => {
         populateMultiSelect(`filter_${fieldName}_container`, ratingOptions, 'Все значения');
       });
+    });
+
+    // TRL-стадия имеет значения 1, 2, 3
+    const trlOptions = ['1', '2', '3'];
+    tasks.push(() => {
+      populateMultiSelect('filter_trlStage_container', trlOptions, 'Все значения');
     });
 
     // Добавляем заполнение множественного выбора для приоритета технологии
@@ -1344,9 +1350,9 @@ window.ExportModule = (function() {
 
   // Функция для включения/отключения фильтров при изменении чекбоксов
   function setupExportFilterToggles() {
-    const multiSelectFields = ['company', 'blocks', 'functions', 'status', 'costProm', 'techRead', 'organRead', 'funcCover', 'priority', 'vendors', 'integrators'];
+    const multiSelectFields = ['company', 'blocks', 'functions', 'status', 'costProm', 'techRead', 'organRead', 'trlStage', 'priority', 'vendors', 'integrators'];
     const singleSelectFields = [];
-    const textFields = ['description'];
+    const textFields = ['description', 'exampleDesc'];
 
     // Множественный выбор
     multiSelectFields.forEach(field => {
@@ -1498,9 +1504,10 @@ window.ExportModule = (function() {
       status: true,
       costProm: false,
       description: false,
+      exampleDesc: false,
       techRead: false,
       organRead: false,
-      funcCover: false,
+      trlStage: false,
       priority: false,
       vendors: false,
       integrators: false
@@ -1537,23 +1544,10 @@ window.ExportModule = (function() {
           }
 
           // Сектор (если есть зум)
+          // ОБНОВЛЕНО (2026-01-29): Блоки больше не фильтруются по квадрантам
+          // Все блоки доступны для всех квадрантов, так как они являются отдельными критериями технологии
           const currentZoomedQuadrant = safeGet('getCurrentZoomedQuadrant');
-          if (currentZoomedQuadrant !== null) {
-            const blocksInQuadrant = [];
-            if (typeof window.blockToQuadrant !== 'undefined') {
-              Object.keys(window.blockToQuadrant).forEach(blockName => {
-                const qId = Array.isArray(window.blockToQuadrant[blockName])
-                  ? window.blockToQuadrant[blockName][0]
-                  : window.blockToQuadrant[blockName];
-                if (qId === currentZoomedQuadrant) {
-                  blocksInQuadrant.push(blockName);
-                }
-              });
-            }
-            if (blocksInQuadrant.length > 0) {
-              setMultiSelectFilter('blocks', blocksInQuadrant, 'Все блоки');
-            }
-          }
+          // При зуме на квадрант все блоки остаются доступными
 
           // Функциональный блок (из фильтра)
           if (typeof window.getFilterValues === 'function') {
@@ -1643,7 +1637,7 @@ window.ExportModule = (function() {
     }
 
     // Проверяем поля с множественным выбором
-    const allMultiSelectFields = ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'funcCover', 'priority', 'vendors', 'integrators'];
+    const allMultiSelectFields = ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'trlStage', 'priority', 'vendors', 'integrators'];
     const fieldLabels = {
       'company': 'Предприятия',
       'blocks': 'Функциональный блок',
@@ -1653,7 +1647,7 @@ window.ExportModule = (function() {
       'costProm': 'Стоимость внедрения',
       'techRead': 'Технологическая готовность',
       'organRead': 'Организационная готовность',
-      'funcCover': 'Покрытие функций',
+      'trlStage': 'TRL-стадия',
       'priority': 'Приоритет',
       'vendors': 'Вендору',
       'integrators': 'Интеграторы'
@@ -1739,7 +1733,7 @@ window.ExportModule = (function() {
         document.querySelectorAll('#exportPdfModal .export-field-item > label input[type="checkbox"], #exportPdfModal .export-field-row > label input[type="checkbox"]').forEach(cb => {
           cb.checked = shouldSelectAll;
           const field = cb.getAttribute('data-field');
-          const multiSelectFields = ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'funcCover', 'priority', 'vendors', 'integrators'];
+          const multiSelectFields = ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'trlStage', 'priority', 'vendors', 'integrators'];
 
           if (multiSelectFields.includes(field)) {
             const container = document.getElementById(`filter_${field}_container`);
@@ -1847,8 +1841,8 @@ window.ExportModule = (function() {
         });
 
         // Собираем значения фильтров
-        const multiSelectFields = ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'funcCover', 'priority', 'vendors', 'integrators'];
-        const textFields = ['description'];
+        const multiSelectFields = ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'trlStage', 'priority', 'vendors', 'integrators'];
+        const textFields = ['description', 'exampleDesc'];
 
         // Множественный выбор
         multiSelectFields.forEach(field => {
@@ -1880,7 +1874,7 @@ window.ExportModule = (function() {
           // Успех обрабатывается внутри performPdfExport
         } catch (error) {
           // Ошибка обрабатывается внутри performPdfExport
-          console.error('Ошибка экспорта PDF:', error);
+          // Ошибка экспорта PDF
         }
       });
     }

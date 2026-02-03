@@ -5,7 +5,7 @@
 (function (window) {
   'use strict';
 
-  console.log('[AutoFuncCover] Инициализация модуля');
+  // Модуль AutoFuncCover инициализирован
 
   /**
    * Получение текстового представления покрытия функций
@@ -39,7 +39,7 @@
     // Также сохраняем числовое значение в data-атрибуте для удобства
     field.setAttribute('data-value', value);
 
-    console.log(`[AutoFuncCover] Покрытие функций обновлено для ${fieldId}: ${value} (${text})`);
+    // Покрытие функций обновлено
   }
 
   /**
@@ -105,7 +105,7 @@
 
       return blockIds;
     } catch (e) {
-      console.warn('[AutoFuncCover] Ошибка при парсинге блоков:', e);
+      // Ошибка при парсинге блоков
       return [];
     }
   }
@@ -133,7 +133,7 @@
         updateFuncCoverField(coverFieldId, funcCover);
         return;
       } catch (e) {
-        console.warn('[AutoFuncCover] Ошибка при расчете через FuncCoverUtils:', e);
+        // Ошибка при расчете через FuncCoverUtils
       }
     }
 
@@ -221,7 +221,7 @@
       handleFuncChange();
     }, 100);
 
-    console.log('[AutoFuncCover] Инициализация для формы добавления завершена');
+    // Инициализация для формы добавления завершена
   }
 
   /**
@@ -260,7 +260,7 @@
       handleFuncChange();
     }, 100);
 
-    console.log('[AutoFuncCover] Инициализация для формы редактирования завершена');
+    // Инициализация для формы редактирования завершена
   }
 
   /**
@@ -284,7 +284,7 @@
     updateFuncCoverField: updateFuncCoverField
   };
 
-  console.log('[AutoFuncCover] Модуль загружен');
+  // Модуль AutoFuncCover загружен
 
   // Автоматическая инициализация при загрузке модуля
   if (document.readyState === 'loading') {

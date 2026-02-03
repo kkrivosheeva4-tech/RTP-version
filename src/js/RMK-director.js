@@ -101,7 +101,7 @@ async function loadAllModules() {
       await loadModule(module);
     }
   } catch (error) {
-    console.error('Ошибка при загрузке модулей:', error);
+    // Ошибка при загрузке модулей
     throw error;
   }
 }
@@ -113,7 +113,7 @@ const CENTER_Y = 500;
 const RADIUS_STEP = 140;
 // Отступы и минимальное расстояние между технологиями на радаре
 const POSITION_PAD = 30;           // отступ от границ колец
-const POSITION_ANGLE_PAD = 8;      // отступ от границ секторов (в градусах)
+const POSITION_ANGLE_PAD = 2;      // отступ от границ секторов (в градусах)
 const MIN_BLIP_DISTANCE = 28;      // минимальная дистанция между центрами технологий
 // Размеры прямоугольников фона подписей колец (должны совпадать с renderRadarBackground)
 const RING_LABEL_WIDTH = 180;
@@ -157,7 +157,7 @@ if (document.readyState === 'loading') {
       await loadAllModules();
       // Инициализация происходит автоматически в app-init.js при загрузке DOM
     } catch (error) {
-      console.error('Ошибка инициализации приложения:', error);
+      // Ошибка инициализации приложения
     }
   });
 } else {
@@ -167,7 +167,7 @@ if (document.readyState === 'loading') {
       await loadAllModules();
       // Инициализация происходит автоматически в app-init.js при загрузке DOM
     } catch (error) {
-      console.error('Ошибка инициализации приложения:', error);
+      // Ошибка инициализации приложения
     }
   })();
 }

@@ -2,7 +2,7 @@
 // Экспортирует функции в window.Filters для использования в RMK2.js
 // Использует глобальные переменные из RMK2.js и функции из других модулей
 
-(function() {
+(function () {
   'use strict';
 
   // Вспомогательные функции для создания элементов списка
@@ -212,12 +212,12 @@
     }
     const optionsList = select.querySelector('.select-options');
     if (!optionsList) {
-      console.error(`populateSelect: не найден .select-options для "${filterKey}"`);
+      // Не найден .select-options
       return;
     }
     const selectedText = select.querySelector('.selected-text');
     if (!selectedText) {
-      console.error(`populateSelect: не найден .selected-text для "${filterKey}"`);
+      // Не найден .selected-text
       return;
     }
     const hiddenInput = document.getElementById(`filter_${filterKey}`);
@@ -824,7 +824,7 @@
   function populateSelectForModal(selectId, items, placeholder) {
     const customSelect = document.querySelector(`.custom-select-modal[data-field="${selectId}"]`);
     if (!customSelect) {
-      if (window.Logger) window.Logger.warn(`populateSelectForModal: селект с data-field="${selectId}" не найден`);
+      // Селект не найден (это нормально, если модальное окно закрыто)
       return;
     }
     if (!Array.isArray(items) || items.length === 0) {
@@ -832,12 +832,12 @@
     }
     const optionsList = customSelect.querySelector('.select-options');
     if (!optionsList) {
-      console.error(`populateSelectForModal: не найден .select-options для "${selectId}"`);
+      // Не найден .select-options
       return;
     }
     const selectedText = customSelect.querySelector('.selected-text');
     if (!selectedText) {
-      console.error(`populateSelectForModal: не найден .selected-text для "${selectId}"`);
+      // Не найден .selected-text
       return;
     }
     const hiddenInput = document.getElementById(selectId);
@@ -905,6 +905,295 @@
         optionsList.appendChild(li);
       }
     });
+
+    // Добавляем опцию "Добавить новый" для вендоров и интеграторов
+    const isVendorField = selectId === 'techVendors' || selectId === 'editVendors';
+    const isIntegratorField = selectId === 'techIntegrators' || selectId === 'editIntegrators'
+      || isVendorIntegratorsByVendor;
+
+    if (isVendorField || isIntegratorField) {
+      const addNewLi = document.createElement('li');
+      addNewLi.className = 'add-new-option';
+      addNewLi.setAttribute('data-add-new', isVendorField ? 'vendor' : 'integrator');
+      const label = isVendorField ? 'Добавить нового вендора' : 'Добавить нового интегратора';
+      addNewLi.innerHTML = `
+        <div class="add-new-option-content">
+          <input type="text" class="add-new-input" placeholder="${label}" autocomplete="off" />
+          <button type="button" class="add-new-btn" title="Добавить">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+      `;
+      optionsList.appendChild(addNewLi);
+
+      // Обработчик для добавления нового значения
+      const addNewInput = addNewLi.querySelector('.add-new-input');
+      const addNewBtn = addNewLi.querySelector('.add-new-btn');
+
+      if (addNewInput && addNewBtn) {
+        const handleAddNew = () => {
+          const newValue = addNewInput.value.trim();
+          if (!newValue) return;
+
+          // Проверяем, что такого значения еще нет
+          const existingValues = Array.from(optionsList.querySelectorAll('li[data-value]'))
+            .map(li => li.getAttribute('data-value'))
+            .filter(Boolean);
+
+          if (existingValues.includes(newValue)) {
+            if (window.showNotification) {
+              window.showNotification(`${isVendorField ? 'Вендор' : 'Интегратор'} "${newValue}" уже существует`, false);
+            }
+            return;
+          }
+
+          // Сохраняем текущую позицию прокрутки перед добавлением
+          const optionsContainer = optionsList.closest('.select-options') || optionsList;
+          const scrollTopBefore = optionsContainer.scrollTop || 0;
+
+          // ВАЖНО: Сначала сохраняем текущие выбранные значения ПЕРЕД любыми изменениями
+          let currentValues = [];
+          try {
+            if (hiddenInput && hiddenInput.value && hiddenInput.value.trim().startsWith('[')) {
+              currentValues = JSON.parse(hiddenInput.value);
+              if (!Array.isArray(currentValues)) {
+                currentValues = [];
+              }
+            } else if (hiddenInput && hiddenInput.value) {
+              const singleValue = hiddenInput.value.trim();
+              if (singleValue) {
+                currentValues = [singleValue];
+              }
+            }
+          } catch (e) {
+            currentValues = [];
+          }
+
+          // Сохраняем копию текущих значений для безопасности
+          const savedCurrentValues = [...currentValues];
+
+          // Сохраняем в localStorage через модуль vendors-files
+          // Это НЕ должно влиять на текущие значения, так как мы убрали вызовы updateVendorsSelects/updateIntegratorsSelects
+          if (isVendorField && window.VendorsFiles && typeof window.VendorsFiles.addVendor === 'function') {
+            window.VendorsFiles.addVendor(newValue);
+          } else if (isIntegratorField && window.VendorsFiles && typeof window.VendorsFiles.addIntegrator === 'function') {
+            window.VendorsFiles.addIntegrator(newValue);
+          }
+
+          // Используем сохраненные значения
+          currentValues = savedCurrentValues;
+
+          // Добавляем новое значение к выбранным (если его еще нет)
+          if (!currentValues.includes(newValue)) {
+            currentValues.push(newValue);
+          }
+
+          // Добавляем новую опцию в список и сразу помечаем как выбранную
+          let newLi;
+          if (needsCheckboxes) {
+            newLi = document.createElement('li');
+            newLi.classList.add('select-option-item', 'selected');
+            newLi.setAttribute('data-value', newValue);
+            newLi.innerHTML = `
+              <label class="option-label">
+                <input type="checkbox" class="option-checkbox" checked />
+                <span>${newValue}</span>
+              </label>
+            `;
+            // Вставляем перед опцией "Добавить новый"
+            optionsList.insertBefore(newLi, addNewLi);
+          } else {
+            newLi = document.createElement('li');
+            newLi.textContent = newValue;
+            newLi.setAttribute('data-value', newValue);
+            newLi.classList.add('selected');
+            optionsList.insertBefore(newLi, addNewLi);
+          }
+
+          // Очищаем поле ввода
+          addNewInput.value = '';
+
+          // Сохраняем выбранные значения в hidden input
+          if (isMulti) {
+            hiddenInput.value = JSON.stringify(currentValues);
+          } else {
+            hiddenInput.value = newValue;
+          }
+
+          // Используем двойной requestAnimationFrame для гарантии, что DOM полностью обновлен
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              // ВАЖНО: Обновляем отображение вручную, чтобы не сбрасывать существующие значения
+              // setCustomSelectValue сбрасывает все выделения, что может привести к потере значений
+
+              // Отмечаем все нужные опции, не сбрасывая существующие
+              currentValues.forEach(val => {
+                const valStr = String(val);
+                let li = null;
+                try {
+                  li = customSelect.querySelector(`.select-options li[data-value="${CSS.escape(valStr)}"]`);
+                } catch (e) {
+                  li = customSelect.querySelector(`.select-options li[data-value="${valStr}"]`);
+                }
+
+                if (li) {
+                  li.classList.add('selected');
+                  const checkbox = li.querySelector('input[type="checkbox"]');
+                  if (checkbox) {
+                    checkbox.checked = true;
+                    checkbox.dataset.programmaticChange = 'true';
+                    setTimeout(() => {
+                      delete checkbox.dataset.programmaticChange;
+                    }, 100);
+                  }
+                }
+              });
+
+              // Обновляем отображение тегов для мультиселекта
+              if (typeof renderMultiSelectTags === 'function') {
+                renderMultiSelectTags(customSelect);
+              }
+
+              // Дополнительная проверка: убеждаемся, что все значения правильно отмечены
+              setTimeout(() => {
+                // Проверяем, что hidden input содержит правильные значения
+                const currentHiddenValue = hiddenInput ? hiddenInput.value : '';
+                let expectedValues = currentValues;
+
+                // Если hidden input не соответствует currentValues, восстанавливаем его
+                try {
+                  if (currentHiddenValue && currentHiddenValue.trim().startsWith('[')) {
+                    const parsed = JSON.parse(currentHiddenValue);
+                    if (Array.isArray(parsed)) {
+                      // Проверяем, что все значения из currentValues присутствуют в parsed
+                      const missing = currentValues.filter(v => !parsed.includes(v));
+                      if (missing.length > 0) {
+                        // Восстанавливаем значения в hidden input
+                        hiddenInput.value = JSON.stringify(currentValues);
+                      }
+                    }
+                  } else if (isMulti && currentValues.length > 0) {
+                    // Если это мультиселект, но hidden input не содержит массив, восстанавливаем
+                    hiddenInput.value = JSON.stringify(currentValues);
+                  }
+                } catch (e) {
+                  // Если ошибка парсинга, восстанавливаем значения
+                  if (isMulti) {
+                    hiddenInput.value = JSON.stringify(currentValues);
+                  }
+                }
+
+                // Отмечаем все опции из currentValues
+                currentValues.forEach(val => {
+                  const valStr = String(val);
+                  let li = null;
+                  try {
+                    li = customSelect.querySelector(`.select-options li[data-value="${CSS.escape(valStr)}"]`);
+                  } catch (e) {
+                    li = customSelect.querySelector(`.select-options li[data-value="${valStr}"]`);
+                  }
+
+                  if (li) {
+                    const isSelected = li.classList.contains('selected');
+                    const checkbox = li.querySelector('input[type="checkbox"]');
+                    const isChecked = checkbox ? checkbox.checked : false;
+
+                    // Если опция не выбрана, выбираем её
+                    if (!isSelected || (checkbox && !isChecked)) {
+                      li.classList.add('selected');
+                      if (checkbox) {
+                        checkbox.checked = true;
+                        checkbox.dataset.programmaticChange = 'true';
+                        setTimeout(() => {
+                          delete checkbox.dataset.programmaticChange;
+                        }, 100);
+                      }
+                    }
+                  }
+                });
+
+                // Обновляем отображение тегов еще раз после проверки
+                if (typeof renderMultiSelectTags === 'function') {
+                  renderMultiSelectTags(customSelect);
+                }
+              }, 100);
+
+              // Если это поле вендоров, вызываем обновление полей интеграторов
+              if (isVendorField && hiddenInput) {
+                // Триггерим событие change, чтобы сработал обработчик renderVendorIntegrators
+                // Используем setTimeout для гарантии, что все обновления DOM завершены
+                setTimeout(() => {
+                  // Триггерим события change и input на hidden input
+                  // Обработчики в form-management.js слушают эти события и вызывают renderVendorIntegrators
+                  // Используем более надежный способ: сначала изменяем значение, затем триггерим события
+                  const currentValue = hiddenInput.value;
+
+                  // Временно изменяем значение, чтобы гарантировать срабатывание событий
+                  if (currentValue) {
+                    // Триггерим события с текущим значением
+                    const changeEvent = new Event('change', { bubbles: true, cancelable: true });
+                    hiddenInput.dispatchEvent(changeEvent);
+
+                    const inputEvent = new Event('input', { bubbles: true, cancelable: true });
+                    hiddenInput.dispatchEvent(inputEvent);
+                  }
+                }, 200);
+              }
+            });
+          });
+
+          // Восстанавливаем позицию прокрутки или прокручиваем к новому элементу
+          // Используем requestAnimationFrame для гарантии, что DOM обновлен
+          requestAnimationFrame(() => {
+            // Вычисляем новую позицию прокрутки с учетом добавленного элемента
+            const newLiHeight = newLi.offsetHeight || 30; // Примерная высота элемента
+            const newScrollTop = scrollTopBefore + newLiHeight;
+
+            // Прокручиваем так, чтобы новая опция была видна, но не в самом верху
+            // Это сохраняет контекст и не перебрасывает пользователя
+            if (optionsContainer.scrollHeight > optionsContainer.clientHeight) {
+              // Если список прокручиваемый, прокручиваем к новой опции, но с небольшим отступом сверху
+              newLi.scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest',
+                inline: 'nearest'
+              });
+
+              // Дополнительно корректируем позицию, чтобы новая опция была видна, но не в самом верху
+              setTimeout(() => {
+                const liRect = newLi.getBoundingClientRect();
+                const containerRect = optionsContainer.getBoundingClientRect();
+
+                // Если новая опция слишком высоко, немного прокручиваем вниз
+                if (liRect.top < containerRect.top + 50) {
+                  optionsContainer.scrollTop = Math.max(0, optionsContainer.scrollTop - 30);
+                }
+              }, 100);
+            }
+          });
+
+          if (window.showNotification) {
+            window.showNotification(`${isVendorField ? 'Вендор' : 'Интегратор'} "${newValue}" добавлен и выбран`, true);
+          }
+        };
+
+        addNewBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          handleAddNew();
+        });
+
+        addNewInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.stopPropagation();
+            e.preventDefault();
+            handleAddNew();
+          }
+        });
+      }
+    }
+
     if (hiddenInput) hiddenInput.value = '';
     // Если это multi-select, отрендерим теги (пустые по умолчанию)
     if (customSelect.getAttribute('data-multi') === 'true') renderMultiSelectTags(customSelect);
@@ -936,7 +1225,10 @@
     // Если hidden содержит JSON-массив — распарсим
     let toSelect = [];
     try {
-      if (hiddenInput && hiddenInput.value && hiddenInput.value.trim().startsWith('[')) {
+      // Сначала проверяем переданное значение (может быть массивом)
+      if (Array.isArray(value)) {
+        toSelect = value;
+      } else if (hiddenInput && hiddenInput.value && hiddenInput.value.trim().startsWith('[')) {
         const parsed = JSON.parse(hiddenInput.value);
         if (Array.isArray(parsed)) toSelect = parsed;
       } else if (typeof value === 'string' && value.trim().startsWith('[')) {
@@ -944,21 +1236,78 @@
         if (Array.isArray(parsed)) toSelect = parsed;
       } else if (typeof value === 'string' && value.length > 0) {
         toSelect = [value];
+      } else if (hiddenInput && hiddenInput.value) {
+        // Если значение в hiddenInput не массив, создаем массив
+        const singleValue = hiddenInput.value.trim();
+        if (singleValue) {
+          toSelect = [singleValue];
+        }
       }
     } catch (e) {
       // Если не массив, попробуем как одиночное значение
-      if (typeof value === 'string' && value.length > 0) {
+      if (Array.isArray(value)) {
+        toSelect = value;
+      } else if (typeof value === 'string' && value.length > 0) {
         toSelect = [value];
       }
     }
     // Отметим нужные опции
     toSelect.forEach(val => {
-      const li = customSelect.querySelector(`.select-options li[data-value="${val}"]`);
+      const valStr = String(val);
+      // Используем CSS.escape для безопасного поиска
+      let li = null;
+      try {
+        li = customSelect.querySelector(`.select-options li[data-value="${CSS.escape(valStr)}"]`);
+      } catch (e) {
+        // Если CSS.escape не поддерживается, используем обычный селектор
+        li = customSelect.querySelector(`.select-options li[data-value="${valStr}"]`);
+      }
+
+      // Если не нашли по data-value, ищем по тексту содержимого
+      if (!li) {
+        const allOptions = customSelect.querySelectorAll('.select-options li');
+        for (let i = 0; i < allOptions.length; i++) {
+          const option = allOptions[i];
+          // Пропускаем служебные элементы (поиск, "Выбрать все", "Добавить новый")
+          if (option.classList.contains('select-search') ||
+            option.classList.contains('select-all-option') ||
+            option.classList.contains('add-new-option')) {
+            continue;
+          }
+
+          const optionValue = option.getAttribute('data-value');
+          if (optionValue === valStr) {
+            li = option;
+            break;
+          }
+
+          // Проверяем текст опции (для опций с чекбоксами - берем текст из span)
+          const span = option.querySelector('span');
+          const textContent = span ? span.textContent.trim() : option.textContent.trim();
+          if (textContent === valStr) {
+            li = option;
+            break;
+          }
+        }
+      }
+
       if (li) {
         li.classList.add('selected');
         const checkbox = li.querySelector('input[type="checkbox"]');
-        if (checkbox) checkbox.checked = true;
+        if (checkbox) {
+          checkbox.checked = true;
+          // Устанавливаем флаг, чтобы избежать повторной обработки
+          checkbox.dataset.programmaticChange = 'true';
+          setTimeout(() => {
+            delete checkbox.dataset.programmaticChange;
+          }, 100);
+        }
         if (!selectedOption) selectedOption = li;
+      } else {
+        // Логируем, если не нашли опцию (для отладки)
+        if (window.Logger) {
+          window.Logger.warn(`Не удалось найти опцию для значения: "${valStr}" в селекте ${fieldId}`);
+        }
       }
     });
     // Обновим отображение

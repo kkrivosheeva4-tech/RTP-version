@@ -5,7 +5,7 @@
 (function(window) {
   'use strict';
 
-  console.log('[SpatialIndex] Инициализация модуля');
+  // Модуль SpatialIndex инициализирован
 
   /**
    * Простая реализация Quadtree для 2D пространства
@@ -276,6 +276,6 @@
     optimizeLayoutWithSpatialIndex: optimizeLayoutWithSpatialIndex
   };
 
-  console.log('[SpatialIndex] Модуль загружен');
+  // Модуль SpatialIndex загружен
 
 })(window);

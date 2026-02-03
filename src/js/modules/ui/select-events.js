@@ -1165,10 +1165,13 @@
       }
 
       // ВАЖНО: Пропускаем клики по кнопкам добавления вендоров и интеграторов
-      // Эти клики должны обрабатываться обработчиками в vendors-files.js
+      // Эти клики должны обрабатываться обработчиками в vendors-files.js и filters.js
       if (e.target.closest(".add-new-vendor-btn") ||
           e.target.closest(".add-new-integrator-btn") ||
           e.target.closest(".add-new-vendor-option") ||
+          e.target.closest(".add-new-option") ||
+          e.target.closest(".add-new-btn") ||
+          e.target.closest(".add-new-input") ||
           e.target.closest(".add-new-integrator-option") ||
           e.target.classList.contains("new-vendor-input") ||
           e.target.classList.contains("new-integrator-input")) {

@@ -15,7 +15,7 @@
      * Инициализация менеджера вкладок
      */
     function initTabs() {
-        console.log('[EditTechTabsManager] Инициализация менеджера вкладок');
+        // Инициализация менеджера вкладок
 
         // Устанавливаем обработчики на основную вкладку
         const generalTab = document.querySelector('.tab-btn[data-tab="edit-general-info"]');
@@ -109,16 +109,16 @@
      * Обновление вкладок предприятий на основе выбора
      */
     function updateEnterpriseTabs() {
-        console.log('[EditTechTabsManager] updateEnterpriseTabs вызвана');
+        // updateEnterpriseTabs вызвана
         const editCompanyInput = document.getElementById('editCompany');
         if (!editCompanyInput) {
-            console.warn('[EditTechTabsManager] Поле editCompany не найдено');
+            // Поле editCompany не найдено
             return;
         }
 
         let selectedCompanies = [];
         const value = editCompanyInput.value;
-        console.log('[EditTechTabsManager] Значение поля editCompany:', value);
+        // Значение поля editCompany обновлено
 
         if (value) {
             try {
@@ -141,7 +141,7 @@
             ).filter(Boolean);
         }
 
-        console.log('[EditTechTabsManager] Выбранные предприятия:', selectedCompanies);
+        // Выбранные предприятия обновлены
 
         // Удаляем вкладки для невыбранных предприятий
         const currentTabs = Array.from(enterpriseTabs.keys());
@@ -168,16 +168,16 @@
             return;
         }
 
-        console.log('[EditTechTabsManager] Добавление вкладки для предприятия:', enterpriseName);
+        // Добавление вкладки для предприятия
 
         // Создаем вкладку в заголовке
         const tabBtn = createTabButton(enterpriseName);
         const enterpriseTabsContainer = document.getElementById('editEnterpriseTabsContainer');
         if (enterpriseTabsContainer) {
             enterpriseTabsContainer.appendChild(tabBtn);
-            console.log('[EditTechTabsManager] Кнопка вкладки добавлена для:', enterpriseName);
+            // Кнопка вкладки добавлена
         } else {
-            console.error('[EditTechTabsManager] Контейнер editEnterpriseTabsContainer не найден!');
+            // Контейнер editEnterpriseTabsContainer не найден
         }
 
         // Создаем контент вкладки
@@ -185,9 +185,9 @@
         const enterpriseTabsContentContainer = document.getElementById('editEnterpriseTabsContent');
         if (enterpriseTabsContentContainer) {
             enterpriseTabsContentContainer.appendChild(tabContent);
-            console.log('[EditTechTabsManager] Контент вкладки добавлен для:', enterpriseName);
+            // Контент вкладки добавлен
         } else {
-            console.error('[EditTechTabsManager] Контейнер editEnterpriseTabsContent не найден!');
+            // Контейнер editEnterpriseTabsContent не найден
         }
 
         // Сохраняем ссылки
@@ -388,7 +388,7 @@
      * @param {string} tabId - ID вкладки
      */
     function switchTab(tabId) {
-        console.log('[EditTechTabsManager] Переключение на вкладку:', tabId);
+        // Переключение на вкладку
 
         // Сохраняем данные текущей вкладки
         saveCurrentTabData();
@@ -428,7 +428,7 @@
         const tabData = enterpriseTabs.get(enterpriseName);
         if (!tabData) return;
 
-        console.log('[EditTechTabsManager] Удаление вкладки:', enterpriseName);
+        // Удаление вкладки
 
         // Удаляем элементы из DOM
         if (tabData.button) tabData.button.remove();
@@ -447,7 +447,7 @@
      * Удаление всех вкладок предприятий
      */
     function clearAllEnterpriseTabs() {
-        console.log('[EditTechTabsManager] Удаление всех вкладок предприятий');
+        // Удаление всех вкладок предприятий
 
         const enterpriseNames = Array.from(enterpriseTabs.keys());
         enterpriseNames.forEach(name => {
@@ -569,10 +569,10 @@
      * @param {Object} companyRatings - Объект с данными по предприятиям
      */
     function loadEnterpriseData(companyRatings) {
-        console.log('[EditTechTabsManager] Загрузка данных предприятий:', companyRatings);
+        // Загрузка данных предприятий
 
         if (!companyRatings || typeof companyRatings !== 'object') {
-            console.warn('[EditTechTabsManager] Нет данных для загрузки');
+            // Нет данных для загрузки
             return;
         }
 
@@ -580,7 +580,7 @@
         enterpriseTabs.forEach((tabData, enterpriseName) => {
             const data = companyRatings[enterpriseName] || {};
 
-            console.log(`[EditTechTabsManager] Загрузка данных для ${enterpriseName}:`, data);
+            // Загрузка данных для предприятия
 
             let hasTechRead = false;
             let hasOrganRead = false;
@@ -645,14 +645,14 @@
             };
         });
 
-        console.log('[EditTechTabsManager] Данные успешно загружены');
+        // Данные успешно загружены
     }
 
     /**
      * Сброс формы
      */
     function resetForm() {
-        console.log('[EditTechTabsManager] Сброс формы');
+        // Сброс формы
 
         // Очищаем все вкладки предприятий
         clearAllEnterpriseTabs();
@@ -676,6 +676,6 @@
         getActiveTab: () => activeTab
     };
 
-    console.log('[EditTechTabsManager] Модуль загружен');
+    // Модуль EditTechTabsManager загружен
 
 })(window);

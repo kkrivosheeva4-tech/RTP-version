@@ -11,7 +11,7 @@
 (function (window) {
     'use strict';
 
-    console.log('[FuncCoverCalculator] Инициализация модуля (устаревший метод)');
+    // Модуль FuncCoverCalculator инициализирован (устаревший метод)
 
     /**
      * Вычисление значения покрытия функций на основе количества направлений
@@ -64,7 +64,7 @@
             }
         }
 
-        console.log(`[FuncCoverCalculator] Покрытие функций обновлено: ${value}`);
+        // Покрытие функций обновлено
     }
 
     /**
@@ -89,7 +89,7 @@
                 return directionsValue.trim() ? 1 : 0;
             }
         } catch (e) {
-            console.error('[FuncCoverCalculator] Ошибка при парсинге направлений:', e);
+            // Ошибка при парсинге направлений
             return 0;
         }
     }
@@ -109,11 +109,11 @@
      * Инициализация для формы добавления технологии
      */
     function initForAddForm() {
-        console.log('[FuncCoverCalculator] Инициализация для формы добавления');
+        // Инициализация для формы добавления
 
         const directionsInput = document.getElementById('techDirections');
         if (!directionsInput) {
-            console.warn('[FuncCoverCalculator] Поле techDirections не найдено');
+            // Поле techDirections не найдено
             return;
         }
 
@@ -130,11 +130,11 @@
      * Инициализация для формы редактирования технологии
      */
     function initForEditForm() {
-        console.log('[FuncCoverCalculator] Инициализация для формы редактирования');
+        // Инициализация для формы редактирования
 
         const directionsInput = document.getElementById('editDirections');
         if (!directionsInput) {
-            console.warn('[FuncCoverCalculator] Поле editDirections не найдено');
+            // Поле editDirections не найдено
             return;
         }
 
@@ -151,7 +151,7 @@
      * Инициализация модуля
      */
     function init() {
-        console.log('[FuncCoverCalculator] Инициализация');
+        // Инициализация FuncCoverCalculator
 
         // Инициализируем для формы добавления
         initForAddForm();
@@ -169,7 +169,7 @@
         handleDirectionsChange: handleDirectionsChange
     };
 
-    console.log('[FuncCoverCalculator] Модуль загружен');
+    // Модуль FuncCoverCalculator загружен
 
     // Автоматическая инициализация при загрузке модуля
     if (document.readyState === 'loading') {

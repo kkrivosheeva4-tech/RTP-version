@@ -985,7 +985,7 @@
               if (typeof confirmEl._onClose === "function")
                 confirmEl._onClose();
             } catch (e) {
-              console.error(e);
+              // Ошибка обработки события
             }
             try {
               const related = confirmEl._relatedPanel;

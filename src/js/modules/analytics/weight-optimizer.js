@@ -6,7 +6,7 @@
 (function(window) {
   'use strict';
 
-  console.log('[WeightOptimizer] Инициализация модуля');
+  // Модуль WeightOptimizer инициализирован
 
   /**
    * Функция потерь для оптимизации весов
@@ -75,7 +75,7 @@
 
       // Проверка сходимости
       if (Math.abs(previousLoss - loss) < tolerance) {
-        console.log(`[WeightOptimizer] Градиентный спуск сошелся на итерации ${iter}`);
+        // Градиентный спуск сошелся
         break;
       }
 
@@ -232,7 +232,7 @@
    */
   function optimizeWeights(technologies, options = {}) {
     if (!technologies || technologies.length < 10) {
-      console.warn('[WeightOptimizer] Недостаточно данных для оптимизации (минимум 10 технологий)');
+      // Недостаточно данных для оптимизации
       return null;
     }
 
@@ -257,7 +257,7 @@
       crossoverRate: options.crossoverRate || 0.7
     };
 
-    console.log(`[WeightOptimizer] Начало оптимизации методом: ${method}`);
+    // Начало оптимизации
 
     let optimizedWeights;
     if (method === 'genetic') {
@@ -271,7 +271,7 @@
     const optimizedLoss = calculateLoss(optimizedWeights, technologies, config);
     const improvement = ((initialLoss - optimizedLoss) / initialLoss) * 100;
 
-    console.log(`[WeightOptimizer] Оптимизация завершена. Улучшение: ${improvement.toFixed(2)}%`);
+    // Оптимизация завершена
 
     return {
       weights: optimizedWeights,
@@ -291,6 +291,6 @@
     geneticAlgorithm: geneticAlgorithm
   };
 
-  console.log('[WeightOptimizer] Модуль загружен');
+  // Модуль WeightOptimizer загружен
 
 })(window);

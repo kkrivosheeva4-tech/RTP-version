@@ -30,7 +30,12 @@
     const id = Number(tech.id);
     byId.set(id, tech);
 
-    if (tech.block) {
+    // Индексируем блоки: поддерживаем и tech.block, и tech.blocks
+    if (Array.isArray(tech.blocks) && tech.blocks.length > 0) {
+      tech.blocks.forEach(block => {
+        if (block) indexMap(byBlock, block, tech);
+      });
+    } else if (tech.block) {
       indexMap(byBlock, tech.block, tech);
     }
 

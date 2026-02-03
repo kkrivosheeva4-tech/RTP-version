@@ -5,9 +5,15 @@
     "directions": [
       1
     ],
-    "block": 5,
+    "block": 1,
     "functionCoverage": [
-      "ТОиР"
+      "Маркшейдерские работы",
+      "Буровые работы",
+      "Лабораторные исследования",
+      "Взрывные работы",
+      "Экскавация",
+      "Транспортировка",
+      "Геологические работы"
     ],
     "description": "Описание технологии 1",
     "enterprises": [
@@ -31,6 +37,7 @@
       }
     ],
     "trlStage": 3,
+    "funcCover": 3,
     "vendors": [
       {
         "name": "Вендор 1",
@@ -76,33 +83,47 @@
     "directions": [
       1
     ],
-    "block": 6,
+    "block": 2,
     "functionCoverage": [
-      "Планирование строительства",
-      "Ценообразование"
+      "Измельчение руды мельницами",
+      "Флотация",
+      "Сгущение концентрата",
+      "Крупное дробление"
     ],
     "description": "Описание технологии 2",
     "enterprises": [
       {
-        "enterpriseId": 1,
+        "enterpriseId": 4,
         "technologicalReadiness": 2,
         "organizationalReadiness": 2,
         "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 5,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 6,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
       }
     ],
-    "trlStage": 1,
+    "trlStage": 2,
     "vendors": [
       {
-        "name": "Вендор 1",
+        "name": "Вендор 3",
         "integrators": [
-          "Интегратор 1",
-          "Интегратор 2"
+          "Интегратор 2",
+          "Интегратор 5"
         ]
       },
       {
-        "name":"Вендор 2",
+        "name": "Вендор 4",
         "integrators": [
-          "Интегратор 3",
+          "Интегратор 2",
           "Интегратор 4"
         ]
       }
@@ -122,20 +143,21 @@
     "directions": [
       1
     ],
-    "block": 7,
+    "blocks": [
+      3,
+      4
+    ],
     "functionCoverage": [
-      "Обслуживание транспорта"
+      "Контроль качества сырья и материалов",
+      "Транспортировка сырья",
+      "Транспортировка ГП",
+      "Складирование готовой продукции",
+      "Шихтоподготовка",
+      "Энергетика"
     ],
     "description": "Описание технологии 3",
-    "enterprises": [
-      {
-        "enterpriseId": 2,
-        "technologicalReadiness": 0,
-        "organizationalReadiness": 0,
-        "status": "Невнедренна"
-      }
-    ],
-    "trlStage": 2,
+    "enterprises": [],
+    "trlStage": 1,
     "vendors": [],
     "marketExamples": [
       "Пример внедрения 3"
@@ -150,35 +172,38 @@
     "id": 4,
     "name": "Технология 4",
     "directions": [
-      3
+      2
     ],
-    "block": [
+    "blocks": [
       8,
-      9,
-      10
+      9
     ],
     "functionCoverage": [
-      "Промышленная безопасность",
-      "Экологическая безопасность",
-      "Эксплуатация и техническое обслуживание зданий"
+      "Охраны труда и промышленная безопасность",
+      "Пожарная безопасность",
+      "Ликвидация аварий",
+      "Экологический контроль",
+      "Рациональное природопользование",
+      "Экологический контроль горно-обогатительного, металлургического комплекса",
+      "Экологический мониторинга и отчётность"
     ],
     "description": "Описание технологии 4",
     "enterprises": [
       {
-        "enterpriseId": 4,
+        "enterpriseId": 3,
         "technologicalReadiness": 3,
         "organizationalReadiness": 3,
         "status": "Внедрена"
       },
       {
-        "enterpriseId": 2,
-        "technologicalReadiness": 3,
+        "enterpriseId": 4,
+        "technologicalReadiness": 2,
         "organizationalReadiness": 3,
         "status": "Невнедренна"
       },
       {
-        "enterpriseId": 3,
-        "technologicalReadiness": 3,
+        "enterpriseId": 5,
+        "technologicalReadiness": 2,
         "organizationalReadiness": 3,
         "status": "Невнедренна"
       }
@@ -215,7 +240,7 @@
       }
     ],
     "marketExamples": [
-      "Пример внедрения 1"
+      "Пример внедрения 4"
     ],
     "documentationFiles": [
       "Файл документации 1",
@@ -227,47 +252,59 @@
     "id": 5,
     "name": "Технология 5",
     "directions": [
-      3
+      2
     ],
-    "block": [
-      2,
-      3,
-      4
+    "blocks": [
+      11,
+      12
     ],
     "functionCoverage": [
-      "Крупное дробление",
-      "Складирование крупнодробленной руды",
-      "Транспортировка сырья",
-      "Плавка сырья",
-      "Энергетика"
+      "Экономическая безопасность",
+      "Аккредитация",
+      "Ведение сводной отчетности",
+      "Экономика труда",
+      "Бюджетирование проектов"
     ],
-    "description": "Описание технологии 5",
+    "description": "Описание технологии 2",
     "enterprises": [
       {
         "enterpriseId": 1,
         "technologicalReadiness": 1,
-        "organizationalReadiness": 1,
+        "organizationalReadiness": 2,
         "status": "Невнедренна"
       },
       {
         "enterpriseId": 2,
         "technologicalReadiness": 1,
-        "organizationalReadiness": 1,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 6,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 2,
         "status": "Невнедренна"
       }
     ],
-    "trlStage": 1,
+    "trlStage": 2,
     "vendors": [
       {
-        "name": "Вендор 1",
+        "name": "Вендор 3",
         "integrators": [
-          "Интегратор 1",
-          "Интегратор 2"
+          "Интегратор 2",
+          "Интегратор 5"
+        ]
+      },
+      {
+        "name": "Вендор 4",
+        "integrators": [
+          "Интегратор 2",
+          "Интегратор 4"
         ]
       }
     ],
     "marketExamples": [
-      "Пример внедрения 2"
+      "Пример внедрения 5"
     ],
     "documentationFiles": [
       "Файл документации 1",
@@ -279,45 +316,30 @@
     "id": 6,
     "name": "Технология 6",
     "directions": [
-      3
+      2
     ],
-    "block": 24,
+    "block": 13,
     "functionCoverage": [
-      "Обслуживание транспорта"
+      "Бюджетирования денежных потоков",
+      "Управление дебиторской и кредиторской задолженностью"
     ],
     "description": "Описание технологии 6",
     "enterprises": [
       {
-        "enterpriseId": 1,
-        "technologicalReadiness": 2,
-        "organizationalReadiness": 2,
+        "enterpriseId": 6,
+        "technologicalReadiness": 0,
+        "organizationalReadiness": 0,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 0,
+        "organizationalReadiness": 0,
         "status": "Невнедренна"
       }
     ],
-    "trlStage": 2,
-    "vendors": [
-      {
-        "name": "Вендор 1",
-        "integrators": [
-          "Интегратор 1",
-          "Интегратор 2"
-        ]
-      },
-      {
-        "name": "Вендор 2",
-        "integrators": [
-          "Интегратор 3",
-          "Интегратор 4"
-        ]
-      },
-      {
-        "name": "Вендор 3",
-        "integrators": [
-          "Интегратор 5",
-          "Интегратор 6"
-        ]
-      }
-    ],
+    "trlStage": 1,
+    "vendors": [],
     "marketExamples": [
       "Пример внедрения 6"
     ],
@@ -331,13 +353,13 @@
     "id": 7,
     "name": "Технология 7",
     "directions": [
-      2
+      3
     ],
-    "block": 11,
+    "block": 22,
     "functionCoverage": [
-      "Экономическая безопасность",
-      "Экономика",
-      "Финансы"
+      "Организационное делопроизводство",
+      "Работа с архивом",
+      "Переводы"
     ],
     "description": "Описание технологии 7",
     "enterprises": [
@@ -348,9 +370,9 @@
         "status": "Внедрена"
       },
       {
-        "enterpriseId": 2,
+        "enterpriseId": 6,
         "technologicalReadiness": 3,
-        "organizationalReadiness": 3,
+        "organizationalReadiness": 2,
         "status": "Невнедренна"
       },
       {
@@ -392,7 +414,7 @@
       }
     ],
     "marketExamples": [
-      "Пример внедрения 1"
+      "Пример внедрения 7"
     ],
     "documentationFiles": [
       "Файл документации 1",
@@ -404,42 +426,57 @@
     "id": 8,
     "name": "Технология 8",
     "directions": [
-      2
+      3
     ],
-    "block": 12,
+    "block": 18,
     "functionCoverage": [
-      "Стратегическое планирование и развитие",
-      "Правовая деятельность",
-      "Коммерческая деятельность",
-      "Внешнеэкономическая деятельность"
+      "Поддержка пользователей",
+      "Разработка",
+      "Тестирование и аналитика",
+      "Сопровождение цифровых решений",
+      "Развитие электронного документооборота",
+      "Развитие 1С"
     ],
     "description": "Описание технологии 8",
     "enterprises": [
       {
         "enterpriseId": 1,
-        "technologicalReadiness": 1,
-        "organizationalReadiness": 0,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 2,
         "status": "Невнедренна"
       },
       {
-        "enterpriseId": 2,
+        "enterpriseId": 4,
         "technologicalReadiness": 1,
-        "organizationalReadiness": 0,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 5,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 1,
         "status": "Невнедренна"
       }
     ],
-    "trlStage": 1,
+    "trlStage": 2,
     "vendors": [
       {
-        "name": "Вендор 1",
+        "name": "Вендор 3",
         "integrators": [
-          "Интегратор 1",
-          "Интегратор 2"
+          "Интегратор 2",
+          "Интегратор 5"
+        ]
+      },
+      {
+        "name": "Вендор 4",
+        "integrators": [
+          "Интегратор 2",
+          "Интегратор 4"
         ]
       }
     ],
     "marketExamples": [
-      "Пример внедрения 2"
+      "Пример внедрения 8"
     ],
     "documentationFiles": [
       "Файл документации 1",
@@ -451,64 +488,28 @@
     "id": 9,
     "name": "Технология 9",
     "directions": [
-      2
+      3
     ],
-    "block": 13,
+    "block": 19,
     "functionCoverage": [
-      "Информационные технологии и ит-инфраструктура",
-      "Информационная безопасность",
-      "Операционная эффективность",
-      "Управление персоналом",
-      "Делопроизводство",
-      "Социальная политика"
+      "Мониторинг и реагирование на инциденты",
+      "Аналитика"
     ],
     "description": "Описание технологии 9",
     "enterprises": [
       {
-        "enterpriseId": 1,
-        "technologicalReadiness": 2,
-        "organizationalReadiness": 2,
-        "status": "Невнедренна"
-      },
-      {
         "enterpriseId": 2,
-        "technologicalReadiness": 2,
-        "organizationalReadiness": 2,
         "status": "Невнедренна"
       },
       {
         "enterpriseId": 3,
-        "technologicalReadiness": 2,
-        "organizationalReadiness": 2,
         "status": "Невнедренна"
       }
     ],
-    "trlStage": 2,
-    "vendors": [
-      {
-        "name": "Вендор 1",
-        "integrators": [
-          "Интегратор 1",
-          "Интегратор 2"
-        ]
-      },
-      {
-        "name": "Вендор 2",
-        "integrators": [
-          "Интегратор 3",
-          "Интегратор 4"
-        ]
-      },
-      {
-        "name": "Вендор 3",
-        "integrators": [
-          "Интегратор 5",
-          "Интегратор 6"
-        ]
-      }
-    ],
+    "trlStage": 1,
+    "vendors": [],
     "marketExamples": [
-      "Пример внедрения 3"
+      "Пример внедрения 9"
     ],
     "documentationFiles": [
       "Файл документации 1",
@@ -522,27 +523,33 @@
     "directions": [
       4
     ],
-    "block": 25,
+    "blocks": [
+      20,
+      25
+    ],
     "functionCoverage": [
-      "Недропользование",
-      "Информационная политика и связи с общественностью"
+      "Оцифровка показателей",
+      "Анализ показателей",
+      "Планирование и автоматизация",
+      "Информационная политика",
+      "Связи с общественностью"
     ],
     "description": "Описание технологии 10",
     "enterprises": [
       {
-        "enterpriseId": 1,
-        "technologicalReadiness": 3,
-        "organizationalReadiness": 3,
-        "status": "Внедрена"
-      },
-      {
-        "enterpriseId": 2,
-        "technologicalReadiness": 3,
-        "organizationalReadiness": 3,
+        "enterpriseId": 6,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 2,
         "status": "Невнедренна"
       },
       {
-        "enterpriseId": 3,
+        "enterpriseId": 1,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 5,
         "technologicalReadiness": 3,
         "organizationalReadiness": 3,
         "status": "Невнедренна"
@@ -580,7 +587,7 @@
       }
     ],
     "marketExamples": [
-      "Пример внедрения 1"
+      "Пример внедрения 10"
     ],
     "documentationFiles": [
       "Файл документации 1",
@@ -594,32 +601,55 @@
     "directions": [
       4
     ],
-    "block": 24,
+    "blocks": [
+      21
+    ],
     "functionCoverage": [
-      "Недропользование",
-      "Информационная политика и связи с общественностью"
+      "Подбора персонала",
+      "адаптация персонала и работа с учебными заведениями",
+      "аналитика каналов привлечения",
+      "Обучение персонала"
     ],
     "description": "Описание технологии 11",
     "enterprises": [
       {
-        "enterpriseId": 1,
-        "technologicalReadiness": 0,
-        "organizationalReadiness": 0,
+        "enterpriseId": 3,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 4,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 5,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 2,
         "status": "Невнедренна"
       }
     ],
-    "trlStage": 1,
+    "trlStage": 2,
     "vendors": [
       {
-        "name": "Вендор 1",
+        "name": "Вендор 3",
         "integrators": [
-          "Интегратор 1",
-          "Интегратор 2"
+          "Интегратор 2",
+          "Интегратор 5"
+        ]
+      },
+      {
+        "name": "Вендор 4",
+        "integrators": [
+          "Интегратор 2",
+          "Интегратор 4"
         ]
       }
     ],
     "marketExamples": [
-      "Пример внедрения 2"
+      "Пример внедрения 11"
     ],
     "documentationFiles": [
       "Файл документации 1",
@@ -629,16 +659,871 @@
   },
   {
     "id": 12,
-    "name": "Технология 3",
+    "name": "Технология 12",
     "directions": [
       4
     ],
-    "block": 25,
+    "blocks": [
+      24
+    ],
     "functionCoverage": [
-      "Недропользование",
-      "Информационная политика и связи с общественностью"
+      "Геологоразведка"
     ],
     "description": "Описание технологии 12",
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 0,
+        "organizationalReadiness": 0,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 0,
+        "organizationalReadiness": 0,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 1,
+    "vendors": [],
+    "marketExamples": [
+      "Пример внедрения 12"
+    ],
+    "documentationFiles": [
+      "Файл документации 1",
+      "Файл документации 2",
+      "Файл документации 3"
+    ]
+  },
+  {
+    "id": 13,
+    "name": "Технология 13 (высокая готовность, большой размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Маркшейдерские работы",
+      "Буровые работы"
+    ],
+    "description": "Технология с высокой готовностью и большим количеством вендоров",
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 3,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 3,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 3,
+    "funcCover": 3,
+    "vendors": [
+      {
+        "name": "Вендор A",
+        "integrators": [
+          "Интегратор 1"
+        ]
+      },
+      {
+        "name": "Вендор B",
+        "integrators": [
+          "Интегратор 2"
+        ]
+      },
+      {
+        "name": "Вендор C",
+        "integrators": [
+          "Интегратор 3"
+        ]
+      },
+      {
+        "name": "Вендор D",
+        "integrators": [
+          "Интегратор 4"
+        ]
+      },
+      {
+        "name": "Вендор E",
+        "integrators": [
+          "Интегратор 5"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 14,
+    "name": "Технология 14 (средняя готовность, средний размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Лабораторные исследования",
+      "Взрывные работы"
+    ],
+    "description": "Технология со средней готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 3,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 4,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 2,
+    "funcCover": 1,
+    "vendors": [
+      {
+        "name": "Вендор F",
+        "integrators": [
+          "Интегратор 6"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 15,
+    "name": "Технология 15 (низкая готовность, малый размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Экскавация"
+    ],
+    "description": "Технология с низкой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 5,
+        "technologicalReadiness": 0,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 1,
+    "funcCover": 0,
+    "vendors": [
+      {
+        "name": "Вендор I",
+        "integrators": [
+          "Интегратор 9"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 16,
+    "name": "Технология 16 (высокая готовность, средний размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Транспортировка",
+      "Геологические работы"
+    ],
+    "description": "Технология с высокой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 3,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 6,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 2,
+    "funcCover": 2,
+    "vendors": [
+      {
+        "name": "Вендор J",
+        "integrators": [
+          "Интегратор 10"
+        ]
+      },
+      {
+        "name": "Вендор K",
+        "integrators": [
+          "Интегратор 11"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 17,
+    "name": "Технология 17 (средняя готовность, большой размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Маркшейдерские работы",
+      "Буровые работы",
+      "Лабораторные исследования"
+    ],
+    "description": "Технология со средней готовностью и большим количеством вендоров",
+    "enterprises": [
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 3,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 3,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 2,
+    "funcCover": 2,
+    "vendors": [
+      {
+        "name": "Вендор L",
+        "integrators": [
+          "Интегратор 12"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 18,
+    "name": "Технология 18 (низкая готовность, средний размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Взрывные работы",
+      "Экскавация"
+    ],
+    "description": "Технология с низкой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 4,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 5,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 1,
+    "vendors": [
+      {
+        "name": "Вендор Q",
+        "integrators": [
+          "Интегратор 17"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 19,
+    "name": "Технология 19 (высокая готовность, малый размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Транспортировка"
+    ],
+    "description": "Технология с высокой готовностью, но малым количеством вендоров",
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 2,
+    "funcCover": 1,
+    "vendors": [
+      {
+        "name": "Вендор S",
+        "integrators": [
+          "Интегратор 19"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 20,
+    "name": "Технология 20 (средняя готовность, малый размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Геологические работы"
+    ],
+    "description": "Технология со средней готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 6,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 1,
+    "funcCover": 0,
+    "vendors": [
+      {
+        "name": "Вендор T",
+        "integrators": [
+          "Интегратор 20"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 21,
+    "name": "Технология 21 (низкая готовность, большой размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Маркшейдерские работы",
+      "Буровые работы",
+      "Лабораторные исследования",
+      "Взрывные работы"
+    ],
+    "description": "Технология с низкой готовностью, но большим количеством вендоров",
+    "enterprises": [
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 0,
+        "organizationalReadiness": 0,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 1,
+    "funcCover": 1,
+    "vendors": [
+      {
+        "name": "Вендор U",
+        "integrators": [
+          "Интегратор 21"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 22,
+    "name": "Технология 22 (высокая готовность, большой размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Маркшейдерские работы",
+      "Буровые работы",
+      "Лабораторные исследования"
+    ],
+    "description": "Технология с высокой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 3,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 3,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 4,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 5,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 3,
+    "funcCover": 3,
+    "vendors": [
+      {
+        "name": "Вендор Z",
+        "integrators": [
+          "Интегратор 26"
+        ]
+      },
+      {
+        "name": "Вендор AA",
+        "integrators": [
+          "Интегратор 27"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 23,
+    "name": "Технология 23 (средняя готовность, средний размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Экскавация",
+      "Транспортировка"
+    ],
+    "description": "Технология со средней готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 0,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 1,
+    "funcCover": 1,
+    "vendors": [
+      {
+        "name": "Вендор AD",
+        "integrators": [
+          "Интегратор 30"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 24,
+    "name": "Технология 24 (низкая готовность, малый размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Геологические работы"
+    ],
+    "description": "Технология с низкой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 6,
+        "technologicalReadiness": 0,
+        "organizationalReadiness": 0,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 1,
+    "funcCover": 0,
+    "vendors": [
+      {
+        "name": "Вендор AG",
+        "integrators": [
+          "Интегратор 33"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 25,
+    "name": "Технология 25 (высокая готовность, средний размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Маркшейдерские работы",
+      "Буровые работы"
+    ],
+    "description": "Технология с высокой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 3,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 3,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 4,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 3,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 3,
+    "funcCover": 3,
+    "vendors": [
+      {
+        "name": "Вендор AH",
+        "integrators": [
+          "Интегратор 34"
+        ]
+      },
+      {
+        "name": "Вендор AI",
+        "integrators": [
+          "Интегратор 35"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 26,
+    "name": "Технология 26 (средняя готовность, большой размер)",
+    "directions": [
+      1
+    ],
+    "blocks": [
+      1,
+      2
+    ],
+    "functionCoverage": [
+      "Лабораторные исследования",
+      "Взрывные работы",
+      "Экскавация"
+    ],
+    "description": "Технология со средней готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 5,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 1,
+    "funcCover": 2,
+    "vendors": [
+      {
+        "name": "Вендор AJ",
+        "integrators": [
+          "Интегратор 36"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 27,
+    "name": "Технология 27 (низкая готовность, средний размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Транспортировка",
+      "Геологические работы"
+    ],
+    "description": "Технология с низкой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 0,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 0,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 1,
+    "funcCover": 1,
+    "vendors": [
+      {
+        "name": "Вендор AO",
+        "integrators": [
+          "Интегратор 41"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 28,
+    "name": "Технология 28 (высокая готовность, малый размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Маркшейдерские работы"
+    ],
+    "description": "Технология с высокой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 3,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 3,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 3,
+    "funcCover": 1,
+    "vendors": [
+      {
+        "name": "Вендор AQ",
+        "integrators": [
+          "Интегратор 43"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 29,
+    "name": "Технология 29 (средняя готовность, малый размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Буровые работы",
+      "Лабораторные исследования"
+    ],
+    "description": "Технология со средней готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 4,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 2,
+    "funcCover": 2,
+    "vendors": [
+      {
+        "name": "Вендор AR",
+        "integrators": [
+          "Интегратор 44"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 30,
+    "name": "Технология 30 (низкая готовность, большой размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Взрывные работы",
+      "Экскавация",
+      "Транспортировка"
+    ],
+    "description": "Технология с низкой готовностью",
+    "enterprises": [],
+    "trlStage": 1,
+    "funcCover": 1,
+    "vendors": [
+      {
+        "name": "Вендор AS",
+        "integrators": [
+          "Интегратор 45"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 31,
+    "name": "Технология 31 (высокая готовность, большой размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Маркшейдерские работы",
+      "Буровые работы",
+      "Лабораторные исследования",
+      "Взрывные работы"
+    ],
+    "description": "Технология с высокой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 2,
+    "funcCover": 3,
+    "vendors": [
+      {
+        "name": "Вендор AX",
+        "integrators": [
+          "Интегратор 50"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 32,
+    "name": "Технология 32 (средняя готовность, средний размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Экскавация",
+      "Транспортировка"
+    ],
+    "description": "Технология со средней готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 3,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 3,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 4,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 2,
+    "funcCover": 1,
+    "vendors": [
+      {
+        "name": "Вендор BC",
+        "integrators": [
+          "Интегратор 55"
+        ]
+      },
+      {
+        "name": "Вендор BD",
+        "integrators": [
+          "Интегратор 56"
+        ]
+      },
+      {
+        "name": "Вендор BE",
+        "integrators": [
+          "Интегратор 57"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 33,
+    "name": "Технология 33 (низкая готовность, малый размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Геологические работы"
+    ],
+    "description": "Технология с низкой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 5,
+        "technologicalReadiness": 0,
+        "organizationalReadiness": 0,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 1,
+    "funcCover": 0,
+    "vendors": [
+      {
+        "name": "Вендор BF",
+        "integrators": [
+          "Интегратор 58"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 34,
+    "name": "Технология 34 (высокая готовность, средний размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Маркшейдерские работы",
+      "Буровые работы"
+    ],
+    "description": "Технология с высокой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 6,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 3,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 3,
+    "funcCover": 2,
+    "vendors": [
+      {
+        "name": "Вендор BG",
+        "integrators": [
+          "Интегратор 59"
+        ]
+      },
+      {
+        "name": "Вендор BH",
+        "integrators": [
+          "Интегратор 60"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 35,
+    "name": "Технология 35 (средняя готовность, большой размер)",
+    "directions": [
+      1
+    ],
+    "blocks": [
+      1,
+      2
+    ],
+    "functionCoverage": [
+      "Лабораторные исследования",
+      "Взрывные работы",
+      "Экскавация"
+    ],
+    "description": "Технология со средней готовностью",
     "enterprises": [
       {
         "enterpriseId": 1,
@@ -647,37 +1532,1287 @@
         "status": "Невнедренна"
       }
     ],
-    "trlStage": 2,
+    "trlStage": 1,
+    "funcCover": 2,
     "vendors": [
       {
-        "name": "Вендор 1",
+        "name": "Вендор BI",
         "integrators": [
-          "Интегратор 1",
-          "Интегратор 2"
-        ]
-      },
-      {
-        "name": "Вендор 2",
-        "integrators": [
-          "Интегратор 3",
-          "Интегратор 4"
-        ]
-      },
-      {
-        "name": "Вендор 3",
-        "integrators": [
-          "Интегратор 5",
-          "Интегратор 6"
+          "Интегратор 61"
         ]
       }
+    ]
+  },
+  {
+    "id": 36,
+    "name": "Технология 36 (низкая готовность, средний размер)",
+    "directions": [
+      1
     ],
-    "marketExamples": [
-      "Пример внедрения 3"
+    "block": 1,
+    "functionCoverage": [
+      "Транспортировка",
+      "Геологические работы"
     ],
-    "documentationFiles": [
-      "Файл документации 1",
-      "Файл документации 2",
-      "Файл документации 3"
+    "description": "Технология с низкой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 4,
+        "technologicalReadiness": 0,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 5,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 0,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 1,
+    "funcCover": 1,
+    "vendors": [
+      {
+        "name": "Вендор BN",
+        "integrators": [
+          "Интегратор 66"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 37,
+    "name": "Технология 37 (высокая готовность, малый размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Маркшейдерские работы"
+    ],
+    "description": "Технология с высокой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 2,
+    "funcCover": 1,
+    "vendors": [
+      {
+        "name": "Вендор BP",
+        "integrators": [
+          "Интегратор 68"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 38,
+    "name": "Технология 38 (средняя готовность, малый размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Буровые работы"
+    ],
+    "description": "Технология со средней готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 6,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 1,
+    "funcCover": 1,
+    "vendors": [
+      {
+        "name": "Вендор BQ",
+        "integrators": [
+          "Интегратор 69"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 39,
+    "name": "Технология 39 (низкая готовность, большой размер)",
+    "directions": [
+      1
+    ],
+    "blocks": [
+      1,
+      2
+    ],
+    "functionCoverage": [
+      "Маркшейдерские работы",
+      "Буровые работы",
+      "Лабораторные исследования",
+      "Взрывные работы"
+    ],
+    "description": "Технология с низкой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 0,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 1,
+    "funcCover": 2,
+    "vendors": [
+      {
+        "name": "Вендор BR",
+        "integrators": [
+          "Интегратор 70"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 40,
+    "name": "Технология 40 (высокая готовность, большой размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Маркшейдерские работы",
+      "Буровые работы",
+      "Лабораторные исследования"
+    ],
+    "description": "Технология с высокой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 3,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 4,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 5,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 2,
+    "funcCover": 2,
+    "vendors": [
+      {
+        "name": "Вендор BW",
+        "integrators": [
+          "Интегратор 75"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 41,
+    "name": "Технология 41 (средняя готовность, средний размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Экскавация",
+      "Транспортировка"
+    ],
+    "description": "Технология со средней готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 1,
+    "funcCover": 1,
+    "vendors": [
+      {
+        "name": "Вендор CA",
+        "integrators": [
+          "Интегратор 79"
+        ]
+      },
+      {
+        "name": "Вендор CB",
+        "integrators": [
+          "Интегратор 80"
+        ]
+      },
+      {
+        "name": "Вендор CC",
+        "integrators": [
+          "Интегратор 81"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 42,
+    "name": "Технология 42 (низкая готовность, малый размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Геологические работы"
+    ],
+    "description": "Технология с низкой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 6,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 1,
+    "funcCover": 0,
+    "vendors": [
+      {
+        "name": "Вендор CD",
+        "integrators": [
+          "Интегратор 82"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 43,
+    "name": "Технология 43 (высокая готовность, средний размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Маркшейдерские работы",
+      "Буровые работы"
+    ],
+    "description": "Технология с высокой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 3,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 4,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 2,
+    "funcCover": 2,
+    "vendors": [
+      {
+        "name": "Вендор CE",
+        "integrators": [
+          "Интегратор 83"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 44,
+    "name": "Технология 44 (средняя готовность, большой размер)",
+    "directions": [
+      1
+    ],
+    "blocks": [
+      1,
+      2
+    ],
+    "functionCoverage": [
+      "Лабораторные исследования",
+      "Взрывные работы",
+      "Экскавация"
+    ],
+    "description": "Технология со средней готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 5,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 3,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 1,
+    "funcCover": 2,
+    "vendors": [
+      {
+        "name": "Вендор CG",
+        "integrators": [
+          "Интегратор 85"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 45,
+    "name": "Технология 45 (низкая готовность, средний размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Транспортировка",
+      "Геологические работы"
+    ],
+    "description": "Технология с низкой готовностью",
+    "enterprises": [],
+    "trlStage": 1,
+    "funcCover": 1,
+    "vendors": [
+      {
+        "name": "Вендор CL",
+        "integrators": [
+          "Интегратор 90"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 46,
+    "name": "Технология 46 (высокая готовность, малый размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Маркшейдерские работы"
+    ],
+    "description": "Технология с высокой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 3,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 3,
+    "funcCover": 1,
+    "vendors": [
+      {
+        "name": "Вендор CN",
+        "integrators": [
+          "Интегратор 92"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 47,
+    "name": "Технология 47 (средняя готовность, малый размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Буровые работы",
+      "Лабораторные исследования"
+    ],
+    "description": "Технология со средней готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 4,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 0,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 2,
+    "funcCover": 2,
+    "vendors": [
+      {
+        "name": "Вендор CO",
+        "integrators": [
+          "Интегратор 93"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 48,
+    "name": "Технология 48 (низкая готовность, большой размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Взрывные работы",
+      "Экскавация",
+      "Транспортировка"
+    ],
+    "description": "Технология с низкой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 5,
+        "technologicalReadiness": 0,
+        "organizationalReadiness": 0,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 6,
+        "technologicalReadiness": 0,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 1,
+    "funcCover": 1,
+    "vendors": [
+      {
+        "name": "Вендор CP",
+        "integrators": [
+          "Интегратор 94"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 49,
+    "name": "Технология 49 (высокая готовность, большой размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Маркшейдерские работы",
+      "Буровые работы",
+      "Лабораторные исследования",
+      "Взрывные работы"
+    ],
+    "description": "Технология с высокой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 3,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 2,
+    "funcCover": 3,
+    "vendors": [
+      {
+        "name": "Вендор CU",
+        "integrators": [
+          "Интегратор 99"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 50,
+    "name": "Технология 50 (средняя готовность, средний размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Экскавация",
+      "Транспортировка"
+    ],
+    "description": "Технология со средней готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 3,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 4,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 1,
+    "funcCover": 1,
+    "vendors": [
+      {
+        "name": "Вендор CZ",
+        "integrators": [
+          "Интегратор 104"
+        ]
+      },
+      {
+        "name": "Вендор DA",
+        "integrators": [
+          "Интегратор 105"
+        ]
+      },
+      {
+        "name": "Вендор DB",
+        "integrators": [
+          "Интегратор 106"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 51,
+    "name": "Технология 51 (низкая готовность, малый размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Геологические работы"
+    ],
+    "description": "Технология с низкой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 5,
+        "technologicalReadiness": 0,
+        "organizationalReadiness": 0,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 1,
+    "funcCover": 0,
+    "vendors": [
+      {
+        "name": "Вендор DC",
+        "integrators": [
+          "Интегратор 107"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 52,
+    "name": "Технология 52 (высокая готовность, средний размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Маркшейдерские работы",
+      "Буровые работы"
+    ],
+    "description": "Технология с высокой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 6,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 3,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 3,
+    "funcCover": 2,
+    "vendors": [
+      {
+        "name": "Вендор DD",
+        "integrators": [
+          "Интегратор 108"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 53,
+    "name": "Технология 53 (средняя готовность, большой размер)",
+    "directions": [
+      1
+    ],
+    "blocks": [
+      1,
+      2
+    ],
+    "functionCoverage": [
+      "Лабораторные исследования",
+      "Взрывные работы",
+      "Экскавация"
+    ],
+    "description": "Технология со средней готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 0,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 3,
+        "technologicalReadiness": 0,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 1,
+    "funcCover": 2,
+    "vendors": [
+      {
+        "name": "Вендор DF",
+        "integrators": [
+          "Интегратор 110"
+        ]
+      },
+      {
+        "name": "Вендор DG",
+        "integrators": [
+          "Интегратор 111"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 54,
+    "name": "Технология 54 (низкая готовность, средний размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Транспортировка",
+      "Геологические работы"
+    ],
+    "description": "Технология с низкой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 4,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 5,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 1,
+    "funcCover": 1,
+    "vendors": [
+      {
+        "name": "Вендор DK",
+        "integrators": [
+          "Интегратор 115"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 55,
+    "name": "Технология 55 (высокая готовность, малый размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Маркшейдерские работы"
+    ],
+    "description": "Технология с высокой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 2,
+    "funcCover": 1,
+    "vendors": [
+      {
+        "name": "Вендор DM",
+        "integrators": [
+          "Интегратор 117"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 56,
+    "name": "Технология 56 (средняя готовность, малый размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Буровые работы"
+    ],
+    "description": "Технология со средней готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 6,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 1,
+    "funcCover": 1,
+    "vendors": [
+      {
+        "name": "Вендор DN",
+        "integrators": [
+          "Интегратор 118"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 57,
+    "name": "Технология 57 (низкая готовность, большой размер)",
+    "directions": [
+      1
+    ],
+    "blocks": [
+      1,
+      2
+    ],
+    "functionCoverage": [
+      "Маркшейдерские работы",
+      "Буровые работы",
+      "Лабораторные исследования",
+      "Взрывные работы"
+    ],
+    "description": "Технология с низкой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 0,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 1,
+    "funcCover": 2,
+    "vendors": [
+      {
+        "name": "Вендор DO",
+        "integrators": [
+          "Интегратор 119"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 58,
+    "name": "Технология 58 (высокая готовность, большой размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Маркшейдерские работы",
+      "Буровые работы",
+      "Лабораторные исследования"
+    ],
+    "description": "Технология с высокой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 3,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 4,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 3,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 5,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 2,
+    "funcCover": 2,
+    "vendors": [
+      {
+        "name": "Вендор DT",
+        "integrators": [
+          "Интегратор 124"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 59,
+    "name": "Технология 59 (средняя готовность, средний размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Экскавация",
+      "Транспортировка"
+    ],
+    "description": "Технология со средней готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 3,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 0,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 1,
+    "funcCover": 1,
+    "vendors": [
+      {
+        "name": "Вендор DX",
+        "integrators": [
+          "Интегратор 128"
+        ]
+      },
+      {
+        "name": "Вендор DY",
+        "integrators": [
+          "Интегратор 129"
+        ]
+      },
+      {
+        "name": "Вендор DZ",
+        "integrators": [
+          "Интегратор 130"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 60,
+    "name": "Технология 60 (низкая готовность, малый размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Геологические работы"
+    ],
+    "description": "Технология с низкой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 6,
+        "technologicalReadiness": 0,
+        "organizationalReadiness": 0,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 1,
+    "funcCover": 0,
+    "vendors": [
+      {
+        "name": "Вендор EA",
+        "integrators": [
+          "Интегратор 131"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 61,
+    "name": "Технология 61 (высокая готовность, средний размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Маркшейдерские работы",
+      "Буровые работы"
+    ],
+    "description": "Технология с высокой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 3,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 4,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 2,
+    "funcCover": 2,
+    "vendors": [
+      {
+        "name": "Вендор EB",
+        "integrators": [
+          "Интегратор 132"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 62,
+    "name": "Технология 62 (средняя готовность, большой размер)",
+    "directions": [
+      1
+    ],
+    "blocks": [
+      1,
+      2
+    ],
+    "functionCoverage": [
+      "Лабораторные исследования",
+      "Взрывные работы",
+      "Экскавация"
+    ],
+    "description": "Технология со средней готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 5,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 1,
+    "funcCover": 2,
+    "vendors": [
+      {
+        "name": "Вендор ED",
+        "integrators": [
+          "Интегратор 134"
+        ]
+      },
+      {
+        "name": "Вендор EE",
+        "integrators": [
+          "Интегратор 135"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 63,
+    "name": "Технология 63 (низкая готовность, средний размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Транспортировка",
+      "Геологические работы"
+    ],
+    "description": "Технология с низкой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 0,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 0,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 1,
+    "funcCover": 1,
+    "vendors": [
+      {
+        "name": "Вендор EI",
+        "integrators": [
+          "Интегратор 139"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 64,
+    "name": "Технология 64 (высокая готовность, малый размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Маркшейдерские работы"
+    ],
+    "description": "Технология с высокой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 3,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 3,
+    "funcCover": 1,
+    "vendors": [
+      {
+        "name": "Вендор EK",
+        "integrators": [
+          "Интегратор 141"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 65,
+    "name": "Технология 65 (средняя готовность, малый размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Буровые работы",
+      "Лабораторные исследования"
+    ],
+    "description": "Технология со средней готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 4,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 0,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 2,
+    "funcCover": 2,
+    "vendors": [
+      {
+        "name": "Вендор EL",
+        "integrators": [
+          "Интегратор 142"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 66,
+    "name": "Технология 66 (низкая готовность, большой размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Взрывные работы",
+      "Экскавация",
+      "Транспортировка"
+    ],
+    "description": "Технология с низкой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 5,
+        "technologicalReadiness": 0,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 6,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 0,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 1,
+    "funcCover": 1,
+    "vendors": [
+      {
+        "name": "Вендор EM",
+        "integrators": [
+          "Интегратор 143"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 67,
+    "name": "Технология 67 (высокая готовность, большой размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Маркшейдерские работы",
+      "Буровые работы",
+      "Лабораторные исследования",
+      "Взрывные работы"
+    ],
+    "description": "Технология с высокой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 3,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 2,
+    "funcCover": 3,
+    "vendors": [
+      {
+        "name": "Вендор ER",
+        "integrators": [
+          "Интегратор 148"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 68,
+    "name": "Технология 68 (средняя готовность, средний размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Экскавация",
+      "Транспортировка"
+    ],
+    "description": "Технология со средней готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 3,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 4,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 1,
+    "funcCover": 1,
+    "vendors": [
+      {
+        "name": "Вендор EW",
+        "integrators": [
+          "Интегратор 153"
+        ]
+      },
+      {
+        "name": "Вендор EX",
+        "integrators": [
+          "Интегратор 154"
+        ]
+      },
+      {
+        "name": "Вендор EY",
+        "integrators": [
+          "Интегратор 155"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 69,
+    "name": "Технология 69 (низкая готовность, малый размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Геологические работы"
+    ],
+    "description": "Технология с низкой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 5,
+        "technologicalReadiness": 0,
+        "organizationalReadiness": 0,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 1,
+    "funcCover": 0,
+    "vendors": [
+      {
+        "name": "Вендор EZ",
+        "integrators": [
+          "Интегратор 156"
+        ]
+      }
+    ]
+  },
+  {
+    "id": 70,
+    "name": "Технология 70 (высокая готовность, средний размер)",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Маркшейдерские работы",
+      "Буровые работы"
+    ],
+    "description": "Технология с высокой готовностью",
+    "enterprises": [
+      {
+        "enterpriseId": 6,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 3,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 2,
+    "funcCover": 2,
+    "vendors": [
+      {
+        "name": "Вендор FA",
+        "integrators": [
+          "Интегратор 157"
+        ]
+      }
     ]
   }
 ]

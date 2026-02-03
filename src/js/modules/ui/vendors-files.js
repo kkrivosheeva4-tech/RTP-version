@@ -1,7 +1,7 @@
 // Модуль управления вендорами и файлами для форм
 // Используется в формах добавления и редактирования технологий
 
-(function() {
+(function () {
   'use strict';
 
   // Хранение списков вендоров и интеграторов в localStorage (для новых значений)
@@ -230,6 +230,222 @@
     }
   }
 
+  // Добавление нового вендора
+  function addVendor(vendorName) {
+    const vendorStr = String(vendorName || '').trim();
+    if (!vendorStr) {
+      if (window.Logger) window.Logger.warn('Попытка добавить пустое имя вендора');
+      return false;
+    }
+
+    try {
+      // Получаем текущий список из localStorage
+      let existingVendors = [];
+      try {
+        const stored = localStorage.getItem(VENDORS_STORAGE_KEY);
+        if (stored) {
+          existingVendors = JSON.parse(stored);
+          if (!Array.isArray(existingVendors)) {
+            existingVendors = [];
+          }
+        }
+      } catch (e) {
+        existingVendors = [];
+      }
+
+      // Проверяем, нет ли уже такого вендора
+      if (existingVendors.includes(vendorStr)) {
+        if (window.Logger) window.Logger.debug('Вендор уже существует в localStorage', vendorStr);
+        return false;
+      }
+
+      // Добавляем новый вендор
+      existingVendors.push(vendorStr);
+      localStorage.setItem(VENDORS_STORAGE_KEY, JSON.stringify(existingVendors));
+
+      // Обновляем кэш - перезагружаем список
+      vendorsListCache = null;
+      // НЕ вызываем updateVendorsSelects здесь, так как новая опция уже добавлена в DOM в filters.js
+      // updateVendorsSelects будет вызван только если модальное окно будет закрыто и открыто заново
+      // Это предотвращает сброс выбранных значений при добавлении нового вендора
+
+      if (window.Logger) {
+        window.Logger.debug('Добавлен новый вендор в localStorage', vendorStr);
+      }
+      return true;
+    } catch (e) {
+      if (window.Logger) window.Logger.warn('Не удалось добавить вендора', e);
+      return false;
+    }
+  }
+
+  // Добавление нового интегратора
+  function addIntegrator(integratorName) {
+    const integratorStr = String(integratorName || '').trim();
+    if (!integratorStr) {
+      if (window.Logger) window.Logger.warn('Попытка добавить пустое имя интегратора');
+      return false;
+    }
+
+    try {
+      // Получаем текущий список из localStorage
+      let existingIntegrators = [];
+      try {
+        const stored = localStorage.getItem(INTEGRATORS_STORAGE_KEY);
+        if (stored) {
+          existingIntegrators = JSON.parse(stored);
+          if (!Array.isArray(existingIntegrators)) {
+            existingIntegrators = [];
+          }
+        }
+      } catch (e) {
+        existingIntegrators = [];
+      }
+
+      // Проверяем, нет ли уже такого интегратора
+      if (existingIntegrators.includes(integratorStr)) {
+        if (window.Logger) window.Logger.debug('Интегратор уже существует в localStorage', integratorStr);
+        return false;
+      }
+
+      // Добавляем новый интегратор
+      existingIntegrators.push(integratorStr);
+      localStorage.setItem(INTEGRATORS_STORAGE_KEY, JSON.stringify(existingIntegrators));
+
+      // Обновляем кэш - перезагружаем список
+      integratorsListCache = null;
+      // НЕ вызываем updateIntegratorsSelects здесь, так как новая опция уже добавлена в DOM в filters.js
+      // updateIntegratorsSelects будет вызван только если модальное окно будет закрыто и открыто заново
+      // Это предотвращает сброс выбранных значений при добавлении нового интегратора
+
+      if (window.Logger) {
+        window.Logger.debug('Добавлен новый интегратор в localStorage', integratorStr);
+      }
+      return true;
+    } catch (e) {
+      if (window.Logger) window.Logger.warn('Не удалось добавить интегратора', e);
+      return false;
+    }
+  }
+
+  // Обновление селектов вендоров в модальных окнах
+  function updateVendorsSelects() {
+    const vendorFields = ['techVendors', 'editVendors'];
+    vendorFields.forEach(fieldId => {
+      const customSelect = document.querySelector(`.custom-select-modal[data-field="${fieldId}"]`);
+      if (customSelect && window.Filters && typeof window.Filters.populateSelectForModal === 'function') {
+        // Сохраняем текущие выбранные значения ПЕРЕД обновлением
+        const hiddenInput = document.getElementById(fieldId);
+        const savedValue = hiddenInput ? hiddenInput.value : '';
+
+        // Сохраняем значения интеграторов по вендорам для этого поля
+        const prefix = fieldId === 'editVendors' ? 'edit' : 'tech';
+        const integratorsContainerId = prefix === 'edit' ? 'editVendorIntegratorsByVendor' : 'techVendorIntegratorsByVendor';
+        const integratorsContainer = document.getElementById(integratorsContainerId);
+        const savedIntegratorsByVendor = new Map();
+
+        if (integratorsContainer) {
+          // Сохраняем все значения интеграторов по вендорам
+          integratorsContainer.querySelectorAll('input[type="hidden"][id^="' + prefix + 'VendorIntegrators__"]').forEach(input => {
+            const fieldIdForIntegrators = input.id;
+            const value = input.value || '';
+            if (value) {
+              savedIntegratorsByVendor.set(fieldIdForIntegrators, value);
+            }
+          });
+        }
+
+        loadVendorsList().then(vendorsList => {
+          if (Array.isArray(vendorsList) && vendorsList.length > 0) {
+            window.Filters.populateSelectForModal(fieldId, vendorsList, 'Выберите');
+
+            // Восстанавливаем выбранные значения вендоров
+            if (savedValue && typeof window.setCustomSelectValue === 'function') {
+              // Используем requestAnimationFrame для гарантии, что DOM обновлен
+              requestAnimationFrame(() => {
+                window.setCustomSelectValue(fieldId, savedValue);
+
+                // Восстанавливаем значения интеграторов по вендорам после небольшой задержки
+                // чтобы renderVendorIntegrators успел создать поля
+                setTimeout(() => {
+                  savedIntegratorsByVendor.forEach((value, fieldIdForIntegrators) => {
+                    const integratorInput = document.getElementById(fieldIdForIntegrators);
+                    if (integratorInput && typeof window.setCustomSelectValue === 'function') {
+                      window.setCustomSelectValue(fieldIdForIntegrators, value);
+                    }
+                  });
+                }, 300);
+              });
+            }
+          }
+        });
+      }
+    });
+  }
+
+  // Обновление селектов интеграторов в модальных окнах
+  function updateIntegratorsSelects() {
+    // Сохраняем все текущие выбранные значения интеграторов ПЕРЕД обновлением
+    const savedIntegratorValues = new Map();
+
+    // Сохраняем основные селекты интеграторов
+    const integratorFields = ['techIntegrators', 'editIntegrators'];
+    integratorFields.forEach(fieldId => {
+      const hiddenInput = document.getElementById(fieldId);
+      if (hiddenInput && hiddenInput.value) {
+        savedIntegratorValues.set(fieldId, hiddenInput.value);
+      }
+    });
+
+    // Сохраняем селекты интеграторов по вендорам
+    document.querySelectorAll('input[type="hidden"][id^="techVendorIntegrators__"], input[type="hidden"][id^="editVendorIntegrators__"]').forEach(input => {
+      const fieldId = input.id;
+      if (input.value) {
+        savedIntegratorValues.set(fieldId, input.value);
+      }
+    });
+
+    // Обновляем основные селекты интеграторов
+    integratorFields.forEach(fieldId => {
+      const customSelect = document.querySelector(`.custom-select-modal[data-field="${fieldId}"]`);
+      if (customSelect && window.Filters && typeof window.Filters.populateSelectForModal === 'function') {
+        loadIntegratorsList().then(integratorsList => {
+          if (Array.isArray(integratorsList) && integratorsList.length > 0) {
+            window.Filters.populateSelectForModal(fieldId, integratorsList, 'Выберите');
+
+            // Восстанавливаем выбранные значения
+            const savedValue = savedIntegratorValues.get(fieldId);
+            if (savedValue && typeof window.setCustomSelectValue === 'function') {
+              requestAnimationFrame(() => {
+                window.setCustomSelectValue(fieldId, savedValue);
+              });
+            }
+          }
+        });
+      }
+    });
+
+    // Обновляем селекты интеграторов по вендорам
+    document.querySelectorAll('.custom-select-modal[data-field^="techVendorIntegrators__"], .custom-select-modal[data-field^="editVendorIntegrators__"]').forEach(customSelect => {
+      const fieldId = customSelect.getAttribute('data-field');
+      if (fieldId && window.Filters && typeof window.Filters.populateSelectForModal === 'function') {
+        loadIntegratorsList().then(integratorsList => {
+          if (Array.isArray(integratorsList) && integratorsList.length > 0) {
+            window.Filters.populateSelectForModal(fieldId, integratorsList, 'Выберите');
+
+            // Восстанавливаем выбранные значения
+            const savedValue = savedIntegratorValues.get(fieldId);
+            if (savedValue && typeof window.setCustomSelectValue === 'function') {
+              requestAnimationFrame(() => {
+                window.setCustomSelectValue(fieldId, savedValue);
+              });
+            }
+          }
+        });
+      }
+    });
+  }
+
   // Создание элемента вендора
   async function createVendorElement(vendor, containerId, isEdit = false) {
     try {
@@ -239,35 +455,35 @@
         return null;
       }
 
-    const vendorDiv = document.createElement('div');
-    vendorDiv.className = 'vendor-item';
-    vendorDiv.dataset.vendorId = vendor.id || Date.now();
+      const vendorDiv = document.createElement('div');
+      vendorDiv.className = 'vendor-item';
+      vendorDiv.dataset.vendorId = vendor.id || Date.now();
 
-    // Убеждаемся, что элемент виден
-    vendorDiv.style.display = '';
-    vendorDiv.style.visibility = 'visible';
-    vendorDiv.style.opacity = '1';
+      // Убеждаемся, что элемент виден
+      vendorDiv.style.display = '';
+      vendorDiv.style.visibility = 'visible';
+      vendorDiv.style.opacity = '1';
 
-    const vendorName = vendor.name || '';
-    const integrators = vendor.integrators || [];
-    const vendorFieldId = `vendor-${vendorDiv.dataset.vendorId}`;
+      const vendorName = vendor.name || '';
+      const integrators = vendor.integrators || [];
+      const vendorFieldId = `vendor-${vendorDiv.dataset.vendorId}`;
 
-    // Загружаем список вендоров
-    const vendorsList = await loadVendorsList();
-    if (!vendorsList || !Array.isArray(vendorsList)) {
-      if (window.Logger) window.Logger.warn('Список вендоров не является массивом', vendorsList);
-    }
-    // Убеждаемся, что каждый элемент - строка
-    const vendorsOptions = vendorsList
-      .filter(v => v != null && String(v).trim() !== '')
-      .map(v => `<li data-value="${String(v)}">${String(v)}</li>`)
-      .join('');
+      // Загружаем список вендоров
+      const vendorsList = await loadVendorsList();
+      if (!vendorsList || !Array.isArray(vendorsList)) {
+        if (window.Logger) window.Logger.warn('Список вендоров не является массивом', vendorsList);
+      }
+      // Убеждаемся, что каждый элемент - строка
+      const vendorsOptions = vendorsList
+        .filter(v => v != null && String(v).trim() !== '')
+        .map(v => `<li data-value="${String(v)}">${String(v)}</li>`)
+        .join('');
 
-    if (window.Logger && vendorsList.length > 0) {
-      window.Logger.debug('Создано опций вендоров для селекта:', vendorsList.length);
-    }
+      if (window.Logger && vendorsList.length > 0) {
+        window.Logger.debug('Создано опций вендоров для селекта:', vendorsList.length);
+      }
 
-    vendorDiv.innerHTML = `
+      vendorDiv.innerHTML = `
       <div class="vendor-header">
         <div class="custom-select-modal vendor-select" data-field="${vendorFieldId}" tabindex="0">
           <div class="select-trigger">
@@ -385,48 +601,48 @@
         });
       }
 
-        // Слушаем изменения скрытого поля
-        if (vendorHiddenInput) {
-          // Обработчик события change (триггерится select-events.js)
-          vendorHiddenInput.addEventListener('change', () => {
-            // Небольшая задержка для гарантии, что значение обновлено
-            setTimeout(() => {
-              updateVendorUI();
-              // Дополнительная проверка: если значение есть, но секция скрыта - показываем
-              const currentValue = vendorHiddenInput.value.trim();
-              if (currentValue && vendorIntegratorsSection) {
-                const isHidden = vendorIntegratorsSection.style.display === 'none' ||
-                                vendorIntegratorsSection.getAttribute('aria-hidden') === 'true';
-                if (isHidden) {
-                  toggleIntegratorsSection(true);
-                }
+      // Слушаем изменения скрытого поля
+      if (vendorHiddenInput) {
+        // Обработчик события change (триггерится select-events.js)
+        vendorHiddenInput.addEventListener('change', () => {
+          // Небольшая задержка для гарантии, что значение обновлено
+          setTimeout(() => {
+            updateVendorUI();
+            // Дополнительная проверка: если значение есть, но секция скрыта - показываем
+            const currentValue = vendorHiddenInput.value.trim();
+            if (currentValue && vendorIntegratorsSection) {
+              const isHidden = vendorIntegratorsSection.style.display === 'none' ||
+                vendorIntegratorsSection.getAttribute('aria-hidden') === 'true';
+              if (isHidden) {
+                toggleIntegratorsSection(true);
               }
-            }, 10);
-          });
+            }
+          }, 10);
+        });
 
-          // Также слушаем события input для надежности
-          vendorHiddenInput.addEventListener('input', () => {
-            setTimeout(() => {
-              updateVendorUI();
-              // Дополнительная проверка: если значение есть, но секция скрыта - показываем
-              const currentValue = vendorHiddenInput.value.trim();
-              if (currentValue && vendorIntegratorsSection) {
-                const isHidden = vendorIntegratorsSection.style.display === 'none' ||
-                                vendorIntegratorsSection.getAttribute('aria-hidden') === 'true';
-                if (isHidden) {
-                  toggleIntegratorsSection(true);
-                }
+        // Также слушаем события input для надежности
+        vendorHiddenInput.addEventListener('input', () => {
+          setTimeout(() => {
+            updateVendorUI();
+            // Дополнительная проверка: если значение есть, но секция скрыта - показываем
+            const currentValue = vendorHiddenInput.value.trim();
+            if (currentValue && vendorIntegratorsSection) {
+              const isHidden = vendorIntegratorsSection.style.display === 'none' ||
+                vendorIntegratorsSection.getAttribute('aria-hidden') === 'true';
+              if (isHidden) {
+                toggleIntegratorsSection(true);
               }
-            }, 10);
-          });
+            }
+          }, 10);
+        });
 
-          // MutationObserver для отслеживания программных изменений
-          const observer = new MutationObserver(() => {
-            setTimeout(() => {
-              updateVendorUI();
-            }, 10);
-          });
-          observer.observe(vendorHiddenInput, { attributes: true, attributeFilter: ['value'] });
+        // MutationObserver для отслеживания программных изменений
+        const observer = new MutationObserver(() => {
+          setTimeout(() => {
+            updateVendorUI();
+          }, 10);
+        });
+        observer.observe(vendorHiddenInput, { attributes: true, attributeFilter: ['value'] });
 
         // Отслеживаем изменения состояния селекта (открытие/закрытие) для обновления UI
         const selectStateObserver = new MutationObserver((mutations) => {
@@ -444,7 +660,7 @@
                     const currentValue = vendorHiddenInput ? vendorHiddenInput.value.trim() : '';
                     if (currentValue && vendorIntegratorsSection) {
                       const isHidden = vendorIntegratorsSection.style.display === 'none' ||
-                                      vendorIntegratorsSection.getAttribute('aria-hidden') === 'true';
+                        vendorIntegratorsSection.getAttribute('aria-hidden') === 'true';
                       if (isHidden) {
                         toggleIntegratorsSection(true);
                       }
@@ -516,7 +732,7 @@
         const newVendorInput = vendorDiv.querySelector('.new-vendor-input');
 
         if (addNewVendorBtn && newVendorInput) {
-            const addNewVendor = async () => {
+          const addNewVendor = async () => {
             const newVendorName = newVendorInput.value.trim();
             if (!newVendorName) return;
 
@@ -742,103 +958,103 @@
 
       }
 
-    // Добавляем интеграторов (только если вендор уже выбран)
-    // Теперь создаем один элемент интегратора с множественным выбором для всех интеграторов вендора
-    const integratorsList = vendorDiv.querySelector('.integrators-list');
-    if (vendorName && integratorsList && integrators.length > 0) {
-      // Собираем все имена интеграторов в массив
-      const integratorNames = integrators.map(int => int.name || int).filter(name => name);
+      // Добавляем интеграторов (только если вендор уже выбран)
+      // Теперь создаем один элемент интегратора с множественным выбором для всех интеграторов вендора
+      const integratorsList = vendorDiv.querySelector('.integrators-list');
+      if (vendorName && integratorsList && integrators.length > 0) {
+        // Собираем все имена интеграторов в массив
+        const integratorNames = integrators.map(int => int.name || int).filter(name => name);
 
-      if (integratorNames.length > 0) {
-        // Создаем один элемент интегратора с множественным выбором
-        // Используем первый интегратор как основу, но передаем массив имен
-        const integratorData = {
-          id: integrators[0].id || Date.now(),
-          name: JSON.stringify(integratorNames) // Передаем массив как JSON строку
-        };
-        const integratorEl = await createIntegratorElement(integratorData, vendorDiv.dataset.vendorId);
-        if (integratorEl) {
-          integratorsList.appendChild(integratorEl);
-        }
-      }
-    }
-
-    // Если вендор уже выбран при создании, показываем секцию интеграторов
-    if (vendorName) {
-      const vendorIntegratorsSection = vendorDiv.querySelector('.vendor-integrators');
-      if (vendorIntegratorsSection) {
-        vendorIntegratorsSection.style.display = '';
-        vendorIntegratorsSection.setAttribute('aria-hidden', 'false');
-      }
-    } else {
-      // Если вендор не выбран, скрываем секцию интеграторов
-      const vendorIntegratorsSection = vendorDiv.querySelector('.vendor-integrators');
-      if (vendorIntegratorsSection) {
-        vendorIntegratorsSection.style.display = 'none';
-        vendorIntegratorsSection.setAttribute('aria-hidden', 'true');
-      }
-    }
-
-    // Обработчики событий - кнопка удаления вендора
-    const removeVendorBtn = vendorDiv.querySelector('.remove-vendor-btn');
-    if (removeVendorBtn) {
-      removeVendorBtn.addEventListener('click', async (e) => {
-        e.stopPropagation(); // Предотвращаем закрытие модального окна
-        e.preventDefault();
-
-        // Получаем контейнер вендоров перед удалением
-        const vendorsContainer = vendorDiv.closest('.vendors-container');
-        if (!vendorsContainer || !vendorsContainer.id) {
-          vendorDiv.remove();
-          return;
-        }
-
-        const containerId = vendorsContainer.id;
-        const isEdit = containerId.includes('edit');
-
-        // Проверяем количество вендоров перед удалением
-        const remainingVendors = vendorsContainer.querySelectorAll('.vendor-item');
-        const willBeLast = remainingVendors.length === 1; // Текущий вендор еще не удален
-
-        // Удаляем элемент вендора
-        vendorDiv.remove();
-
-        // Если это был последний вендор, создаем новый пустой вендор
-        if (willBeLast) {
-          const container = document.getElementById(containerId);
-          if (container) {
-            const newVendorEl = await createVendorElement({ id: Date.now(), name: '', integrators: [] }, containerId, isEdit);
-            if (newVendorEl) {
-              // Добавляем класс для анимации появления
-              newVendorEl.classList.add('vendor-item-new');
-              container.appendChild(newVendorEl);
-              // Убираем класс анимации после завершения анимации
-              setTimeout(() => {
-                newVendorEl.classList.remove('vendor-item-new');
-              }, 400);
-            }
+        if (integratorNames.length > 0) {
+          // Создаем один элемент интегратора с множественным выбором
+          // Используем первый интегратор как основу, но передаем массив имен
+          const integratorData = {
+            id: integrators[0].id || Date.now(),
+            name: JSON.stringify(integratorNames) // Передаем массив как JSON строку
+          };
+          const integratorEl = await createIntegratorElement(integratorData, vendorDiv.dataset.vendorId);
+          if (integratorEl) {
+            integratorsList.appendChild(integratorEl);
           }
         }
+      }
 
-        // Обновляем скрытое поле
-        updateVendorsHiddenInput(containerId, isEdit);
-      });
-    }
+      // Если вендор уже выбран при создании, показываем секцию интеграторов
+      if (vendorName) {
+        const vendorIntegratorsSection = vendorDiv.querySelector('.vendor-integrators');
+        if (vendorIntegratorsSection) {
+          vendorIntegratorsSection.style.display = '';
+          vendorIntegratorsSection.setAttribute('aria-hidden', 'false');
+        }
+      } else {
+        // Если вендор не выбран, скрываем секцию интеграторов
+        const vendorIntegratorsSection = vendorDiv.querySelector('.vendor-integrators');
+        if (vendorIntegratorsSection) {
+          vendorIntegratorsSection.style.display = 'none';
+          vendorIntegratorsSection.setAttribute('aria-hidden', 'true');
+        }
+      }
 
-    // Кнопка добавления вендора теперь находится рядом с label "Вендоры"
-    // Старая кнопка add-vendor-btn была удалена из vendor-header
+      // Обработчики событий - кнопка удаления вендора
+      const removeVendorBtn = vendorDiv.querySelector('.remove-vendor-btn');
+      if (removeVendorBtn) {
+        removeVendorBtn.addEventListener('click', async (e) => {
+          e.stopPropagation(); // Предотвращаем закрытие модального окна
+          e.preventDefault();
 
-    const addIntegratorBtn = vendorDiv.querySelector('.add-integrator-btn');
-    if (addIntegratorBtn && integratorsList) {
-      addIntegratorBtn.addEventListener('click', async () => {
-        const integratorEl = await createIntegratorElement({ id: Date.now(), name: '' }, vendorDiv.dataset.vendorId);
-        integratorsList.appendChild(integratorEl);
-        updateVendorsHiddenInput(containerId, isEdit);
+          // Получаем контейнер вендоров перед удалением
+          const vendorsContainer = vendorDiv.closest('.vendors-container');
+          if (!vendorsContainer || !vendorsContainer.id) {
+            vendorDiv.remove();
+            return;
+          }
 
-        // Скрываем кнопку "Добавить интегратора" после добавления
-        addIntegratorBtn.style.display = 'none';
-      });
-    }
+          const containerId = vendorsContainer.id;
+          const isEdit = containerId.includes('edit');
+
+          // Проверяем количество вендоров перед удалением
+          const remainingVendors = vendorsContainer.querySelectorAll('.vendor-item');
+          const willBeLast = remainingVendors.length === 1; // Текущий вендор еще не удален
+
+          // Удаляем элемент вендора
+          vendorDiv.remove();
+
+          // Если это был последний вендор, создаем новый пустой вендор
+          if (willBeLast) {
+            const container = document.getElementById(containerId);
+            if (container) {
+              const newVendorEl = await createVendorElement({ id: Date.now(), name: '', integrators: [] }, containerId, isEdit);
+              if (newVendorEl) {
+                // Добавляем класс для анимации появления
+                newVendorEl.classList.add('vendor-item-new');
+                container.appendChild(newVendorEl);
+                // Убираем класс анимации после завершения анимации
+                setTimeout(() => {
+                  newVendorEl.classList.remove('vendor-item-new');
+                }, 400);
+              }
+            }
+          }
+
+          // Обновляем скрытое поле
+          updateVendorsHiddenInput(containerId, isEdit);
+        });
+      }
+
+      // Кнопка добавления вендора теперь находится рядом с label "Вендоры"
+      // Старая кнопка add-vendor-btn была удалена из vendor-header
+
+      const addIntegratorBtn = vendorDiv.querySelector('.add-integrator-btn');
+      if (addIntegratorBtn && integratorsList) {
+        addIntegratorBtn.addEventListener('click', async () => {
+          const integratorEl = await createIntegratorElement({ id: Date.now(), name: '' }, vendorDiv.dataset.vendorId);
+          integratorsList.appendChild(integratorEl);
+          updateVendorsHiddenInput(containerId, isEdit);
+
+          // Скрываем кнопку "Добавить интегратора" после добавления
+          addIntegratorBtn.style.display = 'none';
+        });
+      }
 
       return vendorDiv;
     } catch (error) {
@@ -2443,6 +2659,8 @@
     saveVendorsList,
     getIntegratorsList,
     saveIntegratorsList,
+    addVendor,
+    addIntegrator,
     resetInitialization,
     resetFileInputInitialization
   };

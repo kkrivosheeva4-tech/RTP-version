@@ -335,12 +335,23 @@
     }
 
     // ОБНОВЛЕНО (2026-01-29): Добавляем класс для детальной индикации отсутствующих данных
+    // ОБНОВЛЕНО: Также проверяем информацию из позиции (для технологий с недостаточными данными)
+    const hasMissingDataFromPosition = pos && pos.hasMissingData && pos.missingFactors && pos.missingFactors.length >= 2;
+
     if (missingDataInfo && missingDataInfo.hasMissingData) {
       el.classList.add('blip-missing-data');
       // Добавляем data-атрибуты для детальной информации
       el.dataset.missingFactors = missingDataInfo.missingFactors.join(',');
       if (missingDataInfo.missingEnterprises.length > 0) {
         el.dataset.missingEnterprises = missingDataInfo.missingEnterprises.join(',');
+      }
+    } else if (hasMissingDataFromPosition) {
+      // Если информация об отсутствующих данных пришла из позиции (недостаточно данных для расчета)
+      el.classList.add('blip-missing-data');
+      el.classList.add('blip-insufficient-data'); // Дополнительный класс для недостаточных данных
+      el.dataset.missingFactors = pos.missingFactors.join(',');
+      if (window.Logger && typeof window.Logger.debug === 'function') {
+        window.Logger.debug(`[RadarRenderer] Технология ${tech.id || 'unknown'} имеет недостаточно данных: ${pos.missingFactors.join(', ')}`);
       }
     }
 
@@ -422,18 +433,14 @@
           if (window.Logger) window.Logger.log('blip click: showDetail вызвана');
         } else {
           if (!t) {
-            console.error('Ошибка при обработке клика на blip: технология не найдена', { id });
+            // Ошибка при обработке клика на blip: технология не найдена
           }
           if (!showDetailFn) {
-            console.error('Ошибка при обработке клика на blip: showDetail не доступна', {
-              id,
-              windowShowDetail: typeof window.showDetail,
-              windowDetailPanel: typeof window.DetailPanel
-            });
+            // Ошибка при обработке клика на blip: showDetail не доступна
           }
         }
       } catch (err) {
-        console.error('Ошибка при обработке клика на blip:', err);
+        // Ошибка при обработке клика на blip
       }
     });
   }
@@ -474,6 +481,37 @@
     const renderData = [];
 
     validTechs.forEach((t) => {
+      // ОБНОВЛЕНО: Проверяем полностью внедренные технологии перед добавлением в renderData
+      // Если все предприятия внедрены и не выбран фильтр "Внедренные", пропускаем технологию
+      const enterprises = Array.isArray(t.enterprises) ? t.enterprises : [];
+      if (enterprises.length > 0) {
+        // Проверяем, есть ли хотя бы одно невнедренное предприятие
+        const hasNonImplemented = enterprises.some(ent => {
+          if (!ent || typeof ent !== 'object') return false;
+          const status = String(ent.status || '').toLowerCase();
+          const isImplemented = ent.isImplemented === true || status.includes('внедрен');
+          return !isImplemented;
+        });
+
+        // Если все предприятия внедрены, проверяем фильтр
+        if (!hasNonImplemented) {
+          const Filters = window.Filters;
+          const levelFilter = Filters && typeof Filters.getFilterValues === 'function'
+            ? Filters.getFilterValues('level') || []
+            : [];
+
+          const showImplemented = levelFilter.includes('Внедренная') || levelFilter.includes('Внедренные');
+
+          // Если фильтр "Внедренные" не выбран, пропускаем эту технологию
+          if (!showImplemented) {
+            if (window.Logger && typeof window.Logger.debug === 'function') {
+              window.Logger.debug(`[RadarRenderer] Технология ${t.id || 'unknown'} полностью внедрена, пропущена (фильтр "Внедренные" не активен)`);
+            }
+            return; // Пропускаем эту технологию
+          }
+        }
+      }
+
       const techQuadrants = getAllQuadrantsForTech(t);
 
       // ОБНОВЛЕНО (2026-01-29): Технологии без направлений теперь имеют fallback квадрант
@@ -527,11 +565,62 @@
 
     if (window.Logger) window.Logger.debug('renderRadar: after mapping — renderData entries:', renderData.length);
 
+    // ОБНОВЛЕНО: Сортируем renderData по ID для детерминированного порядка обработки
+    // Это гарантирует стабильность позиций при повторных вызовах
+    renderData.sort((a, b) => {
+      const idA = Number(a.id) || 0;
+      const idB = Number(b.id) || 0;
+      if (idA !== idB) return idA - idB;
+      // Если ID одинаковые, сортируем по квадранту
+      return (a.quadrant || 0) - (b.quadrant || 0);
+    });
+
     // Вычисляем позиции для каждого blip'а
+    // ОБНОВЛЕНО: Используем кеш для получения позиций
     renderData.forEach((entry) => {
+      // Пробуем использовать кеш перед расчетом
+      const cacheKey = window.Positioning && typeof window.Positioning.getCacheKey === 'function'
+        ? window.Positioning.getCacheKey(entry)
+        : null;
+
+      if (cacheKey) {
+        const quadrantId = entry.quadrant;
+        const positionCache = window.Positioning && window.Positioning.positionCache
+          ? window.Positioning.positionCache
+          : null;
+
+        if (positionCache) {
+          const quadrantCacheKey = `${cacheKey}:quadrant:${quadrantId}`;
+          if (positionCache.has(quadrantCacheKey)) {
+            const cached = positionCache.get(quadrantCacheKey);
+            if (cached && typeof cached.x === 'number' && typeof cached.y === 'number') {
+              entry.x = cached.x;
+              entry.y = cached.y;
+              return;
+            }
+          }
+          // Если кеш не сработал, пробуем общий кеш
+          if (positionCache.has(cacheKey)) {
+            const cached = positionCache.get(cacheKey);
+            if (cached && typeof cached.x === 'number' && typeof cached.y === 'number') {
+              entry.x = cached.x;
+              entry.y = cached.y;
+              return;
+            }
+          }
+        }
+      }
+
+      // Если кеш не сработал, вычисляем позицию
       const pos = assignFixedPositionForQuadrant(entry, entry.quadrant);
       entry.x = pos.x;
       entry.y = pos.y;
+
+      // ОБНОВЛЕНО: Сохраняем информацию об отсутствующих данных для визуальной индикации
+      if (pos.hasMissingData) {
+        entry.hasMissingData = true;
+        entry.missingFactors = pos.missingFactors || [];
+      }
     });
 
     // Группируем по квадрантам для раскладки
@@ -557,9 +646,18 @@
         quadrant: entry.quadrant,
         ring: entry.ring,
         x: entry.x,
-        y: entry.y
+        y: entry.y,
+        hasMissingData: entry.hasMissingData || false
       });
-      createBlipFn(entry, { x: entry.x, y: entry.y }, entry.quadrant, config);
+
+      // Передаем информацию об отсутствующих данных в createBlip
+      const pos = { x: entry.x, y: entry.y };
+      if (entry.hasMissingData) {
+        pos.hasMissingData = true;
+        pos.missingFactors = entry.missingFactors || [];
+      }
+
+      createBlipFn(entry, pos, entry.quadrant, config);
     });
 
     // Пометить пустые квадранты в DOM и в сайдбаре

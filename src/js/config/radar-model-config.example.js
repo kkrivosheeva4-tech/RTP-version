@@ -60,6 +60,6 @@
     }
   };
 
-  console.log('[RadarModelConfig] Конфигурация модели загружена', window.RadarModelConfig);
+  // Конфигурация модели загружена
 
 })();

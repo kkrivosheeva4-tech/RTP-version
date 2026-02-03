@@ -5,7 +5,7 @@
 (function (window) {
   'use strict';
 
-  console.log('[FuncCoverUtils] Инициализация модуля');
+  // Модуль инициализирован
 
   // Кэш для данных functionToBlock
   let functionToBlockData = null;
@@ -35,15 +35,15 @@
         if (cachedVersion === CURRENT_VERSION && cachedData) {
           try {
             functionToBlockData = JSON.parse(cachedData);
-            console.log('[FuncCoverUtils] Данные functionToBlock загружены из localStorage');
+            // Данные functionToBlock загружены из localStorage
             return functionToBlockData;
           } catch (e) {
-            console.warn('[FuncCoverUtils] Ошибка парсинга данных из localStorage, загружаем с сервера');
+            // Ошибка парсинга данных из localStorage, загружаем с сервера
           }
         }
       }
     } catch (e) {
-      console.warn('[FuncCoverUtils] Ошибка доступа к localStorage:', e);
+      // Ошибка доступа к localStorage
     }
 
     try {
@@ -53,22 +53,22 @@
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       functionToBlockData = await response.json();
-      console.log('[FuncCoverUtils] Данные functionToBlock загружены с сервера', functionToBlockData);
+      // Данные functionToBlock загружены с сервера
 
       // ОБНОВЛЕНО (2026-01-29): Сохраняем в localStorage для последующих загрузок
       try {
         if (typeof localStorage !== 'undefined') {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(functionToBlockData));
           localStorage.setItem(STORAGE_VERSION_KEY, CURRENT_VERSION);
-          console.log('[FuncCoverUtils] Данные functionToBlock сохранены в localStorage');
+          // Данные functionToBlock сохранены в localStorage
         }
       } catch (e) {
-        console.warn('[FuncCoverUtils] Ошибка сохранения в localStorage:', e);
+        // Ошибка сохранения в localStorage
       }
 
       return functionToBlockData;
     } catch (error) {
-      console.error('[FuncCoverUtils] Ошибка загрузки functionToBlock.json:', error);
+      // Ошибка загрузки functionToBlock.json
 
       // ОБНОВЛЕНО (2026-01-29): Пробуем использовать устаревшие данные из localStorage
       if (typeof localStorage !== 'undefined') {
@@ -76,10 +76,10 @@
         if (cachedData) {
           try {
             functionToBlockData = JSON.parse(cachedData);
-            console.warn('[FuncCoverUtils] Используются устаревшие данные из localStorage');
+            // Используются устаревшие данные из localStorage
             return functionToBlockData;
           } catch (e) {
-            console.error('[FuncCoverUtils] Ошибка парсинга устаревших данных:', e);
+            // Ошибка парсинга устаревших данных
           }
         }
       }
@@ -109,7 +109,7 @@
       });
     }
 
-    console.log('[FuncCoverUtils] Количество функций по блокам:', counts);
+    // Количество функций по блокам подсчитано
     return counts;
   }
 
@@ -165,12 +165,26 @@
         }
       }
     } catch (e) {
-      console.warn('[FuncCoverUtils] Ошибка загрузки весов из localStorage:', e);
+      // Ошибка загрузки весов из localStorage
     }
 
     // Пробуем загрузить с сервера
+    // Используем более тихую обработку для опционального файла
     try {
-      const response = await fetch('/src/data/ru/functionWeights.json');
+      const response = await fetch('/src/data/ru/functionWeights.json', {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+
+      // Проверяем статус ответа - 404 это нормально для опционального файла
+      if (response.status === 404) {
+        // Файл не найден - это нормально, используем пустой объект
+        functionWeights = {};
+        return functionWeights;
+      }
+
       if (response.ok) {
         functionWeights = await response.json();
         // Сохраняем в localStorage
@@ -180,7 +194,8 @@
         return functionWeights;
       }
     } catch (e) {
-      console.warn('[FuncCoverUtils] Файл functionWeights.json не найден, используются равные веса');
+      // Ошибка загрузки - файл опциональный, игнорируем
+      // Сетевые ошибки не должны выводиться в консоль для опциональных файлов
     }
 
     // По умолчанию все функции имеют одинаковый вес
@@ -214,7 +229,7 @@
 
     if (!Array.isArray(blockIds) || blockIds.length === 0) {
       // Если блоки не указаны, используем старую логику (абсолютное количество)
-      console.warn('[FuncCoverUtils] Блоки не указаны, используем старую логику');
+      // Блоки не указаны, используем старую логику
       return calculateFuncCoverLegacy(coveredFunctions.length);
     }
 
@@ -254,23 +269,40 @@
 
       // Если веса не используются или не найдены, используем простое количество
       totalWeightedFunctions += useWeights && Object.keys(weights).length > 0 ? blockWeight : count;
-      console.log(`[FuncCoverUtils] Блок ${blockId}: ${count} функций, взвешенная сумма: ${useWeights && Object.keys(weights).length > 0 ? blockWeight.toFixed(2) : count}`);
+      // Блок обработан
     });
 
     if (totalWeightedFunctions === 0) {
-      console.warn('[FuncCoverUtils] В указанных блоках нет функций');
+      // В указанных блоках нет функций
       return 0;
     }
 
-    // ОБНОВЛЕНО: Взвешенная сумма покрытых функций
+    // ИСПРАВЛЕНО: Фильтруем покрытые функции - учитываем только те, которые относятся к блокам технологии
+    const validCoveredFunctions = coveredFunctions.filter(funcName => {
+      const funcBlockIds = functionToBlockMap[funcName];
+      if (!funcBlockIds) {
+        // Функция не найдена в маппинге - не учитываем
+        return false;
+      }
+      const funcBlocks = Array.isArray(funcBlockIds) ? funcBlockIds : [funcBlockIds];
+      // Проверяем, относится ли функция хотя бы к одному из блоков технологии
+      return funcBlocks.some(blockId => uniqueBlocks.includes(blockId));
+    });
+
+    if (validCoveredFunctions.length === 0) {
+      // Ни одна из покрытых функций не относится к блокам технологии
+      return 0;
+    }
+
+    // ОБНОВЛЕНО: Взвешенная сумма покрытых функций (только валидных)
     let coveredWeightedSum = 0;
     if (useWeights && Object.keys(weights).length > 0) {
-      coveredFunctions.forEach(funcName => {
+      validCoveredFunctions.forEach(funcName => {
         const weight = weights[funcName] || 1.0;
         coveredWeightedSum += weight;
       });
     } else {
-      coveredWeightedSum = coveredFunctions.length;
+      coveredWeightedSum = validCoveredFunctions.length;
     }
 
     // Процент покрытия (взвешенный)
@@ -279,7 +311,10 @@
     // ОБНОВЛЕНО (2026-01-29): Используем общую функцию для преобразования
     const funcCover = convertCoveragePercentToFuncCover(coveragePercent);
 
-    console.log(`[FuncCoverUtils] Расчет покрытия: ${coveredCount}/${totalFunctionsInBlocks} функций = ${(coveragePercent * 100).toFixed(1)}% = funcCover ${funcCover}`);
+    // ИСПРАВЛЕНО: Используем правильные переменные для лога
+    const totalFunctionsInBlocks = totalWeightedFunctions;
+    const coveredCount = validCoveredFunctions.length;
+    // Расчет покрытия завершен
 
     return funcCover;
   }
@@ -321,7 +356,7 @@
     // Используем предзагруженные данные, если они доступны
     if (!blockFunctionCounts) {
       // Данные не загружены, используем legacy расчет
-      console.warn('[FuncCoverUtils] Данные блоков не загружены, используется legacy расчет');
+      // Данные блоков не загружены, используется legacy расчет
       return calculateFuncCoverLegacy(coveredFunctions.length);
     }
 
@@ -371,15 +406,32 @@
       return 0;
     }
 
-    // ОБНОВЛЕНО: Взвешенная сумма покрытых функций
+    // ИСПРАВЛЕНО: Фильтруем покрытые функции - учитываем только те, которые относятся к блокам технологии
+    const validCoveredFunctions = coveredFunctions.filter(funcName => {
+      const funcBlockIds = functionToBlockMap[funcName];
+      if (!funcBlockIds) {
+        // Функция не найдена в маппинге - не учитываем
+        return false;
+      }
+      const funcBlocks = Array.isArray(funcBlockIds) ? funcBlockIds : [funcBlockIds];
+      // Проверяем, относится ли функция хотя бы к одному из блоков технологии
+      return funcBlocks.some(blockId => uniqueBlocks.includes(blockId));
+    });
+
+    if (validCoveredFunctions.length === 0) {
+      // Ни одна из покрытых функций не относится к блокам технологии
+      return 0;
+    }
+
+    // ОБНОВЛЕНО: Взвешенная сумма покрытых функций (только валидных)
     let coveredWeightedSum = 0;
     if (useWeights && Object.keys(weights).length > 0) {
-      coveredFunctions.forEach(funcName => {
+      validCoveredFunctions.forEach(funcName => {
         const weight = weights[funcName] || 1.0;
         coveredWeightedSum += weight;
       });
     } else {
-      coveredWeightedSum = coveredFunctions.length;
+      coveredWeightedSum = validCoveredFunctions.length;
     }
 
     // Процент покрытия (взвешенный)
@@ -466,7 +518,7 @@
    * ОБНОВЛЕНО: Загружает веса важности функций
    */
   async function init() {
-    console.log('[FuncCoverUtils] Инициализация');
+    // Инициализация FuncCoverUtils
     const ftb = await loadFunctionToBlockData();
     if (!blockFunctionCounts) {
       blockFunctionCounts = calculateBlockFunctionCounts(ftb);
@@ -498,6 +550,6 @@
     _blockFunctionCounts: () => blockFunctionCounts
   };
 
-  console.log('[FuncCoverUtils] Модуль загружен');
+  // Модуль FuncCoverUtils загружен
 
 })(window);

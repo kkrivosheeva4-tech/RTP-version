@@ -6,7 +6,7 @@
 
   // Защита от повторной инициализации
   if (window.Notifications && window.Notifications._initialized) {
-    console.log('Модуль уведомлений уже инициализирован');
+    // Модуль уведомлений уже инициализирован
     return;
   }
 
@@ -118,7 +118,7 @@
       const saved = saveNotifications(notifications);
 
       // Логируем для отладки
-      console.log('Уведомление добавлено в localStorage:', notification);
+      // Уведомление добавлено в localStorage
       if (window.Logger) {
         window.Logger.info('Уведомление добавлено:', notification);
       }
@@ -137,7 +137,7 @@
       if (window.Logger) {
         window.Logger.error('Ошибка при добавлении уведомления:', error);
       }
-      console.error('Ошибка при добавлении уведомления:', error);
+      // Ошибка при добавлении уведомления
       return null;
     }
   }
@@ -667,7 +667,7 @@
       const unreadCount = getUnreadCount();
       const notifications = getNotifications();
 
-      console.log('Обновление UI уведомлений. Непрочитанных:', unreadCount, 'Всего:', notifications.length);
+      // Обновление UI уведомлений
 
       // Обновляем badge
       if (badge) {
@@ -708,7 +708,7 @@
         }
       }
     } catch (error) {
-      console.error('Ошибка при обновлении UI уведомлений:', error);
+      // Ошибка при обновлении UI уведомлений
       if (window.Logger) {
         window.Logger.error('Ошибка при обновлении UI уведомлений:', error);
       }

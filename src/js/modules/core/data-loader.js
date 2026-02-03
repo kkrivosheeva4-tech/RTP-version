@@ -28,7 +28,7 @@
       if (window.Logger) window.Logger.debug(`vfsWrite: ${filename} saved to localStorage`);
       return true;
     } catch (e) {
-      console.error('vfsWrite error', e);
+      // Ошибка записи в VFS
       return false;
     }
   }
@@ -53,7 +53,7 @@
       if (window.Logger) window.Logger.debug(`Очищено ${vfsKeys.length} ключей VFS из localStorage`);
       return vfsKeys.length;
     } catch (e) {
-      console.error('Ошибка при очистке VFS:', e);
+      // Ошибка при очистке VFS
       return 0;
     }
   }
@@ -105,9 +105,17 @@
     for (const p of paths) {
       try {
         // Если forceReload, используем fetch напрямую без кэша
+        // Добавляем временную метку к URL для гарантированного обхода кеша браузера
         let json;
         if (forceReload) {
-          const response = await fetch(p, { cache: 'no-store' });
+          const urlWithTimestamp = `${p}?t=${Date.now()}`;
+          const response = await fetch(urlWithTimestamp, {
+            cache: 'no-store',
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache'
+            }
+          });
           if (!response || !response.ok) {
             throw new Error(`HTTP ${response ? response.status : 'no response'}`);
           }
@@ -162,7 +170,8 @@
     if (key === 'functions') window.functions = value;
     if (key === 'nameToBlockId') window.nameToBlockId = value;
     if (key === 'functionToBlockMap') window.functionToBlockMap = value;
-    if (key === 'blockToQuadrant') window.blockToQuadrant = value;
+    // УДАЛЕНО (2026-01-29): blockToQuadrant больше не используется
+    // Блоки не привязаны к квадрантам, они являются отдельными критериями технологии
   };
 
   const getDOMCache = () => {
@@ -310,7 +319,8 @@
         'functions.json',
         'functionToBlock.json',
         'technologies.json',
-        'blockToQuadrant.json',
+        // УДАЛЕНО (2026-01-29): blockToQuadrant.json больше не используется
+        // Блоки не привязаны к квадрантам, они являются отдельными критериями технологии
         'digitalDirections.json',
         'directionToQuadrant.json',
         'vendors.json',
@@ -337,7 +347,7 @@
       }
 
       if (missing.length) {
-        console.error('Ошибка загрузки данных. Подробности:', { fetched });
+        // Ошибка загрузки данных
         const hint = missing.join(', ');
         throw new Error(`Не удалось загрузить файлы: ${hint}`);
       }
@@ -373,7 +383,8 @@
         if (window.Logger) window.Logger.warn('Валидация данных: обнаружены проблемы', validationErrors);
         showNotification(`Проверка данных: ${validationErrors.join('; ')}`, false);
       }
-      setState('blockToQuadrant', fetched['blockToQuadrant.json'].data || {});
+      // УДАЛЕНО (2026-01-29): blockToQuadrant больше не загружается
+      // Блоки не привязаны к квадрантам, они являются отдельными критериями технологии
       // Загружаем направления цифрового развития
       const digitalDirections = ensureArray('digitalDirections.json', fetched['digitalDirections.json'].data);
       setState('digitalDirections', digitalDirections);
@@ -446,7 +457,28 @@
       // Функция преобразования технологии из нового формата в формат приложения
       function normalizeTechnologyFromNewFormat(tech, blockIdToName, enterprisesData) {
         // Преобразуем block ID в имя
-        const blockId = typeof tech.block === 'number' ? tech.block : null;
+        // Поддерживаем оба варианта: tech.block (единственное число) и tech.blocks (массив)
+        let blockId = null;
+        let blockIds = [];
+
+        if (Array.isArray(tech.blocks) && tech.blocks.length > 0) {
+          // Если есть массив blocks, используем его
+          blockIds = tech.blocks.map(b => typeof b === 'number' ? b : (typeof b === 'string' ? parseInt(b, 10) : null)).filter(b => b !== null && !isNaN(b));
+          blockId = blockIds.length > 0 ? blockIds[0] : null;
+        } else if (typeof tech.block === 'number') {
+          // Если есть единственное число block
+          blockId = tech.block;
+          blockIds = [tech.block];
+        } else if (typeof tech.block === 'string') {
+          // Если block - строка (имя блока), пытаемся найти ID
+          const foundId = Object.keys(blockIdToName).find(id => blockIdToName[id] === tech.block);
+          if (foundId) {
+            blockId = parseInt(foundId, 10);
+            blockIds = [blockId];
+          }
+        }
+
+        // Преобразуем ID в имя (берем первое имя, если блоков несколько)
         const blockName = blockId && blockIdToName[blockId] ? blockIdToName[blockId] : (typeof tech.block === 'string' ? tech.block : '');
 
         // Преобразуем enterprises в company и companyRatings
@@ -534,10 +566,8 @@
         // Используем новую логику с учетом процентного покрытия блока
         let funcCover = null;
 
-        // Определяем блоки технологии
-        const techBlockIds = tech.block
-          ? (typeof tech.block === 'number' ? [tech.block] : [])
-          : [];
+        // Определяем блоки технологии (используем уже вычисленные blockIds)
+        const techBlockIds = blockIds;
 
         // ВАЖНО: funcCover будет рассчитан асинхронно позже
         // Для начальной загрузки используем старую логику как fallback
@@ -559,11 +589,11 @@
                 // Обновляем значение в уже созданном объекте
                 if (normalized && normalized.id === tech.id) {
                   normalized.funcCover = calculatedFuncCover;
-                  console.log(`[DataLoader] Обновлен funcCover для технологии ${tech.id}: ${calculatedFuncCover}`);
+                  // Обновлен funcCover для технологии
                 }
               })
               .catch(err => {
-                console.error('[DataLoader] Ошибка расчета funcCover:', err);
+                // Ошибка расчета funcCover
               });
           }
         }
@@ -573,14 +603,19 @@
           ? tech.documentationFiles.map(path => ({ path, name: path.split('/').pop() }))
           : [];
 
+        // Преобразуем все blockIds в имена блоков
+        const blockNames = blockIds
+          .map(id => blockIdToName[id] || null)
+          .filter(name => name !== null);
+
         // Создаем нормализованный объект технологии
         const normalized = {
           id: tech.id,
           name: tech.name || '',
           description: tech.description || '',
           exampleDesc: tech.marketExamples ? (Array.isArray(tech.marketExamples) ? tech.marketExamples.join('\n') : tech.marketExamples) : '',
-          block: blockName,
-          blocks: blockName ? [blockName] : [],
+          block: blockName, // Первый блок для обратной совместимости
+          blocks: blockNames, // Все блоки
           func: tech.function || '',
           functions: Array.isArray(tech.functionCoverage) && tech.functionCoverage.length > 0
             ? tech.functionCoverage
@@ -641,40 +676,13 @@
       }
 
       // Загружаем технологии из technologies.json
-      // Сначала проверяем VFS (localStorage) - если там есть сохраненные технологии, используем их
+      // ВАЖНО: Сначала загружаем из файла, чтобы видеть изменения в JSON файлах
+      // VFS используется только как fallback, если файл недоступен
       let allTechnologies = [];
       const enterpriseData = {};
-      let technologiesFromVfs = null;
 
-      // Проверяем VFS на наличие сохраненных технологий
-      try {
-        technologiesFromVfs = vfsRead('technologies.json');
-        if (technologiesFromVfs && Array.isArray(technologiesFromVfs) && technologiesFromVfs.length > 0) {
-          if (window.Logger) window.Logger.debug('loadData: Загружены технологии из VFS (localStorage)', technologiesFromVfs.length);
-          // Используем технологии из VFS напрямую (они уже в нормализованном формате)
-          allTechnologies = technologiesFromVfs;
-
-          // Восстанавливаем структуру enterpriseData из VFS или создаем заново
-          const enterpriseDataFromVfs = vfsRead('enterpriseData.json');
-          if (enterpriseDataFromVfs && typeof enterpriseDataFromVfs === 'object') {
-            Object.assign(enterpriseData, enterpriseDataFromVfs);
-          } else {
-            // Если enterpriseData нет в VFS, создаем из технологий
-            allTechnologies.forEach(tech => {
-              const companies = Array.isArray(tech.company) ? tech.company : (tech.company ? [tech.company] : []);
-              companies.forEach(company => {
-                if (!enterpriseData[company]) enterpriseData[company] = [];
-                enterpriseData[company].push(tech);
-              });
-            });
-          }
-        }
-      } catch (e) {
-        if (window.Logger) window.Logger.warn('Ошибка при загрузке технологий из VFS', e);
-      }
-
-      // Если в VFS нет технологий, загружаем из файла
-      if (!technologiesFromVfs && fetched['technologies.json'] && Array.isArray(fetched['technologies.json'].data)) {
+      // Сначала пытаемся загрузить из файла (приоритет файлу, чтобы видеть изменения)
+      if (fetched['technologies.json'] && Array.isArray(fetched['technologies.json'].data)) {
         if (window.Logger) window.Logger.debug('loadData: Загружаем технологии из файла technologies.json');
         fetched['technologies.json'].data.forEach(tech => {
           const normalized = normalizeTechnologyFromNewFormat(tech, blockIdToName, enterprisesData);
@@ -687,6 +695,35 @@
             enterpriseData[company].push(normalized);
           });
         });
+      }
+
+      // Если не удалось загрузить из файла, используем VFS как fallback
+      if (allTechnologies.length === 0) {
+        try {
+          const technologiesFromVfs = vfsRead('technologies.json');
+          if (technologiesFromVfs && Array.isArray(technologiesFromVfs) && technologiesFromVfs.length > 0) {
+            if (window.Logger) window.Logger.debug('loadData: Загружены технологии из VFS (localStorage) как fallback', technologiesFromVfs.length);
+            // Используем технологии из VFS напрямую (они уже в нормализованном формате)
+            allTechnologies = technologiesFromVfs;
+
+            // Восстанавливаем структуру enterpriseData из VFS или создаем заново
+            const enterpriseDataFromVfs = vfsRead('enterpriseData.json');
+            if (enterpriseDataFromVfs && typeof enterpriseDataFromVfs === 'object') {
+              Object.assign(enterpriseData, enterpriseDataFromVfs);
+            } else {
+              // Если enterpriseData нет в VFS, создаем из технологий
+              allTechnologies.forEach(tech => {
+                const companies = Array.isArray(tech.company) ? tech.company : (tech.company ? [tech.company] : []);
+                companies.forEach(company => {
+                  if (!enterpriseData[company]) enterpriseData[company] = [];
+                  enterpriseData[company].push(tech);
+                });
+              });
+            }
+          }
+        } catch (e) {
+          if (window.Logger) window.Logger.warn('Ошибка при загрузке технологий из VFS', e);
+        }
       }
 
       // Сохраняем объединенный массив технологий
@@ -810,7 +847,7 @@
         Filters.populateSelectForModal('techOrganRead', ratingOptions, 'Выберите оценку');
         Filters.populateSelectForModal('techFuncCover', ratingOptions, 'Выберите оценку');
       } else {
-        console.error('Filters не загружен, модальные фильтры не будут заполнены');
+        // Filters не загружен, модальные фильтры не будут заполнены
       }
       // Инициализируем селект вендоров с возможностью добавления новых (вне блока Filters)
       // Вызываем с небольшой задержкой, чтобы убедиться, что DOM готов
@@ -863,7 +900,7 @@
               }
             }
           } catch (e) {
-            console.warn('Ошибка парсинга directions:', e);
+            // Ошибка парсинга directions
           }
 
           const tech = {
@@ -956,7 +993,7 @@
               }
             }
           } catch (e) {
-            console.warn('Ошибка парсинга directions:', e);
+            // Ошибка парсинга directions
           }
 
           const updatedTech = {
@@ -1240,7 +1277,7 @@
         // Пересчитываем funcCover синхронно (await)
         await recalculateFuncCoverForAllTechnologies(technologiesForRecalc);
 
-        console.log('[DataLoader] Пересчет funcCover завершен успешно');
+        // Пересчет funcCover завершен успешно
 
         // Пересчитываем координаты для всех технологий после обновления funcCover
         // Это необходимо, так как funcCover влияет на позиционирование
@@ -1249,7 +1286,7 @@
           technologiesForRecalc.forEach(tech => {
             Positioning.computeCoordinates(tech);
           });
-          console.log('[DataLoader] Координаты пересчитаны для всех технологий после обновления funcCover');
+          // Координаты пересчитаны для всех технологий после обновления funcCover
         }
 
         // После пересчета обновляем state
@@ -1270,8 +1307,7 @@
         window.LoadingManager.hide(loaderId);
       }
     } catch (error) {
-      console.error('Ошибка загрузки данных:', error);
-      console.error('Стек ошибки:', error?.stack);
+      // Ошибка загрузки данных
 
       // Скрываем индикатор загрузки при ошибке
       if (loaderId && typeof window !== 'undefined' && window.LoadingManager) {
@@ -1302,12 +1338,15 @@
       if (newTech.block && typeof newTech.block === 'string') newTech.block = newTech.block.trim();
       if (newTech.level && typeof newTech.level === 'string') newTech.level = newTech.level.trim();
       if (!newTech.level) newTech.level = 'Существующие';
-      // Ensure mapping exists
-      const blockToQuadrant = getState('blockToQuadrant');
+      // ОБНОВЛЕНО (2026-01-29): Убрана привязка блоков к квадрантам
+      // Блоки теперь являются отдельными критериями технологии и могут быть в любом квадранте
       const bk = (newTech.blocks && newTech.blocks.length) ? (typeof newTech.blocks[0] === 'string' ? newTech.blocks[0].trim() : newTech.blocks[0]) : (typeof newTech.block === 'string' ? newTech.block : newTech.block);
       newTech.block = bk;
-      if (!blockToQuadrant.hasOwnProperty(bk) || blockToQuadrant[bk] == null) {
-        blockToQuadrant[bk] = 1;
+
+      // Добавляем блок в список блоков, если его там нет
+      const blocksList = getState('blocksList');
+      if (!blocksList.includes(bk)) {
+        setState('blocksList', [...blocksList, bk]);
         // add to selects
         const sidebarOptionsList = document.querySelector('.custom-select[data-filter="block"] .select-options');
         if (sidebarOptionsList) {
@@ -1334,12 +1373,7 @@
             opts.appendChild(li);
           }
         });
-        const blocksList = getState('blocksList');
-        if (!blocksList.includes(bk)) {
-          setState('blocksList', [...blocksList, bk]);
-        }
-        setState('blockToQuadrant', { ...blockToQuadrant });
-        try { vfsWrite('bloks.json', getState('blocksList')); vfsWrite('blockToQuadrant.json', blockToQuadrant); } catch (e) { if (window.Logger) window.Logger.warn('vfs write failed', e); }
+        try { vfsWrite('bloks.json', getState('blocksList')); } catch (e) { if (window.Logger) window.Logger.warn('vfs write failed', e); }
       }
       // Ensure level mapping exists
       const levelToRing = window.levelToRing || {};
@@ -1430,7 +1464,7 @@
         window.updateRadar();
       }
     } catch (error) {
-      console.error('Ошибка переключения предприятия:', error);
+      // Ошибка переключения предприятия
       if (typeof window !== 'undefined' && window.ErrorDisplay) {
         window.ErrorDisplay.show(error, 'Переключение предприятия');
       }
@@ -1441,7 +1475,7 @@
   function initFilters() {
     const Filters = getFilters();
     if (!Filters) {
-      console.error('Filters не загружен, невозможно заполнить фильтры');
+      // Filters не загружен, невозможно заполнить фильтры
       return false;
     }
 
@@ -1542,15 +1576,15 @@
    */
   async function recalculateFuncCoverForAllTechnologies(technologies) {
     if (!Array.isArray(technologies) || technologies.length === 0) {
-      console.warn('[DataLoader] Нет технологий для пересчета funcCover');
+      // Нет технологий для пересчета funcCover
       return;
     }
 
-    console.log('[DataLoader] Начинаем пересчет funcCover для всех технологий...');
+    // Начинаем пересчет funcCover для всех технологий
 
     // Проверяем наличие модуля FuncCoverUtils
     if (!window.FuncCoverUtils || typeof window.FuncCoverUtils.calculateFuncCover !== 'function') {
-      console.warn('[DataLoader] Модуль FuncCoverUtils не загружен, пересчет невозможен');
+      // Модуль FuncCoverUtils не загружен, пересчет невозможен
       return;
     }
 
@@ -1583,15 +1617,15 @@
           const oldValue = tech.funcCover;
           tech.funcCover = newFuncCover;
           updatedCount++;
-          console.log(`[DataLoader] Технология "${tech.name}" (ID: ${tech.id}): funcCover ${oldValue} → ${newFuncCover}`);
+          // Технология обновлена
         }
       } catch (error) {
-        console.error(`[DataLoader] Ошибка при пересчете funcCover для технологии ${tech.id}:`, error);
+        // Ошибка при пересчете funcCover для технологии
       }
     });
 
     await Promise.all(promises);
-    console.log(`[DataLoader] Пересчет funcCover завершен. Обновлено технологий: ${updatedCount} из ${technologies.length}`);
+    // Пересчет funcCover завершен
   }
 
   // Экспорт функций в window для обратной совместимости

@@ -68,7 +68,7 @@
 
       // Инициализация менеджера вкладок для формы редактирования технологии
       if (panel.id === 'editTechPanel' && window.EditTechTabsManager && typeof window.EditTechTabsManager.init === 'function') {
-        console.log('[Modals] Инициализация EditTechTabsManager для editTechPanel');
+        // Инициализация EditTechTabsManager для editTechPanel
         setTimeout(() => {
           window.EditTechTabsManager.init();
         }, 150);

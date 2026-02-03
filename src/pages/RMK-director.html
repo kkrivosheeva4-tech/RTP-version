@@ -1345,6 +1345,9 @@
                   <span class="export-multi-select-arrow"></span>
                 </div>
                 <div class="export-multi-select-dropdown">
+                  <div class="export-multi-select-search">
+                    <input type="text" placeholder="Поиск..." autocomplete="off">
+                  </div>
                   <div class="export-multi-select-options"></div>
                 </div>
                 <input type="hidden" id="filter_status" value="">
@@ -1396,10 +1399,10 @@
           <div class="export-field-item">
             <div class="export-field-row">
               <label>
-                <input type="checkbox" id="field_funcCover" data-field="funcCover">
-                <span>Покрытие функций (0-3)</span>
+                <input type="checkbox" id="field_trlStage" data-field="trlStage">
+                <span>TRL-стадия</span>
               </label>
-              <div class="export-multi-select" id="filter_funcCover_container" data-field="funcCover">
+              <div class="export-multi-select" id="filter_trlStage_container" data-field="trlStage">
                 <div class="export-multi-select-trigger" tabindex="0">
                   <span class="export-multi-select-text">Все значения</span>
                   <span class="export-multi-select-arrow"></span>
@@ -1410,7 +1413,7 @@
                   </div>
                   <div class="export-multi-select-options"></div>
                 </div>
-                <input type="hidden" id="filter_funcCover" value="">
+                <input type="hidden" id="filter_trlStage" value="">
               </div>
             </div>
           </div>
@@ -1460,7 +1463,15 @@
             <div class="export-field-row">
               <label>
                 <input type="checkbox" id="field_description" data-field="description">
-                <span>Описание технологии</span>
+                <span>Описание</span>
+              </label>
+            </div>
+          </div>
+          <div class="export-field-item">
+            <div class="export-field-row">
+              <label>
+                <input type="checkbox" id="field_exampleDesc" data-field="exampleDesc">
+                <span>Примеры внедрения</span>
               </label>
             </div>
           </div>

@@ -240,7 +240,7 @@
    */
   function showDetail(t, source = 'unknown', sourceQuadrant = null) {
     if (!t) {
-      console.error('showDetail: технология не передана');
+      // showDetail: технология не передана
       return;
     }
 
@@ -856,7 +856,24 @@
         }
         return tech.func || tech.functions || 'Не указано';
       case 'status':
-        return tech.status || tech.level || 'Не указано';
+        // Определяем статус на основе isImplemented
+        const companies = Array.isArray(tech.company) ? tech.company : (tech.company ? [tech.company] : []);
+        let isImplemented = false;
+
+        if (companies.length > 1 && tech.companyRatings && typeof tech.companyRatings === 'object') {
+          isImplemented = companies.some(company => {
+            const ratings = tech.companyRatings[company];
+            return ratings && ratings.isImplemented === true;
+          });
+        } else {
+          if (companies.length === 1 && tech.companyRatings && typeof tech.companyRatings === 'object') {
+            const ratings = tech.companyRatings[companies[0]];
+            isImplemented = ratings && ratings.isImplemented === true;
+          } else {
+            isImplemented = tech.isImplemented === true;
+          }
+        }
+        return isImplemented ? 'Внедренные' : 'Невнедренные';
       case 'costProm':
         if (tech.status === 'Перспективные' || tech.level === 'Перспективные') {
           return tech.costProm !== undefined && tech.costProm !== null ? String(tech.costProm) : '—';
@@ -928,8 +945,8 @@
           // Одно предприятие - стандартное отображение
           return tech.organRead !== undefined && tech.organRead !== null ? String(tech.organRead) : '—';
         }
-      case 'funcCover':
-        return tech.funcCover !== undefined && tech.funcCover !== null ? String(tech.funcCover) : '—';
+      case 'trlStage':
+        return tech.trlStage !== undefined && tech.trlStage !== null ? String(tech.trlStage) : '—';
       case 'vendors':
         if (tech.vendors && Array.isArray(tech.vendors) && tech.vendors.length > 0) {
           return tech.vendors.map(vendor => vendor.name || 'Без названия').filter(Boolean).join(', ') || 'Не указано';
@@ -952,7 +969,16 @@
         }
         return 'Не указано';
       case 'exampleDesc':
-        return tech.exampleDesc || '—';
+        // exampleDesc может быть строкой или массивом (marketExamples)
+        if (tech.exampleDesc) {
+          return tech.exampleDesc;
+        } else if (tech.marketExamples) {
+          if (Array.isArray(tech.marketExamples)) {
+            return tech.marketExamples.join('\n');
+          }
+          return String(tech.marketExamples);
+        }
+        return '—';
       default:
         return '—';
     }
@@ -972,9 +998,10 @@
       'status': 'Статус',
       'costProm': 'Стоимость внедрения',
       'description': 'Описание',
+      'exampleDesc': 'Примеры внедрения',
       'techRead': 'Технологическая готовность',
       'organRead': 'Организационная готовность',
-      'funcCover': 'Покрытие функций',
+      'trlStage': 'TRL-стадия',
       'vendors': 'Вендору',
       'integrators': 'Интеграторы'
     };
