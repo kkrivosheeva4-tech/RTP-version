@@ -1888,6 +1888,7 @@ body.dark .modal-body .custom-select-modal .select-dropdown {
   .blip-incomplete {
     animation: none;
   }
+
   .blip-missing-data {
     stroke-dasharray: none;
   }
@@ -2402,7 +2403,7 @@ body.dark .blip.selected {
   touch-action: pan-y;
   scrollbar-width: thin;
   /* Для Firefox */
-  scrollbar-color: var(--accent-70) rgba(0, 0, 0, 0.08);
+  scrollbar-color: rgba(206, 144, 104, 0.7);
   width: 100%;
 }
 
@@ -4390,6 +4391,7 @@ body.dark .function-row input:hover:not(:focus) {
 /* ===== Модальное окно выбора полей для экспорта ===== */
 #exportPdfModal .modal-body {
   overflow: visible;
+  max-height: calc(100vh - 50px);
 }
 
 .export-fields-container {
@@ -5206,27 +5208,31 @@ body.dark .export-public-btn:hover {
 
 /* Базовые стили скроллбара для панели подробной информации */
 .detail-panel .tech-info::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
 }
 
 .detail-panel .tech-info::-webkit-scrollbar-thumb {
-  background: rgba(206, 144, 104, 0.7);
-  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(206, 144, 104, 0.6), rgba(206, 144, 104, 0.8));
+  border-radius: 12px;
   border: 2px solid transparent;
   background-clip: padding-box;
-  transition: background 0.2s ease;
-  min-height: 30px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 40px;
+  box-shadow: inset 0 0 6px rgba(206, 144, 104, 0.3);
 }
 
 .detail-panel .tech-info::-webkit-scrollbar-thumb:hover {
-  background: rgba(206, 144, 104, 0.9);
+  background: linear-gradient(180deg, rgba(206, 144, 104, 0.8), rgba(206, 144, 104, 1));
+  box-shadow: inset 0 0 8px rgba(206, 144, 104, 0.5);
+  transform: scaleX(1.1);
 }
 
 .detail-panel .tech-info::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.08);
-  border-radius: 10px;
-  margin: 4px 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.1));
+  border-radius: 12px;
+  margin: 6px 0;
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 /* Скроллбары модальных окон */
@@ -5258,19 +5264,23 @@ body.dark .export-public-btn:hover {
 
 /* Скроллбары модальных окон и панели подробностей в темной теме */
 body.dark .detail-panel .tech-info::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.4);
+  background: linear-gradient(180deg, rgba(206, 144, 104, 0.5), rgba(206, 144, 104, 0.7));
+  box-shadow: inset 0 0 6px rgba(206, 144, 104, 0.4);
 }
 
 body.dark .detail-panel .tech-info::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.6);
+  background: linear-gradient(180deg, rgba(206, 144, 104, 0.7), rgba(206, 144, 104, 0.9));
+  box-shadow: inset 0 0 8px rgba(206, 144, 104, 0.6);
+  transform: scaleX(1.1);
 }
 
 body.dark .detail-panel .tech-info::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.15));
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 body.dark .detail-panel .tech-info {
-  scrollbar-color: rgba(255, 255, 255, 0.4) rgba(255, 255, 255, 0.1);
+  scrollbar-color: rgba(206, 144, 104, 0.6);
 }
 
 body.dark .modal-panel .modal-body:hover::-webkit-scrollbar-thumb {

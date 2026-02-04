@@ -63,9 +63,9 @@
     const l = Filters.getFilterValues('level');
     const e = Filters.getFilterValues('enterprise');
 
-    // Получаем searchInput через DOMProxy
-    const searchInput = DOMProxy.createElementProxy("searchInput");
-    const q = (searchInput.value || '').toLowerCase().trim();
+    // Получаем searchInput через DOMCache напрямую для чтения value
+    const searchInputEl = DOMCache.get("searchInput");
+    const q = (searchInputEl && searchInputEl.value ? searchInputEl.value : '').toLowerCase().trim();
 
     // Оптимизация: предварительно нормализуем данные для поиска, если есть текстовый запрос
     const hasTextSearch = q.length > 0;
@@ -128,19 +128,30 @@
         // Используем кэш для нормализованных полей
         let normalizedFields = searchFieldsCache.get(t.id);
         if (!normalizedFields) {
+          // Преобразуем все значения в строки перед созданием массива
+          const directionsArray = Array.isArray(t.directions)
+            ? t.directions.map(d => String(d || ''))
+            : [];
+          const blocksArray = Array.isArray(t.blocks)
+            ? t.blocks.map(b => String(b || ''))
+            : [];
+          const functionsArray = Array.isArray(t.functions)
+            ? t.functions.map(f => String(f || ''))
+            : [];
+
           normalizedFields = [
             String(t.name || ''),
             String(t.description || ''),
             String(t.direction || ''),
-            ...(t.directions || []),
+            ...directionsArray,
             String(t.block || ''),
-            ...(t.blocks || []),
+            ...blocksArray,
             String(t.func || ''),
-            ...(t.functions || []),
+            ...functionsArray,
             String(t.techType || ''),
             String(t.level || ''),
             String(t.id || '')
-          ].map(fld => fld.toLowerCase());
+          ].map(fld => String(fld || '').toLowerCase()).filter(fld => fld.length > 0);
           searchFieldsCache.set(t.id, normalizedFields);
         }
         return normalizedFields.some(fld => fld.includes(q));

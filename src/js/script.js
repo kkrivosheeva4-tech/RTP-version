@@ -494,14 +494,8 @@
     };
   }
 
-  // Поиск
-  const searchInput = document.getElementById("searchInput");
-  if (searchInput) {
-    searchInput.addEventListener("input", () => {
-      const query = searchInput.value.toLowerCase();
-      document.dispatchEvent(new CustomEvent("searchTech", { detail: query }));
-    });
-  }
+  // Поиск обрабатывается в events.js через DOMCache и debounce
+  // Удален избыточный обработчик, который отправлял неиспользуемое событие searchTech
 
   // ===== РАДАР ЛОГИКА (фиксированные точки + задержка и плавное затухание) =====
 (function () {
@@ -747,4 +741,42 @@
 
   // Help Button теперь в common-ui.js
   // Инициализация происходит автоматически в common-ui.js при загрузке DOM
+
+  // Скрытие кнопки "Перейти к детальному просмотру" для неавторизованных пользователей
+  function initDetailViewLinkVisibility() {
+    const detailViewLink = document.getElementById('detailViewLink');
+    if (!detailViewLink) return;
+
+    function checkAndUpdateVisibility() {
+      const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+      const role = localStorage.getItem('role');
+      const isAuthorized = isLoggedIn || (role && role.trim() !== '');
+
+      if (isAuthorized) {
+        detailViewLink.style.display = '';
+      } else {
+        detailViewLink.style.display = 'none';
+      }
+    }
+
+    // Проверяем при загрузке
+    checkAndUpdateVisibility();
+
+    // Слушаем изменения в localStorage (для случаев, когда пользователь войдет/выйдет в другом окне)
+    window.addEventListener('storage', checkAndUpdateVisibility);
+
+    // Проверяем после небольшой задержки, чтобы убедиться, что renderAuth выполнился
+    setTimeout(checkAndUpdateVisibility, 100);
+
+    // Проверяем периодически (для случаев, когда localStorage изменяется в том же окне)
+    // Используем более редкий интервал для лучшей производительности
+    setInterval(checkAndUpdateVisibility, 1000);
+  }
+
+  // Инициализируем после загрузки DOM
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDetailViewLinkVisibility);
+  } else {
+    initDetailViewLinkVisibility();
+  }
 })();

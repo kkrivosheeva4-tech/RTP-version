@@ -158,6 +158,23 @@
     }
   }
 
+  /**
+   * Очистка только финальных позиций (после разведения)
+   * Вызывается при изменении фильтров, чтобы пересчитать позиции с учетом нового состава технологий
+   */
+  function clearFinalPositionsCache() {
+    const keysToDelete = [];
+    positionCache.forEach((value, key) => {
+      if (key.includes(':final:quadrant:')) {
+        keysToDelete.push(key);
+      }
+    });
+    keysToDelete.forEach(key => positionCache.delete(key));
+    if (window.Logger && typeof window.Logger.debug === 'function') {
+      window.Logger.debug(`[Positioning] Кеш финальных позиций очищен (${keysToDelete.length} записей)`);
+    }
+  }
+
   // Вспомогательная функция для дробной части
   function frac(n) {
     return n - Math.floor(n);
@@ -1462,6 +1479,10 @@
       groups.get(key).push(t);
     });
 
+    // ОБНОВЛЕНО: Кеш для финальных позиций после разведения
+    // Ключ: `${techId}:${quadrantId}`, значение: {x, y}
+    const finalPositionsCache = new Map();
+
     function clampToSectorRing(t) {
       const q = quadrantById[t.quadrant];
       if (!q) return;
@@ -1533,6 +1554,63 @@
         const idB = Number(b.id) || 0;
         return idA - idB;
       });
+
+      // ОБНОВЛЕНО: Проверяем кеш финальных позиций для всех технологий в квадранте
+      // ВАЖНО: Ключ кеша включает хеш состава технологий в квадранте, чтобы позиции
+      // были актуальны только для того же состава технологий
+      let allHaveFinalPositions = true;
+      const cachedFinalPositions = new Map();
+
+      // Вычисляем хеш состава технологий в квадранте для включения в ключ кеша
+      // Это гарантирует, что финальные позиции используются только для того же состава
+      const groupIds = group
+        .map(t => t && t.id ? String(t.id) : '')
+        .filter(id => id.length > 0)
+        .sort()
+        .join(',');
+      const groupHash = groupIds.length > 0
+        ? groupIds.split(',').reduce((hash, id) => {
+            // Простой хеш на основе ID
+            return ((hash << 5) - hash) + id.charCodeAt(0);
+          }, 0)
+        : 0;
+
+      group.forEach(t => {
+        if (t && t.id && t.quadrant) {
+          const cacheKey = getCacheKey(t);
+          if (cacheKey) {
+            const quadrantId = t.quadrant;
+            // Включаем хеш состава технологий в ключ кеша
+            const finalCacheKey = `${cacheKey}:final:quadrant:${quadrantId}:group:${groupHash}`;
+            if (positionCache.has(finalCacheKey)) {
+              const cached = positionCache.get(finalCacheKey);
+              if (cached && typeof cached.x === 'number' && typeof cached.y === 'number') {
+                cachedFinalPositions.set(`${t.id}:${quadrantId}`, cached);
+              } else {
+                allHaveFinalPositions = false;
+              }
+            } else {
+              allHaveFinalPositions = false;
+            }
+          } else {
+            allHaveFinalPositions = false;
+          }
+        }
+      });
+
+      // Если все технологии имеют кешированные финальные позиции, используем их и пропускаем разведение
+      if (allHaveFinalPositions && cachedFinalPositions.size === group.length) {
+        group.forEach(t => {
+          if (t && t.id && t.quadrant) {
+            const cachedPos = cachedFinalPositions.get(`${t.id}:${t.quadrant}`);
+            if (cachedPos) {
+              t.x = cachedPos.x;
+              t.y = cachedPos.y;
+            }
+          }
+        });
+        continue; // Переходим к следующему квадранту, пропуская разведение
+      }
 
       // Инициализируем позиции, если они не заданы
       // ОБНОВЛЕНО: Используем кеш для получения позиций
@@ -1893,6 +1971,44 @@
         // Уменьшаем коэффициент затухания для следующей итерации
         dampingFactor *= DAMPING_DECAY;
       }
+
+      // ОБНОВЛЕНО: Сохраняем финальные позиции в кеш после разведения
+      // Это обеспечивает стабильность позиций при повторных рендерах
+      // ВАЖНО: Используем тот же хеш состава технологий, что и при проверке кеша
+      const groupIdsForSave = group
+        .map(t => t && t.id ? String(t.id) : '')
+        .filter(id => id.length > 0)
+        .sort()
+        .join(',');
+      const groupHashForSave = groupIdsForSave.length > 0
+        ? groupIdsForSave.split(',').reduce((hash, id) => {
+            return ((hash << 5) - hash) + id.charCodeAt(0);
+          }, 0)
+        : 0;
+
+      group.forEach(t => {
+        if (t && t.id && t.quadrant && typeof t.x === 'number' && typeof t.y === 'number') {
+          const cacheKey = getCacheKey(t);
+          if (cacheKey) {
+            const quadrantId = t.quadrant;
+            // Включаем хеш состава технологий в ключ кеша
+            const finalCacheKey = `${cacheKey}:final:quadrant:${quadrantId}:group:${groupHashForSave}`;
+            positionCache.set(finalCacheKey, { x: t.x, y: t.y });
+            // Также сохраняем в общий кеш для обратной совместимости
+            const quadrantCacheKey = `${cacheKey}:quadrant:${quadrantId}`;
+            positionCache.set(quadrantCacheKey, { x: t.x, y: t.y });
+          }
+        }
+      });
+    }
+
+    // ОБНОВЛЕНО: Сохраняем кеш в localStorage для стабильности при перезагрузке
+    // Используем debounce для оптимизации (сохраняем не чаще раза в секунду)
+    if (!savePositionCache._timeout) {
+      savePositionCache._timeout = setTimeout(() => {
+        savePositionCache();
+        savePositionCache._timeout = null;
+      }, 1000);
     }
   }
 
@@ -1975,6 +2091,7 @@
     getMissingDataInfo,
     // ОБНОВЛЕНО (2026-01-29): Функции для управления кешем
     clearPositionCache,
+    clearFinalPositionsCache,
     getCacheKey,
     savePositionCache,
     loadPositionCache,

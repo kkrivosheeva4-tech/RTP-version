@@ -15,6 +15,37 @@
     return window[name];
   }
 
+  // Функция для инициализации поиска (может быть вызвана повторно)
+  function initSearchHandler() {
+    const DOMCache = getDependency("DOMCache");
+    let searchInput = DOMCache.get("searchInput");
+    if (!searchInput) {
+      searchInput = document.getElementById("searchInput");
+    }
+
+    if (searchInput && !searchInput.dataset.searchHandlerAttached) {
+      if (typeof window.debounce === "function") {
+        const debouncedSearch = window.debounce(() => {
+          if (typeof window.updateRadar === "function") {
+            window.updateRadar();
+          }
+        }, 300);
+
+        const handleSearch = () => {
+          debouncedSearch();
+        };
+
+        searchInput.addEventListener("input", handleSearch);
+        searchInput.addEventListener("keyup", handleSearch);
+        searchInput.dataset.searchHandlerAttached = "true";
+
+        if (window.Logger) window.Logger.debug("Обработчик поиска успешно привязан к searchInput");
+        return true;
+      }
+    }
+    return false;
+  }
+
   // Инициализация обработчиков событий
   function initEventHandlers() {
     // Guard: предотвращаем повторную инициализацию
@@ -68,20 +99,9 @@
     }
 
     // ===== ПОИСК =====
-    const searchInput = DOMCache.get("searchInput");
-    if (searchInput) {
-      // Используем debounce из radar-utils.js
-      if (typeof debounce === "function") {
-        const debouncedSearch = debounce(() => {
-          if (typeof window.updateRadar === "function") {
-            window.updateRadar();
-          }
-        }, 300);
-        searchInput.addEventListener("input", debouncedSearch);
-      } else {
-        if (window.Logger) window.Logger.warn("Функция debounce не найдена");
-      }
-    }
+    // Инициализация поиска вынесена в отдельную функцию initSearchHandler
+    // для возможности повторной инициализации, если элемент не найден сразу
+    initSearchHandler();
 
     // ===== ФИЛЬТРЫ =====
     const filterBtn = DOMCache.get("filterBtn");
@@ -145,8 +165,8 @@
 
     const qpSearchInput = DOMCache.get("qpSearchInput");
     if (qpSearchInput) {
-      if (typeof debounce === "function") {
-        const debouncedQpSearch = debounce(() => {
+      if (typeof window.debounce === "function") {
+        const debouncedQpSearch = window.debounce(() => {
           if (typeof window.getCurrentZoomedQuadrant === "function") {
             const currentZoomed = window.getCurrentZoomedQuadrant();
             if (
@@ -1172,15 +1192,32 @@
 
   // Инициализация при загрузке DOM
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initEventHandlers);
+    document.addEventListener("DOMContentLoaded", () => {
+      initEventHandlers();
+      // Повторная попытка инициализации поиска через небольшую задержку
+      setTimeout(() => {
+        if (!initSearchHandler()) {
+          // Если не удалось, пробуем еще раз через 500мс
+          setTimeout(initSearchHandler, 500);
+        }
+      }, 100);
+    });
   } else {
     // DOM уже загружен
     initEventHandlers();
+    // Повторная попытка инициализации поиска через небольшую задержку
+    setTimeout(() => {
+      if (!initSearchHandler()) {
+        // Если не удалось, пробуем еще раз через 500мс
+        setTimeout(initSearchHandler, 500);
+      }
+    }, 100);
   }
 
   // Экспорт функции инициализации для повторного использования
   if (typeof window !== "undefined") {
     window.initEventHandlers = initEventHandlers;
+    window.initSearchHandler = initSearchHandler; // Экспорт функции инициализации поиска
     // Экспорт Utils для обратной совместимости
     window.Utils = Utils;
     Object.keys(Utils).forEach(key => {
