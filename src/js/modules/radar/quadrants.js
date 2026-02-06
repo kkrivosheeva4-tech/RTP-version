@@ -42,11 +42,6 @@
     }
   };
 
-  const updateBlockFilterForZoomedQuadrant = (qId) => {
-    const fn = window.Filters?.updateBlockFilterForZoomedQuadrant;
-    if (fn) fn(qId);
-  };
-
   const openQuadrantPriorityPanel = (qId) => {
     const fn = window.openQuadrantPriorityPanel;
     if (fn) fn(qId);
@@ -183,9 +178,6 @@
       moveResetButtonToFilterPanel();
     }
 
-    // Обновляем фильтр блоков, чтобы показывать только блоки этого сектора
-    updateBlockFilterForZoomedQuadrant(qId);
-
     // Открываем правую панель приоритета сектора при зуме
     // НО НЕ открываем, если источник - клик по blip (source === 'blip' или skipPriorityPanel === true)
     const shouldSkipPriorityPanel = opts.skipPriorityPanel === true || opts.source === 'blip';
@@ -208,9 +200,6 @@
 
     // Сбрасываем текущий зуммированный квадрант
     setCurrentZoomedQuadrant(null);
-
-    // Восстанавливаем фильтр блоков (показываем все блоки)
-    updateBlockFilterForZoomedQuadrant(null);
 
     // Закрываем правую панель приоритета
     closeQuadrantPriorityPanel();
