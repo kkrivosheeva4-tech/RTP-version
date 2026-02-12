@@ -315,6 +315,15 @@
       techRead = (tech.techRead !== undefined && tech.techRead !== null) ? tech.techRead : null;
       organRead = (tech.organRead !== undefined && tech.organRead !== null) ? tech.organRead : null;
       funcCover = (tech.funcCover !== undefined && tech.funcCover !== null) ? tech.funcCover : null;
+      // Если общих оценок нет (например, полностью внедрённая техника с несколькими предприятиями),
+      // берём из enterprises для корректной индикации «есть оценки»
+      const enterprises = Array.isArray(tech.enterprises) ? tech.enterprises : [];
+      if ((!isRatingFilled(techRead) || !isRatingFilled(organRead)) && enterprises.length > 0) {
+        const firstWithTech = enterprises.find(ent => ent && (ent.technologicalReadiness !== undefined && ent.technologicalReadiness !== null));
+        const firstWithOrgan = enterprises.find(ent => ent && (ent.organizationalReadiness !== undefined && ent.organizationalReadiness !== null));
+        if (techRead == null && firstWithTech) techRead = Number(firstWithTech.technologicalReadiness);
+        if (organRead == null && firstWithOrgan) organRead = Number(firstWithOrgan.organizationalReadiness);
+      }
       techReadFilled = isRatingFilled(techRead);
       organReadFilled = isRatingFilled(organRead);
     }
@@ -481,34 +490,41 @@
     const renderData = [];
 
     validTechs.forEach((t) => {
-      // ОБНОВЛЕНО: Проверяем полностью внедренные технологии перед добавлением в renderData
-      // Если все предприятия внедрены и не выбран фильтр "Внедренные", пропускаем технологию
+      // Проверяем полностью внедрённые технологии: по умолчанию не показываем на радаре.
+      // Показываем только при явном выборе фильтра «Статус: Внедренная».
       const enterprises = Array.isArray(t.enterprises) ? t.enterprises : [];
+      let isFullyImplemented = false;
+
       if (enterprises.length > 0) {
-        // Проверяем, есть ли хотя бы одно невнедренное предприятие
         const hasNonImplemented = enterprises.some(ent => {
           if (!ent || typeof ent !== 'object') return false;
-          const status = String(ent.status || '').toLowerCase();
-          const isImplemented = ent.isImplemented === true || status.includes('внедрен');
+          const status = String(ent.status || '').trim().toLowerCase();
+          const isImplemented = ent.isImplemented === true || status === 'внедрена' || status === 'внедренна';
           return !isImplemented;
         });
+        isFullyImplemented = !hasNonImplemented;
+      } else {
+        // Нет массива enterprises (например, технология из файла или добавленная через модалку)
+        const statusLower = String(t.status || t.level || '').trim().toLowerCase();
+        const techImplemented = t.isImplemented === true || statusLower === 'внедрена' || statusLower === 'внедренна';
+        if (techImplemented) isFullyImplemented = true;
+        else if (t.companyRatings && typeof t.companyRatings === 'object') {
+          const allImplemented = Object.values(t.companyRatings).every(r => r && r.isImplemented === true);
+          if (allImplemented) isFullyImplemented = true;
+        }
+      }
 
-        // Если все предприятия внедрены, проверяем фильтр
-        if (!hasNonImplemented) {
-          const Filters = window.Filters;
-          const levelFilter = Filters && typeof Filters.getFilterValues === 'function'
-            ? Filters.getFilterValues('level') || []
-            : [];
-
-          const showImplemented = levelFilter.includes('Внедренная') || levelFilter.includes('Внедренные');
-
-          // Если фильтр "Внедренные" не выбран, пропускаем эту технологию
-          if (!showImplemented) {
-            if (window.Logger && typeof window.Logger.debug === 'function') {
-              window.Logger.debug(`[RadarRenderer] Технология ${t.id || 'unknown'} полностью внедрена, пропущена (фильтр "Внедренные" не активен)`);
-            }
-            return; // Пропускаем эту технологию
+      if (isFullyImplemented) {
+        const Filters = window.Filters;
+        const levelFilter = Filters && typeof Filters.getFilterValues === 'function'
+          ? Filters.getFilterValues('level') || []
+          : [];
+        const showImplemented = levelFilter.includes('Внедренная') || levelFilter.includes('Внедренные');
+        if (!showImplemented) {
+          if (window.Logger && typeof window.Logger.debug === 'function') {
+            window.Logger.debug(`[RadarRenderer] Технология ${t.id || 'unknown'} полностью внедрена, скрыта (показать только при фильтре «Внедренная»)`);
           }
+          return;
         }
       }
 

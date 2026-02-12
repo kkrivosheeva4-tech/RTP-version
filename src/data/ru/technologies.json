@@ -365,20 +365,20 @@
     "enterprises": [
       {
         "enterpriseId": 1,
-        "technologicalReadiness": 3,
-        "organizationalReadiness": 3,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 1,
         "status": "Внедрена"
       },
       {
         "enterpriseId": 6,
-        "technologicalReadiness": 3,
+        "technologicalReadiness": 1,
         "organizationalReadiness": 2,
         "status": "Невнедренна"
       },
       {
         "enterpriseId": 3,
-        "technologicalReadiness": 3,
-        "organizationalReadiness": 3,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 2,
         "status": "Невнедренна"
       }
     ],
@@ -389,27 +389,6 @@
         "integrators": [
           "Интегратор 1",
           "Интегратор 2"
-        ]
-      },
-      {
-        "name": "Вендор 2",
-        "integrators": [
-          "Интегратор 3",
-          "Интегратор 4"
-        ]
-      },
-      {
-        "name": "Вендор 3",
-        "integrators": [
-          "Интегратор 5",
-          "Интегратор 6"
-        ]
-      },
-      {
-        "name": "Вендор 4",
-        "integrators": [
-          "Интегратор 7",
-          "Интегратор 8"
         ]
       }
     ],
@@ -697,7 +676,7 @@
   },
   {
     "id": 13,
-    "name": "Технология 13 (высокая готовность, большой размер)",
+    "name": "Технология 13",
     "directions": [
       1
     ],
@@ -716,40 +695,39 @@
       },
       {
         "enterpriseId": 2,
-        "technologicalReadiness": 3,
+        "technologicalReadiness": 2,
         "organizationalReadiness": 3,
         "status": "Невнедренна"
       }
     ],
     "trlStage": 3,
-    "funcCover": 3,
     "vendors": [
       {
-        "name": "Вендор A",
+        "name": "Вендор 1",
         "integrators": [
           "Интегратор 1"
         ]
       },
       {
-        "name": "Вендор B",
+        "name": "Вендор 2",
         "integrators": [
           "Интегратор 2"
         ]
       },
       {
-        "name": "Вендор C",
+        "name": "Вендор 3",
         "integrators": [
           "Интегратор 3"
         ]
       },
       {
-        "name": "Вендор D",
+        "name": "Вендор 4",
         "integrators": [
           "Интегратор 4"
         ]
       },
       {
-        "name": "Вендор E",
+        "name": "Вендор 5",
         "integrators": [
           "Интегратор 5"
         ]
@@ -758,7 +736,7 @@
   },
   {
     "id": 14,
-    "name": "Технология 14 (средняя готовность, средний размер)",
+    "name": "Технология 14",
     "directions": [
       1
     ],
@@ -783,10 +761,9 @@
       }
     ],
     "trlStage": 2,
-    "funcCover": 1,
     "vendors": [
       {
-        "name": "Вендор F",
+        "name": "Вендор 6",
         "integrators": [
           "Интегратор 6"
         ]
@@ -795,7 +772,7 @@
   },
   {
     "id": 15,
-    "name": "Технология 15 (низкая готовность, малый размер)",
+    "name": "Технология 15",
     "directions": [
       1
     ],
@@ -816,7 +793,7 @@
     "funcCover": 0,
     "vendors": [
       {
-        "name": "Вендор I",
+        "name": "Вендор 7",
         "integrators": [
           "Интегратор 9"
         ]
@@ -825,7 +802,7 @@
   },
   {
     "id": 16,
-    "name": "Технология 16 (высокая готовность, средний размер)",
+    "name": "Технология 16",
     "directions": [
       1
     ],
@@ -838,37 +815,30 @@
     "enterprises": [
       {
         "enterpriseId": 1,
-        "technologicalReadiness": 2,
-        "organizationalReadiness": 3,
+        "technologicalReadiness": 0,
+        "organizationalReadiness": 0,
         "status": "Невнедренна"
       },
       {
         "enterpriseId": 6,
-        "technologicalReadiness": 3,
-        "organizationalReadiness": 2,
+        "technologicalReadiness": 0,
+        "organizationalReadiness": 0,
         "status": "Невнедренна"
       }
     ],
     "trlStage": 2,
-    "funcCover": 2,
     "vendors": [
       {
-        "name": "Вендор J",
+        "name": "Вендор 8",
         "integrators": [
           "Интегратор 10"
-        ]
-      },
-      {
-        "name": "Вендор K",
-        "integrators": [
-          "Интегратор 11"
         ]
       }
     ]
   },
   {
     "id": 17,
-    "name": "Технология 17 (средняя готовность, большой размер)",
+    "name": "Технология 17 ",
     "directions": [
       1
     ],
@@ -882,31 +852,30 @@
     "enterprises": [
       {
         "enterpriseId": 2,
-        "technologicalReadiness": 2,
-        "organizationalReadiness": 3,
+        "technologicalReadiness": 0,
+        "organizationalReadiness": 0,
         "status": "Невнедренна"
       },
       {
         "enterpriseId": 3,
-        "technologicalReadiness": 3,
-        "organizationalReadiness": 1,
+        "technologicalReadiness": 0,
+        "organizationalReadiness": 0,
         "status": "Невнедренна"
       }
     ],
     "trlStage": 2,
-    "funcCover": 2,
     "vendors": [
       {
-        "name": "Вендор L",
+        "name": "Вендор 10",
         "integrators": [
-          "Интегратор 12"
+          "Интегратор 2"
         ]
       }
     ]
   },
   {
     "id": 18,
-    "name": "Технология 18 (низкая готовность, средний размер)",
+    "name": "Технология 18",
     "directions": [
       1
     ],
@@ -929,16 +898,16 @@
     "trlStage": 1,
     "vendors": [
       {
-        "name": "Вендор Q",
+        "name": "Вендор 1",
         "integrators": [
-          "Интегратор 17"
+          "Интегратор 2"
         ]
       }
     ]
   },
   {
     "id": 19,
-    "name": "Технология 19 (высокая готовность, малый размер)",
+    "name": "Технология 19",
     "directions": [
       1
     ],
@@ -956,19 +925,18 @@
       }
     ],
     "trlStage": 2,
-    "funcCover": 1,
     "vendors": [
       {
-        "name": "Вендор S",
+        "name": "Вендор 2",
         "integrators": [
-          "Интегратор 19"
+          "Интегратор 3"
         ]
       }
     ]
   },
   {
     "id": 20,
-    "name": "Технология 20 (средняя готовность, малый размер)",
+    "name": "Технология 20",
     "directions": [
       1
     ],
@@ -986,19 +954,18 @@
       }
     ],
     "trlStage": 1,
-    "funcCover": 0,
     "vendors": [
       {
-        "name": "Вендор T",
+        "name": "Вендор 3",
         "integrators": [
-          "Интегратор 20"
+          "Интегратор 4"
         ]
       }
     ]
   },
   {
     "id": 21,
-    "name": "Технология 21 (низкая готовность, большой размер)",
+    "name": "Технология 21",
     "directions": [
       1
     ],
@@ -1019,19 +986,18 @@
       }
     ],
     "trlStage": 1,
-    "funcCover": 1,
     "vendors": [
       {
-        "name": "Вендор U",
+        "name": "Вендор 4",
         "integrators": [
-          "Интегратор 21"
+          "Интегратор 5"
         ]
       }
     ]
   },
   {
     "id": 22,
-    "name": "Технология 22 (высокая готовность, большой размер)",
+    "name": "Технология 22",
     "directions": [
       1
     ],
@@ -1041,47 +1007,40 @@
       "Буровые работы",
       "Лабораторные исследования"
     ],
-    "description": "Технология с высокой готовностью",
+    "description": "Технология 22",
     "enterprises": [
       {
         "enterpriseId": 3,
-        "technologicalReadiness": 3,
-        "organizationalReadiness": 3,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 1,
         "status": "Невнедренна"
       },
       {
         "enterpriseId": 4,
-        "technologicalReadiness": 2,
-        "organizationalReadiness": 2,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 1,
         "status": "Невнедренна"
       },
       {
         "enterpriseId": 5,
-        "technologicalReadiness": 2,
-        "organizationalReadiness": 2,
+        "technologicalReadiness": 0,
+        "organizationalReadiness": 1,
         "status": "Невнедренна"
       }
     ],
     "trlStage": 3,
-    "funcCover": 3,
     "vendors": [
       {
-        "name": "Вендор Z",
+        "name": "Вендор 5",
         "integrators": [
-          "Интегратор 26"
-        ]
-      },
-      {
-        "name": "Вендор AA",
-        "integrators": [
-          "Интегратор 27"
+          "Интегратор 6"
         ]
       }
     ]
   },
   {
     "id": 23,
-    "name": "Технология 23 (средняя готовность, средний размер)",
+    "name": "Технология 23",
     "directions": [
       1
     ],
@@ -1106,19 +1065,18 @@
       }
     ],
     "trlStage": 1,
-    "funcCover": 1,
     "vendors": [
       {
-        "name": "Вендор AD",
+        "name": "Вендор 7",
         "integrators": [
-          "Интегратор 30"
+          "Интегратор 8"
         ]
       }
     ]
   },
   {
     "id": 24,
-    "name": "Технология 24 (низкая готовность, малый размер)",
+    "name": "Технология 24",
     "directions": [
       1
     ],
@@ -1136,19 +1094,18 @@
       }
     ],
     "trlStage": 1,
-    "funcCover": 0,
     "vendors": [
       {
-        "name": "Вендор AG",
+        "name": "Вендор 8",
         "integrators": [
-          "Интегратор 33"
+          "Интегратор 9"
         ]
       }
     ]
   },
   {
     "id": 25,
-    "name": "Технология 25 (высокая готовность, средний размер)",
+    "name": "Технология 25",
     "directions": [
       1
     ],
@@ -1173,25 +1130,24 @@
       }
     ],
     "trlStage": 3,
-    "funcCover": 3,
     "vendors": [
       {
-        "name": "Вендор AH",
+        "name": "Вендор 9",
         "integrators": [
-          "Интегратор 34"
+          "Интегратор 10"
         ]
       },
       {
-        "name": "Вендор AI",
+        "name": "Вендор 10",
         "integrators": [
-          "Интегратор 35"
+          "Интегратор 1"
         ]
       }
     ]
   },
   {
     "id": 26,
-    "name": "Технология 26 (средняя готовность, большой размер)",
+    "name": "Технология 26",
     "directions": [
       1
     ],
@@ -1214,19 +1170,18 @@
       }
     ],
     "trlStage": 1,
-    "funcCover": 2,
     "vendors": [
       {
-        "name": "Вендор AJ",
+        "name": "Вендор 1",
         "integrators": [
-          "Интегратор 36"
+          "Интегратор 2"
         ]
       }
     ]
   },
   {
     "id": 27,
-    "name": "Технология 27 (низкая готовность, средний размер)",
+    "name": "Технология 27",
     "directions": [
       1
     ],
@@ -1251,19 +1206,18 @@
       }
     ],
     "trlStage": 1,
-    "funcCover": 1,
     "vendors": [
       {
-        "name": "Вендор AO",
+        "name": "Вендор 2",
         "integrators": [
-          "Интегратор 41"
+          "Интегратор 3"
         ]
       }
     ]
   },
   {
     "id": 28,
-    "name": "Технология 28 (высокая готовность, малый размер)",
+    "name": "Технология 28",
     "directions": [
       1
     ],
@@ -1281,19 +1235,18 @@
       }
     ],
     "trlStage": 3,
-    "funcCover": 1,
     "vendors": [
       {
-        "name": "Вендор AQ",
+        "name": "Вендор 3",
         "integrators": [
-          "Интегратор 43"
+          "Интегратор 4"
         ]
       }
     ]
   },
   {
     "id": 29,
-    "name": "Технология 29 (средняя готовность, малый размер)",
+    "name": "Технология 29",
     "directions": [
       1
     ],
@@ -1312,19 +1265,18 @@
       }
     ],
     "trlStage": 2,
-    "funcCover": 2,
     "vendors": [
       {
-        "name": "Вендор AR",
+        "name": "Вендор 4",
         "integrators": [
-          "Интегратор 44"
+          "Интегратор 5"
         ]
       }
     ]
   },
   {
     "id": 30,
-    "name": "Технология 30 (низкая готовность, большой размер)",
+    "name": "Технология 30",
     "directions": [
       1
     ],
@@ -1337,19 +1289,18 @@
     "description": "Технология с низкой готовностью",
     "enterprises": [],
     "trlStage": 1,
-    "funcCover": 1,
     "vendors": [
       {
-        "name": "Вендор AS",
+        "name": "Вендор 5",
         "integrators": [
-          "Интегратор 45"
+          "Интегратор 6"
         ]
       }
     ]
   },
   {
     "id": 31,
-    "name": "Технология 31 (высокая готовность, большой размер)",
+    "name": "Технология 31",
     "directions": [
       1
     ],
@@ -1361,34 +1312,20 @@
       "Взрывные работы"
     ],
     "description": "Технология с высокой готовностью",
-    "enterprises": [
-      {
-        "enterpriseId": 1,
-        "technologicalReadiness": 2,
-        "organizationalReadiness": 2,
-        "status": "Невнедренна"
-      },
-      {
-        "enterpriseId": 2,
-        "technologicalReadiness": 3,
-        "organizationalReadiness": 1,
-        "status": "Невнедренна"
-      }
-    ],
+    "enterprises": [],
     "trlStage": 2,
-    "funcCover": 3,
     "vendors": [
       {
-        "name": "Вендор AX",
+        "name": "Вендор 6",
         "integrators": [
-          "Интегратор 50"
+          "Интегратор 7"
         ]
       }
     ]
   },
   {
     "id": 32,
-    "name": "Технология 32 (средняя готовность, средний размер)",
+    "name": "Технология 32",
     "directions": [
       1
     ],
@@ -1413,31 +1350,30 @@
       }
     ],
     "trlStage": 2,
-    "funcCover": 1,
     "vendors": [
       {
-        "name": "Вендор BC",
+        "name": "Вендор 7",
         "integrators": [
-          "Интегратор 55"
+          "Интегратор 8"
         ]
       },
       {
-        "name": "Вендор BD",
+        "name": "Вендор 8",
         "integrators": [
-          "Интегратор 56"
+          "Интегратор 9"
         ]
       },
       {
-        "name": "Вендор BE",
+        "name": "Вендор 9",
         "integrators": [
-          "Интегратор 57"
+          "Интегратор 10"
         ]
       }
     ]
   },
   {
     "id": 33,
-    "name": "Технология 33 (низкая готовность, малый размер)",
+    "name": "Технология 33",
     "directions": [
       1
     ],
@@ -1455,19 +1391,18 @@
       }
     ],
     "trlStage": 1,
-    "funcCover": 0,
     "vendors": [
       {
-        "name": "Вендор BF",
+        "name": "Вендор 10",
         "integrators": [
-          "Интегратор 58"
+          "Интегратор 1"
         ]
       }
     ]
   },
   {
     "id": 34,
-    "name": "Технология 34 (высокая готовность, средний размер)",
+    "name": "Технология 34",
     "directions": [
       1
     ],
@@ -1492,25 +1427,24 @@
       }
     ],
     "trlStage": 3,
-    "funcCover": 2,
     "vendors": [
       {
-        "name": "Вендор BG",
+        "name": "Вендор 1",
         "integrators": [
-          "Интегратор 59"
+          "Интегратор 2"
         ]
       },
       {
-        "name": "Вендор BH",
+        "name": "Вендор 2",
         "integrators": [
-          "Интегратор 60"
+          "Интегратор 3"
         ]
       }
     ]
   },
   {
     "id": 35,
-    "name": "Технология 35 (средняя готовность, большой размер)",
+    "name": "Технология 35",
     "directions": [
       1
     ],
@@ -1533,19 +1467,18 @@
       }
     ],
     "trlStage": 1,
-    "funcCover": 2,
     "vendors": [
       {
-        "name": "Вендор BI",
+        "name": "Вендор 3",
         "integrators": [
-          "Интегратор 61"
+          "Интегратор 4"
         ]
       }
     ]
   },
   {
     "id": 36,
-    "name": "Технология 36 (низкая готовность, средний размер)",
+    "name": "Технология 36",
     "directions": [
       1
     ],
@@ -1570,19 +1503,18 @@
       }
     ],
     "trlStage": 1,
-    "funcCover": 1,
     "vendors": [
       {
-        "name": "Вендор BN",
+        "name": "Вендор 4",
         "integrators": [
-          "Интегратор 66"
+          "Интегратор 5"
         ]
       }
     ]
   },
   {
     "id": 37,
-    "name": "Технология 37 (высокая готовность, малый размер)",
+    "name": "Технология 37",
     "directions": [
       1
     ],
@@ -1600,19 +1532,18 @@
       }
     ],
     "trlStage": 2,
-    "funcCover": 1,
     "vendors": [
       {
-        "name": "Вендор BP",
+        "name": "Вендор 5",
         "integrators": [
-          "Интегратор 68"
+          "Интегратор 6"
         ]
       }
     ]
   },
   {
     "id": 38,
-    "name": "Технология 38 (средняя готовность, малый размер)",
+    "name": "Технология 38",
     "directions": [
       1
     ],
@@ -1630,19 +1561,18 @@
       }
     ],
     "trlStage": 1,
-    "funcCover": 1,
     "vendors": [
       {
-        "name": "Вендор BQ",
+        "name": "Вендор 6",
         "integrators": [
-          "Интегратор 69"
+          "Интегратор 7"
         ]
       }
     ]
   },
   {
     "id": 39,
-    "name": "Технология 39 (низкая готовность, большой размер)",
+    "name": "Технология 39",
     "directions": [
       1
     ],
@@ -1666,19 +1596,18 @@
       }
     ],
     "trlStage": 1,
-    "funcCover": 2,
     "vendors": [
       {
-        "name": "Вендор BR",
+        "name": "Вендор 7",
         "integrators": [
-          "Интегратор 70"
+          "Интегратор 8"
         ]
       }
     ]
   },
   {
     "id": 40,
-    "name": "Технология 40 (высокая готовность, большой размер)",
+    "name": "Технология 40",
     "directions": [
       1
     ],
@@ -1710,19 +1639,18 @@
       }
     ],
     "trlStage": 2,
-    "funcCover": 2,
     "vendors": [
       {
-        "name": "Вендор BW",
+        "name": "Вендор 8",
         "integrators": [
-          "Интегратор 75"
+          "Интегратор 9"
         ]
       }
     ]
   },
   {
     "id": 41,
-    "name": "Технология 41 (средняя готовность, средний размер)",
+    "name": "Технология 41",
     "directions": [
       1
     ],
@@ -1747,31 +1675,30 @@
       }
     ],
     "trlStage": 1,
-    "funcCover": 1,
     "vendors": [
       {
-        "name": "Вендор CA",
+        "name": "Вендор 9",
         "integrators": [
-          "Интегратор 79"
+          "Интегратор 10"
         ]
       },
       {
-        "name": "Вендор CB",
+        "name": "Вендор 10",
         "integrators": [
-          "Интегратор 80"
+          "Интегратор 1"
         ]
       },
       {
-        "name": "Вендор CC",
+        "name": "Вендор 1",
         "integrators": [
-          "Интегратор 81"
+          "Интегратор 2"
         ]
       }
     ]
   },
   {
     "id": 42,
-    "name": "Технология 42 (низкая готовность, малый размер)",
+    "name": "Технология 42",
     "directions": [
       1
     ],
@@ -1787,19 +1714,18 @@
       }
     ],
     "trlStage": 1,
-    "funcCover": 0,
     "vendors": [
       {
-        "name": "Вендор CD",
+        "name": "Вендор 1",
         "integrators": [
-          "Интегратор 82"
+          "Интегратор 2"
         ]
       }
     ]
   },
   {
     "id": 43,
-    "name": "Технология 43 (высокая готовность, средний размер)",
+    "name": "Технология 43",
     "directions": [
       1
     ],
@@ -1824,19 +1750,18 @@
       }
     ],
     "trlStage": 2,
-    "funcCover": 2,
     "vendors": [
       {
-        "name": "Вендор CE",
+        "name": "Вендор 2",
         "integrators": [
-          "Интегратор 83"
+          "Интегратор 3"
         ]
       }
     ]
   },
   {
     "id": 44,
-    "name": "Технология 44 (средняя готовность, большой размер)",
+    "name": "Технология 44",
     "directions": [
       1
     ],
@@ -1859,19 +1784,18 @@
       }
     ],
     "trlStage": 1,
-    "funcCover": 2,
     "vendors": [
       {
-        "name": "Вендор CG",
+        "name": "Вендор 3",
         "integrators": [
-          "Интегратор 85"
+          "Интегратор 4"
         ]
       }
     ]
   },
   {
     "id": 45,
-    "name": "Технология 45 (низкая готовность, средний размер)",
+    "name": "Технология 45",
     "directions": [
       1
     ],
@@ -1883,19 +1807,18 @@
     "description": "Технология с низкой готовностью",
     "enterprises": [],
     "trlStage": 1,
-    "funcCover": 1,
     "vendors": [
       {
-        "name": "Вендор CL",
+        "name": "Вендор 4",
         "integrators": [
-          "Интегратор 90"
+          "Интегратор 5"
         ]
       }
     ]
   },
   {
     "id": 46,
-    "name": "Технология 46 (высокая готовность, малый размер)",
+    "name": "Технология 46",
     "directions": [
       1
     ],
@@ -1907,25 +1830,24 @@
     "enterprises": [
       {
         "enterpriseId": 3,
-        "technologicalReadiness": 3,
+        "technologicalReadiness": 1,
         "organizationalReadiness": 1,
         "status": "Невнедренна"
       }
     ],
     "trlStage": 3,
-    "funcCover": 1,
     "vendors": [
       {
-        "name": "Вендор CN",
+        "name": "Вендор 5",
         "integrators": [
-          "Интегратор 92"
+          "Интегратор 6"
         ]
       }
     ]
   },
   {
     "id": 47,
-    "name": "Технология 47 (средняя готовность, малый размер)",
+    "name": "Технология 47",
     "directions": [
       1
     ],
@@ -1944,19 +1866,18 @@
       }
     ],
     "trlStage": 2,
-    "funcCover": 2,
     "vendors": [
       {
-        "name": "Вендор CO",
+        "name": "Вендор 6",
         "integrators": [
-          "Интегратор 93"
+          "Интегратор 7"
         ]
       }
     ]
   },
   {
     "id": 48,
-    "name": "Технология 48 (низкая готовность, большой размер)",
+    "name": "Технология 48",
     "directions": [
       1
     ],
@@ -1982,19 +1903,18 @@
       }
     ],
     "trlStage": 1,
-    "funcCover": 1,
     "vendors": [
       {
-        "name": "Вендор CP",
+        "name": "Вендор 7",
         "integrators": [
-          "Интегратор 94"
+          "Интегратор 8"
         ]
       }
     ]
   },
   {
     "id": 49,
-    "name": "Технология 49 (высокая готовность, большой размер)",
+    "name": "Технология 49",
     "directions": [
       1
     ],
@@ -2021,19 +1941,18 @@
       }
     ],
     "trlStage": 2,
-    "funcCover": 3,
     "vendors": [
       {
-        "name": "Вендор CU",
+        "name": "Вендор 8",
         "integrators": [
-          "Интегратор 99"
+          "Интегратор 9"
         ]
       }
     ]
   },
   {
     "id": 50,
-    "name": "Технология 50 (средняя готовность, средний размер)",
+    "name": "Технология 50",
     "directions": [
       1
     ],
@@ -2058,761 +1977,183 @@
       }
     ],
     "trlStage": 1,
-    "funcCover": 1,
     "vendors": [
       {
-        "name": "Вендор CZ",
+        "name": "Вендор 3",
         "integrators": [
-          "Интегратор 104"
-        ]
-      },
-      {
-        "name": "Вендор DA",
-        "integrators": [
-          "Интегратор 105"
-        ]
-      },
-      {
-        "name": "Вендор DB",
-        "integrators": [
-          "Интегратор 106"
+          "Интегратор 1"
         ]
       }
     ]
   },
   {
     "id": 51,
-    "name": "Технология 51 (низкая готовность, малый размер)",
+    "name": "АСУГТК",
     "directions": [
       1
     ],
     "block": 1,
     "functionCoverage": [
-      "Геологические работы"
-    ],
-    "description": "Технология с низкой готовностью",
-    "enterprises": [
-      {
-        "enterpriseId": 5,
-        "technologicalReadiness": 0,
-        "organizationalReadiness": 0,
-        "status": "Невнедренна"
-      }
-    ],
-    "trlStage": 1,
-    "funcCover": 0,
-    "vendors": [
-      {
-        "name": "Вендор DC",
-        "integrators": [
-          "Интегратор 107"
-        ]
-      }
-    ]
-  },
-  {
-    "id": 52,
-    "name": "Технология 52 (высокая готовность, средний размер)",
-    "directions": [
-      1
-    ],
-    "block": 1,
-    "functionCoverage": [
-      "Маркшейдерские работы",
+      "Экскавация",
+      "Транспортировка",
       "Буровые работы"
     ],
-    "description": "Технология с высокой готовностью",
+    "description": "Автоматизированная система управления горно-транспортным комплексом",
     "enterprises": [
       {
-        "enterpriseId": 6,
-        "technologicalReadiness": 3,
-        "organizationalReadiness": 2,
-        "status": "Невнедренна"
-      },
-      {
-        "enterpriseId": 1,
+        "enterpriseId": 3,
         "technologicalReadiness": 2,
-        "organizationalReadiness": 3,
-        "status": "Невнедренна"
+        "organizationalReadiness": 2,
+        "status": "Внедрена"
       }
     ],
     "trlStage": 3,
-    "funcCover": 2,
     "vendors": [
       {
-        "name": "Вендор DD",
+        "name": "Цифра",
         "integrators": [
-          "Интегратор 108"
+          "Ультиматек"
+        ]
+      }
+    ],
+    "marketExamples": [
+      "АСУГТК - AG Tech"
+    ],
+    "documentationFiles": []
+  },
+  {
+    "id": 52,
+    "name": "АСУГТК",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Экскавация",
+      "Транспортировка"
+    ],
+    "description": "Автоматизированная система управления горно-транспортным комплексом",
+    "enterprises": [
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 2,
+        "status": "Внедрена"
+      }
+    ],
+    "trlStage": 3,
+    "vendors": [
+      {
+        "name": "Цифра",
+        "integrators": [
+          "Ультиматек"
         ]
       }
     ]
   },
   {
     "id": 53,
-    "name": "Технология 53 (средняя готовность, большой размер)",
+    "name": "АСУГТК",
     "directions": [
       1
     ],
-    "blocks": [
-      1,
-      2
-    ],
+    "block": 1,
     "functionCoverage": [
-      "Лабораторные исследования",
-      "Взрывные работы",
-      "Экскавация"
+      "Транспортировка"
     ],
-    "description": "Технология со средней готовностью",
+    "description": "Автоматизированная система управления горно-транспортным комплексом",
     "enterprises": [
       {
-        "enterpriseId": 2,
-        "technologicalReadiness": 2,
-        "organizationalReadiness": 0,
-        "status": "Невнедренна"
-      },
-      {
-        "enterpriseId": 3,
-        "technologicalReadiness": 0,
-        "organizationalReadiness": 2,
+        "enterpriseId": 6,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 1,
         "status": "Невнедренна"
       }
     ],
-    "trlStage": 1,
-    "funcCover": 2,
+    "trlStage": 3,
     "vendors": [
       {
-        "name": "Вендор DF",
+        "name": "AG Tech",
         "integrators": [
-          "Интегратор 110"
-        ]
-      },
-      {
-        "name": "Вендор DG",
-        "integrators": [
-          "Интегратор 111"
+          "AG Tech"
         ]
       }
     ]
   },
   {
     "id": 54,
-    "name": "Технология 54 (низкая готовность, средний размер)",
+    "name": "ЦППТ",
     "directions": [
-      1
+      2
     ],
-    "block": 1,
+    "block": 2,
     "functionCoverage": [
-      "Транспортировка",
-      "Геологические работы"
+      "Измельчение руды мельницами",
+      "Флотация"
     ],
-    "description": "Технология с низкой готовностью",
+    "description": "Цифровая платформа помощник технолога",
     "enterprises": [
       {
-        "enterpriseId": 4,
-        "status": "Невнедренна"
-      },
-      {
-        "enterpriseId": 5,
-        "status": "Невнедренна"
+        "enterpriseId": 2,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 3,
+        "status": "Внедрена"
       }
     ],
-    "trlStage": 1,
-    "funcCover": 1,
+    "trlStage": 3,
     "vendors": [
       {
-        "name": "Вендор DK",
+        "name": "Белка Диджитал",
         "integrators": [
-          "Интегратор 115"
+          "Белка Диджитал"
+        ]
+      },
+      {
+        "name": "Рокет Контрол",
+        "integrators": [
+          "Рокет Контрол"
         ]
       }
     ]
   },
   {
     "id": 55,
-    "name": "Технология 55 (высокая готовность, малый размер)",
+    "name": "ЛИМС",
     "directions": [
       1
     ],
-    "block": 1,
+    "blocks": [1, 2, 3],
     "functionCoverage": [
-      "Маркшейдерские работы"
-    ],
-    "description": "Технология с высокой готовностью",
-    "enterprises": [
-      {
-        "enterpriseId": 1,
-        "technologicalReadiness": 3,
-        "organizationalReadiness": 1,
-        "status": "Невнедренна"
-      }
-    ],
-    "trlStage": 2,
-    "funcCover": 1,
-    "vendors": [
-      {
-        "name": "Вендор DM",
-        "integrators": [
-          "Интегратор 117"
-        ]
-      }
-    ]
-  },
-  {
-    "id": 56,
-    "name": "Технология 56 (средняя готовность, малый размер)",
-    "directions": [
-      1
-    ],
-    "block": 1,
-    "functionCoverage": [
-      "Буровые работы"
-    ],
-    "description": "Технология со средней готовностью",
-    "enterprises": [
-      {
-        "enterpriseId": 6,
-        "technologicalReadiness": 2,
-        "organizationalReadiness": 1,
-        "status": "Невнедренна"
-      }
-    ],
-    "trlStage": 1,
-    "funcCover": 1,
-    "vendors": [
-      {
-        "name": "Вендор DN",
-        "integrators": [
-          "Интегратор 118"
-        ]
-      }
-    ]
-  },
-  {
-    "id": 57,
-    "name": "Технология 57 (низкая готовность, большой размер)",
-    "directions": [
-      1
-    ],
-    "blocks": [
-      1,
-      2
-    ],
-    "functionCoverage": [
-      "Маркшейдерские работы",
-      "Буровые работы",
-      "Лабораторные исследования",
-      "Взрывные работы"
-    ],
-    "description": "Технология с низкой готовностью",
-    "enterprises": [
-      {
-        "enterpriseId": 2,
-        "technologicalReadiness": 0,
-        "organizationalReadiness": 1,
-        "status": "Невнедренна"
-      }
-    ],
-    "trlStage": 1,
-    "funcCover": 2,
-    "vendors": [
-      {
-        "name": "Вендор DO",
-        "integrators": [
-          "Интегратор 119"
-        ]
-      }
-    ]
-  },
-  {
-    "id": 58,
-    "name": "Технология 58 (высокая готовность, большой размер)",
-    "directions": [
-      1
-    ],
-    "block": 1,
-    "functionCoverage": [
-      "Маркшейдерские работы",
-      "Буровые работы",
       "Лабораторные исследования"
     ],
-    "description": "Технология с высокой готовностью",
+    "description": "Лабораторная информационная менеджмент система",
     "enterprises": [
       {
+        "enterpriseId": 2,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      },
+      {
         "enterpriseId": 3,
-        "technologicalReadiness": 2,
-        "organizationalReadiness": 2,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 1,
         "status": "Невнедренна"
       },
       {
         "enterpriseId": 4,
         "technologicalReadiness": 1,
-        "organizationalReadiness": 3,
-        "status": "Невнедренна"
-      },
-      {
-        "enterpriseId": 5,
-        "technologicalReadiness": 3,
         "organizationalReadiness": 1,
         "status": "Невнедренна"
-      }
-    ],
-    "trlStage": 2,
-    "funcCover": 2,
-    "vendors": [
-      {
-        "name": "Вендор DT",
-        "integrators": [
-          "Интегратор 124"
-        ]
-      }
-    ]
-  },
-  {
-    "id": 59,
-    "name": "Технология 59 (средняя готовность, средний размер)",
-    "directions": [
-      1
-    ],
-    "block": 1,
-    "functionCoverage": [
-      "Экскавация",
-      "Транспортировка"
-    ],
-    "description": "Технология со средней готовностью",
-    "enterprises": [
-      {
-        "enterpriseId": 1,
-        "technologicalReadiness": 1,
-        "organizationalReadiness": 3,
-        "status": "Невнедренна"
       },
-      {
-        "enterpriseId": 2,
-        "technologicalReadiness": 3,
-        "organizationalReadiness": 0,
-        "status": "Невнедренна"
-      }
-    ],
-    "trlStage": 1,
-    "funcCover": 1,
-    "vendors": [
-      {
-        "name": "Вендор DX",
-        "integrators": [
-          "Интегратор 128"
-        ]
-      },
-      {
-        "name": "Вендор DY",
-        "integrators": [
-          "Интегратор 129"
-        ]
-      },
-      {
-        "name": "Вендор DZ",
-        "integrators": [
-          "Интегратор 130"
-        ]
-      }
-    ]
-  },
-  {
-    "id": 60,
-    "name": "Технология 60 (низкая готовность, малый размер)",
-    "directions": [
-      1
-    ],
-    "block": 1,
-    "functionCoverage": [
-      "Геологические работы"
-    ],
-    "description": "Технология с низкой готовностью",
-    "enterprises": [
       {
         "enterpriseId": 6,
-        "technologicalReadiness": 0,
-        "organizationalReadiness": 0,
-        "status": "Невнедренна"
-      }
-    ],
-    "trlStage": 1,
-    "funcCover": 0,
-    "vendors": [
-      {
-        "name": "Вендор EA",
-        "integrators": [
-          "Интегратор 131"
-        ]
-      }
-    ]
-  },
-  {
-    "id": 61,
-    "name": "Технология 61 (высокая готовность, средний размер)",
-    "directions": [
-      1
-    ],
-    "block": 1,
-    "functionCoverage": [
-      "Маркшейдерские работы",
-      "Буровые работы"
-    ],
-    "description": "Технология с высокой готовностью",
-    "enterprises": [
-      {
-        "enterpriseId": 3,
-        "technologicalReadiness": 2,
-        "organizationalReadiness": 2,
-        "status": "Невнедренна"
-      },
-      {
-        "enterpriseId": 4,
-        "technologicalReadiness": 3,
-        "organizationalReadiness": 1,
-        "status": "Невнедренна"
-      }
-    ],
-    "trlStage": 2,
-    "funcCover": 2,
-    "vendors": [
-      {
-        "name": "Вендор EB",
-        "integrators": [
-          "Интегратор 132"
-        ]
-      }
-    ]
-  },
-  {
-    "id": 62,
-    "name": "Технология 62 (средняя готовность, большой размер)",
-    "directions": [
-      1
-    ],
-    "blocks": [
-      1,
-      2
-    ],
-    "functionCoverage": [
-      "Лабораторные исследования",
-      "Взрывные работы",
-      "Экскавация"
-    ],
-    "description": "Технология со средней готовностью",
-    "enterprises": [
-      {
-        "enterpriseId": 5,
-        "technologicalReadiness": 1,
-        "organizationalReadiness": 2,
-        "status": "Невнедренна"
-      }
-    ],
-    "trlStage": 1,
-    "funcCover": 2,
-    "vendors": [
-      {
-        "name": "Вендор ED",
-        "integrators": [
-          "Интегратор 134"
-        ]
-      },
-      {
-        "name": "Вендор EE",
-        "integrators": [
-          "Интегратор 135"
-        ]
-      }
-    ]
-  },
-  {
-    "id": 63,
-    "name": "Технология 63 (низкая готовность, средний размер)",
-    "directions": [
-      1
-    ],
-    "block": 1,
-    "functionCoverage": [
-      "Транспортировка",
-      "Геологические работы"
-    ],
-    "description": "Технология с низкой готовностью",
-    "enterprises": [
-      {
-        "enterpriseId": 1,
-        "technologicalReadiness": 0,
-        "organizationalReadiness": 1,
-        "status": "Невнедренна"
-      },
-      {
-        "enterpriseId": 2,
         "technologicalReadiness": 1,
         "organizationalReadiness": 0,
-        "status": "Невнедренна"
-      }
-    ],
-    "trlStage": 1,
-    "funcCover": 1,
-    "vendors": [
-      {
-        "name": "Вендор EI",
-        "integrators": [
-          "Интегратор 139"
-        ]
-      }
-    ]
-  },
-  {
-    "id": 64,
-    "name": "Технология 64 (высокая готовность, малый размер)",
-    "directions": [
-      1
-    ],
-    "block": 1,
-    "functionCoverage": [
-      "Маркшейдерские работы"
-    ],
-    "description": "Технология с высокой готовностью",
-    "enterprises": [
-      {
-        "enterpriseId": 3,
-        "technologicalReadiness": 3,
-        "organizationalReadiness": 2,
         "status": "Невнедренна"
       }
     ],
     "trlStage": 3,
-    "funcCover": 1,
-    "vendors": [
-      {
-        "name": "Вендор EK",
-        "integrators": [
-          "Интегратор 141"
-        ]
-      }
-    ]
-  },
-  {
-    "id": 65,
-    "name": "Технология 65 (средняя готовность, малый размер)",
-    "directions": [
-      1
-    ],
-    "block": 1,
-    "functionCoverage": [
-      "Буровые работы",
-      "Лабораторные исследования"
-    ],
-    "description": "Технология со средней готовностью",
-    "enterprises": [
-      {
-        "enterpriseId": 4,
-        "technologicalReadiness": 2,
-        "organizationalReadiness": 0,
-        "status": "Невнедренна"
-      }
-    ],
-    "trlStage": 2,
-    "funcCover": 2,
-    "vendors": [
-      {
-        "name": "Вендор EL",
-        "integrators": [
-          "Интегратор 142"
-        ]
-      }
-    ]
-  },
-  {
-    "id": 66,
-    "name": "Технология 66 (низкая готовность, большой размер)",
-    "directions": [
-      1
-    ],
-    "block": 1,
-    "functionCoverage": [
-      "Взрывные работы",
-      "Экскавация",
-      "Транспортировка"
-    ],
-    "description": "Технология с низкой готовностью",
-    "enterprises": [
-      {
-        "enterpriseId": 5,
-        "technologicalReadiness": 0,
-        "organizationalReadiness": 1,
-        "status": "Невнедренна"
-      },
-      {
-        "enterpriseId": 6,
-        "technologicalReadiness": 1,
-        "organizationalReadiness": 0,
-        "status": "Невнедренна"
-      }
-    ],
-    "trlStage": 1,
-    "funcCover": 1,
-    "vendors": [
-      {
-        "name": "Вендор EM",
-        "integrators": [
-          "Интегратор 143"
-        ]
-      }
-    ]
-  },
-  {
-    "id": 67,
-    "name": "Технология 67 (высокая готовность, большой размер)",
-    "directions": [
-      1
-    ],
-    "block": 1,
-    "functionCoverage": [
-      "Маркшейдерские работы",
-      "Буровые работы",
-      "Лабораторные исследования",
-      "Взрывные работы"
-    ],
-    "description": "Технология с высокой готовностью",
-    "enterprises": [
-      {
-        "enterpriseId": 1,
-        "technologicalReadiness": 2,
-        "organizationalReadiness": 2,
-        "status": "Невнедренна"
-      },
-      {
-        "enterpriseId": 2,
-        "technologicalReadiness": 1,
-        "organizationalReadiness": 3,
-        "status": "Невнедренна"
-      }
-    ],
-    "trlStage": 2,
-    "funcCover": 3,
-    "vendors": [
-      {
-        "name": "Вендор ER",
-        "integrators": [
-          "Интегратор 148"
-        ]
-      }
-    ]
-  },
-  {
-    "id": 68,
-    "name": "Технология 68 (средняя готовность, средний размер)",
-    "directions": [
-      1
-    ],
-    "block": 1,
-    "functionCoverage": [
-      "Экскавация",
-      "Транспортировка"
-    ],
-    "description": "Технология со средней готовностью",
-    "enterprises": [
-      {
-        "enterpriseId": 3,
-        "technologicalReadiness": 2,
-        "organizationalReadiness": 1,
-        "status": "Невнедренна"
-      },
-      {
-        "enterpriseId": 4,
-        "technologicalReadiness": 1,
-        "organizationalReadiness": 2,
-        "status": "Невнедренна"
-      }
-    ],
-    "trlStage": 1,
-    "funcCover": 1,
-    "vendors": [
-      {
-        "name": "Вендор EW",
-        "integrators": [
-          "Интегратор 153"
-        ]
-      },
-      {
-        "name": "Вендор EX",
-        "integrators": [
-          "Интегратор 154"
-        ]
-      },
-      {
-        "name": "Вендор EY",
-        "integrators": [
-          "Интегратор 155"
-        ]
-      }
-    ]
-  },
-  {
-    "id": 69,
-    "name": "Технология 69 (низкая готовность, малый размер)",
-    "directions": [
-      1
-    ],
-    "block": 1,
-    "functionCoverage": [
-      "Геологические работы"
-    ],
-    "description": "Технология с низкой готовностью",
-    "enterprises": [
-      {
-        "enterpriseId": 5,
-        "technologicalReadiness": 0,
-        "organizationalReadiness": 0,
-        "status": "Невнедренна"
-      }
-    ],
-    "trlStage": 1,
-    "funcCover": 0,
-    "vendors": [
-      {
-        "name": "Вендор EZ",
-        "integrators": [
-          "Интегратор 156"
-        ]
-      }
-    ]
-  },
-  {
-    "id": 70,
-    "name": "Технология 70 (высокая готовность, средний размер)",
-    "directions": [
-      1
-    ],
-    "block": 1,
-    "functionCoverage": [
-      "Маркшейдерские работы",
-      "Буровые работы"
-    ],
-    "description": "Технология с высокой готовностью",
-    "enterprises": [
-      {
-        "enterpriseId": 6,
-        "technologicalReadiness": 2,
-        "organizationalReadiness": 3,
-        "status": "Невнедренна"
-      },
-      {
-        "enterpriseId": 1,
-        "technologicalReadiness": 3,
-        "organizationalReadiness": 1,
-        "status": "Невнедренна"
-      }
-    ],
-    "trlStage": 2,
-    "funcCover": 2,
-    "vendors": [
-      {
-        "name": "Вендор FA",
-        "integrators": [
-          "Интегратор 157"
-        ]
-      }
-    ]
+    "vendors": []
   }
 ]

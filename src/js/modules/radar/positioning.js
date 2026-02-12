@@ -10,7 +10,7 @@
   // ОБНОВЛЕНО (2026-01-29): Кеш для расчетов позиций технологий
   // Кеширует результаты расчета позиций для улучшения производительности
   const positionCache = new Map();
-  const CACHE_VERSION = '2.2'; // Версия кеша для инвалидации при изменении модели (обновлено: равномерное распределение углов по квадранту)
+  const CACHE_VERSION = '2.3'; // Версия кеша (обновлено: веса techRead/organRead 0.35, trlStage 0.10)
   const CACHE_STORAGE_KEY = 'rmk_position_cache'; // Ключ для localStorage
   const CACHE_STORAGE_VERSION_KEY = 'rmk_position_cache_version'; // Ключ для версии кеша
 
@@ -52,8 +52,8 @@
           const enterpriseId = (e.enterpriseId ?? '');
           const techR = (e.technologicalReadiness ?? '');
           const organR = (e.organizationalReadiness ?? '');
-          const status = String(e.status || '').toLowerCase();
-          const isImplemented = (e.isImplemented === true) || status.includes('внедрен');
+          const status = String(e.status || '').trim().toLowerCase();
+          const isImplemented = (e.isImplemented === true) || status === 'внедрена' || status === 'внедренна';
           return `${enterpriseId}:${techR}:${organR}:${isImplemented ? 1 : 0}`;
         })
         .sort()
@@ -584,13 +584,14 @@
     // Параметры можно переопределить через window.RadarModelConfig
 
     // Веса факторов (w_k)
-    // Все факторы положительные - "приближающие" (уменьшают радиус)
-    // Веса скалиброваны так, чтобы их сумма = 1.0 для корректного диапазона
+    // Все факторы положительные - "приближающие" (уменьшают радиус).
+    // Готовность по предприятиям (techRead, organRead) имеет больший вес, чтобы при низких
+    // оценках технология не смещалась к центру из-за одного высокого TRL.
     const defaultWeights = {
-      techRead: 0.30,      // Технологическая готовность (0-3) → положительный
-      organRead: 0.30,     // Организационная готовность (0-3) → положительный
-      funcCover: 0.20,     // Покрытие функций (0-3) → положительный
-      trlStage: 0.20       // TRL стадия (1-3) → положительный
+      techRead: 0.35,      // Технологическая готовность предприятия (0-3)
+      organRead: 0.35,     // Организационная готовность предприятия (0-3)
+      funcCover: 0.20,     // Покрытие функций (0-3)
+      trlStage: 0.10       // TRL стадия (1-3) — общая зрелость технологии
     };
 
     // Получаем веса из конфигурации или используем значения по умолчанию
@@ -714,23 +715,51 @@
     const nonImplementedEnterprises = filteredEnterprises.filter(ent => {
       if (!ent || typeof ent !== 'object') return false;
 
-      // Проверяем статус внедрения
-      const status = String(ent.status || '').toLowerCase();
-      const isImplemented = ent.isImplemented === true ||
-        status.includes('внедрен');
+      // Проверяем статус внедрения (только "Внедрена"/"Внедренна", не "Невнедренна")
+      const status = String(ent.status || '').trim().toLowerCase();
+      const isImplemented = ent.isImplemented === true || status === 'внедрена' || status === 'внедренна';
 
       return !isImplemented;
     });
 
-    // Если все предприятия внедрены, возвращаем null для techRead и organRead
-    // Технология не будет показана на радаре (или будет показана через фильтр "Внедренные")
+    // Если все предприятия внедрены, считаем techRead/organRead по внедрённым предприятиям
+    // (для корректной позиции и отсутствия подсветки "нет оценок" при фильтре "Внедренные")
     if (nonImplementedEnterprises.length === 0 && filteredEnterprises.length > 0) {
-      // Все предприятия внедрены - не учитываем их для позиционирования
-      techRead = null;
-      organRead = null;
+      let sumTechRead = 0;
+      let sumOrganRead = 0;
+      let countTechRead = 0;
+      let countOrganRead = 0;
+      filteredEnterprises.forEach(ent => {
+        if (ent && typeof ent === 'object') {
+          const techReadValue = validateAndNormalizeFactor(
+            ent.technologicalReadiness,
+            `technologicalReadiness (tech.id=${tech.id || 'unknown'})`,
+            0,
+            3,
+            null
+          );
+          const organReadValue = validateAndNormalizeFactor(
+            ent.organizationalReadiness,
+            `organizationalReadiness (tech.id=${tech.id || 'unknown'})`,
+            0,
+            3,
+            null
+          );
+          if (techReadValue !== null) {
+            sumTechRead += techReadValue;
+            countTechRead++;
+          }
+          if (organReadValue !== null) {
+            sumOrganRead += organReadValue;
+            countOrganRead++;
+          }
+        }
+      });
+      if (countTechRead > 0) techRead = sumTechRead / countTechRead;
+      if (countOrganRead > 0) organRead = sumOrganRead / countOrganRead;
 
       if (window.Logger && typeof window.Logger.debug === 'function') {
-        window.Logger.debug(`[Positioning] Технология ${tech.id || 'unknown'} полностью внедрена, исключена из расчета позиции`);
+        window.Logger.debug(`[Positioning] Технология ${tech.id || 'unknown'} полностью внедрена, оценки для позиции взяты по ${filteredEnterprises.length} предприятиям`);
       }
     } else if (nonImplementedEnterprises.length > 0) {
       // Вычисляем среднее значение technologicalReadiness и organizationalReadiness

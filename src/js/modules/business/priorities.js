@@ -270,9 +270,15 @@
     // Фильтрация по статусу внедрения на панели
     const implementationButtons = Array.from(quadrantPriorityPanel.querySelectorAll('.qp-filter-btn'));
 
-    // Если ни одна кнопка не активна, активируем все
+    // По умолчанию показываем только "Невнедренные".
+    // Если пользователь отключил все статусы — возвращаемся к дефолту (только "Невнедренные"),
+    // чтобы "Внедренные" не включались автоматически.
     if (!implementationButtons.some(btn => btn.classList.contains('active'))) {
-      implementationButtons.forEach(btn => btn.classList.add('active'));
+      implementationButtons.forEach(btn => btn.classList.remove('active'));
+      const nonImplBtn = implementationButtons.find(btn =>
+        String(btn.getAttribute('data-implementation-status') || '').trim() === 'Невнедренные'
+      );
+      if (nonImplBtn) nonImplBtn.classList.add('active');
     }
 
     const activeImplementationStatuses = implementationButtons
@@ -298,13 +304,17 @@
           const ratings = t.companyRatings[companies[0]];
           isImplemented = ratings && ratings.isImplemented === true;
         } else {
-          isImplemented = t.isImplemented === true;
+          const statusLower = String(t.status || t.level || '').trim().toLowerCase();
+          isImplemented = t.isImplemented === true || statusLower === 'внедрена' || statusLower === 'внедренна';
         }
       }
 
       const implementationStatus = isImplemented ? 'Внедренные' : 'Невнедренные';
       return activeImplementationStatuses.includes(implementationStatus);
     });
+
+    // Сортируем по названию по алфавиту (русская локаль)
+    filteredTechs.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ru'));
 
     // Строим список технологий
     qpListEl.innerHTML = '';
@@ -423,9 +433,13 @@
       qpTitleEl.textContent = `${getQuadrantName(qId)}`;
     }
 
-    // Устанавливаем все кнопки статусов внедрения активными по умолчанию
-    const implementationButtons = quadrantPriorityPanel.querySelectorAll('.qp-filter-btn');
-    implementationButtons.forEach(btn => btn.classList.add('active'));
+    // По умолчанию в модальном окне приоритетов показываем только "Невнедренные".
+    const implementationButtons = Array.from(quadrantPriorityPanel.querySelectorAll('.qp-filter-btn'));
+    implementationButtons.forEach(btn => btn.classList.remove('active'));
+    const nonImplBtn = implementationButtons.find(btn =>
+      String(btn.getAttribute('data-implementation-status') || '').trim() === 'Невнедренные'
+    );
+    if (nonImplBtn) nonImplBtn.classList.add('active');
 
     recomputeQuadrantPriorityList(qId);
   }

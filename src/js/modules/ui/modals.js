@@ -132,6 +132,11 @@
             // В addTechPanel поля имеют префикс tech* (techSector, techBlock, techFunc, ...)
             window.resetCustomSelects('tech');
           }
+          // Сбрасываем блок «интеграторы по вендору», чтобы при следующем открытии он не показывал старый выбор
+          const techVendorIntegratorsByVendor = document.getElementById('techVendorIntegratorsByVendor');
+          if (techVendorIntegratorsByVendor) techVendorIntegratorsByVendor.innerHTML = '';
+          const techVendorIntegratorsGroup = document.getElementById('techVendorIntegratorsGroup');
+          if (techVendorIntegratorsGroup) techVendorIntegratorsGroup.style.display = 'none';
           const functionsContainer = DOMCache.get('functionsContainer');
           if (functionsContainer) functionsContainer.innerHTML = '';
           const companyRatingsContainer = DOMCache.get('techCompanyRatingsContainer');
@@ -161,6 +166,11 @@
           if (typeof window.resetCustomSelects === 'function') {
             window.resetCustomSelects('edit');
           }
+          // Сбрасываем блок «интеграторы по вендору»
+          const editVendorIntegratorsByVendor = document.getElementById('editVendorIntegratorsByVendor');
+          if (editVendorIntegratorsByVendor) editVendorIntegratorsByVendor.innerHTML = '';
+          const editVendorIntegratorsGroup = document.getElementById('editVendorIntegratorsGroup');
+          if (editVendorIntegratorsGroup) editVendorIntegratorsGroup.style.display = 'none';
           // Сбрасываем файлы
           const filesList = DOMCache.get('editFilesList');
           if (filesList) filesList.innerHTML = '';

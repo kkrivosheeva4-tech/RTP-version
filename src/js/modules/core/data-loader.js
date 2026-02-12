@@ -525,10 +525,14 @@
                 ? normalizeReadiness(ent.organizationalReadiness)
                 : null;
 
+              // Признак внедрения: учитываем оба варианта написания — "Внедрена" и "Внедренна"
+              const statusLower = String(ent.status || '').trim().toLowerCase();
+              const isImplemented = statusLower === 'внедрена' || statusLower === 'внедренна';
+
               companyRatings[companyName] = {
                 techRead: techReadValue,
                 organRead: organReadValue,
-                isImplemented: ent.status === 'Внедрена'
+                isImplemented: isImplemented
               };
             }
           });
@@ -642,12 +646,13 @@
             return Math.max(1, Math.min(3, trl));
           })() : null,
           // Преобразуем статус в формат, ожидаемый приложением
-          // "Внедрена" -> "Используемые", "Невнедренна" -> зависит от TRL
+          // "Внедрена"/"Внедренна" -> "Используемые", "Невнедренна" -> зависит от TRL
           status: tech.status || '',
           level: (() => {
-            if (tech.status === 'Внедрена') {
+            const techStatusNorm = String(tech.status || '').trim().toLowerCase();
+            if (techStatusNorm === 'внедрена' || techStatusNorm === 'внедренна') {
               return 'Используемые';
-            } else if (tech.status === 'Невнедренна') {
+            } else if (techStatusNorm === 'невнедренна' || techStatusNorm === 'невнедрена') {
               // Для невнедренных технологий определяем уровень по TRL
               const trl = tech.trlStage != null ? Number(tech.trlStage) : null;
               if (trl != null && !Number.isNaN(trl)) {
