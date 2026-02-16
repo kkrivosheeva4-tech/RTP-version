@@ -63,34 +63,77 @@
     return [];
   }
 
-  // Получить все технологии
+  // Получить все технологии (StateAccessors — основной источник)
   function getAllTechnologies() {
-    // Пробуем получить через StateManager
-    if (window.StateManager) {
-      const techs = window.StateManager.get('technologies');
-      if (Array.isArray(techs) && techs.length > 0) {
-        return techs;
-      }
+    if (window.StateAccessors && typeof window.StateAccessors.getTechnologies === 'function') {
+      const techs = window.StateAccessors.getTechnologies();
+      if (Array.isArray(techs) && techs.length > 0) return techs;
     }
-    // Fallback на window.getTechnologies
+    if (window.StateManager && typeof window.StateManager.get === 'function') {
+      const techs = window.StateManager.get('technologies');
+      if (Array.isArray(techs) && techs.length > 0) return techs;
+    }
     if (typeof window.getTechnologies === 'function') {
       const techs = window.getTechnologies();
-      if (Array.isArray(techs) && techs.length > 0) {
-        return techs;
-      }
-    }
-    // Fallback на window.technologies
-    if (Array.isArray(window.technologies) && window.technologies.length > 0) {
-      return window.technologies;
+      if (Array.isArray(techs) && techs.length > 0) return techs;
     }
     return [];
+  }
+
+  // Справочники — через StateAccessors (window.* устарел)
+  function getBlocksListFromState() {
+    if (window.StateAccessors && typeof window.StateAccessors.getBlocksList === 'function') {
+      const list = window.StateAccessors.getBlocksList();
+      return Array.isArray(list) ? list : [];
+    }
+    if (window.StateManager && typeof window.StateManager.get === 'function') {
+      const list = window.StateManager.get('blocksList');
+      return Array.isArray(list) ? list : [];
+    }
+    return [];
+  }
+
+  function getFunctionsFromState() {
+    if (window.StateAccessors && typeof window.StateAccessors.getFunctions === 'function') {
+      const list = window.StateAccessors.getFunctions();
+      return Array.isArray(list) ? list : [];
+    }
+    if (window.StateManager && typeof window.StateManager.get === 'function') {
+      const list = window.StateManager.get('functions');
+      return Array.isArray(list) ? list : [];
+    }
+    return [];
+  }
+
+  function getNameToBlockIdFromState() {
+    if (window.StateAccessors && typeof window.StateAccessors.getNameToBlockId === 'function') {
+      const map = window.StateAccessors.getNameToBlockId();
+      return map && typeof map === 'object' ? map : {};
+    }
+    if (window.StateManager && typeof window.StateManager.get === 'function') {
+      const map = window.StateManager.get('nameToBlockId');
+      return map && typeof map === 'object' ? map : {};
+    }
+    return {};
+  }
+
+  function getFunctionToBlockMapFromState() {
+    if (window.StateAccessors && typeof window.StateAccessors.getFunctionToBlockMap === 'function') {
+      const map = window.StateAccessors.getFunctionToBlockMap();
+      return map && typeof map === 'object' ? map : {};
+    }
+    if (window.StateManager && typeof window.StateManager.get === 'function') {
+      const map = window.StateManager.get('functionToBlockMap');
+      return map && typeof map === 'object' ? map : {};
+    }
+    return {};
   }
 
   // Получить все уникальные блоки из технологий
   function getAllUniqueBlocks(allTechnologies) {
     const blocksSet = new Set();
     const blockIdToName = window.blockIdToName || {};
-    const nameToBlockId = window.nameToBlockId || {};
+    const nameToBlockId = getNameToBlockIdFromState();
 
     allTechnologies.forEach(tech => {
       if (!tech) return;
@@ -541,8 +584,10 @@
 
   // Обновить фильтр функций по выбранным блокам
   function updateFunctionFilterForBlock(blockNames) {
-    if (typeof window.functions === 'undefined' || !window.functions || window.functions.length === 0) return;
-    if (typeof window.functionToBlockMap === 'undefined' || !window.functionToBlockMap || Object.keys(window.functionToBlockMap).length === 0) return;
+    const functions = getFunctionsFromState();
+    const functionToBlockMap = getFunctionToBlockMapFromState();
+    if (!functions.length) return;
+    if (!functionToBlockMap || Object.keys(functionToBlockMap).length === 0) return;
 
     const select = document.querySelector('.custom-select[data-filter="function"]');
     if (!select) return;
@@ -561,17 +606,18 @@
     // Сначала фильтруем функции по выбранным предприятиям
     let filteredFunctions = selectedEnterprises.length > 0
       ? getFunctionsForEnterprises(selectedEnterprises, allTechnologies)
-      : window.functions;
+      : getFunctionsFromState();
 
     // Затем фильтруем функции по выбранным блокам
+    const nameToBlockId = getNameToBlockIdFromState();
     const blockNamesArray = Array.isArray(blockNames) ? blockNames : (blockNames ? [blockNames] : []);
-    if (blockNamesArray.length > 0 && typeof window.nameToBlockId !== 'undefined' && window.nameToBlockId) {
+    if (blockNamesArray.length > 0 && nameToBlockId && Object.keys(nameToBlockId).length > 0) {
       const selectedBlockIds = blockNamesArray
-        .map(blockName => window.nameToBlockId[blockName])
+        .map(blockName => nameToBlockId[blockName])
         .filter(id => id != null);
       if (selectedBlockIds.length > 0) {
         filteredFunctions = filteredFunctions.filter(funcName => {
-          const blockIds = window.functionToBlockMap[funcName];
+          const blockIds = functionToBlockMap[funcName];
           if (!blockIds) return false;
           const funcBlockIds = Array.isArray(blockIds) ? blockIds : [blockIds];
           return funcBlockIds.some(id => selectedBlockIds.includes(id));
@@ -628,11 +674,11 @@
     const currentSelectedFunctions = getFilterValues('function');
 
     // Обновляем фильтр блоков - populateSelect сам учтет выбранные предприятия
+    const blocksList = getBlocksListFromState();
     const blockSelect = document.querySelector('.custom-select[data-filter="block"]');
-    if (blockSelect && typeof window.blocksList !== 'undefined' && window.blocksList) {
+    if (blockSelect && blocksList.length > 0) {
       const placeholder = blockSelect.getAttribute('data-placeholder') || 'Функциональный блок';
-      // Передаем полный список - populateSelect сам отфильтрует по предприятиям
-      populateSelect('block', window.blocksList, placeholder);
+      populateSelect('block', blocksList, placeholder);
 
       // Восстанавливаем выбранные блоки, если они все еще доступны
       if (currentSelectedBlocks.length > 0) {
@@ -685,11 +731,11 @@
     }
 
     // Обновляем фильтр функций - populateSelect сам учтет выбранные предприятия и блоки
+    const functionsList = getFunctionsFromState();
     const functionSelect = document.querySelector('.custom-select[data-filter="function"]');
-    if (functionSelect && typeof window.functions !== 'undefined' && window.functions) {
+    if (functionSelect && functionsList.length > 0) {
       const placeholder = functionSelect.getAttribute('data-placeholder') || 'Функция';
-      // Передаем полный список - populateSelect сам отфильтрует по предприятиям и блокам
-      populateSelect('function', window.functions, placeholder);
+      populateSelect('function', functionsList, placeholder);
 
       // Восстанавливаем выбранные функции, если они все еще доступны
       if (currentSelectedFunctions.length > 0) {
@@ -698,17 +744,19 @@
         const allTechnologies = getAllTechnologies();
         let availableFunctions = selectedEnterprises.length > 0
           ? getFunctionsForEnterprises(selectedEnterprises, allTechnologies)
-          : window.functions;
+          : getFunctionsFromState();
 
         // Применяем дополнительную фильтрацию по блокам, если они выбраны
         const selectedBlocks = getFilterValues('block');
-        if (selectedBlocks.length > 0 && typeof window.nameToBlockId !== 'undefined' && window.nameToBlockId && typeof window.functionToBlockMap !== 'undefined' && window.functionToBlockMap) {
+        const nameToBlockIdForBlocks = getNameToBlockIdFromState();
+        const functionToBlockMapForBlocks = getFunctionToBlockMapFromState();
+        if (selectedBlocks.length > 0 && nameToBlockIdForBlocks && Object.keys(nameToBlockIdForBlocks).length > 0 && functionToBlockMapForBlocks && Object.keys(functionToBlockMapForBlocks).length > 0) {
           const selectedBlockIds = selectedBlocks
-            .map(blockName => window.nameToBlockId[blockName])
+            .map(blockName => nameToBlockIdForBlocks[blockName])
             .filter(id => id != null);
           if (selectedBlockIds.length > 0) {
             availableFunctions = availableFunctions.filter(funcName => {
-              const blockIds = window.functionToBlockMap[funcName];
+              const blockIds = functionToBlockMapForBlocks[funcName];
               if (!blockIds) return false;
               const funcBlockIds = Array.isArray(blockIds) ? blockIds : [blockIds];
               return funcBlockIds.some(id => selectedBlockIds.includes(id));
@@ -753,7 +801,8 @@
 
   // Обновить фильтр блоков по зуммированному квадранту
   function updateBlockFilterForZoomedQuadrant(quadrantId) {
-    if (typeof window.blocksList === 'undefined' || !window.blocksList || window.blocksList.length === 0) return;
+    const blocksList = getBlocksListFromState();
+    if (!blocksList.length) return;
 
     const select = document.querySelector('.custom-select[data-filter="block"]');
     if (!select) return;
@@ -766,11 +815,11 @@
     const currentSelected = getFilterValues('block');
 
     // Фильтруем блоки по квадранту, если есть зум
-    let filteredBlocks = window.blocksList;
+    let filteredBlocks = blocksList;
     if (quadrantId != null) {
       const getQuadrantIdForBlock = window.Positioning?.getQuadrantIdForBlock;
       if (getQuadrantIdForBlock) {
-        filteredBlocks = window.blocksList.filter(blockName => {
+        filteredBlocks = blocksList.filter(blockName => {
           const blockQuadrantId = getQuadrantIdForBlock(blockName);
           return blockQuadrantId === quadrantId;
         });

@@ -342,7 +342,7 @@
       };
     }
 
-    // Обработчик графика (prospects-chart) доступен только на RMK-director.html
+    // Обработчик графика (prospects-chart) доступен только на странице радара (radar.html)
     if (chartIconBtn && document.body.id !== 'rmk-director') {
       chartIconBtn.onclick = (e) => {
         e.preventDefault();

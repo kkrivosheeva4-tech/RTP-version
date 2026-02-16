@@ -1,150 +1,14 @@
-// Модуль загрузки данных
-// Экспортирует функции в window.DataLoader для использования в RMK2.js
-// Использует глобальные переменные из RMK2.js и функции из других модулей
+// Модуль загрузки данных (оркестрация)
+// VFS и fetch — в data-source.js; нормализация — в data-normalize.js; инициализация фильтров — в filter-init.js
 
 (function () {
   'use strict';
 
-
-  // ===== VFS: virtual file system using localStorage =====
-  function vfsKey(filename) {
-    return `vfs:${filename}`;
-  }
-
-  function vfsRead(filename) {
-    try {
-      const raw = localStorage.getItem(vfsKey(filename));
-      if (!raw) return null;
-      return JSON.parse(raw);
-    } catch (e) {
-      if (window.Logger) window.Logger.warn('vfsRead parse error', e);
-      return null;
-    }
-  }
-
-  function vfsWrite(filename, data) {
-    try {
-      localStorage.setItem(vfsKey(filename), JSON.stringify(data));
-      if (window.Logger) window.Logger.debug(`vfsWrite: ${filename} saved to localStorage`);
-      return true;
-    } catch (e) {
-      // Ошибка записи в VFS
-      return false;
-    }
-  }
-
-  // ===== СЕТЬ И КЭШ ОТВЕТОВ =====
-  // Кэшируем ответы fetch и дедуплицируем параллельные запросы, чтобы сократить трафик
-  const FETCH_CACHE_TTL_MS = 5 * 60 * 1000; // 5 минут
-  const DEFAULT_FETCH_TIMEOUT_MS = 8000;
-  const fetchCache = new Map();
-  const inflightFetches = new Map();
-
-  function clearFetchCache() {
-    fetchCache.clear();
-    inflightFetches.clear();
-  }
-
-  // Функция для ручного сброса VFS (локальных изменений пользователя)
-  function clearVfsCache() {
-    try {
-      const vfsKeys = Object.keys(localStorage).filter(key => key.startsWith('vfs:'));
-      vfsKeys.forEach(key => localStorage.removeItem(key));
-      if (window.Logger) window.Logger.debug(`Очищено ${vfsKeys.length} ключей VFS из localStorage`);
-      return vfsKeys.length;
-    } catch (e) {
-      // Ошибка при очистке VFS
-      return 0;
-    }
-  }
-
-  async function fetchJsonWithCache(url, { ttl = FETCH_CACHE_TTL_MS, timeout = DEFAULT_FETCH_TIMEOUT_MS } = {}) {
-    const now = Date.now();
-    const cached = fetchCache.get(url);
-    if (cached && cached.expiresAt > now) {
-      return cached.data;
-    }
-
-    if (inflightFetches.has(url)) {
-      return inflightFetches.get(url);
-    }
-
-    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    const timerId = timeout ? setTimeout(() => controller?.abort(), timeout) : null;
-
-    const promise = fetch(url, controller ? { signal: controller.signal } : undefined)
-      .then(async (r) => {
-        if (!r || !r.ok) {
-          throw new Error(`HTTP ${r ? r.status : 'no response'}`);
-        }
-        return r.json();
-      })
-      .then((json) => {
-        fetchCache.set(url, { data: json, expiresAt: now + ttl });
-        return json;
-      })
-      .finally(() => {
-        inflightFetches.delete(url);
-        if (timerId) clearTimeout(timerId);
-      });
-
-    inflightFetches.set(url, promise);
-    return promise;
-  }
-
-  // ===== ЗАГРУЗКА JSON С ПРИОРИТЕТОМ VFS =====
-  async function loadJsonPreferVfs(filename, forceReload = false) {
-    // Если forceReload = true, очищаем кэш для этого файла перед загрузкой
-    if (forceReload) {
-      const paths = [`/src/data/ru/${filename}`, `/src/data/${filename}`];
-      paths.forEach(p => fetchCache.delete(p));
-    }
-
-    // Всегда пытаемся сначала загрузить из data/ru
-    const paths = [`/src/data/ru/${filename}`, `/src/data/${filename}`];
-    for (const p of paths) {
-      try {
-        // Если forceReload, используем fetch напрямую без кэша
-        // Добавляем временную метку к URL для гарантированного обхода кеша браузера
-        let json;
-        if (forceReload) {
-          const urlWithTimestamp = `${p}?t=${Date.now()}`;
-          const response = await fetch(urlWithTimestamp, {
-            cache: 'no-store',
-            headers: {
-              'Cache-Control': 'no-cache, no-store, must-revalidate',
-              'Pragma': 'no-cache'
-            }
-          });
-          if (!response || !response.ok) {
-            throw new Error(`HTTP ${response ? response.status : 'no response'}`);
-          }
-          json = await response.json();
-        } else {
-          json = await fetchJsonWithCache(p, { ttl: FETCH_CACHE_TTL_MS, timeout: DEFAULT_FETCH_TIMEOUT_MS });
-        }
-        if (json) {
-          if (window.Logger) window.Logger.debug(`Загружены данные из файла ${p}:`, json);
-          // Обновляем кэш даже при forceReload, чтобы последующие запросы использовали свежие данные
-          if (forceReload) {
-            fetchCache.set(p, { data: json, expiresAt: Date.now() + FETCH_CACHE_TTL_MS });
-          }
-          return { path: p, data: json };
-        }
-      } catch (err) {
-        if (window.Logger) window.Logger.warn(`Ошибка загрузки ${p}:`, err);
-      }
-    }
-
-    // Только если не удалось загрузить с диска, пробуем из VFS
-    const fromVfs = vfsRead(filename);
-    if (fromVfs !== null) {
-      if (window.Logger) window.Logger.debug(`Загружены данные из VFS для ${filename}:`, fromVfs);
-      return { path: `local:${filename}`, data: fromVfs };
-    }
-
-    return { path: null, data: null };
-  }
+  // VFS и fetch — из data-source.js (загружается до data-loader)
+  const vfsRead = (filename) => (typeof window.vfsRead === 'function' ? window.vfsRead(filename) : null);
+  const vfsWrite = (filename, data) => (typeof window.vfsWrite === 'function' ? window.vfsWrite(filename, data) : false);
+  const loadJsonPreferVfs = (filename, forceReload) => (typeof window.loadJsonPreferVfs === 'function' ? window.loadJsonPreferVfs(filename, forceReload) : Promise.resolve({ path: null, data: null }));
+  const clearFetchCache = () => { if (typeof window.clearFetchCache === 'function') window.clearFetchCache(); };
 
   // Получаем зависимости из других модулей и глобальных переменных (ленивая загрузка)
   const getStateManager = () => {
@@ -162,7 +26,7 @@
   const setState = (key, value) => {
     const sm = getStateManager();
     sm.set(key, value);
-    // Синхронизация с window для обратной совместимости
+    // TODO: убрать после перевода всех потребителей на state. Синхронизация с window для обратной совместимости.
     if (key === 'technologies') window.technologies = value;
     if (key === 'enterpriseData') window.enterpriseData = value;
     if (key === 'currentEnterprise') window.currentEnterprise = value;
@@ -267,53 +131,16 @@
     }
 
     try {
-      // Очищаем только fetch-кэш при загрузке
-      // VFS (vfs:*) НЕ очищаем автоматически, чтобы сохранить пользовательские правки
-      // Для сброса локальных изменений используйте функцию clearVfsCache() или кнопку в UI
       clearFetchCache();
 
-      // Попытаться загрузить и распарсить JSON по наборам путей (data/ и data/ru/). Возвращает { path, data, errors }
-      async function tryFetchAndParse(filename) {
-        const paths = [`/src/data/${filename}`, `/src/data/ru/${filename}`];
-        const errors = [];
-        for (const p of paths) {
-          try {
-            const json = await fetchJsonWithCache(p, { ttl: FETCH_CACHE_TTL_MS, timeout: DEFAULT_FETCH_TIMEOUT_MS });
-            if (json) {
-              return { path: p, data: json };
-            }
-            errors.push(`${p} ответ: нет данных`);
-          } catch (err) {
-            errors.push(`Ошибка fetch(${p}): ${err?.message || err}`);
-          }
-        }
-        return { path: null, data: null, errors };
-      }
-
-      // Load blocks list (prefer VFS, но принудительно перезагружаем с диска)
-      const b1 = await loadJsonPreferVfs('bloks.json', true); // forceReload = true
-      let blocks = b1.data;
-      if (!blocks) {
-        const alt = await loadJsonPreferVfs('blocks.json', true); // forceReload = true
-        if (alt.data) blocks = alt.data;
-      }
-      // Справочники блоков и список имен для селектов
-      const blockIdToName = {};
-      // Используем глобальную переменную nameToBlockId
-      setState('nameToBlockId', {});
-      if (Array.isArray(blocks)) {
-        const nameToBlockId = {};
-        blocks.forEach(b => {
-          const id = b?.id;
-          const nm = b?.name || b;
-          if (nm) {
-            blockIdToName[id] = nm;
-            nameToBlockId[nm] = id;
-          }
-        });
-        setState('nameToBlockId', nameToBlockId);
-      }
-      setState('blocksList', Array.isArray(blocks) ? blocks.map(b => (b && b.name) ? b.name : b).filter(Boolean) : []);
+      // Загрузка blocks (из data-source.js)
+      const b1 = await loadJsonPreferVfs('blocks.json', true);
+      const blocks = b1.data;
+      const { blockIdToName, nameToBlockId, blocksList } = window.DataNormalize && typeof window.DataNormalize.buildBlockMaps === 'function'
+        ? window.DataNormalize.buildBlockMaps(blocks)
+        : { blockIdToName: {}, nameToBlockId: {}, blocksList: [] };
+      setState('nameToBlockId', nameToBlockId);
+      setState('blocksList', blocksList);
 
       const fileNames = [
         'functions.json',
@@ -337,7 +164,7 @@
 
       // Соберём список отсутствующих/непреобразованных файлов
       const missing = [];
-      if (!blocks) missing.push('bloks.json|blocks.json');
+      if (!blocks) missing.push('blocks.json');
       // technologies.json - опциональный файл, не добавляем в missing если его нет
       const optionalFiles = ['technologies.json'];
       for (const fn of fileNames) {
@@ -454,231 +281,10 @@
       }
       setState('enterprisesList', enterprisesData);
 
-      // Функция преобразования технологии из нового формата в формат приложения
-      function normalizeTechnologyFromNewFormat(tech, blockIdToName, enterprisesData) {
-        // Преобразуем block ID в имя
-        // Поддерживаем оба варианта: tech.block (единственное число) и tech.blocks (массив)
-        let blockId = null;
-        let blockIds = [];
-
-        if (Array.isArray(tech.blocks) && tech.blocks.length > 0) {
-          // Если есть массив blocks, используем его
-          blockIds = tech.blocks.map(b => typeof b === 'number' ? b : (typeof b === 'string' ? parseInt(b, 10) : null)).filter(b => b !== null && !isNaN(b));
-          blockId = blockIds.length > 0 ? blockIds[0] : null;
-        } else if (typeof tech.block === 'number') {
-          // Если есть единственное число block
-          blockId = tech.block;
-          blockIds = [tech.block];
-        } else if (typeof tech.block === 'string') {
-          // Если block - строка (имя блока), пытаемся найти ID
-          const foundId = Object.keys(blockIdToName).find(id => blockIdToName[id] === tech.block);
-          if (foundId) {
-            blockId = parseInt(foundId, 10);
-            blockIds = [blockId];
-          }
-        }
-
-        // Преобразуем ID в имя (берем первое имя, если блоков несколько)
-        const blockName = blockId && blockIdToName[blockId] ? blockIdToName[blockId] : (typeof tech.block === 'string' ? tech.block : '');
-
-        // Преобразуем enterprises в company и companyRatings
-        const companies = [];
-        const companyRatings = {};
-
-        if (Array.isArray(tech.enterprises) && tech.enterprises.length > 0) {
-          tech.enterprises.forEach(ent => {
-            const enterpriseId = ent.enterpriseId;
-            // Находим предприятие по ID в полном списке предприятий
-            const enterprise = Array.isArray(enterprisesData)
-              ? enterprisesData.find(e => (typeof e === 'object' && e.id) ? e.id === enterpriseId : false)
-              : null;
-            const companyName = enterprise
-              ? (typeof enterprise === 'object' ? enterprise.name : enterprise)
-              : (enterprisesData[enterpriseId - 1]
-                ? (typeof enterprisesData[enterpriseId - 1] === 'object' ? enterprisesData[enterpriseId - 1].name : enterprisesData[enterpriseId - 1])
-                : `Предприятие ${enterpriseId}`);
-
-            if (companyName) {
-              companies.push(companyName);
-              // Нормализуем значения готовности из диапазона 1-9 в диапазон 0-3
-              // Формула: если значение <= 3, оставляем как есть, иначе нормализуем
-              const normalizeReadiness = (value) => {
-                if (value == null || value === undefined) return null;
-                const num = Number(value);
-                if (Number.isNaN(num)) return null;
-                // Если значение уже в диапазоне 0-3, возвращаем как есть
-                if (num >= 0 && num <= 3) return num;
-                // Если значение в диапазоне 1-9, нормализуем: (value - 1) / 8 * 3
-                if (num >= 1 && num <= 9) {
-                  return Math.round(((num - 1) / 8) * 3);
-                }
-                // Иначе ограничиваем диапазоном 0-3
-                return Math.max(0, Math.min(3, num));
-              };
-
-              // Сохраняем индивидуальные рейтинги для предприятия
-              // Если оценки не указаны (undefined/null), сохраняем null явно
-              const techReadValue = ent.technologicalReadiness !== undefined
-                ? normalizeReadiness(ent.technologicalReadiness)
-                : null;
-              const organReadValue = ent.organizationalReadiness !== undefined
-                ? normalizeReadiness(ent.organizationalReadiness)
-                : null;
-
-              // Признак внедрения: учитываем оба варианта написания — "Внедрена" и "Внедренна"
-              const statusLower = String(ent.status || '').trim().toLowerCase();
-              const isImplemented = statusLower === 'внедрена' || statusLower === 'внедренна';
-
-              companyRatings[companyName] = {
-                techRead: techReadValue,
-                organRead: organReadValue,
-                isImplemented: isImplemented
-              };
-            }
-          });
-        }
-
-        // Если у технологии одно предприятие, устанавливаем общие techRead и organRead
-        // из первого предприятия для обратной совместимости
-        let techRead = null;
-        let organRead = null;
-        if (companies.length === 1 && Object.keys(companyRatings).length > 0) {
-          const firstCompanyName = companies[0];
-          const firstCompanyRatings = companyRatings[firstCompanyName];
-          if (firstCompanyRatings) {
-            techRead = firstCompanyRatings.techRead;
-            organRead = firstCompanyRatings.organRead;
-          }
-        } else if (tech.enterprises && tech.enterprises.length > 0) {
-          // Если нет companyRatings, но есть enterprises, берем из первого
-          const normalizeReadiness = (value) => {
-            if (value == null || value === undefined) return null;
-            const num = Number(value);
-            if (Number.isNaN(num)) return null;
-            if (num >= 0 && num <= 3) return num;
-            if (num >= 1 && num <= 9) {
-              return Math.round(((num - 1) / 8) * 3);
-            }
-            return Math.max(0, Math.min(3, num));
-          };
-          const firstEnt = tech.enterprises[0];
-          techRead = normalizeReadiness(firstEnt.technologicalReadiness);
-          organRead = normalizeReadiness(firstEnt.organizationalReadiness);
-        }
-
-        // Преобразуем functionCoverage (массив) в funcCover (число 0-3)
-        // Используем новую логику с учетом процентного покрытия блока
-        let funcCover = null;
-
-        // Определяем блоки технологии (используем уже вычисленные blockIds)
-        const techBlockIds = blockIds;
-
-        // ВАЖНО: funcCover будет рассчитан асинхронно позже
-        // Для начальной загрузки используем старую логику как fallback
-        if (Array.isArray(tech.functionCoverage) && tech.functionCoverage.length > 0) {
-          const funcCount = tech.functionCoverage.length;
-          if (funcCount === 1) {
-            funcCover = 1;
-          } else if (funcCount >= 2 && funcCount <= 3) {
-            funcCover = 2;
-          } else if (funcCount >= 4) {
-            funcCover = 3;
-          }
-
-          // Асинхронно пересчитываем funcCover с учетом блоков
-          // Это обновит значение после загрузки данных
-          if (window.FuncCoverUtils && typeof window.FuncCoverUtils.calculateFuncCover === 'function') {
-            window.FuncCoverUtils.calculateFuncCover(tech.functionCoverage, techBlockIds)
-              .then(calculatedFuncCover => {
-                // Обновляем значение в уже созданном объекте
-                if (normalized && normalized.id === tech.id) {
-                  normalized.funcCover = calculatedFuncCover;
-                  // Обновлен funcCover для технологии
-                }
-              })
-              .catch(err => {
-                // Ошибка расчета funcCover
-              });
-          }
-        }
-
-        // Преобразуем documentationFiles в files
-        const files = Array.isArray(tech.documentationFiles)
-          ? tech.documentationFiles.map(path => ({ path, name: path.split('/').pop() }))
-          : [];
-
-        // Преобразуем все blockIds в имена блоков
-        const blockNames = blockIds
-          .map(id => blockIdToName[id] || null)
-          .filter(name => name !== null);
-
-        // Создаем нормализованный объект технологии
-        const normalized = {
-          id: tech.id,
-          name: tech.name || '',
-          description: tech.description || '',
-          exampleDesc: tech.marketExamples ? (Array.isArray(tech.marketExamples) ? tech.marketExamples.join('\n') : tech.marketExamples) : '',
-          block: blockName, // Первый блок для обратной совместимости
-          blocks: blockNames, // Все блоки
-          func: tech.function || '',
-          functions: Array.isArray(tech.functionCoverage) && tech.functionCoverage.length > 0
-            ? tech.functionCoverage
-            : (tech.function ? [tech.function] : []),
-          directions: Array.isArray(tech.directions) ? tech.directions : [],
-          direction: Array.isArray(tech.directions) && tech.directions.length > 0 ? tech.directions[0] : '',
-          company: companies.length > 0 ? (companies.length === 1 ? companies[0] : companies) : [],
-          companyRatings: Object.keys(companyRatings).length > 0 ? companyRatings : undefined,
-          techRead: techRead,
-          organRead: organRead,
-          funcCover: funcCover,
-          // Нормализуем TRL из диапазона 1-9 в диапазон 1-3 по стандартной шкале TRL:
-          // Если значение уже в диапазоне 1-3, оставляем как есть
-          // TRL 1-3 → 1-3 (оставляем без изменений), TRL 4-6 → 2 (Прототип), TRL 7-9 → 3 (Готова к внедрению)
-          trlStage: tech.trlStage != null ? (() => {
-            const trl = Number(tech.trlStage);
-            if (Number.isNaN(trl)) return null;
-            // Если значение уже в диапазоне 1-3, оставляем как есть
-            if (trl >= 1 && trl <= 3) return trl;
-            // Если значение в диапазоне 4-9, преобразуем в диапазон 1-3
-            if (trl >= 4 && trl <= 6) return 2;
-            if (trl >= 7 && trl <= 9) return 3;
-            // Для других значений ограничиваем диапазоном 1-3
-            return Math.max(1, Math.min(3, trl));
-          })() : null,
-          // Преобразуем статус в формат, ожидаемый приложением
-          // "Внедрена"/"Внедренна" -> "Используемые", "Невнедренна" -> зависит от TRL
-          status: tech.status || '',
-          level: (() => {
-            const techStatusNorm = String(tech.status || '').trim().toLowerCase();
-            if (techStatusNorm === 'внедрена' || techStatusNorm === 'внедренна') {
-              return 'Используемые';
-            } else if (techStatusNorm === 'невнедренна' || techStatusNorm === 'невнедрена') {
-              // Для невнедренных технологий определяем уровень по TRL
-              const trl = tech.trlStage != null ? Number(tech.trlStage) : null;
-              if (trl != null && !Number.isNaN(trl)) {
-                if (trl >= 7 && trl <= 9) {
-                  return 'Внедряемые'; // Готова к внедрению
-                } else {
-                  return 'Перспективные'; // Еще в разработке
-                }
-              } else {
-                return 'Перспективные'; // По умолчанию
-              }
-            } else {
-              return tech.status || 'Перспективные';
-            }
-          })(),
-          vendors: Array.isArray(tech.vendors) ? tech.vendors : [],
-          integrators: Array.isArray(tech.integrators) ? tech.integrators : [],
-          files: files,
-          techType: '',
-          // Сохраняем оригинальные данные для обратной совместимости
-          technologicalReadiness: tech.enterprises && tech.enterprises.length > 0 ? tech.enterprises[0].technologicalReadiness : null,
-          organizationalReadiness: tech.enterprises && tech.enterprises.length > 0 ? tech.enterprises[0].organizationalReadiness : null
-        };
-
-        return normalized;
-      }
+      // Нормализация технологий — из data-normalize.js
+      const normalizeTechnologyFromNewFormat = typeof window.normalizeTechnologyFromNewFormat === 'function'
+        ? window.normalizeTechnologyFromNewFormat
+        : (tech, blockIdToName, enterprisesData) => tech;
 
       // Загружаем технологии из technologies.json
       // ВАЖНО: Сначала загружаем из файла, чтобы видеть изменения в JSON файлах
@@ -761,117 +367,23 @@
         }
       }
 
-      // Заполнение фильтров - отложим до полной готовности DOM
-      // Фильтры будут заполнены в функции initFiltersWithRetry ниже
-
-      // Модальные окна
-      // Список секторов: используем названия квадрантов из направлений
-      let sectorNames = [];
-      if (Array.isArray(QUADRANTS) && QUADRANTS.length) {
-        sectorNames = QUADRANTS.map(q => q && q.name).filter(Boolean);
+      // Инициализация фильтров и модальных селектов — из filter-init.js
+      const directionsList = Array.isArray(digitalDirections) && digitalDirections.length > 0
+        ? digitalDirections.map(d => (d && typeof d === 'object' && d.name) ? d.name : String(d || '')).filter(Boolean)
+        : [];
+      const enterprisesListData = getState('enterprisesList') || [];
+      const enterpriseListForModal = enterprisesListData.length > 0
+        ? enterprisesListData.map(ent => typeof ent === 'string' ? ent : (ent.name || ent))
+        : Object.keys(getState('enterpriseData') || {});
+      if (window.FilterInit && typeof window.FilterInit.initModalSelectsWithDirections === 'function') {
+        window.FilterInit.initModalSelectsWithDirections(
+          directionsList, getState('blocksList') || [], getState('functions') || [],
+          enterpriseListForModal, getState('vendorsList') || []
+        );
       }
-      // Объявляем trlOptions и addTrlTooltips ПЕРЕД использованием, чтобы они были доступны всегда
-      const trlOptions = ['1-Исследовательская', '2-Прототип', '3-Технология готова к внедрению'];
-      const addTrlTooltips = (fieldId) => {
-        const trlSelect = document.querySelector(`.custom-select-modal[data-field="${fieldId}"]`);
-        if (trlSelect) {
-          const options = trlSelect.querySelectorAll('.select-options li[data-value]');
-          const tooltips = {
-            '1-Исследовательская': 'Ранняя исследовательская стадия: технология находится на начальном этапе разработки, концепция только формируется',
-            '2-Прототип': 'Стадия разработки и прототипирования: технология проходит активную разработку, создаются прототипы',
-            '3-Технология готова к внедрению': 'Зрелая стадия: технология готова к внедрению и использованию в производстве'
-          };
-          options.forEach(li => {
-            const value = li.getAttribute('data-value');
-            if (value && tooltips[value]) {
-              li.setAttribute('title', tooltips[value]);
-            }
-          });
-        }
-      };
-      // Опции для оценок готовности (0-3)
-      const ratingOptions = ['0 — Не готова', '1 — Низкая', '2 — Средняя', '3 — Высокая'];
-      const addRatingTooltips = (fieldId, tooltipMap) => {
-        const ratingSelect = document.querySelector(`.custom-select-modal[data-field="${fieldId}"]`);
-        if (ratingSelect) {
-          const options = ratingSelect.querySelectorAll('.select-options li[data-value]');
-          options.forEach(li => {
-            const value = li.getAttribute('data-value');
-            if (value && tooltipMap[value]) {
-              li.setAttribute('title', tooltipMap[value]);
-            }
-          });
-        }
-      };
-      // Маппинг tooltips для различных полей оценок
-      const techReadTooltips = {
-        '0 — Не готова': 'Технология находится на начальной стадии, не применима',
-        '1 — Низкая': 'Начальная стадия разработки, требуется значительная доработка',
-        '2 — Средняя': 'Технология частично готова, требуется доработка',
-        '3 — Высокая': 'Технология готова к применению'
-      };
-      const organReadTooltips = {
-        '0 — Не готова': 'Организация не готова к внедрению',
-        '1 — Низкая': 'Начальный этап подготовки, требуется значительная работа',
-        '2 — Средняя': 'Частичная готовность, требуется дополнительная подготовка',
-        '3 — Высокая': 'Организация полностью готова к внедрению'
-      };
-      const funcCoverTooltips = {
-        '0 — Не готова': 'Функции не покрыты технологией',
-        '1 — Низкая': 'Покрыта небольшая часть функций',
-        '2 — Средняя': 'Покрыта значительная часть функций',
-        '3 — Высокая': 'Покрыты все необходимые функции'
-      };
-      if (Filters) {
-        const blocksList = getState('blocksList');
-        const functions = getState('functions');
-        const enterpriseData = getState('enterpriseData');
-        const enterprisesListData = getState('enterprisesList') || [];
-        const enterpriseListForModal = enterprisesListData.length > 0
-          ? enterprisesListData.map(ent => typeof ent === 'string' ? ent : (ent.name || ent))
-          : Object.keys(enterpriseData || {});
-        // Поле techSector удалено из форм
-        // Получаем список направлений цифрового развития
-        const digitalDirections = getState('digitalDirections') || [];
-        const directionsList = Array.isArray(digitalDirections) && digitalDirections.length > 0
-          ? digitalDirections.map(d => (d && typeof d === 'object' && d.name) ? d.name : String(d || '')).filter(Boolean)
-          : [];
-        if (directionsList.length > 0) {
-          Filters.populateSelectForModal('techDirections', directionsList, 'Выберите');
-          Filters.populateSelectForModal('editDirections', directionsList, 'Выберите');
-        }
-        Filters.populateSelectForModal('techBlock', blocksList, 'Выберите');
-        Filters.populateSelectForModal('techFunc', functions, 'Выберите');
-        // Поля "Тип технологии" и "Статус" удалены из формы добавления
-        // Заполняем список предприятий
-        Filters.populateSelectForModal('techCompany', enterpriseListForModal, 'Выберите');
-        // Заполняем список TRL с подсказками (объявляем один раз для обеих форм)
-        Filters.populateSelectForModal('techTrlStage', trlOptions, 'Выберите стадию');
-        // Заполняем списки оценок готовности
-        Filters.populateSelectForModal('techTechRead', ratingOptions, 'Выберите оценку');
-        Filters.populateSelectForModal('techOrganRead', ratingOptions, 'Выберите оценку');
-        Filters.populateSelectForModal('techFuncCover', ratingOptions, 'Выберите оценку');
-      } else {
-        // Filters не загружен, модальные фильтры не будут заполнены
-      }
-      // Инициализируем селект вендоров с возможностью добавления новых (вне блока Filters)
-      // Вызываем с небольшой задержкой, чтобы убедиться, что DOM готов
       setTimeout(() => {
-        if (typeof window.initVendorsSelect === 'function') {
-          window.initVendorsSelect();
-        } else if (typeof initVendorsSelect === 'function') {
-          initVendorsSelect();
-        }
+        if (typeof window.initVendorsSelect === 'function') window.initVendorsSelect();
       }, 200);
-      // Добавляем подсказки для опций TRL и оценок после создания опций
-      if (Filters) {
-        setTimeout(() => {
-          addTrlTooltips('techTrlStage');
-          addRatingTooltips('techTechRead', techReadTooltips);
-          addRatingTooltips('techOrganRead', organReadTooltips);
-          addRatingTooltips('techFuncCover', funcCoverTooltips);
-        }, 50);
-      }
       // Поле стоимости внедрения теперь доступно для всех статусов
       function setupCostToggle(prefix) {
         const group = document.getElementById(`${prefix}CostGroup`);
@@ -1060,16 +572,6 @@
         };
       }
 
-      // Фильтры формы редактирования также будут заполнены в initFiltersWithRetry
-      // Но добавим tooltips для TRL и оценок если Filters доступен
-      if (Filters) {
-        setTimeout(() => {
-          addTrlTooltips('editTrlStage');
-          addRatingTooltips('editTechRead', techReadTooltips);
-          addRatingTooltips('editOrganRead', organReadTooltips);
-          addRatingTooltips('editFuncCover', funcCoverTooltips);
-        }, 50);
-      }
       setupCostToggle('edit');
 
       // Вычисляем nextId на основе загруженных технологий
@@ -1098,182 +600,9 @@
         if (window.Logger) window.Logger.warn('Ошибка при обновлении заголовков секторов:', e);
       }
 
-      // Убеждаемся, что фильтры заполнены после полной загрузки DOM
-      // Используем несколько попыток с задержками для гарантии, что все элементы созданы
-      const initFiltersWithRetry = (attempt = 0) => {
-        const maxAttempts = 5;
-        const delay = 100 * (attempt + 1);
-
-        setTimeout(() => {
-          const Filters = getFilters();
-          if (!Filters) {
-            if (window.Logger) window.Logger.warn(`Попытка ${attempt + 1}: Filters не загружен`);
-            if (attempt < maxAttempts - 1) {
-              initFiltersWithRetry(attempt + 1);
-            }
-            return;
-          }
-
-          const blocksList = getState('blocksList') || [];
-          const functions = getState('functions') || [];
-          const techTypes = window.techTypes || Object.keys(window.TECHTYPE_TO_SHAPE || {});
-          const RINGS = window.RINGS || [];
-          const QUADRANTS = window.QUADRANTS || [];
-
-
-          // Получаем sectorNames для модальных фильтров из QUADRANTS
-          let sectorNames = [];
-          if (Array.isArray(QUADRANTS) && QUADRANTS.length) {
-            sectorNames = QUADRANTS.map(q => q && q.name).filter(Boolean);
-          }
-
-          // Получаем список предприятий для фильтра
-          const enterpriseData = getState('enterpriseData') || {};
-          const enterprisesListData = getState('enterprisesList') || [];
-          const enterpriseList = enterprisesListData.length > 0
-            ? enterprisesListData.map(ent => typeof ent === 'string' ? ent : (ent.name || ent)).filter(Boolean)
-            : Object.keys(enterpriseData).filter(Boolean);
-
-          // Проверяем наличие элементов DOM
-          const sidebarEnterpriseSelect = document.querySelector('.custom-select[data-filter="enterprise"]');
-          const sidebarBlockSelect = document.querySelector('.custom-select[data-filter="block"]');
-          const sidebarFunctionSelect = document.querySelector('.custom-select[data-filter="function"]');
-          // Фильтр "Тип технологий" удален из боковой панели
-          const sidebarLevelSelect = document.querySelector('.custom-select[data-filter="level"]');
-
-          if (!sidebarEnterpriseSelect || !sidebarBlockSelect || !sidebarFunctionSelect || !sidebarLevelSelect) {
-            if (window.Logger) window.Logger.warn(`Попытка ${attempt + 1}: не все элементы DOM найдены`, {
-              enterprise: !!sidebarEnterpriseSelect,
-              block: !!sidebarBlockSelect,
-              function: !!sidebarFunctionSelect,
-              level: !!sidebarLevelSelect
-            });
-            if (attempt < maxAttempts - 1) {
-              initFiltersWithRetry(attempt + 1);
-            }
-            return;
-          }
-
-          // Заполняем фильтры sidebar принудительно
-          if (enterpriseList.length > 0) {
-            Filters.populateSelect('enterprise', enterpriseList, 'Предприятия: Все');
-          }
-          if (blocksList.length > 0) {
-            Filters.populateSelect('block', blocksList, 'Функциональные блоки: Все');
-          }
-          if (functions.length > 0) {
-            Filters.populateSelect('function', functions, 'Функции: Все');
-          }
-          // Фильтр "Тип технологий" удален из боковой панели
-          // Заменяем значения фильтра "Статус" на "Внедренная/Невнедренная"
-          const statusOptions = ['Внедренная', 'Невнедренная'];
-          if (statusOptions.length > 0) {
-            Filters.populateSelect('level', statusOptions, 'Статус: Все');
-          }
-
-          // Заполняем модальные фильтры
-          // enterpriseData уже объявлена выше
-          const modalEnterpriseList = enterprisesListData.length > 0
-            ? enterprisesListData.map(ent => typeof ent === 'string' ? ent : (ent.name || ent))
-            : Object.keys(enterpriseData || {});
-          const vendorsList = getState('vendorsList') || [];
-          const integratorsList = getState('integratorsList') || [];
-          const modalSelects = [
-            // Поля techSector, techIntegrators удалены из форм
-            { id: 'techBlock', items: blocksList, placeholder: 'Выберите' },
-            { id: 'techFunc', items: functions, placeholder: 'Выберите' },
-            // Поля "Тип технологии" и "Статус" удалены из формы добавления
-            { id: 'techCompany', items: modalEnterpriseList, placeholder: 'Выберите' },
-            { id: 'techVendors', items: vendorsList, placeholder: 'Выберите' },
-            { id: 'editBlock', items: blocksList, placeholder: 'Выберите' },
-            { id: 'editFunc', items: functions, placeholder: 'Выберите' },
-            // Поля editTechType, editStatus, editIntegrators удалены из форм
-            { id: 'editCompany', items: modalEnterpriseList, placeholder: 'Выберите' },
-            { id: 'editVendors', items: vendorsList, placeholder: 'Выберите' }
-          ];
-
-          modalSelects.forEach(({ id, items, placeholder }) => {
-            if (Array.isArray(items) && items.length > 0) {
-              Filters.populateSelectForModal(id, items, placeholder);
-            }
-          });
-
-          // Заполняем TRL фильтры
-          const trlOptions = ['1-Исследовательская', '2-Прототип', '3-Технология готова к внедрению'];
-          Filters.populateSelectForModal('techTrlStage', trlOptions, 'Выберите стадию');
-          Filters.populateSelectForModal('editTrlStage', trlOptions, 'Выберите стадию');
-
-          // Заполняем списки оценок готовности
-          const ratingOptions = ['0 — Не готова', '1 — Низкая', '2 — Средняя', '3 — Высокая'];
-          // Поля techTechRead, techOrganRead удалены из формы добавления
-          Filters.populateSelectForModal('techFuncCover', ratingOptions, 'Выберите оценку');
-          // Поля editTechRead, editOrganRead удалены из формы редактирования
-          Filters.populateSelectForModal('editFuncCover', ratingOptions, 'Выберите оценку');
-
-          // Добавляем tooltips для TRL
-          const addTrlTooltips = (fieldId) => {
-            const trlSelect = document.querySelector(`.custom-select-modal[data-field="${fieldId}"]`);
-            if (trlSelect) {
-              const options = trlSelect.querySelectorAll('.select-options li[data-value]');
-              const tooltips = {
-                '1 — Ранняя стадия (исследование)': 'Ранняя исследовательская стадия: технология находится на начальном этапе разработки, концепция только формируется',
-                '2 — Разработка (прототип)': 'Стадия разработки и прототипирования: технология проходит активную разработку, создаются прототипы',
-                '3 — Зрелость (готовность к внедрению)': 'Зрелая стадия: технология готова к внедрению и использованию в производстве'
-              };
-              options.forEach(li => {
-                const value = li.getAttribute('data-value');
-                if (value && tooltips[value]) {
-                  li.setAttribute('title', tooltips[value]);
-                }
-              });
-            }
-          };
-          // Добавляем tooltips для оценок готовности
-          const addRatingTooltips = (fieldId, tooltipMap) => {
-            const ratingSelect = document.querySelector(`.custom-select-modal[data-field="${fieldId}"]`);
-            if (ratingSelect) {
-              const options = ratingSelect.querySelectorAll('.select-options li[data-value]');
-              options.forEach(li => {
-                const value = li.getAttribute('data-value');
-                if (value && tooltipMap[value]) {
-                  li.setAttribute('title', tooltipMap[value]);
-                }
-              });
-            }
-          };
-          const techReadTooltips = {
-            '0 — Не готова': 'Технология находится на начальной стадии, не применима',
-            '1 — Низкая': 'Начальная стадия разработки, требуется значительная доработка',
-            '2 — Средняя': 'Технология частично готова, требуется доработка',
-            '3 — Высокая': 'Технология готова к применению'
-          };
-          const organReadTooltips = {
-            '0 — Не готова': 'Организация не готова к внедрению',
-            '1 — Низкая': 'Начальный этап подготовки, требуется значительная работа',
-            '2 — Средняя': 'Частичная готовность, требуется дополнительная подготовка',
-            '3 — Высокая': 'Организация полностью готова к внедрению'
-          };
-          const funcCoverTooltips = {
-            '0 — Не готова': 'Функции не покрыты технологией',
-            '1 — Низкая': 'Покрыта небольшая часть функций',
-            '2 — Средняя': 'Покрыта значительная часть функций',
-            '3 — Высокая': 'Покрыты все необходимые функции'
-          };
-          setTimeout(() => {
-            addTrlTooltips('techTrlStage');
-            addTrlTooltips('editTrlStage');
-            addRatingTooltips('techTechRead', techReadTooltips);
-            addRatingTooltips('techOrganRead', organReadTooltips);
-            addRatingTooltips('techFuncCover', funcCoverTooltips);
-            addRatingTooltips('editTechRead', techReadTooltips);
-            addRatingTooltips('editOrganRead', organReadTooltips);
-            addRatingTooltips('editFuncCover', funcCoverTooltips);
-          }, 50);
-        }, delay);
-      };
-
-      // Запускаем первую попытку
-      initFiltersWithRetry(0);
+      if (typeof window.initFiltersWithRetry === 'function') {
+        window.initFiltersWithRetry(0);
+      }
 
       // Пересчитываем funcCover для всех технологий с использованием нового алгоритма
       // Это делается синхронно перед первым рендерингом, чтобы избежать изменения позиций
@@ -1312,25 +641,15 @@
         window.LoadingManager.hide(loaderId);
       }
     } catch (error) {
-      // Ошибка загрузки данных
-
       // Скрываем индикатор загрузки при ошибке
       if (loaderId && typeof window !== 'undefined' && window.LoadingManager) {
         window.LoadingManager.hide(loaderId);
       }
-
-      // Используем ErrorDisplay, если доступен
-      const msg = error?.message || String(error) || 'Неизвестная ошибка';
-      const detailedMsg = msg + '\n\nЕсли вы открываете страницу по протоколу file://, запустите локальный HTTP-сервер и откройте по http://localhost.';
-
-      if (typeof window !== 'undefined' && window.ErrorDisplay) {
-        window.ErrorDisplay.show(error, 'Загрузка данных приложения', () => {
-          // Retry callback
-          loadData();
-        });
+      if (typeof window.reportError === 'function') {
+        window.reportError(error, 'Загрузка данных приложения', { retryCallback: loadData });
       } else {
-        // Fallback на alert
-        alert('Не удалось загрузить данные приложения. ' + detailedMsg);
+        const msg = error?.message || String(error) || 'Неизвестная ошибка';
+        alert('Не удалось загрузить данные приложения. ' + msg);
       }
     }
   }
@@ -1378,7 +697,7 @@
             opts.appendChild(li);
           }
         });
-        try { vfsWrite('bloks.json', getState('blocksList')); } catch (e) { if (window.Logger) window.Logger.warn('vfs write failed', e); }
+        try { vfsWrite('blocks.json', getState('blocksList')); } catch (e) { if (window.Logger) window.Logger.warn('vfs write failed', e); }
       }
       // Ensure level mapping exists
       const levelToRing = window.levelToRing || {};
@@ -1426,7 +745,13 @@
           if (window.Logger) window.Logger.debug('ensureAndPersistNewTech: enterpriseData updated for', currentEnterprise, 'total techs:', getState('technologies').length);
         }
       } catch (e) { if (window.Logger) window.Logger.warn('update enterpriseData failed', e); }
-    } catch (err) { if (window.Logger) window.Logger.warn('ensureAndPersistNewTech error', err); }
+    } catch (err) {
+      if (typeof window.reportError === 'function') {
+        window.reportError(err, 'Сохранение технологии');
+      } else if (window.Logger) {
+        window.Logger.warn('ensureAndPersistNewTech error', err);
+      }
+    }
   }
 
   // ===== ФУНКЦИЯ ПЕРЕКЛЮЧЕНИЯ ПРЕДПРИЯТИЯ (упрощенная версия - только обновляет фильтр) =====
@@ -1446,7 +771,11 @@
           }
         }
       } catch (e) {
-        if (window.Logger) window.Logger.warn('Не удалось сохранить technologies при переключении предприятия', e);
+        if (typeof window.reportError === 'function') {
+          window.reportError(e, 'Сохранение данных при переключении предприятия');
+        } else if (window.Logger) {
+          window.Logger.warn('Не удалось сохранить technologies при переключении предприятия', e);
+        }
       }
 
       // Обновляем фильтр предприятий
@@ -1469,108 +798,14 @@
         window.updateRadar();
       }
     } catch (error) {
-      // Ошибка переключения предприятия
-      if (typeof window !== 'undefined' && window.ErrorDisplay) {
-        window.ErrorDisplay.show(error, 'Переключение предприятия');
+      if (typeof window.reportError === 'function') {
+        window.reportError(error, 'Переключение предприятия');
       }
     }
   }
 
-  // Функция для ручного заполнения фильтров (для отладки и повторной инициализации)
   function initFilters() {
-    const Filters = getFilters();
-    if (!Filters) {
-      // Filters не загружен, невозможно заполнить фильтры
-      return false;
-    }
-
-    const blocksList = getState('blocksList') || [];
-    const functions = getState('functions') || [];
-    const techTypes = window.techTypes || Object.keys(window.TECHTYPE_TO_SHAPE || {});
-    const RINGS = window.RINGS || [];
-    const QUADRANTS = window.QUADRANTS || [];
-    const digitalDirections = getState('digitalDirections') || [];
-
-    // Получаем sectorNames из QUADRANTS (направления цифрового развития)
-    let sectorNames = [];
-    if (Array.isArray(QUADRANTS) && QUADRANTS.length) {
-      sectorNames = QUADRANTS.map(q => q && q.name).filter(Boolean);
-    }
-
-    // Получаем список названий направлений
-    const directionsList = Array.isArray(digitalDirections) && digitalDirections.length > 0
-      ? digitalDirections.map(d => (d && typeof d === 'object' && d.name) ? d.name : String(d || '')).filter(Boolean)
-      : [];
-
-    // Получаем список предприятий для фильтра
-    const enterpriseData = getState('enterpriseData') || {};
-    const enterprisesListData = getState('enterprisesList') || [];
-    const enterpriseList = enterprisesListData.length > 0
-      ? enterprisesListData.map(ent => typeof ent === 'string' ? ent : (ent.name || ent)).filter(Boolean)
-      : Object.keys(enterpriseData).filter(Boolean);
-
-    // Заполняем sidebar фильтры
-    if (enterpriseList.length > 0) {
-      Filters.populateSelect('enterprise', enterpriseList, 'Предприятия: Все');
-    }
-    if (directionsList.length > 0) {
-      Filters.populateSelect('direction', directionsList, 'Направления цифрового развития: Все');
-    }
-    if (blocksList.length > 0) {
-      Filters.populateSelect('block', blocksList, 'Функциональные блоки: Все');
-    }
-    if (functions.length > 0) {
-      Filters.populateSelect('function', functions, 'Функции: Все');
-    }
-    // Фильтр "Тип технологий" удален из боковой панели
-    // Заменяем значения фильтра "Статус" на "Внедренная/Невнедренная"
-    const statusOptions = ['Внедренная', 'Невнедренная'];
-    if (statusOptions.length > 0) {
-      Filters.populateSelect('level', statusOptions, 'Статус: Все');
-    }
-
-    // Заполняем модальные фильтры
-    const enterpriseListForInit = enterprisesListData.length > 0
-      ? enterprisesListData.map(ent => typeof ent === 'string' ? ent : (ent.name || ent))
-      : Object.keys(enterpriseData || {});
-    const vendorsList = getState('vendorsList') || [];
-    const integratorsList = getState('integratorsList') || [];
-    const trlOptions = ['1-Исследовательская', '2-Прототип', '3-Технология готова к внедрению'];
-
-    const ratingOptions = ['0 — Не готова', '1 — Низкая', '2 — Средняя', '3 — Высокая'];
-    const modalSelects = [
-      { id: 'techSector', items: sectorNames, placeholder: 'Выберите' },
-      { id: 'techDirections', items: directionsList, placeholder: 'Выберите' },
-      { id: 'techBlock', items: blocksList, placeholder: 'Выберите' },
-      { id: 'techFunc', items: functions, placeholder: 'Выберите' },
-      // Поля "Тип технологии" и "Статус" удалены из формы добавления
-      { id: 'techCompany', items: enterpriseListForInit, placeholder: 'Выберите' },
-      { id: 'techVendors', items: vendorsList, placeholder: 'Выберите' },
-      { id: 'techIntegrators', items: integratorsList, placeholder: 'Выберите' },
-      { id: 'techTrlStage', items: trlOptions, placeholder: 'Выберите стадию' },
-      { id: 'techTechRead', items: ratingOptions, placeholder: 'Выберите оценку' },
-      { id: 'techOrganRead', items: ratingOptions, placeholder: 'Выберите оценку' },
-      { id: 'techFuncCover', items: ratingOptions, placeholder: 'Выберите оценку' },
-      { id: 'editDirections', items: directionsList, placeholder: 'Выберите' },
-      { id: 'editBlock', items: blocksList, placeholder: 'Выберите' },
-      { id: 'editFunc', items: functions, placeholder: 'Выберите' },
-      // Поля "Тип технологии" и "Статус" удалены из формы редактирования
-      { id: 'editCompany', items: enterpriseListForInit, placeholder: 'Выберите' },
-      { id: 'editVendors', items: vendorsList, placeholder: 'Выберите' },
-      { id: 'editIntegrators', items: integratorsList, placeholder: 'Выберите' },
-      { id: 'editTrlStage', items: trlOptions, placeholder: 'Выберите стадию' },
-      { id: 'editTechRead', items: ratingOptions, placeholder: 'Выберите оценку' },
-      { id: 'editOrganRead', items: ratingOptions, placeholder: 'Выберите оценку' },
-      { id: 'editFuncCover', items: ratingOptions, placeholder: 'Выберите оценку' }
-    ];
-
-    modalSelects.forEach(({ id, items, placeholder }) => {
-      if (Array.isArray(items) && items.length > 0) {
-        Filters.populateSelectForModal(id, items, placeholder);
-      }
-    });
-
-    return true;
+    return typeof window.initFilters === 'function' ? window.initFilters() : false;
   }
 
   /**
@@ -1633,13 +868,12 @@
     // Пересчет funcCover завершен
   }
 
-  // Экспорт функций в window для обратной совместимости
   window.DataLoader = {
     vfsRead,
     vfsWrite,
-    fetchJsonWithCache,
+    fetchJsonWithCache: typeof window.fetchJsonWithCache === 'function' ? window.fetchJsonWithCache : () => {},
     clearFetchCache,
-    clearVfsCache,
+    clearVfsCache: typeof window.clearVfsCache === 'function' ? window.clearVfsCache : () => 0,
     loadJsonPreferVfs,
     loadData,
     ensureAndPersistNewTech,
@@ -1649,13 +883,7 @@
     recalculateFuncCoverForAllTechnologies
   };
 
-  // Экспорт функции initFilters для ручного вызова
-  window.initFilters = initFilters;
-
-  // Экспорт функций напрямую в window для обратной совместимости
-  window.vfsRead = vfsRead;
-  window.vfsWrite = vfsWrite;
-  window.fetchJsonWithCache = fetchJsonWithCache;
+  // initFilters экспортируется из filter-init.js; data-loader оставляет обёртку для совместимости
   // Инициализация селекта вендоров с возможностью добавления новых
   function initVendorsSelect() {
     const customSelect = document.querySelector('.custom-select-modal[data-field="techVendors"]');
@@ -1875,9 +1103,7 @@
     }
   }
 
-  window.clearFetchCache = clearFetchCache;
-  window.clearVfsCache = clearVfsCache;
-  window.loadJsonPreferVfs = loadJsonPreferVfs;
+  // clearFetchCache, clearVfsCache, loadJsonPreferVfs — экспортируются из data-source.js, не перезаписываем
   window.loadData = loadData;
   window.ensureAndPersistNewTech = ensureAndPersistNewTech;
   window.switchEnterprise = switchEnterprise;

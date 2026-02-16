@@ -1503,14 +1503,12 @@
           hiddenInputId === "techSector" &&
           typeof window.updateModalBlocksForSectors === "function"
         ) {
-          // Обновляем данные перед вызовом, если доступны StateAccessors
+          // TODO: убрать после перевода всех потребителей на state. Синхронизация для обратной совместимости.
           if (window.StateAccessors) {
             try {
               window.blocksList = window.StateAccessors.getBlocksList() || window.blocksList || [];
               window.blockToQuadrant = window.StateAccessors.getBlockToQuadrant() || window.blockToQuadrant || {};
-            } catch (e) {
-              // Используем существующие данные если StateAccessors недоступен
-            }
+            } catch (e) {}
           }
           window.updateModalBlocksForSectors(selected);
         } else if (
@@ -1769,14 +1767,12 @@
             hiddenInputId === "techSector" &&
             typeof window.updateModalBlocksForSectors === "function"
           ) {
-            // Обновляем данные перед вызовом, если доступны StateAccessors
+            // TODO: убрать после перевода всех потребителей на state. Синхронизация для обратной совместимости.
             if (window.StateAccessors) {
               try {
                 window.blocksList = window.StateAccessors.getBlocksList() || window.blocksList || [];
                 window.blockToQuadrant = window.StateAccessors.getBlockToQuadrant() || window.blockToQuadrant || {};
-              } catch (e) {
-                // Используем существующие данные если StateAccessors недоступен
-              }
+              } catch (e) {}
             }
             window.updateModalBlocksForSectors(selectedValues);
           } else if (
@@ -1866,14 +1862,12 @@
           hiddenInputId === "techSector" &&
           typeof window.updateModalBlocksForSectors === "function"
         ) {
-          // Обновляем данные перед вызовом, если доступны StateAccessors
+          // TODO: убрать после перевода всех потребителей на state. Синхронизация для обратной совместимости.
           if (window.StateAccessors) {
             try {
               window.blocksList = window.StateAccessors.getBlocksList() || window.blocksList || [];
               window.blockToQuadrant = window.StateAccessors.getBlockToQuadrant() || window.blockToQuadrant || {};
-            } catch (e) {
-              // Используем существующие данные если StateAccessors недоступен
-            }
+            } catch (e) {}
           }
           window.updateModalBlocksForSectors(selected);
         } else if (

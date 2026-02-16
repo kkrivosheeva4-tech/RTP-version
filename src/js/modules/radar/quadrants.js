@@ -5,25 +5,19 @@
 (function() {
   'use strict';
 
-  // Получаем зависимости из других модулей и глобальных переменных (ленивая загрузка)
+  // Получаем зависимости из других модулей (StateAccessors — основной источник; window.* устарел)
   const getTechnologies = () => {
-    // Пробуем получить через StateManager
-    if (window.StateManager) {
-      const techs = window.StateManager.get('technologies');
-      if (Array.isArray(techs) && techs.length > 0) {
-        return techs;
-      }
+    if (window.StateAccessors && typeof window.StateAccessors.getTechnologies === 'function') {
+      const techs = window.StateAccessors.getTechnologies();
+      if (Array.isArray(techs) && techs.length > 0) return techs;
     }
-    // Fallback на window.getTechnologies для обратной совместимости
+    if (window.StateManager && typeof window.StateManager.get === 'function') {
+      const techs = window.StateManager.get('technologies');
+      if (Array.isArray(techs) && techs.length > 0) return techs;
+    }
     if (typeof window.getTechnologies === 'function') {
       const techs = window.getTechnologies();
-      if (Array.isArray(techs) && techs.length > 0) {
-        return techs;
-      }
-    }
-    // Fallback на window.technologies
-    if (Array.isArray(window.technologies) && window.technologies.length > 0) {
-      return window.technologies;
+      if (Array.isArray(techs) && techs.length > 0) return techs;
     }
     return [];
   };

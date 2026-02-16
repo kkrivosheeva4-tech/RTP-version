@@ -1,6 +1,6 @@
-# Документация HTML файлов проекта РТП-2.3
+# Документация HTML файлов проекта РТП
 
-Актуально для состояния репозитория на **2026‑01‑29**.
+Актуально для состояния репозитория на **2026‑02‑16**.
 
 ## Содержание
 
@@ -9,7 +9,7 @@
   - [`index.html`](#indexhtml)
 - [Страницы приложения (`src/pages/`)](#страницы-приложения-srcpages)
   - [`src/pages/index.html`](#srcpagesindexhtml)
-  - [`src/pages/RMK-director.html`](#srcpagesrmk-directorhtml)
+  - [`src/pages/radar.html`](#srcpagesradarhtml)
   - [`src/pages/auth.html`](#srcpagesauthhtml)
   - [`src/pages/admin.html`](#srcpagesadminhtml)
   - [`src/pages/help.html`](#srcpageshelphtml)
@@ -57,8 +57,10 @@
 
 **JS:**
 
-- `/src/js/modules/ui/mobile-nav.js` — адаптация навигации под мобильные
-- `/src/js/modules/ui/touch-handlers.js` — touch/жесты
+- `/src/js/modules/utils/func-cover-utils.js` — утилиты покрытия функций
+- `/src/js/modules/ui/common-ui.js` — общий UI (тема и др.)
+- `/src/js/modules/ui/notifications.js`, `/src/js/modules/ui/offline-handler.js`
+- `/src/js/modules/ui/mobile-nav.js`, `/src/js/modules/ui/touch-handlers.js`
 - `/src/js/audit-logger.js` — аудит действий (localStorage)
 - `/src/js/script.js` — основная логика главной страницы (выбор предприятия, состояние UI)
 
@@ -76,35 +78,31 @@
 - кнопки предприятий активируют логику выбора предприятия (см. `script.js`);
 - тема и подсказки управляются общими механизмами (shared UI).
 
-### `src/pages/RMK.html`
-
-**Примечание:** Файл `src/pages/RMK.html` больше не существует в текущей версии проекта. Все пользователи (архитекторы, директоры, РП, администраторы) работают на единой странице `RMK-director.html`.
-
-Если в коде или ссылках встречается упоминание `RMK.html`, оно должно перенаправлять на `RMK-director.html`.
-
-### `src/pages/RMK-director.html`
+### `src/pages/radar.html`
 
 **Назначение:** основная страница радара технологий для всех ролей (архитекторы, директоры, РП, администраторы). Имеет модифицированный радар с позиционированием по готовности к реализации и внедрению, расширенные формы управления вендорами и интеграторами, а также прикрепление файлов к технологиям.
 
 **Доступ:** Для всех авторизованных пользователей (архитекторы, директоры, РП, администраторы).
 
 **CSS:**
+
 - `/src/css/common.css` — общие стили/темы/компоненты
 - `/src/css/RMK.css` — основная верстка/сайдбар/радар/панели (с модификациями для директорской страницы)
 - `/src/css/about.css` — общие секционные стили
 - `/src/css/rmk-inline-styles.css` — дополнительные стили и «точечные» правки интерфейса RMK
 
 **Внешние библиотеки (CDN):**
+
 - `jsPDF` (`jspdf.umd.min.js`)
 - `jsPDF AutoTable` (`jspdf.plugin.autotable.min.js`)
 - `html2canvas`
 
 **JS:**
+
 - единственный прямой `<script src="/src/js/RMK-director.js"></script>` в конце страницы (остальные модули подгружает сам `RMK-director.js`).
 
-**Назначение:** основная рабочая страница радара технологий для всех ролей (архитекторы, директоры, РП, администраторы). Все пользователи работают на этой единой странице.
-
 **Особенности:**
+
 - **Модифицированный радар**:
   - Позиционирование технологий по готовности к реализации и внедрению
   - Размер кругов зависит от количества вендоров (0-1: 8px, 2-3: 14px, 4+: 20px)
@@ -115,9 +113,10 @@
   - Прикрепление файлов к технологиям
   - Подсказки для всех полей
   - Переименованные TRL оценки (1-Исследовательская, 2-Прототип, 3-Технология готова к внедрению)
-- **Отдельный файл данных**: `enterpriseData-director.json` для хранения данных страницы (с полями `vendors` и `files`)
+- **Данные**: загружаются через `data-loader.js` из `blocks.json`, `technologies.json`, `enterprises.json`, `vendors.json`, `integrators.json` и др.; итоговые данные предприятий и технологий хранятся в StateManager и при сохранении — в VFS (`enterpriseData.json`). Поля вендоров и файлов поддерживаются в технологиях.
 
 **Ключевые DOM‑узлы:**
+
 - Радар (SVG + логика зума/выделения)
 - Боковая панель (поиск/фильтры/списки по секторам)
 - Панель деталей технологии
@@ -129,7 +128,7 @@
 
 1. Страница загружает CDN‑библиотеки (PDF/скриншоты) и в конце — `RMK-director.js`.
 2. `RMK-director.js` динамически подключает модули `src/js/modules/**` в нужном порядке (см. порядок загрузки в `MODULES_DOCUMENTATION.md`).
-3. `core/data-loader.js` автоматически определяет директорскую страницу (по `body#rmk-director`) и загружает `enterpriseData-director.json` вместо `enterpriseData.json`.
+3. `core/data-loader.js` загружает данные из JSON (`blocks.json`, `technologies.json`, `enterpriseData` из VFS и т.д.); страница радара определяется по `body#rmk-director` для применения логики отображения (круги по вендорам, без подписей колец).
 4. `radar/*` вычисляет координаты blip‑ов и рисует SVG с применением специальной логики для директорской страницы:
    - Размеры blip зависят от количества вендоров (0-1: 8px, 2-3: 14px, 4+: 20px)
    - Все технологии отображаются только в виде кругов
@@ -143,9 +142,11 @@
 **Назначение:** страница входа в систему.
 
 **CSS:**
+
 - `/src/css/auth.css`
 
 **JS:**
+
 - `/src/js/audit-logger.js`
 - `/src/js/auth.js`
 
@@ -180,24 +181,28 @@
 
 **JS:**
 
-- `/src/js/modules/ui/mobile-nav.js` — мобильная навигация
-- `/src/js/modules/ui/touch-handlers.js` — touch‑жесты
-- `/src/js/audit-logger.js` — аудит
-- `/src/js/admin.js` — логика админ‑панели
-- `/src/js/script.js` — общая логика (навигация предприятий/тема/общие обработчики, используемые несколькими страницами)
+- `/src/js/modules/utils/func-cover-utils.js` — утилиты расчёта покрытия функций
+- `/src/js/modules/ui/common-ui.js` — общий UI (тема, уведомления)
+- `/src/js/modules/ui/notifications.js`, `/src/js/modules/ui/offline-handler.js`
+- `/src/js/modules/ui/mobile-nav.js`, `/src/js/modules/ui/touch-handlers.js`
+- `/src/js/audit-logger.js`, `/src/js/modules/core/logger.js`, `/src/js/modules/core/error-handler.js`, `/src/js/modules/ui/toast.js`
+- `/src/js/config/roles-config.js` — роли и системные учётки
+- `/src/js/admin/admin-common.js` — общее состояние и хранилище админки
+- `/src/js/admin/admin-dashboard.js`, `/src/js/admin/admin-users.js`, `/src/js/admin/admin-audit.js`, `/src/js/admin/admin-export.js`, `/src/js/admin/admin-backups.js`, `/src/js/admin/admin-enterprises.js` — разделы админ‑панели
+- `/src/js/admin.js` — точка входа админки (проверка доступа, навигация, координация разделов)
 
 **Ключевые DOM‑узлы (примеры):**
 
-- `aside.admin-sidebar` + кнопки `.menu-item[data-section="..."]` — переключение разделов
+- `aside.admin-sidebar` + кнопки `.menu-item[data-section="..."]` — переключение разделов (dashboard, users, audit, export, backup, enterprises)
 - `#adminSidebarToggle`, `#adminMobileMenu` — управление отображением меню
-- `section.content-section` — секции контента (dashboard/users/audit/export/backup)
+- `section.content-section` — секции контента (dashboard, users, audit, export, backup, enterprises)
 - `canvas#usersChart`, `canvas#auditChart`, `canvas#rolesChart` — графики Chart.js
 
 **Как работает (высокоуровнево):**
 
-- проверка/использование роли пользователя (через localStorage, см. `admin.js`);
-- чтение/запись «пользователей», «аудита», «бэкапов» из localStorage;
-- построение графиков через Chart.js и синхронизация со сменой темы.
+- проверка доступа по роли (localStorage, только `admin`/`architect`);
+- `admin.js` координирует разделы; данные читаются/пишутся через `AdminCommon` в localStorage (`adminUsers`, `adminAuditLogs`, `adminBackups` и т.д.);
+- разделы «Пользователи», «Аудит», «Экспорт», «Бэкапы», «Предприятия» реализованы в `admin/*.js`; графики — Chart.js с синхронизацией темы.
 
 ### `src/pages/help.html`
 

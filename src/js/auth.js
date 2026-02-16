@@ -1,12 +1,11 @@
 // Управление авторизацией (для auth.html)
-// Пользователи системы
-let users = [
-    { username: 'admin', password: 'admin123', role: 'admin' },
-    { username: 'architect', password: 'architect123', role: 'architect' },
-    { username: 'director', password: 'director123', role: 'director' },
-    { username: 'project_manager', password: 'pm123', role: 'project_manager' },
-    { username: 'guest', password: 'guest123', role: 'guest' }
-];
+// Список пользователей для mock-входа — из единого конфига (config/roles-config.js)
+function getUsers() {
+    if (typeof window.RolesConfig !== 'undefined' && typeof window.RolesConfig.getUsersForMockAuth === 'function') {
+        return window.RolesConfig.getUsersForMockAuth();
+    }
+    return [];
+}
 
 function pad2(n) {
     const v = Number(n) || 0;
@@ -30,7 +29,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
     const savedUsername = localStorage.getItem('username');
     if (isLoggedIn && savedUsername) {
-        const user = users.find(u => u.username === savedUsername);
+        const user = getUsers().find(u => u.username === savedUsername);
         if (user) {
             // Если сессия уже активна — логируем "автовход" (на случай, когда пользователь не вводит пароль повторно)
             try {
@@ -183,7 +182,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const password = document.getElementById('password').value;
             const remember = document.getElementById('remember') ? document.getElementById('remember').checked : false;
 
-            const user = users.find(u => u.username === username && u.password === password);
+            const user = getUsers().find(u => u.username === username && u.password === password);
             if (user) {
                 localStorage.setItem('isLoggedIn', 'true');
                 localStorage.setItem('username', username);

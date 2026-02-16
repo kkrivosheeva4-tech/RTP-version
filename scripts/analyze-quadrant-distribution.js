@@ -45,7 +45,7 @@ async function analyzeQuadrantDistribution() {
       const dirToQuadPath = path.join(__dirname, '../src/data/ru/directionToQuadrant.json');
       // УДАЛЕНО (2026-01-29): blockToQuadrant.json больше не используется
       const directionsPath = path.join(__dirname, '../src/data/ru/digitalDirections.json');
-      const blocksPath = path.join(__dirname, '../src/data/ru/bloks.json');
+      const blocksPath = path.join(__dirname, '../src/data/ru/blocks.json');
 
       technologies = JSON.parse(fs.readFileSync(techPath, 'utf8'));
       directionToQuadrant = JSON.parse(fs.readFileSync(dirToQuadPath, 'utf8'));

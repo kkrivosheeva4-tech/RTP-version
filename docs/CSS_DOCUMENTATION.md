@@ -1,6 +1,6 @@
-# Документация CSS файлов проекта РТП-2.3
+# Документация CSS файлов проекта РТП
 
-Актуально для состояния репозитория на **2026‑01‑29**.
+Актуально для состояния репозитория на **2026‑02‑16**.
 
 ## Содержание
 
@@ -19,7 +19,7 @@
 
 В проекте используются 2 независимых механизма темы (это важно при поддержке):
 
-1. **Основное приложение (`index.html`, `RMK-director.html`, `help.html`, `admin.html`)**
+1. **Основное приложение (`index.html`, `radar.html`, `help.html`, `admin.html`)**
    Обычно использует классы **`body.light` / `body.dark`** и CSS‑переменные из `src/css/common.css` (например `--bg`, `--text`, `--accent`, `--modal-bg`, `--input-border`, `--header-height`).
 
 2. **Страница авторизации (`auth.html`)**
@@ -34,7 +34,7 @@
 **Кто подключает:**
 
 - `src/pages/index.html`
-- `src/pages/RMK-director.html`
+- `src/pages/radar.html`
 - `src/pages/help.html`
 - `src/pages/admin.html`
 
@@ -65,7 +65,7 @@
 **Кто подключает:**
 
 - `src/pages/index.html`
-- `src/pages/RMK-director.html`
+- `src/pages/radar.html`
 - `src/pages/help.html`
 - `src/pages/admin.html`
 
@@ -98,9 +98,9 @@
 
 ### `src/css/RMK.css`
 
-**Роль:** основной CSS для `src/pages/RMK-director.html` (вся рабочая UI‑плоскость: сайдбар, радар, панели, модалки, селекты, подсказки).
+**Роль:** основной CSS для `src/pages/radar.html` (вся рабочая UI‑плоскость: сайдбар, радар, панели, модалки, селекты, подсказки).
 
-**Кто подключает:** `src/pages/RMK-director.html`
+**Кто подключает:** `src/pages/radar.html`
 
 **Что внутри (по смысловым зонам):**
 
@@ -134,9 +134,9 @@
 
 ### `src/css/rmk-inline-styles.css`
 
-**Роль:** набор «точечных» правил, вынесенных из `RMK-director.html` (оптимизация и удобство поддержки).
+**Роль:** набор «точечных» правил, вынесенных из `radar.html` (оптимизация и удобство поддержки).
 
-**Кто подключает:** `src/pages/RMK-director.html`
+**Кто подключает:** `src/pages/radar.html`
 
 **Что внутри:**
 

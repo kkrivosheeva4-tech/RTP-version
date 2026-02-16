@@ -1,28 +1,38 @@
 # Документация модулей проекта РТП-2.3 (`src/js/modules/`)
 
-Обновлено: **2026‑01‑29**
+Обновлено: **2026‑02‑16**
 Цель документа: дать максимально подробное описание каждого файла в `src/js/modules/`, его API, зависимостей и роли в приложении.
 
 ## Содержание
 
 - [Архитектурные принципы](#архитектурные-принципы)
-- [Порядок загрузки модулей (RMK-director.html)](#порядок-загрузки-модулей-rmk-directorhtml)
+- [Порядок загрузки модулей (radar.html)](#порядок-загрузки-модулей-radarhtml)
 - [Соглашения и общие понятия](#соглашения-и-общие-понятия)
   - [Состояние (StateManager)](#состояние-statemanager)
   - [DOM доступ (DOMCache и DOMProxy)](#dom-доступ-domcache-и-domproxy)
   - [События (EventManager, events.js)](#события-eventmanager-eventsjs)
+  - [Роли и системные учётки](#роли-и-системные-учётки)
   - [Нотификации и ошибки](#нотификации-и-ошибки)
 - [Core](#core)
   - [`core/logger.js`](#coreloggerjs)
   - [`core/dom-utils.js`](#coredom-utilsjs)
   - [`core/core-utils.js`](#corecore-utilsjs)
+  - [`core/error-handler.js`](#coreerror-handlerjs)
+  - [`config/api-config.js`](#configapi-configjs)
   - [`core/state-manager.js`](#corestate-managerjs)
+  - [`core/api-client.js`](#coreapi-clientjs)
+  - [`core/data-source.js`](#coredata-sourcejs)
+  - [`core/data-normalize.js`](#coredata-normalizejs)
   - [`core/data-loader.js`](#coredata-loaderjs)
   - [`core/state-utils.js`](#corestate-utilsjs)
   - [`core/data-indexing.js`](#coredata-indexingjs)
   - [`core/app-init.js`](#coreapp-initjs)
+  - [`config/roles-config.js`](#configroles-configjs)
+- [Utils](#utils)
+  - [`utils/func-cover-utils.js`](#utilsfunc-cover-utilsjs)
 - [Radar](#radar)
   - [`radar/positioning.js`](#radarpositioningjs)
+  - [`radar/spatial-index.js`](#radarspatial-indexjs)
   - [`radar/radar-renderer.js`](#radarradar-rendererjs)
   - [`radar/quadrant-cache.js`](#radarquadrant-cachejs)
   - [`radar/quadrants.js`](#radarquadrantsjs)
@@ -31,7 +41,9 @@
   - [`radar/radar-events.js`](#radarradar-eventsjs)
   - [`radar/prospects-chart.js`](#radarprospects-chartjs)
 - [UI](#ui)
+  - [`ui/common-ui.js`](#uicommon-uijs)
   - [`ui/filters.js`](#uifiltersjs)
+  - [`ui/filter-init.js`](#uifilter-initjs)
   - [`ui/select-events.js`](#uiselect-eventsjs)
   - [`ui/modals.js`](#uimodalsjs)
   - [`ui/forms.js`](#uiformsjs)
@@ -58,7 +70,12 @@
 - [Business](#business)
   - [`business/auth.js`](#businessauthjs)
   - [`business/priorities.js`](#businessprioritiesjs)
+  - [`business/export-fields-config.js`](#businessexport-fields-configjs)
+  - [`business/export-filters.js`](#businessexport-filtersjs)
+  - [`business/export-pdf.js`](#businessexport-pdfjs)
   - [`business/export.js`](#businessexportjs)
+- [Analytics](#analytics)
+  - [Модули аналитики модели](#модули-аналитики-модели)
 - [Integration](#integration)
   - [`integration/events.js`](#integrationeventsjs)
 
@@ -76,22 +93,23 @@
 4. **UI реагирует на изменения через подписки и события.**
    `state-utils.js` подписывает UI на изменения ключей состояния, `integration/events.js` связывает клики/ввод/зум с изменением состояния и перерисовкой.
 
-## Порядок загрузки модулей (RMK-director.html)
+## Порядок загрузки модулей (radar.html)
 
-Страница `src/pages/RMK-director.html` подключает **только** `RMK-director.js`.
+Страница `src/pages/radar.html` подключает **только** `RMK-director.js`.
 Дальше `RMK-director.js` загружает все модули последовательно (см. массив `modules` в `loadAllModules()`).
-
-**Примечание:** Страница `src/pages/RMK.html` больше не существует — она была заменена на `RMK-director.html` для всех ролей пользователей.
 
 Высокоуровневый порядок загрузки:
 
 - **base**: `audit-logger.js`, `script.js`, `radar-utils.js`
-- **core**: `logger.js` → `dom-utils` → `core-utils` → `state-manager` → `data-loader` → `state-utils` → `data-indexing`
+- **core**: `logger.js` → `dom-utils` → `core-utils` → `error-handler.js` → `config/api-config.js` → `state-manager` → `api-client.js` → `data-source` → `data-normalize` → `data-loader` → `state-utils` → `data-indexing`
 - **ui (раньше)**: `detail-panel` (нужен до `radar-wrappers`)
+- **utils**: `modules/utils/func-cover-utils.js` (учёт важности функций в funcCover)
 - **radar**: `positioning` → `radar-renderer` → `quadrant-cache` → `quadrants` → `radar-wrappers` → `radar-update`
-  - **Примечание:** `prospects-chart.js` **НЕ загружается** для директорской страницы
-- **ui (остальные)**: `filters` → `focus-trap` → `modals` → `forms` → `sidebar` → `modal-forms` → `report-status` → `tooltips` → `notifications` → `form-management` → `vendors-files` → `loading` → `error-display` → `toast` → `skeleton` → `mobile-nav` → `touch-handlers` → `keyboard-nav` → `aria-manager` → `onboarding` → `contextual-hints` → `offline-handler`
-- **business**: `export` → `auth` → `priorities`
+  - **Примечание:** `prospects-chart.js` **НЕ загружается** для страницы радара (radar.html)
+- **ui (остальные)**: `filters` → `config/form-field-options.js` → `filter-init` → `focus-trap` → `modals` → `forms` → `sidebar` → `modal-forms` → `report-status` → `tooltips` → `notifications` → `form-management` → `vendors-files` → `loading` → `error-display` → `toast` → `skeleton` → `mobile-nav` → `touch-handlers` → `keyboard-nav` → `aria-manager` → `onboarding` → `contextual-hints` → `offline-handler`
+- **business**: `export-fields-config` → `export-filters` → `export-pdf` → `export` → `auth` → `priorities`
+- **analytics**: `model-analytics` → `weight-optimizer` → `missing-data-predictor` → `temporal-dynamics` → `adaptive-calibration`
+- **radar (оптимизация)**: `radar/spatial-index.js`
 - **split‑handlers**: `ui/select-events` → `radar/radar-events`
 - **integration**: `integration/events`
 - **init**: `core/app-init` (загружается последним)
@@ -111,6 +129,8 @@
 - `blocksList`, `functions`, `nameToBlockId`, `functionToBlockMap`, `blockToQuadrant` — справочники
 - `quadrantsCache`, `quadrantsCacheVersion` — ускорение доступа к SVG‑структуре
 
+**Доступ к данным:** Данные радара и справочники (technologies, enterpriseData, blocksList, functions, nameToBlockId, functionToBlockMap, currentEnterprise и т.д.) следует **читать только через StateAccessors или StateManager** (`getTechnologies()`, `getEnterpriseData()`, `getBlocksList()`, `getFunctions()` и т.д.). Обращение к `window.technologies`, `window.blocksList`, `window.functions` и т.п. считается **устаревшим** (оставлено только для обратной совместимости при постепенном переходе; после перевода всех потребителей на state дублирование в `window` будет убрано).
+
 ### DOM доступ (DOMCache и DOMProxy)
 
 - `DOMCache.get(id)` — быстрый доступ по `id` с кешем и защитой от устаревших нод.
@@ -126,14 +146,22 @@
   - `ui/select-events.js` — кастомные селекты
   - `radar/radar-events.js` — события на радаре (hover/click/zoom)
 
+### Роли и системные учётки
+
+**Роли и системные учётки задаются в `config/roles-config.js`; страница входа (`auth.js`) и админ-панель (раздел «Пользователи») только потребляют.** Модуль экспортирует `window.RolesConfig`: константы ролей, отображаемые названия, `getUsersForMockAuth()` для mock-входа, `getSystemAccountsForAdmin()` для шаблона таблицы пользователей по умолчанию. При переходе на API учётки будут приходить с бэкенда; конфиг остаётся источником перечисления ролей и меток.
+
 ### Нотификации и ошибки
 
-Есть несколько «каналов»:
+**Показ ошибок пользователю и логирование — через `reportError`.**
 
-- `ui/toast.js` (`window.Toast`) — основной «современный» способ уведомлений.
-- `core/core-utils.js` (`ErrorHandler`) + `ui/error-display.js` (`ErrorDisplay`) — показ ошибок и возможность повтора.
-- `ui/loading.js` (`LoadingManager`) — индикатор загрузки/прогресса.
-- `ui/report-status.js` (`ReportStatus`) — специализированный индикатор экспорта отчёта.
+- `core/error-handler.js` — единая точка входа:
+  - `reportError(error, context, options?)` — логирует через `Logger` (если есть) и показывает пользователю через `ErrorDisplay` или `Toast`; `context` — строка или объект (например `'Загрузка данных'` или `{ action: 'loadData' }`); в `options` можно передать `{ retryCallback: fn }` для кнопки «Повторить» в ErrorDisplay, `showToUser: false` — только логирование.
+  - `reportValidationErrors(fieldErrors)` — показ ошибок валидации форм (массив строк или `{ field, message }`).
+- Остальные «каналы»:
+  - `ui/toast.js` (`window.Toast`) — уведомления (используется из reportError при отсутствии ErrorDisplay).
+  - `core/core-utils.js` (`ErrorHandler`) + `ui/error-display.js` (`ErrorDisplay`) — показ ошибок с повтором (вызываются из reportError при необходимости).
+  - `ui/loading.js` (`LoadingManager`) — индикатор загрузки/прогресса.
+  - `ui/report-status.js` (`ReportStatus`) — индикатор экспорта отчёта.
 
 ---
 
@@ -213,6 +241,18 @@
 
 ---
 
+### `core/error-handler.js`
+
+**Назначение:** единая точка входа для логирования и показа ошибок пользователю (см. [Нотификации и ошибки](#нотификации-и-ошибки)).
+
+**Экспорт в `window`:**
+- `reportError(error, context, options?)` — логирует через `Logger` (если есть) и при необходимости показывает пользователю через `ErrorDisplay` или `Toast`. Аргументы: `error` — объект Error или строка; `context` — строка или объект (например `{ action: 'loadData' }`); `options` — опционально `{ retryCallback: fn }` (для кнопки «Повторить» в ErrorDisplay), `showToUser: false` (только логирование).
+- `reportValidationErrors(fieldErrors)` — массив строк или объектов `{ field, message }` для отображения ошибок валидации форм (Toast.warning).
+
+**Зависимости (на момент вызова):** `Logger` (для лога), `ErrorDisplay` или `Toast` (для показа пользователю). Модуль загружается после `core-utils`, вызовы `reportError` происходят позже, когда UI-модули уже загружены.
+
+---
+
 ### `core/state-manager.js`
 
 **Назначение:** минималистичное хранилище состояния + подписки.
@@ -231,28 +271,68 @@
 
 ---
 
+### `config/api-config.js`
+
+**Назначение:** конфигурация API бэкенда (базовый URL, таймауты, ключи хранения токенов). Заглушка для этапа 6 рефакторинга; при подключении бэкенда используется в `api-client.js`. См. `BACKEND_READINESS_CRITICAL_CHANGES.md`.
+
+**Экспорт в `window`:**
+- `window.ApiConfig` — объект с методами: `getBaseUrl()`, `getDefaultTimeout()`, `getHeavyTimeout()`, `getTokenStorageKey()`, `getRefreshTokenStorageKey()`.
+
+---
+
+### `core/api-client.js`
+
+**Назначение:** заглушка единой точки запросов к API (метод, путь, body, query, таймауты, подстановка Authorization, обработка 401). Пока не вызывается из data-loader; при подключении бэкенда здесь будет реализован fetch с токеном, refresh при 401 и редирект на auth.html.
+
+**Экспорт в `window`:**
+- `window.ApiClient` — объект с методами: `request(method, path, options)`, `get(path, query, options)`, `post(path, body, options)`, `put`, `patch`, `delete`.
+
+---
+
+### `config/form-field-options.js`
+
+**Назначение:** единый конфиг опций для селектов форм (добавление/редактирование технологии, фильтры). Этап 7 рефакторинга: изменение надписей или добавление опции — в одном файле.
+
+**Экспорт в `window`:**
+- `window.FormFieldOptions` — объект: `TRL_OPTIONS`, `RATING_OPTIONS`, `STATUS_OPTIONS`, `TRL_TOOLTIPS`, `TECH_READ_TOOLTIPS`, `ORGAN_READ_TOOLTIPS`, `FUNC_COVER_TOOLTIPS`, `MODAL_FIELD_IDS` (id полей модальных форм).
+
+**Используется в:** `ui/filter-init.js` (инициализация sidebar-фильтров и модальных селектов).
+
+---
+
+### `core/data-source.js`
+
+**Назначение:** слой работы с данными — VFS (localStorage) и fetch‑загрузка JSON. Вынесено из data-loader (этап 2 рефакторинга).
+
+**Экспорт в `window`:**
+- `vfsRead(filename)`, `vfsWrite(filename, data)` — чтение/запись JSON в localStorage под ключом `vfs:<filename>`.
+- `clearVfsCache()` — удаление всех ключей `vfs:*` из localStorage.
+- `fetchJsonWithCache(url, {ttl, timeout})` — fetch с кешем в памяти (TTL 5 мин), дедупликация параллельных запросов.
+- `clearFetchCache()` — очистка кеша fetch.
+- `loadJsonPreferVfs(filename, forceReload?)` — загрузка JSON: сначала с диска (`/src/data/ru/`, `/src/data/`), затем из VFS.
+
+---
+
+### `core/data-normalize.js`
+
+**Назначение:** нормализация технологий и справочников из сырых JSON. Вынесено из data-loader (этап 2 рефакторинга).
+
+**Экспорт в `window`:**
+- `buildBlockMaps(blocks)` — строит `blockIdToName`, `nameToBlockId`, `blocksList` из массива блоков.
+- `normalizeTechnologyFromNewFormat(tech, blockIdToName, enterprisesData)` — преобразует технологию из формата JSON в формат приложения.
+- `buildEnterpriseDataFromTechnologies(allTechnologies)` — строит объект company → technologies[].
+
+---
+
 ### `core/data-loader.js`
 
-**Назначение:** загрузка JSON данных, кеширование fetch, нормализация и запись в `StateManager`.
+**Назначение:** оркестрация загрузки данных — вызывает data-source, data-normalize, filter-init, записывает в StateManager. VFS и fetch — в `data-source.js`, нормализация — в `data-normalize.js`.
 
-**Подсистемы:**
+**Подсистемы (делегирование):**
 
-1. **VFS в localStorage**
-   Ключи вида `vfs:<filename>`, функции `vfsRead/vfsWrite`.
-
-2. **Fetch‑cache + дедупликация**
-   `fetchJsonWithCache(url, {ttl, timeout})`:
-
-   - кеширует ответы в памяти на TTL (по умолчанию 5 минут),
-   - дедуплицирует параллельные запросы через `inflightFetches`,
-   - использует `AbortController` для таймаута.
-
-3. **Загрузка JSON с приоритетом диска**
-   `loadJsonPreferVfs(filename)` пытается:
-
-   - `/src/data/ru/<filename>` → `/src/data/<filename>` (через fetch),
-   - если не получилось — VFS.
-
+1. **VFS и fetch** — см. `core/data-source.js`.
+2. **Нормализация** — см. `core/data-normalize.js`.
+3. **Инициализация фильтров** — см. `ui/filter-init.js`.
 4. **Интеграция с UI**
    `showNotification(message, isSuccess)`:
    - предпочтительно использует `window.Toast`,
@@ -352,6 +432,29 @@
 - включает `MobileNav`, `TouchHandlers`, `KeyboardNav`, `AriaManager`, `OnboardingTour`.
 
 **Примечание:** `ContextualHints` в этом файле отмечен как отключенный (закомментированная инициализация), хотя модуль и CSS существуют.
+
+---
+
+### `config/roles-config.js`
+
+**Назначение:** конфигурация ролей приложения и системных учёток. Источник перечисления ролей и меток; при переходе на API учётки будут с бэкенда.
+
+**Экспорт в `window`:**
+- `window.RolesConfig` — константы ролей, отображаемые названия, `getUsersForMockAuth()`, `getSystemAccountsForAdmin()`.
+
+**Где используется:** страница входа (`auth.js`), админ‑панель (раздел «Пользователи»), модуль `business/auth.js`.
+
+---
+
+## Utils
+
+### `utils/func-cover-utils.js`
+
+**Назначение:** утилиты расчёта покрытия функций (funcCover) с учётом важности функций. Используется при позиционировании и аналитике.
+
+**Где загружается:** `radar.html` (через RMK-director.js до radar-модулей), `admin.html`, `index.html`.
+
+**Экспорт в `window`:** функции/объекты для расчёта покрытия (точный API — в файле).
 
 ---
 
@@ -522,13 +625,23 @@
 
 ---
 
+### `radar/spatial-index.js`
+
+**Назначение:** пространственные индексы для оптимизации разведения blip'ов на радаре (снижение коллизий и перекрытий).
+
+**Где загружается:** `radar.html` (через RMK-director.js после analytics, перед select-events).
+
+**Экспорт в `window`:** API пространственного индекса (используется модулями positioning/radar-renderer при необходимости).
+
+---
+
 ### `radar/prospects-chart.js`
 
 **Назначение:** модуль «Перспективные» — модалка с графиком + таблицей + экспортом PDF.
 
 **DOM‑контракты (ключевые):**
 
-- кнопка открытия: `#toggleProspectsChartBtn` (не используется на RMK-director.html, модуль не загружается для директорской страницы)
+- кнопка открытия: `#toggleProspectsChartBtn` (не используется на radar.html, модуль не загружается для директорской страницы)
 - модалка: `#prospectsModal`
 - закрытие: `#closeProspectsBtn`
 - SVG графика: `#prospectsChartSvg`
@@ -554,6 +667,17 @@
 
 ## UI
 
+### `ui/common-ui.js`
+
+**Назначение:** общие UI-функции для страниц без RMK-director: инициализация темы (`initTheme`), общие обработчики. Используется на `index.html` и `admin.html`.
+
+**Экспорт в `window`:**
+- `window.CommonUI` — объект с методами `initTheme()` и др.
+
+**Где загружается:** подключается напрямую в `index.html`, `admin.html` (не входит в цепочку RMK-director.js).
+
+---
+
 ### `ui/filters.js`
 
 **Назначение:** построение и управление sidebar‑фильтрами (custom select), чтение выбранных значений, синхронизация зависимых фильтров.
@@ -576,6 +700,19 @@
 
 - `window.Filters` (набор методов)
 - алиасы: `window.getFilterValues` и другие helper‑функции (зависят от хвоста файла)
+
+---
+
+### `ui/filter-init.js`
+
+**Назначение:** инициализация sidebar‑фильтров и модальных селектов. Вынесено из data-loader (этап 2 рефакторинга).
+
+**Экспорт в `window`:**
+- `initFiltersWithRetry(attempt?)` — заполняет sidebar‑фильтры и модальные селекты с повтором при неготовности DOM.
+- `initModalSelectsWithDirections(directionsList, blocksList, functions, enterpriseListForModal, vendorsList)` — заполняет модальные селекты для форм добавления/редактирования.
+- `initFilters()` — ручная инициализация (отладка, повторная инициализация).
+
+**Зависимости:** `StateManager`, `Filters`.
 
 ---
 
@@ -659,7 +796,7 @@
   - валидация обязательных полей,
   - интеграция с `DataLoader.ensureAndPersistNewTech`, `switchEnterprise`, `updateRadar`, `Toast`, `appendAdminAudit`.
 
-**Сильная зависимость от DOM‑ID** (формы в `RMK-director.html`):
+**Сильная зависимость от DOM‑ID** (формы в `radar.html`):
 
 - `addTechForm`, `editTechForm` и множество `tech*` / `edit*` полей (включая hidden поля кастомных селектов).
 
@@ -750,7 +887,7 @@
 
 **Назначение:** модальный индикатор статуса генерации отчёта.
 
-**DOM‑контракты (в RMK-director.html):**
+**DOM‑контракты (в radar.html):**
 
 - модалка `#reportLoadingModal`
 - элементы `#loadingSpinner`, `#loadingSuccess`, `#loadingError`, `#loadingText`, `#loadingErrorMessage`
@@ -1019,7 +1156,7 @@
 - Валидация и обработка файлов
 
 **Особенности:**
-- Работает только на странице `RMK-director.html`
+- Работает только на странице `radar.html`
 - Интегрируется с формами добавления/редактирования технологий
 - Сохраняет данные в `enterpriseData-director.json`
 
@@ -1104,33 +1241,79 @@
 
 ---
 
+### `business/export-fields-config.js`
+
+**Назначение (этап 3 рефакторинга):** конфигурация полей и опций для экспорта PDF: порядок колонок, поля по умолчанию, метки полей, списки multi-select/text, опции (стоимость, рейтинги, TRL, приоритет, статус).
+
+**Экспорт:** `window.ExportFieldsConfig` — объект с константами `EXPORT_COLUMN_ORDER`, `DEFAULT_EXPORT_FIELDS`, `EXPORT_FIELD_LABELS`, `MULTI_SELECT_FIELDS`, `TEXT_FIELDS`, `COST_PROM_OPTIONS`, `RATING_OPTIONS`, `TRL_OPTIONS`, `PRIORITY_OPTIONS`, `STATUS_OPTIONS`.
+
+**Загружается:** до `export.js`, `export-filters.js`, `export-pdf.js`.
+
+---
+
+### `business/export-filters.js`
+
+**Назначение (этап 3 рефакторинга):** применение фильтров экспорта к списку технологий (предприятие, блоки, функции, статус, стоимость, описание, готовность, TRL, вендоры, интеграторы).
+
+**Экспорт:** `window.ExportFilters = { applyFiltersToTechnologies }`, алиас `window.applyFiltersToTechnologies`.
+
+**Загружается:** до `export.js` и `export-pdf.js`.
+
+---
+
+### `business/export-pdf.js`
+
+**Назначение (этап 3 рефакторинга):** генерация PDF-отчёта: построение таблицы на canvas, вставка страниц в jsPDF, сохранение файла. Использует `ExportFieldsConfig`, `getFieldLabel`/`getFieldValue` (detail-panel), `isNumericField` (events).
+
+**Входные зависимости:** `window.jspdf`, `window.getFieldLabel`, `window.getFieldValue`, `window.isNumericField`, `window.ExportFieldsConfig`.
+
+**Экспорт:** `window.ExportPdf = { generatePdf, prepareSelectedFieldsList }`. Функция `generatePdf(sourceList, enterpriseName, selectedFields, companyFilterForDisplay)` возвращает `Promise<{ enterpriseName, fieldsCount }>`.
+
+**Загружается:** до `export.js`, после `export-fields-config.js` и `export-filters.js`.
+
+---
+
 ### `business/export.js`
 
-**Назначение:** экспорт PDF отчёта: выбор полей, фильтров экспорта, генерация PDF через `jsPDF` + `autoTable`.
+**Назначение:** оркестрация экспорта PDF: модальное окно выбора полей и фильтров, сбор данных, вызов `prepareSourceList` (state + ExportFilters), вызов `ExportPdf.generatePdf`, Toast/аудит. Конфигурация полей и опции — из `ExportFieldsConfig`; фильтрация списка — через `ExportFilters.applyFiltersToTechnologies`; генерация файла — через `ExportPdf.generatePdf`.
 
 **Входные зависимости:**
 
-- библиотеки: `window.jspdf` (UMD), `autoTable` plugin
-- данные: `StateAccessors.getTechnologies()` и/или доступ к списку технологий
-- поля: `getFieldLabel/getFieldValue` (обычно из `detail-panel.js`)
-- фильтры: `Filters` и внутренние фильтры экспорта (company/blocks/functions/techTypes/status/costProm)
-- UI:
-  - `showModal/hideModal`
-  - `ReportStatus` (индикатор отчёта)
-  - `Toast` (уведомления)
+- модули: `ExportFieldsConfig`, `ExportFilters`, `ExportPdf` (загружаются до export.js в RMK-director)
+- библиотеки: `window.jspdf` (для проверки в performPdfExport)
+- данные: StateAccessors (getEnterpriseData, getCurrentEnterprise, getTechnologies)
+- поля: `getFieldLabel`/`getFieldValue` (detail-panel)
+- UI: `showModal`/`hideModal`, `LoadingManager`, `Toast`
 
 **Ключевые экспортируемые функции (алиасы):**
 
-- `performPdfExport(selectedFields, filters)`
+- `performPdfExport(selectedFields, filters)` — подготовка списка, вызов ExportPdf.generatePdf, уведомления и аудит
 - `showExportPdfModal()`
-- `populateExportFilters()`
-- `setupExportFilterToggles()`
-- `validateExportFields()`
+- `populateExportFilters()`, `setupExportFilterToggles()`, `validateExportFields()`
+- `applyFiltersToTechnologies` (делегирует в ExportFilters)
 
 **Экспорт:**
 
 - `window.ExportModule = (function(){ ... })()`
 - алиасы: `window.performPdfExport`, `window.showExportPdfModal`, …
+
+---
+
+## Analytics
+
+### Модули аналитики модели
+
+Загружаются на `radar.html` через RMK-director.js после business-модулей. Используются для расчёта приоритетов, весов и обработки отсутствующих данных.
+
+| Модуль | Назначение |
+|--------|------------|
+| `analytics/model-analytics.js` | Базовая аналитика модели. |
+| `analytics/weight-optimizer.js` | Автоматическая оптимизация весов. |
+| `analytics/missing-data-predictor.js` | Обработка и предсказание при отсутствующих данных. |
+| `analytics/temporal-dynamics.js` | Учёт временной динамики. |
+| `analytics/adaptive-calibration.js` | Адаптивная калибровка параметров. |
+
+**Экспорт:** каждый модуль при необходимости экспортирует API в `window` для использования в priorities, positioning или других модулях.
 
 ---
 

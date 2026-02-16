@@ -27,25 +27,19 @@
     const Filters = getFilters();
     const renderMultiSelectTags = Filters.renderMultiSelectTags;
 
-    // Получаем зависимости из window
-    const getBlocksList = window.getBlocksList || (() => []);
     const updateModalFunctionsForBlocks = window.updateModalFunctionsForBlocks;
 
-    // Получаем актуальные данные из StateAccessors, если доступны
-    let blocksList;
-    if (window.StateAccessors) {
-      try {
-        blocksList = window.StateAccessors.getBlocksList ? window.StateAccessors.getBlocksList() : getBlocksList();
-        if (!blocksList || blocksList.length === 0) {
-          blocksList = window.blocksList || getBlocksList();
-        }
-      } catch (e) {
-        // Fallback к window функциям если StateAccessors недоступен
-        blocksList = window.blocksList || getBlocksList();
-      }
-    } else {
-      // Fallback к window функциям
-      blocksList = window.blocksList || getBlocksList();
+    // Данные только через StateAccessors (window.* устарел)
+    let blocksList = [];
+    if (window.StateAccessors && typeof window.StateAccessors.getBlocksList === 'function') {
+      blocksList = window.StateAccessors.getBlocksList() || [];
+    }
+    if (!blocksList.length && window.StateManager && typeof window.StateManager.get === 'function') {
+      const list = window.StateManager.get('blocksList');
+      blocksList = Array.isArray(list) ? list : [];
+    }
+    if (!blocksList.length && (window.getBlocksList && typeof window.getBlocksList === 'function')) {
+      blocksList = window.getBlocksList() || [];
     }
 
     if (!Array.isArray(blocksList) || blocksList.length === 0) {
@@ -139,10 +133,21 @@
     const Filters = getFilters();
     const renderMultiSelectTags = Filters.renderMultiSelectTags;
 
-    // Получаем зависимости из window
-    const functions = window.functions || [];
-    const functionToBlockMap = window.functionToBlockMap || {};
-    const nameToBlockId = window.nameToBlockId || {};
+    // Справочники через StateAccessors (window.* устарел)
+    let functions = [];
+    let functionToBlockMap = {};
+    let nameToBlockId = {};
+    if (window.StateAccessors) {
+      if (typeof window.StateAccessors.getFunctions === 'function') functions = window.StateAccessors.getFunctions() || [];
+      if (typeof window.StateAccessors.getFunctionToBlockMap === 'function') functionToBlockMap = window.StateAccessors.getFunctionToBlockMap() || {};
+      if (typeof window.StateAccessors.getNameToBlockId === 'function') nameToBlockId = window.StateAccessors.getNameToBlockId() || {};
+    }
+    if (!functions.length && window.StateManager && typeof window.StateManager.get === 'function') {
+      const f = window.StateManager.get('functions');
+      functions = Array.isArray(f) ? f : [];
+      if (!Object.keys(functionToBlockMap).length) functionToBlockMap = window.StateManager.get('functionToBlockMap') || {};
+      if (!Object.keys(nameToBlockId).length) nameToBlockId = window.StateManager.get('nameToBlockId') || {};
+    }
 
     if (!Array.isArray(functions) || functions.length === 0) return;
     if (!functionToBlockMap || Object.keys(functionToBlockMap).length === 0) return;

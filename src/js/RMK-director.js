@@ -27,7 +27,12 @@ async function loadAllModules() {
     '/src/js/modules/core/logger.js',  // logger wrapper для dev/prod
     '/src/js/modules/core/dom-utils.js',  // dom-cache + dom-proxy
     '/src/js/modules/core/core-utils.js',  // error-handler + event-manager + memoization + module-loader + render-queue
+    '/src/js/modules/core/error-handler.js',  // reportError — единая точка логирования и показа ошибок
+    '/src/js/config/api-config.js',  // базовый URL API, таймауты (заглушка для бэкенда)
     '/src/js/modules/core/state-manager.js',
+    '/src/js/modules/core/api-client.js',  // заглушка запросов к API (Authorization, 401, таймауты)
+    '/src/js/modules/core/data-source.js',  // VFS + fetch + loadJsonPreferVfs (этап 2)
+    '/src/js/modules/core/data-normalize.js',  // normalizeTechnologyFromNewFormat, buildBlockMaps (этап 2)
     '/src/js/modules/core/data-loader.js',
     '/src/js/modules/core/state-utils.js',  // state-accessors + state-subscriptions
     '/src/js/modules/core/data-indexing.js',  // data-index + tech-index
@@ -49,6 +54,8 @@ async function loadAllModules() {
 
     // UI модули (остальные)
     '/src/js/modules/ui/filters.js',
+    '/src/js/config/form-field-options.js',  // TRL, рейтинги, статусы, tooltips (этап 7)
+    '/src/js/modules/ui/filter-init.js',  // initFiltersWithRetry, initModalSelects (этап 2)
     '/src/js/modules/ui/focus-trap.js',
     '/src/js/modules/ui/modals.js',
     '/src/js/modules/ui/forms.js',
@@ -71,7 +78,10 @@ async function loadAllModules() {
     '/src/js/modules/ui/contextual-hints.js',
     '/src/js/modules/ui/offline-handler.js',
 
-    // Business модули
+    // Business модули (этап 3: конфиг полей, фильтры и PDF до export.js)
+    '/src/js/modules/business/export-fields-config.js',
+    '/src/js/modules/business/export-filters.js',
+    '/src/js/modules/business/export-pdf.js',
     '/src/js/modules/business/export.js',
     '/src/js/modules/business/auth.js',
     '/src/js/modules/business/priorities.js',

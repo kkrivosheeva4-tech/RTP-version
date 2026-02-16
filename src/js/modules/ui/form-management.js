@@ -1256,7 +1256,7 @@
         }
       });
       try {
-        DataLoader.vfsWrite('bloks.json', StateAccessors.getBlocksList());
+        DataLoader.vfsWrite('blocks.json', StateAccessors.getBlocksList());
       } catch (err) { if (window.Logger) window.Logger.warn('Не удалось сохранить новый блок в VFS', err); }
     }
 
@@ -2190,11 +2190,11 @@
         }
 
         // Загружаем текущие данные блоков для получения/создания ID
-        let blocksData = DataLoader.vfsRead('bloks.json');
+        let blocksData = DataLoader.vfsRead('blocks.json');
         if (!blocksData) {
           // Если нет в VFS, загружаем из исходного файла
           try {
-            const loaded = await DataLoader.loadJsonPreferVfs('bloks.json');
+            const loaded = await DataLoader.loadJsonPreferVfs('blocks.json');
             blocksData = loaded.data || [];
           } catch (err) {
             blocksData = [];
@@ -2307,7 +2307,7 @@
         // Сохраняем блоки
         // УДАЛЕНО (2026-01-29): blockToQuadrant.json больше не сохраняется
         // Блоки не привязаны к квадрантам, они являются отдельными критериями технологии
-        DataLoader.vfsWrite('bloks.json', blocksData);
+        DataLoader.vfsWrite('blocks.json', blocksData);
 
         // Обновляем фильтры и модальные формы с актуальными данными
         const blocksListUpdated = StateAccessors.getBlocksList();
@@ -2323,8 +2323,7 @@
           }
         }
 
-        // Синхронизируем данные с window и StateManager для гарантии актуальности
-        // УДАЛЕНО (2026-01-29): blockToQuadrant больше не синхронизируется
+        // TODO: убрать запись в window после перевода всех потребителей на state
         window.blocksList = blocksListUpdated;
         if (window.StateManager && window.StateManager.set) {
           window.StateManager.set('blocksList', blocksListUpdated);
@@ -2366,7 +2365,7 @@
                 if (selectedSectors.length > 0) {
                   // Используем setTimeout для гарантии, что данные обновились и populateSelectForModal завершился
                   setTimeout(() => {
-                    // Еще раз получаем актуальные данные перед вызовом
+                    // TODO: убрать после перевода всех потребителей на state
                     if (window.StateAccessors) {
                       window.blocksList = window.StateAccessors.getBlocksList() || blocksListUpdated;
                     }

@@ -62,164 +62,12 @@ window.ExportModule = (function() {
     }
   }
 
-  // Функция для применения фильтров к списку технологий
+  // Делегирование в export-filters.js (этап 3 рефакторинга)
   function applyFiltersToTechnologies(sourceList, filters) {
-    if (!sourceList || sourceList.length === 0) return sourceList;
-
-    return sourceList.filter(tech => {
-      // Фильтр по предприятию (массив значений)
-      if (filters.company && Array.isArray(filters.company) && filters.company.length > 0) {
-        const techCompanies = Array.isArray(tech.company) ? tech.company : (tech.company ? [tech.company] : []);
-        const hasMatchingCompany = techCompanies.some(comp => filters.company.includes(comp));
-        if (!hasMatchingCompany) return false;
-      }
-
-      // Фильтр по блоку (массив значений)
-      if (filters.blocks && Array.isArray(filters.blocks) && filters.blocks.length > 0) {
-        const techBlocks = Array.isArray(tech.blocks)
-          ? tech.blocks.map(b => {
-              if (typeof b === 'number' && typeof window.blockIdToName !== 'undefined' && window.blockIdToName[b]) {
-                return window.blockIdToName[b];
-              }
-              return String(b || '');
-            })
-          : [tech.block || tech.blocks].filter(Boolean);
-        const hasMatchingBlock = techBlocks.some(block => filters.blocks.includes(block));
-        if (!hasMatchingBlock) return false;
-      }
-
-      // Фильтр по функциям (массив значений)
-      if (filters.functions && Array.isArray(filters.functions) && filters.functions.length > 0) {
-        const techFunctions = Array.isArray(tech.functions) ? tech.functions : [tech.func || tech.functions].filter(Boolean);
-        const hasMatchingFunction = techFunctions.some(func => filters.functions.includes(func));
-        if (!hasMatchingFunction) return false;
-      }
-
-      // Фильтр по типу технологии удален (все технологии отображаются кругами)
-
-      // Фильтр по статусу (Внедренные/Невнедренные) на основе isImplemented
-      if (filters.status && Array.isArray(filters.status) && filters.status.length > 0) {
-        // Для технологий с несколькими предприятиями проверяем isImplemented для каждого предприятия
-        const companies = Array.isArray(tech.company) ? tech.company : (tech.company ? [tech.company] : []);
-        let isImplemented = false;
-
-        if (companies.length > 1 && tech.companyRatings && typeof tech.companyRatings === 'object') {
-          // Для нескольких предприятий проверяем, есть ли хотя бы одно с isImplemented = true
-          isImplemented = companies.some(company => {
-            const ratings = tech.companyRatings[company];
-            return ratings && ratings.isImplemented === true;
-          });
-        } else {
-          // Для одного предприятия или общего значения
-          if (companies.length === 1 && tech.companyRatings && typeof tech.companyRatings === 'object') {
-            const ratings = tech.companyRatings[companies[0]];
-            isImplemented = ratings && ratings.isImplemented === true;
-          } else {
-            isImplemented = tech.isImplemented === true;
-          }
-        }
-
-        const statusValue = isImplemented ? 'Внедренные' : 'Невнедренные';
-        if (!filters.status.includes(statusValue)) return false;
-      }
-
-      // Фильтр по стоимости (только для перспективных) - множественный выбор
-      if (filters.costProm && Array.isArray(filters.costProm) && filters.costProm.length > 0) {
-        const isPerspective = tech.status === 'Перспективные' || tech.level === 'Перспективные';
-        if (!isPerspective) return false;
-
-        const cost = Number(tech.costProm) || 0;
-        let matchesAnyRange = false;
-
-        filters.costProm.forEach(range => {
-          if (range === '0 - 1 000 000' && cost >= 0 && cost <= 1000000) matchesAnyRange = true;
-          if (range === '1 000 000 - 5 000 000' && cost > 1000000 && cost <= 5000000) matchesAnyRange = true;
-          if (range === '5 000 000 - 10 000 000' && cost > 5000000 && cost <= 10000000) matchesAnyRange = true;
-          if (range === 'Более 10 000 000' && cost > 10000000) matchesAnyRange = true;
-        });
-
-        if (!matchesAnyRange) return false;
-      }
-
-      // Фильтр по описанию (поиск подстроки)
-      if (filters.description && filters.description !== '') {
-        const desc = (tech.description || '').toLowerCase();
-        const searchText = filters.description.toLowerCase();
-        if (!desc.includes(searchText)) return false;
-      }
-
-      // Фильтр по технологической готовности - множественный выбор
-      if (filters.techRead && Array.isArray(filters.techRead) && filters.techRead.length > 0) {
-        const techRead = String(tech.techRead || '');
-        if (!filters.techRead.includes(techRead)) return false;
-      }
-
-      // Фильтр по организационной готовности - множественный выбор
-      if (filters.organRead && Array.isArray(filters.organRead) && filters.organRead.length > 0) {
-        const organRead = String(tech.organRead || '');
-        if (!filters.organRead.includes(organRead)) return false;
-      }
-
-      // Фильтр по TRL-стадии - множественный выбор
-      if (filters.trlStage && Array.isArray(filters.trlStage) && filters.trlStage.length > 0) {
-        const trlStage = String(tech.trlStage || '');
-        if (!filters.trlStage.includes(trlStage)) return false;
-      }
-
-      // Фильтр по вендорам (массив значений)
-      if (filters.vendors && Array.isArray(filters.vendors) && filters.vendors.length > 0) {
-        if (!tech.vendors || !Array.isArray(tech.vendors) || tech.vendors.length === 0) return false;
-
-        // Извлекаем имена вендоров из технологии
-        const techVendorNames = tech.vendors.map(v => {
-          if (typeof v === 'object' && v !== null) {
-            return v.name || v.id || String(v);
-          }
-          return String(v);
-        }).map(name => String(name).trim()).filter(Boolean);
-
-        // Проверяем, есть ли совпадение (без учета регистра)
-        const hasMatchingVendor = techVendorNames.some(vendorName => {
-          return filters.vendors.some(filterVendor => {
-            return String(vendorName).toLowerCase() === String(filterVendor).toLowerCase();
-          });
-        });
-
-        if (!hasMatchingVendor) return false;
-      }
-
-      // Фильтр по интеграторам (массив значений)
-      if (filters.integrators && Array.isArray(filters.integrators) && filters.integrators.length > 0) {
-        if (!tech.vendors || !Array.isArray(tech.vendors) || tech.vendors.length === 0) return false;
-
-        // Собираем все интеграторы из всех вендоров технологии
-        const allIntegrators = [];
-        tech.vendors.forEach(vendor => {
-          if (vendor && typeof vendor === 'object' && vendor.integrators && Array.isArray(vendor.integrators)) {
-            vendor.integrators.forEach(integrator => {
-              const integratorName = typeof integrator === 'object' && integrator !== null
-                ? (integrator.name || integrator.id || String(integrator))
-                : String(integrator);
-              const normalizedName = String(integratorName).trim();
-              if (normalizedName && !allIntegrators.includes(normalizedName)) {
-                allIntegrators.push(normalizedName);
-              }
-            });
-          }
-        });
-
-        // Проверяем, есть ли совпадение (без учета регистра)
-        const hasMatchingIntegrator = allIntegrators.some(integratorName => {
-          return filters.integrators.some(filterIntegrator => {
-            return String(integratorName).toLowerCase() === String(filterIntegrator).toLowerCase();
-          });
-        });
-
-        if (!hasMatchingIntegrator) return false;
-      }
-
-      return true;
-    });
+    if (window.ExportFilters && typeof window.ExportFilters.applyFiltersToTechnologies === 'function') {
+      return window.ExportFilters.applyFiltersToTechnologies(sourceList, filters);
+    }
+    return sourceList || [];
   }
 
   // ===== ФУНКЦИИ РАБОТЫ С MULTI-SELECT =====
@@ -498,8 +346,7 @@ window.ExportModule = (function() {
       fieldItem.classList.add('has-error');
     }
 
-    // Если это поле с множественным выбором, подсвечиваем и его контейнер
-    const multiSelectFields = ['company', 'blocks', 'functions', 'status', 'costProm', 'techRead', 'organRead', 'trlStage', 'priority', 'vendors', 'integrators'];
+    const multiSelectFields = (window.ExportFieldsConfig && window.ExportFieldsConfig.MULTI_SELECT_FIELDS) || ['company', 'blocks', 'functions', 'status', 'costProm', 'techRead', 'organRead', 'trlStage', 'priority', 'vendors', 'integrators'];
     if (multiSelectFields.includes(fieldName)) {
       const container = document.getElementById(`filter_${fieldName}_container`);
       if (container) {
@@ -509,184 +356,9 @@ window.ExportModule = (function() {
   }
 
   // ===== ОСНОВНЫЕ ФУНКЦИИ ЭКСПОРТА =====
+  // prepareSelectedFieldsList, preparePreviewData, calculateColumnWidths, determinePageOrientation, mmToPx, wrapText и генерация PDF перенесены в export-pdf.js (этап 3)
 
-  // Подготовка списка выбранных полей в правильном порядке
-  function prepareSelectedFieldsList(selectedFields) {
-    const columnOrder = ['company', 'blocks', 'functions', 'name'];
-    const selectedFieldsKeys = Object.keys(selectedFields).filter(f => selectedFields[f] === true);
-    const selectedFieldsList = [];
-
-    columnOrder.forEach(field => {
-      if (selectedFieldsKeys.includes(field)) {
-        selectedFieldsList.push(field);
-      }
-    });
-    selectedFieldsKeys.forEach(field => {
-      if (!columnOrder.includes(field)) {
-        selectedFieldsList.push(field);
-      }
-    });
-
-    if (selectedFieldsList.length === 0) {
-      throw new Error('Не выбрано ни одного поля');
-    }
-
-    return selectedFieldsList;
-  }
-
-  // Подготовка данных для предпросмотра (для расчета ширины колонок)
-  function preparePreviewData(filters, selectedFields, pxPerMM) {
-    const enterpriseData = safeGet('getEnterpriseData', {});
-    const currentEnterprise = safeGet('getCurrentEnterprise');
-    let previewData = [];
-
-    if (filters.company && Array.isArray(filters.company) && filters.company.length > 0) {
-      filters.company.forEach(company => {
-        if (enterpriseData && enterpriseData[company]) {
-          previewData = previewData.concat(enterpriseData[company].slice(0, 10));
-        }
-      });
-    } else if (selectedFields.company === true) {
-      const allCompanies = Object.keys(enterpriseData || {}).filter(c => c);
-      allCompanies.forEach(company => {
-        if (enterpriseData && enterpriseData[company]) {
-          previewData = previewData.concat(enterpriseData[company].slice(0, 10));
-        }
-      });
-    } else {
-      const currentEnt = currentEnterprise || 'Предприятие';
-      if (enterpriseData && enterpriseData[currentEnt]) {
-        previewData = enterpriseData[currentEnt].slice(0, 10);
-      } else {
-        const technologies = safeGet('getTechnologies', []);
-        if (Array.isArray(technologies)) {
-          previewData = technologies.slice(0, 10);
-        }
-      }
-    }
-
-    return previewData;
-  }
-
-  // Расчет минимальных ширин колонок
-  function calculateColumnWidths(selectedFieldsList, previewData, companyFilterForDisplay, pxPerMM) {
-    const tempCanvas = document.createElement('canvas');
-    const tempCtx = tempCanvas.getContext('2d');
-    const tempFontSize = Math.round(12 * pxPerMM / 3.78);
-    const tempFont = `${tempFontSize}px Segoe UI, Roboto, Arial, sans-serif`;
-    const tempBoldFont = `bold ${tempFontSize}px Segoe UI, Roboto, Arial, sans-serif`;
-    tempCtx.font = tempFont;
-
-    return selectedFieldsList.map(field => {
-      const label = (typeof window.getFieldLabel === 'function' ? window.getFieldLabel(field) : field);
-      tempCtx.font = tempBoldFont;
-      const labelWidthPx = tempCtx.measureText(label).width;
-      tempCtx.font = tempFont;
-
-      let maxContentWidthPx = labelWidthPx;
-      previewData.forEach(tech => {
-        const value = typeof window.getFieldValue === 'function'
-          ? window.getFieldValue(tech, field, { companyFilter: companyFilterForDisplay })
-          : String(tech[field] || '');
-        const valueStr = String(value || '');
-        const words = valueStr.split(/\s+/);
-        let line = '';
-        words.forEach(word => {
-          const testLine = line ? line + ' ' + word : word;
-          const testWidth = tempCtx.measureText(testLine).width;
-          if (testWidth > maxContentWidthPx) {
-            maxContentWidthPx = testWidth;
-          }
-          if (testWidth > 200) {
-            line = word;
-          } else {
-            line = testLine;
-          }
-        });
-      });
-
-      const cellPadding = 4;
-      const minWidthPx = Math.max(labelWidthPx, maxContentWidthPx) + (cellPadding * 2) + 10;
-      const minWidthMm = minWidthPx / pxPerMM;
-      return Math.max(minWidthMm, 20);
-    });
-  }
-
-  // Определение ориентации страницы
-  function determinePageOrientation(minColWidths, selectedFieldsList, margin, pxPerMM) {
-    const cellPadding = 4;
-    const cellPaddingMm = cellPadding / pxPerMM;
-    const totalMinWidth = minColWidths.reduce((sum, w) => sum + w, 0) + (selectedFieldsList.length - 1) * cellPaddingMm;
-    const availableWidthPortrait = 210 - (margin * 2);
-    return totalMinWidth > availableWidthPortrait ? 'landscape' : 'portrait';
-  }
-
-  // Вспомогательные функции для работы с текстом и размерами
-  function mmToPx(mm, pxPerMM) {
-    return Math.round(mm * pxPerMM);
-  }
-
-  function wrapText(ctx, text, maxWidthPx) {
-    const words = String(text || '').split(/\s+/);
-    const lines = [];
-    let line = '';
-
-    function breakLongWord(word, maxWidth) {
-      const result = [];
-      let currentPart = '';
-
-      for (let i = 0; i < word.length; i++) {
-        const testPart = currentPart + word[i];
-        const testWidth = ctx.measureText(testPart + '-').width;
-
-        if (testWidth > maxWidth && currentPart.length > 1) {
-          result.push(currentPart + '-');
-          currentPart = word[i];
-        } else {
-          currentPart = testPart;
-        }
-      }
-
-      if (currentPart) {
-        result.push(currentPart);
-      }
-
-      return result;
-    }
-
-    for (let i = 0; i < words.length; i++) {
-      const word = words[i];
-      const test = line ? line + ' ' + word : word;
-      const w = ctx.measureText(test).width;
-
-      if (w > maxWidthPx) {
-        if (line) {
-          lines.push(line);
-          line = '';
-        }
-
-        const wordWidth = ctx.measureText(word).width;
-        if (wordWidth > maxWidthPx) {
-          const wordParts = breakLongWord(word, maxWidthPx);
-          for (let j = 0; j < wordParts.length; j++) {
-            if (j === wordParts.length - 1) {
-              line = wordParts[j];
-            } else {
-              lines.push(wordParts[j]);
-            }
-          }
-        } else {
-          line = word;
-        }
-      } else {
-        line = test;
-      }
-    }
-    if (line) lines.push(line);
-    return lines;
-  }
-
-  // Подготовка списка технологий для экспорта
+  // Подготовка списка технологий для экспорта (оркестрация: state + ExportFilters.applyFiltersToTechnologies)
   function prepareSourceList(filters, selectedFields) {
     const enterpriseData = safeGet('getEnterpriseData', {});
     const currentEnterprise = safeGet('getCurrentEnterprise');
@@ -743,359 +415,39 @@ window.ExportModule = (function() {
     return { sourceList, enterpriseName };
   }
 
-  // Основная функция экспорта PDF с поддержкой выбора полей
+  // Основная функция экспорта PDF (оркестрация: prepareSourceList + ExportPdf.generatePdf)
   async function performPdfExport(selectedFields, filters = {}) {
-    // Показываем индикатор загрузки
     let loaderId = null;
     if (typeof window !== 'undefined' && window.LoadingManager) {
       loaderId = window.LoadingManager.show('Генерация PDF отчета...');
     }
 
     try {
-      // Используем функции из RMK2.js (будут доступны после загрузки)
       if (typeof window.checkArchitectRole === 'function' && !window.checkArchitectRole()) {
         throw new Error('Недостаточно прав для экспорта отчета');
       }
 
-      // Проверка, что выбрано хотя бы одно поле
-      const hasSelectedFields = Object.values(selectedFields).some(v => v === true);
-      if (!hasSelectedFields) {
-        throw new Error('Выберите хотя бы одно поле для экспорта');
-      }
-      const { jsPDF } = window.jspdf;
-
-      // Настройки формата A4 (мм)
-      const margin = 14; // mm
-      const DPI = 150;
-      const pxPerMM = DPI / 25.4;
-
-      // Подготовка данных
-      const selectedFieldsList = prepareSelectedFieldsList(selectedFields);
+      const { sourceList, enterpriseName } = prepareSourceList(filters, selectedFields);
       const companyFilterForDisplay = filters.company && Array.isArray(filters.company) && filters.company.length > 0
         ? filters.company
         : null;
-      const previewData = preparePreviewData(filters, selectedFields, pxPerMM);
-      const minColWidths = calculateColumnWidths(selectedFieldsList, previewData, companyFilterForDisplay, pxPerMM);
-      const orientation = determinePageOrientation(minColWidths, selectedFieldsList, margin, pxPerMM);
-      const { sourceList, enterpriseName } = prepareSourceList(filters, selectedFields);
 
-      // Создаем PDF с правильной ориентацией
-      const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: orientation });
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-
-
-      // Render a single page to canvas and return PNG dataURL
-      async function renderPagesToImages() {
-        const images = [];
-        const cw = mmToPx(pageWidth, pxPerMM);
-        const ch = mmToPx(pageHeight, pxPerMM);
-
-        // styles
-        const headerFont = `${Math.round(14 * pxPerMM / 3.78)}px Segoe UI, Roboto, Arial, sans-serif`;
-        const normalFont = `${Math.round(12 * pxPerMM / 3.78)}px Segoe UI, Roboto, Arial, sans-serif`;
-        const smallFont = `${Math.round(11 * pxPerMM / 3.78)}px Segoe UI, Roboto, Arial, sans-serif`;
-        const boldFont = `bold ${Math.round(12 * pxPerMM / 3.78)}px Segoe UI, Roboto, Arial, sans-serif`;
-
-        let canvas = document.createElement('canvas');
-        canvas.width = cw;
-        canvas.height = ch;
-        let ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, cw, ch);
-
-        const marginPx = mmToPx(margin, pxPerMM);
-        const contentW = cw - marginPx * 2;
-        const cellPadding = 4;
-        const rowSpacing = 2;
-        const baseHeaderHeight = 20;
-
-        let y = marginPx;
-
-        function newPage() {
-          images.push(canvas.toDataURL('image/png'));
-          canvas = document.createElement('canvas');
-          canvas.width = cw; canvas.height = ch;
-          const cctx = canvas.getContext('2d');
-          cctx.fillStyle = '#ffffff';
-          cctx.fillRect(0, 0, cw, ch);
-          return cctx;
-        }
-
-        const nowStr = new Date().toLocaleString('ru-RU');
-
-        function drawHeader(cctx) {
-          cctx.fillStyle = '#000';
-          cctx.textBaseline = 'top';
-          cctx.font = headerFont;
-          const title = `Технологический отчёт: ${enterpriseName}`;
-          const titleW = cctx.measureText(title).width;
-          cctx.fillText(title, Math.round((cw - titleW) / 2), y);
-          cctx.font = smallFont;
-          cctx.fillText(`Дата формирования отчёта: ${nowStr}`, marginPx, y + Math.round(16 * pxPerMM / 3.78));
-          y += Math.round(26 * pxPerMM / 3.78);
-        }
-
-        ctx.fillStyle = '#000';
-        ctx.textBaseline = 'top';
-        drawHeader(ctx);
-
-        if (!sourceList || sourceList.length === 0) {
-          ctx.font = normalFont;
-          ctx.fillText('На предприятии не зарегистрировано технологий', marginPx, y + 6);
-          images.push(canvas.toDataURL('image/png'));
-          return images;
-        }
-
-        // Вычисляем ширину колонок
-        const numCols = selectedFieldsList.length;
-        const availableWidthPx = contentW;
-        const totalPadding = (numCols - 1) * cellPadding;
-        const availableWidthForCols = availableWidthPx - totalPadding;
-
-        const minColWidthsPx = minColWidths.map(w => mmToPx(w));
-        const totalMinWidthPx = minColWidthsPx.reduce((sum, w) => sum + w, 0);
-
-        let colWidths;
-        if (totalMinWidthPx > availableWidthForCols) {
-          const scale = availableWidthForCols / totalMinWidthPx;
-          colWidths = minColWidthsPx.map(w => Math.max(Math.floor(w * scale), 10));
-        } else {
-          const scale = availableWidthForCols / totalMinWidthPx;
-          colWidths = minColWidthsPx.map(w => Math.floor(w * scale));
-          colWidths = colWidths.map((w, idx) => Math.max(w, minColWidthsPx[idx]));
-          const totalWidth = colWidths.reduce((sum, w) => sum + w, 0);
-          if (totalWidth > availableWidthForCols) {
-            const correction = availableWidthForCols / totalWidth;
-            colWidths = colWidths.map(w => Math.max(Math.floor(w * correction), 10));
-          }
-        }
-
-        let totalWidth = colWidths.reduce((sum, w) => sum + w, 0);
-        if (totalWidth > availableWidthForCols) {
-          const finalCorrection = availableWidthForCols / totalWidth;
-          colWidths = colWidths.map(w => Math.floor(w * finalCorrection));
-        }
-
-        const colWidth = Math.floor(availableWidthForCols / numCols);
-
-        // Вычисляем необходимую высоту заголовка
-        ctx.font = boldFont;
-        let maxHeaderLines = 1;
-        selectedFieldsList.forEach((field, idx) => {
-          const label = typeof window.getFieldLabel === 'function' ? window.getFieldLabel(field) : field;
-          const currentColWidth = colWidths[idx] || colWidth;
-          const availableWidth = currentColWidth - cellPadding * 2;
-          const headerLines = wrapText(ctx, label, availableWidth);
-          maxHeaderLines = Math.max(maxHeaderLines, headerLines.length);
-        });
-        const headerHeight = Math.max(baseHeaderHeight, maxHeaderLines * Math.round(12 * pxPerMM / 3.78) + cellPadding * 2);
-
-        // Рисуем заголовок таблицы
-        const headerY = y;
-        ctx.fillStyle = '#e0e0e0';
-        ctx.fillRect(marginPx, headerY, contentW, headerHeight);
-        ctx.fillStyle = '#000';
-        ctx.font = boldFont;
-        ctx.textBaseline = 'top';
-        ctx.textAlign = 'left';
-
-        let x = marginPx + cellPadding;
-        selectedFieldsList.forEach((field, idx) => {
-          const label = typeof window.getFieldLabel === 'function' ? window.getFieldLabel(field) : field;
-          const currentColWidth = colWidths[idx] || colWidth;
-          const availableWidth = currentColWidth - cellPadding * 2;
-
-          ctx.font = boldFont;
-          let headerLines = wrapText(ctx, label, availableWidth);
-          const lineHeight = Math.round(12 * pxPerMM / 3.78);
-
-          headerLines = headerLines.map(line => {
-            let displayLine = line;
-            if (ctx.measureText(displayLine).width > availableWidth) {
-              while (displayLine.length > 0 && ctx.measureText(displayLine + '...').width > availableWidth) {
-                displayLine = displayLine.slice(0, -1);
-              }
-              displayLine = displayLine + '...';
-            }
-            return displayLine;
-          });
-
-          const totalHeaderHeight = headerLines.length * lineHeight;
-          const startY = headerY + Math.max(0, (headerHeight - totalHeaderHeight) / 2);
-
-          headerLines.forEach((line, lineIdx) => {
-            ctx.fillText(line, x, startY + lineIdx * lineHeight);
-          });
-
-          x += currentColWidth + cellPadding;
-        });
-
-        y += headerHeight + rowSpacing;
-
-        // Рисуем строки данных
-        for (let i = 0; i < sourceList.length; i++) {
-          const tech = sourceList[i];
-          const isEvenRow = i % 2 === 0;
-
-          ctx.font = normalFont;
-          let maxLines = 1;
-          const cellValues = selectedFieldsList.map((field, idx) => {
-            const value = typeof window.getFieldValue === 'function'
-              ? window.getFieldValue(tech, field, { companyFilter: companyFilterForDisplay })
-              : String(tech[field] || '');
-            const currentColWidth = colWidths[idx] || colWidth;
-            const lines = wrapText(ctx, value, currentColWidth - cellPadding * 2);
-            maxLines = Math.max(maxLines, lines.length);
-            return lines;
-          });
-
-          const rowHeight = Math.max(headerHeight, maxLines * Math.round(12 * pxPerMM / 3.78) + cellPadding * 2);
-
-          // Проверка на перенос страницы
-          if (y + rowHeight + marginPx > ch - marginPx) {
-            const cctx = newPage();
-            y = marginPx;
-            drawHeader(cctx);
-            const newHeaderY = y;
-            cctx.fillStyle = '#e0e0e0';
-            cctx.fillRect(marginPx, newHeaderY, contentW, headerHeight);
-            cctx.fillStyle = '#000';
-            cctx.font = boldFont;
-            cctx.textBaseline = 'top';
-            cctx.textAlign = 'left';
-            let newX = marginPx + cellPadding;
-            selectedFieldsList.forEach((field, idx) => {
-              const label = typeof window.getFieldLabel === 'function' ? window.getFieldLabel(field) : field;
-              const currentColWidth = colWidths[idx] || colWidth;
-              const availableWidth = currentColWidth - cellPadding * 2;
-
-              cctx.font = boldFont;
-              let headerLines = wrapText(cctx, label, availableWidth);
-              const lineHeight = Math.round(12 * pxPerMM / 3.78);
-
-              headerLines = headerLines.map(line => {
-                let displayLine = line;
-                if (cctx.measureText(displayLine).width > availableWidth) {
-                  while (displayLine.length > 0 && cctx.measureText(displayLine + '...').width > availableWidth) {
-                    displayLine = displayLine.slice(0, -1);
-                  }
-                  displayLine = displayLine + '...';
-                }
-                return displayLine;
-              });
-
-              const totalHeaderHeight = headerLines.length * lineHeight;
-              const startY = newHeaderY + Math.max(0, (headerHeight - totalHeaderHeight) / 2);
-
-              headerLines.forEach((line, lineIdx) => {
-                cctx.fillText(line, newX, startY + lineIdx * lineHeight);
-              });
-
-              newX += currentColWidth + cellPadding;
-            });
-            y += headerHeight + rowSpacing;
-            ctx = cctx;
-          }
-
-          // Фон строки
-          if (isEvenRow) {
-            ctx.fillStyle = '#f9f9f9';
-            ctx.fillRect(marginPx, y, contentW, rowHeight);
-          }
-
-          // Границы ячеек
-          ctx.strokeStyle = '#d0d0d0';
-          ctx.lineWidth = 0.5;
-          x = marginPx;
-          for (let col = 0; col <= numCols; col++) {
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.lineTo(x, y + rowHeight);
-            ctx.stroke();
-            if (col < numCols) {
-              const currentColWidth = colWidths[col] || colWidth;
-              x += currentColWidth + cellPadding;
-            }
-          }
-          ctx.beginPath();
-          ctx.moveTo(marginPx, y);
-          ctx.lineTo(marginPx + contentW, y);
-          ctx.stroke();
-          ctx.beginPath();
-          ctx.moveTo(marginPx, y + rowHeight);
-          ctx.lineTo(marginPx + contentW, y + rowHeight);
-          ctx.stroke();
-
-          // Текст в ячейках
-          ctx.font = normalFont;
-          ctx.textBaseline = 'top';
-          ctx.textAlign = 'left';
-          x = marginPx + cellPadding;
-          selectedFieldsList.forEach((field, colIdx) => {
-            const lines = cellValues[colIdx];
-            const isNumeric = typeof window.isNumericField === 'function' ? window.isNumericField(field) : false;
-            const currentColWidth = colWidths[colIdx] || colWidth;
-            const availableTextWidth = currentColWidth - cellPadding * 2;
-            const textX = isNumeric ? x + currentColWidth - cellPadding : x;
-            ctx.textAlign = isNumeric ? 'right' : 'left';
-            const lineHeight = Math.round(12 * pxPerMM / 3.78);
-
-            ctx.fillStyle = '#000';
-
-            lines.forEach((line, lineIdx) => {
-              let displayLine = line;
-              if (ctx.measureText(displayLine).width > availableTextWidth) {
-                while (displayLine.length > 0 && ctx.measureText(displayLine + '...').width > availableTextWidth) {
-                  displayLine = displayLine.slice(0, -1);
-                }
-                displayLine = displayLine + '...';
-              }
-              ctx.fillText(displayLine, textX, y + cellPadding + lineIdx * lineHeight);
-            });
-
-            x += currentColWidth + cellPadding;
-            ctx.textAlign = 'left';
-          });
-
-          y += rowHeight + rowSpacing;
-        }
-
-        images.push(canvas.toDataURL('image/png'));
-        return images;
+      if (!window.ExportPdf || typeof window.ExportPdf.generatePdf !== 'function') {
+        throw new Error('Модуль генерации PDF не загружен');
       }
 
-      // Generate images and put them into pdf
-      const imgs = await renderPagesToImages();
-      if (!imgs || imgs.length === 0) {
-        throw new Error('Не удалось подготовить страницы отчёта');
-      }
+      const { enterpriseName: name, fieldsCount } = await window.ExportPdf.generatePdf(sourceList, enterpriseName, selectedFields, companyFilterForDisplay);
 
-      for (let i = 0; i < imgs.length; i++) {
-        if (i > 0) pdf.addPage();
-        pdf.addImage(imgs[i], 'PNG', 0, 0, pageWidth, pageHeight);
-      }
-
-      const filename = `Технологический_отчёт_${enterpriseName.replace(/\s+/g, '_')}.pdf`;
-      pdf.save(filename);
-
-      // Скрываем индикатор загрузки при успешном экспорте
       if (loaderId && typeof window !== 'undefined' && window.LoadingManager) {
         window.LoadingManager.hide(loaderId);
       }
-
-      // Показываем уведомление об успехе
       if (typeof window !== 'undefined' && window.Toast) {
         window.Toast.success('PDF отчет успешно сгенерирован и сохранен');
       }
-
-      // Логируем экспорт PDF (enterpriseName уже определен выше из prepareSourceList)
       try {
-        const fieldsCount = Object.values(selectedFields).filter(v => v === true).length;
         if (typeof window.appendAdminAudit === 'function') {
-          window.appendAdminAudit('export', `Экспорт PDF отчета для предприятия "${enterpriseName}" (полей: ${fieldsCount})`);
+          window.appendAdminAudit('export', `Экспорт PDF отчета для предприятия "${name}" (полей: ${fieldsCount})`);
         } else {
-          // Fallback: прямое логирование в localStorage если функция недоступна
           const key = 'adminAuditLogs';
           const raw = localStorage.getItem(key);
           const list = raw ? (JSON.parse(raw) || []) : [];
@@ -1110,7 +462,7 @@ window.ExportModule = (function() {
             date: now,
             user: username,
             action: 'export',
-            details: `Экспорт PDF отчета для предприятия "${enterpriseName}" (полей: ${fieldsCount})`,
+            details: `Экспорт PDF отчета для предприятия "${name}" (полей: ${fieldsCount})`,
             tz: 'local',
             ip: 'local'
           });
@@ -1120,20 +472,14 @@ window.ExportModule = (function() {
         if (window.Logger) window.Logger.warn('Ошибка при логировании экспорта:', err);
       }
     } catch (error) {
-      // Ошибка при генерации отчёта (canvas flow)
-
-      // Скрываем индикатор загрузки при ошибке
       if (loaderId && typeof window !== 'undefined' && window.LoadingManager) {
         window.LoadingManager.hide(loaderId);
       }
-
-      // Показываем ошибку
-      if (typeof window !== 'undefined' && window.ErrorDisplay) {
-        window.ErrorDisplay.show(error, 'Экспорт PDF отчета');
+      if (typeof window.reportError === 'function') {
+        window.reportError(error, 'Экспорт PDF отчета');
       } else if (typeof window !== 'undefined' && window.Toast) {
         window.Toast.error(error.message || 'Ошибка при генерации отчета');
       }
-
       throw error;
     }
   }
@@ -1152,17 +498,23 @@ window.ExportModule = (function() {
     },
     {
       field: 'blocks',
-      source: () => (typeof window.blocksList !== 'undefined' && Array.isArray(window.blocksList)) ? window.blocksList : [],
+      source: () => {
+        const list = safeGet('getBlocksList', []);
+        return Array.isArray(list) ? list : [];
+      },
       placeholder: 'Все блоки'
     },
     {
       field: 'functions',
-      source: () => (typeof window.functions !== 'undefined' && Array.isArray(window.functions)) ? window.functions : [],
+      source: () => {
+        const list = safeGet('getFunctions', []);
+        return Array.isArray(list) ? list : [];
+      },
       placeholder: 'Все функции'
     },
     {
       field: 'status',
-      source: () => ['Внедренные', 'Невнедренные'],
+      source: () => (window.ExportFieldsConfig && window.ExportFieldsConfig.STATUS_OPTIONS) || ['Внедренные', 'Невнедренные'],
       placeholder: 'Все статусы'
     },
     {
@@ -1298,37 +650,24 @@ window.ExportModule = (function() {
       });
     }
 
-    // Добавляем заполнение множественного выбора для стоимости внедрения
-    const costPromOptions = [
-      '0 - 1 000 000',
-      '1 000 000 - 5 000 000',
-      '5 000 000 - 10 000 000',
-      'Более 10 000 000'
-    ];
+    const costPromOptions = (window.ExportFieldsConfig && window.ExportFieldsConfig.COST_PROM_OPTIONS) || ['0 - 1 000 000', '1 000 000 - 5 000 000', '5 000 000 - 10 000 000', 'Более 10 000 000'];
     tasks.push(() => {
       populateMultiSelect('filter_costProm_container', costPromOptions, 'Все значения');
     });
 
-    // Добавляем заполнение множественного выбора для технологической готовности, организационной готовности, TRL-стадии
-    const ratingOptions = ['0', '1', '2', '3'];
+    const ratingOptions = (window.ExportFieldsConfig && window.ExportFieldsConfig.RATING_OPTIONS) || ['0', '1', '2', '3'];
     ['techRead', 'organRead'].forEach(fieldName => {
       tasks.push(() => {
         populateMultiSelect(`filter_${fieldName}_container`, ratingOptions, 'Все значения');
       });
     });
 
-    // TRL-стадия имеет значения 1, 2, 3
-    const trlOptions = ['1', '2', '3'];
+    const trlOptions = (window.ExportFieldsConfig && window.ExportFieldsConfig.TRL_OPTIONS) || ['1', '2', '3'];
     tasks.push(() => {
       populateMultiSelect('filter_trlStage_container', trlOptions, 'Все значения');
     });
 
-    // Добавляем заполнение множественного выбора для приоритета технологии
-    const priorityOptions = [
-      'Высокий (60-100%)',
-      'Средний (30-60%)',
-      'Низкий (0-30%)'
-    ];
+    const priorityOptions = (window.ExportFieldsConfig && window.ExportFieldsConfig.PRIORITY_OPTIONS) || ['Высокий (60-100%)', 'Средний (30-60%)', 'Низкий (0-30%)'];
     tasks.push(() => {
       populateMultiSelect('filter_priority_container', priorityOptions, 'Все приоритеты');
     });
@@ -1348,11 +687,10 @@ window.ExportModule = (function() {
     processNextTask();
   }
 
-  // Функция для включения/отключения фильтров при изменении чекбоксов
   function setupExportFilterToggles() {
-    const multiSelectFields = ['company', 'blocks', 'functions', 'status', 'costProm', 'techRead', 'organRead', 'trlStage', 'priority', 'vendors', 'integrators'];
+    const multiSelectFields = (window.ExportFieldsConfig && window.ExportFieldsConfig.MULTI_SELECT_FIELDS) || ['company', 'blocks', 'functions', 'status', 'costProm', 'techRead', 'organRead', 'trlStage', 'priority', 'vendors', 'integrators'];
     const singleSelectFields = [];
-    const textFields = ['description', 'exampleDesc'];
+    const textFields = (window.ExportFieldsConfig && window.ExportFieldsConfig.TEXT_FIELDS) || ['description', 'exampleDesc'];
 
     // Множественный выбор
     multiSelectFields.forEach(field => {
@@ -1494,26 +832,12 @@ window.ExportModule = (function() {
     // Очищаем все ошибки при открытии модального окна
     clearAllErrors();
 
-    // Дефолтные значения полей
-    const defaultFields = {
-      name: true,
-      company: true,
-      blocks: true,
-      functions: false,
-      techTypes: false,
-      status: true,
-      costProm: false,
-      description: false,
-      exampleDesc: false,
-      techRead: false,
-      organRead: false,
-      trlStage: false,
-      priority: false,
-      vendors: false,
-      integrators: false
+    const defaultFields = (window.ExportFieldsConfig && window.ExportFieldsConfig.DEFAULT_EXPORT_FIELDS) || {
+      name: true, company: true, blocks: true, functions: false, techTypes: false, status: true,
+      costProm: false, description: false, exampleDesc: false, techRead: false, organRead: false,
+      trlStage: false, priority: false, vendors: false, integrators: false
     };
 
-    // Инициализация чекбоксов
     Object.keys(defaultFields).forEach(field => {
       const checkbox = document.getElementById(`field_${field}`);
       if (checkbox) {
@@ -1636,22 +960,8 @@ window.ExportModule = (function() {
       return false;
     }
 
-    // Проверяем поля с множественным выбором
-    const allMultiSelectFields = ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'trlStage', 'priority', 'vendors', 'integrators'];
-    const fieldLabels = {
-      'company': 'Предприятия',
-      'blocks': 'Функциональный блок',
-      'functions': 'Функции',
-      'techTypes': 'Тип технологии',
-      'status': 'Статус',
-      'costProm': 'Стоимость внедрения',
-      'techRead': 'Технологическая готовность',
-      'organRead': 'Организационная готовность',
-      'trlStage': 'TRL-стадия',
-      'priority': 'Приоритет',
-      'vendors': 'Вендору',
-      'integrators': 'Интеграторы'
-    };
+    const allMultiSelectFields = (window.ExportFieldsConfig && window.ExportFieldsConfig.MULTI_SELECT_FIELDS) || ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'trlStage', 'priority', 'vendors', 'integrators'];
+    const fieldLabels = (window.ExportFieldsConfig && window.ExportFieldsConfig.EXPORT_FIELD_LABELS) || { company: 'Предприятия', blocks: 'Функциональный блок', functions: 'Функции', techTypes: 'Тип технологии', status: 'Статус', costProm: 'Стоимость внедрения', techRead: 'Технологическая готовность', organRead: 'Организационная готовность', trlStage: 'TRL-стадия', priority: 'Приоритет', vendors: 'Вендору', integrators: 'Интеграторы' };
 
     allMultiSelectFields.forEach(field => {
       const checkbox = document.getElementById(`field_${field}`);
@@ -1730,12 +1040,12 @@ window.ExportModule = (function() {
         const allSelected = areAllFieldsSelected();
         const shouldSelectAll = !allSelected;
 
+        const allMultiSelectFields = (window.ExportFieldsConfig && window.ExportFieldsConfig.MULTI_SELECT_FIELDS) || ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'trlStage', 'priority', 'vendors', 'integrators'];
         document.querySelectorAll('#exportPdfModal .export-field-item > label input[type="checkbox"], #exportPdfModal .export-field-row > label input[type="checkbox"]').forEach(cb => {
           cb.checked = shouldSelectAll;
           const field = cb.getAttribute('data-field');
-          const multiSelectFields = ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'trlStage', 'priority', 'vendors', 'integrators'];
 
-          if (multiSelectFields.includes(field)) {
+          if (allMultiSelectFields.includes(field)) {
             const container = document.getElementById(`filter_${field}_container`);
             if (container) {
               if (shouldSelectAll) {
@@ -1832,7 +1142,6 @@ window.ExportModule = (function() {
         const selectedFields = {};
         const filters = {};
 
-        // Собираем выбранные поля
         document.querySelectorAll('#exportPdfModal input[type="checkbox"]').forEach(cb => {
           const field = cb.getAttribute('data-field');
           if (field) {
@@ -1840,9 +1149,8 @@ window.ExportModule = (function() {
           }
         });
 
-        // Собираем значения фильтров
-        const multiSelectFields = ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'trlStage', 'priority', 'vendors', 'integrators'];
-        const textFields = ['description', 'exampleDesc'];
+        const multiSelectFields = (window.ExportFieldsConfig && window.ExportFieldsConfig.MULTI_SELECT_FIELDS) || ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'trlStage', 'priority', 'vendors', 'integrators'];
+        const textFields = (window.ExportFieldsConfig && window.ExportFieldsConfig.TEXT_FIELDS) || ['description', 'exampleDesc'];
 
         // Множественный выбор
         multiSelectFields.forEach(field => {

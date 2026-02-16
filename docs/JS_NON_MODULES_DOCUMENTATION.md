@@ -1,6 +1,6 @@
-# Документация JS файлов (кроме `src/js/modules/`) проекта РТП-2.3
+# Документация JS файлов (кроме `src/js/modules/`) проекта РТП
 
-Актуально для состояния репозитория на **2026‑01‑29**.
+Актуально для состояния репозитория на **2026‑02‑16**.
 
 ## Содержание
 
@@ -12,18 +12,21 @@
   - [`src/js/RMK-director.js`](#srcjsrmk-directorjs)
   - [`src/js/auth.js`](#srcjsauthjs)
   - [`src/js/help.js`](#srcjshelpjs)
+  - [`src/js/config/roles-config.js`](#srcjsconfigroles-configjs)
+  - [Скрипты админ‑панели (`src/js/admin/`)](#скрипты-админ-панели-srcjsadmin)
   - [`src/js/admin.js`](#srcjsadminjs)
 
 ## Общий обзор
 
 Вне `src/js/modules/` находятся «страничные» и «базовые» скрипты:
 
-- **`RMK-director.js`** — загрузчик модулей для основной страницы радара `RMK-director.html`. Загружает все модули в правильном порядке и экспортирует константы в `window`.
+- **`RMK-director.js`** — загрузчик модулей для основной страницы радара `radar.html`. Загружает все модули в правильном порядке и экспортирует константы в `window`.
 - **`script.js`** — общий «скрипт шапки/темы/tooltip'ов» и логика некоторых страниц (главная, админка; также загружается в RMK-director через `RMK-director.js`).
 - **`audit-logger.js`** — единый журнал аудита в `localStorage` + алиасы для всего проекта.
 - **`auth.js`** — авторизация на отдельной странице `auth.html` (в этой странице не используется модуль `modules/business/auth.js`).
 - **`help.js`** — поведение страницы справки `help.html`.
-- **`admin.js`** — админ‑панель (пользователи/аудит/бэкапы/экспорт/графики).
+- **`config/roles-config.js`** — конфигурация ролей и системных учёток (используется страницей входа и админкой).
+- **`admin.js`** — точка входа админ‑панели; координация разделов и навигации. Логика разделов вынесена в `src/js/admin/*.js`.
 - **`radar-utils.js`** — чистые утилиты геометрии/дебаунса, экспортируемые в `window`.
 
 ---
@@ -75,7 +78,7 @@
 
 - `window.debounce`, `window.polarToCartesian`, `window.cartesianToPolar`, `window.describeArc`, `window.describeWedge`, `window.starPath`
 
-**Где используется:** на странице `RMK-director.html` (через `RMK-director.js`, который загружает `radar-utils.js` одним из первых) и в модулях позиционирования/рендеринга.
+**Где используется:** на странице `radar.html` (через `RMK-director.js`, который загружает `radar-utils.js` одним из первых) и в модулях позиционирования/рендеринга.
 
 ---
 
@@ -93,7 +96,7 @@
 
 - `src/pages/index.html`
 - `src/pages/admin.html`
-- на `src/pages/RMK-director.html` этот файл загружается динамически из `RMK-director.js` (как «base utility»)
+- на `src/pages/radar.html` этот файл загружается динамически из `RMK-director.js` (как «base utility»)
 
 **Ключи localStorage (по факту использования в файле):**
 
@@ -127,7 +130,7 @@
 
 ### `src/js/RMK-director.js`
 
-**Назначение:** основной «загрузчик и интегратор» для `src/pages/RMK-director.html`.
+**Назначение:** основной «загрузчик и интегратор» для `src/pages/radar.html`.
 
 Файл выполняет две роли:
 
@@ -192,7 +195,7 @@
 **Назначение:** логика страницы `src/pages/help.html`:
 
 - тема (переключение `body.light/body.dark`);
-- навигация по предприятиям: по клику сохраняет `selectedEnterprise` и делает переход на `RMK-director.html`;
+- навигация по предприятиям: по клику сохраняет `selectedEnterprise` и делает переход на `radar.html`;
 - поиск по справке (скрытие/показ секций + подсветка `<mark.help-search-highlight>`);
 - «липкая» навигация по разделам и подсветка активного раздела при скролле внутри `.help-content`;
 - инициализация авторизации в шапке: вызывает `window.renderAuth()`, а если её нет — подгружает `/src/js/modules/business/auth.js`.
@@ -205,34 +208,44 @@
 
 ---
 
+### `src/js/config/roles-config.js`
+
+**Назначение:** конфигурация ролей приложения и системных учёток для mock-авторизации и шаблона пользователей в админке.
+
+**Где используется:** подключается на `auth.html` (опционально) и на `admin.html`; потребляется модулем `modules/business/auth.js` и админ‑разделами.
+
+**Экспорт в `window`:**
+- `window.RolesConfig` — константы ролей, отображаемые названия, `getUsersForMockAuth()`, `getSystemAccountsForAdmin()`.
+
+---
+
+### Скрипты админ‑панели (`src/js/admin/`)
+
+Подключаются только на `src/pages/admin.html` в порядке зависимостей. Общее состояние и хранилище — в `AdminCommon`.
+
+| Файл | Назначение |
+|------|------------|
+| `admin-common.js` | Общее состояние (AdminState), ключи localStorage, утилиты чтения/записи, уведомления. Экспорт: `window.AdminCommon`. |
+| `admin-dashboard.js` | Раздел «Дашборд»: статистика, графики Chart.js (usersChart, auditChart, rolesChart). Экспорт: `window.AdminDashboard`. |
+| `admin-users.js` | Раздел «Пользователи»: CRUD пользователей. Экспорт: `window.AdminUsers`. |
+| `admin-audit.js` | Раздел «Аудит»: журнал аудита, фильтрация, пагинация. Экспорт: `window.AdminAudit`. |
+| `admin-export.js` | Раздел «Экспорт»: экспорт данных (JSON/Excel). Экспорт: `window.AdminExport`. |
+| `admin-backups.js` | Раздел «Бэкапы»: создание/восстановление/удаление снапшотов. Экспорт: `window.AdminBackups`. |
+| `admin-enterprises.js` | Раздел «Предприятия»: обзор/управление предприятиями. Экспорт: `window.AdminEnterprises`. |
+
+**Ключи localStorage (через AdminCommon):** `adminUsers`, `adminAuditLogs`, `adminBackups`, `appInstallDate`, `adminSidebarCollapsed` и др.
+
+---
+
 ### `src/js/admin.js`
 
-**Назначение:** вся логика админ‑панели `src/pages/admin.html`.
+**Назначение:** точка входа админ‑панели `src/pages/admin.html` — проверка доступа, тема, навигация по разделам, координация подмодулей `admin/*.js`.
 
-**Главные функции/подсистемы:**
+**Главные функции:**
 
-- загрузка/нормализация данных из localStorage;
-- проверка доступа (роль `admin`);
-- тема + синхронизация темы с графиками;
-- навигация по разделам (`dashboard/users/audit/export/backup`);
-- пользователи (CRUD), аудит (фильтр/пагинация/очистка), бэкапы (создание/восстановление/удаление);
-- экспорт данных (JSON/Excel);
-- модальные окна и уведомления;
-- графики Chart.js (users/audit/roles).
+- проверка доступа (роль `admin` или `architect`), при отсутствии — редирект;
+- инициализация темы через `CommonUI.initTheme()` и синхронизация с графиками (`AdminDashboard.applyChartsTheme`);
+- навигация по разделам (`dashboard`, `users`, `audit`, `export`, `backup`, `enterprises`) и вызов соответствующих подмодулей (`AdminDashboard`, `AdminUsers`, `AdminAudit`, `AdminExport`, `AdminBackups`, `AdminEnterprises`);
+- загрузка данных и обновление текущего раздела при переключении.
 
-**Ключи localStorage (ADMIN_STORAGE):**
-
-- `adminUsers` — пользователи админ‑панели
-- `adminAuditLogs` — журнал аудита (общий с остальным приложением)
-- `adminBackups` — бэкапы (снапшоты данных)
-- `appInstallDate` — дата «установки» (используется для дефолтов)
-- `adminSidebarCollapsed` — состояние свернутого меню
-
-**Работа с аудитом:**
-
-- в `admin.js` есть собственная нормализация/миграция дат (в т.ч. `tz`), чтобы корректно фильтровать по диапазонам.
-
-**Chart.js:**
-
-- создаёт графики `new Chart(...)` на `canvas#usersChart`, `#auditChart`, `#rolesChart`;
-- при смене темы обновляет цвета сетки/подписей/заливок.
+**Зависимости:** `AdminCommon`, `AdminDashboard`, `AdminUsers`, `AdminAudit`, `AdminExport`, `AdminBackups`, `AdminEnterprises`, `CommonUI`, `renderAuth` (если есть). Ключи localStorage и работа с аудитом/графиками реализованы в подмодулях `admin/*.js`.

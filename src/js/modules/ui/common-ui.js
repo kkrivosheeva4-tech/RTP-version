@@ -190,8 +190,8 @@
   // Основано на modules/core/app-init.js
 
   function showHelpMenu(button) {
-    // Проверяем, находимся ли мы на странице радара (RMK-director.html)
-    const isRMKPage = window.location.pathname.includes('RMK-director.html') || window.location.href.includes('RMK-director.html');
+    // Проверяем, находимся ли мы на странице радара (radar.html)
+    const isRMKPage = window.location.pathname.includes('radar.html') || window.location.href.includes('radar.html');
 
     // Удаляем существующее меню, если есть
     const existingMenu = document.querySelector('.help-menu');

@@ -1077,6 +1077,13 @@ select:focus-visible {
   white-space: nowrap;
 }
 
+.audit-empty-message {
+  text-align: center;
+  padding: 24px 16px;
+  color: var(--admin-muted-2);
+  font-size: 14px;
+}
+
 .action-buttons {
   display: flex;
   gap: 8px;

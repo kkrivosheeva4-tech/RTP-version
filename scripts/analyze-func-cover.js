@@ -8,7 +8,7 @@ const path = require('path');
 
 // Пути к файлам данных
 const FUNCTION_TO_BLOCK_PATH = path.join(__dirname, '../src/data/ru/functionToBlock.json');
-const BLOCKS_PATH = path.join(__dirname, '../src/data/ru/bloks.json');
+const BLOCKS_PATH = path.join(__dirname, '../src/data/ru/blocks.json');
 
 // Загрузка данных
 function loadJson(filePath) {
