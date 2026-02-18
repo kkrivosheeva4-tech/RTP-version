@@ -225,7 +225,6 @@
     const toggleSidebarBtn = document.getElementById("toggleSidebarBtn");
     const searchIconBtn = document.getElementById("searchIconBtn");
     const filterIconBtn = document.getElementById("filterIconBtn");
-    const chartIconBtn = document.getElementById("chartIconBtn");
     const resetIconBtn = document.getElementById("resetIconBtn");
     const reportIconBtn = document.getElementById("reportIconBtn");
     const addIconBtn = document.getElementById("addIconBtn");
@@ -339,23 +338,6 @@
         moveResetButton(sidebarWrapper);
         // Скрываем кнопки "Фильтр" и "Поиск"
         toggleSearchFilterButtons(true);
-      };
-    }
-
-    // Обработчик графика (prospects-chart) доступен только на странице радара (radar.html)
-    if (chartIconBtn && document.body.id !== 'rmk-director') {
-      chartIconBtn.onclick = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        // Ждем, пока кнопка будет создана в RMK2.js
-        setTimeout(() => {
-          const toggleProspectsChartBtn = document.getElementById("toggleProspectsChartBtn");
-          if (toggleProspectsChartBtn) {
-            toggleProspectsChartBtn.click();
-          } else {
-            if (window.Logger) window.Logger.warn('toggleProspectsChartBtn not found');
-          }
-        }, 100);
       };
     }
 
@@ -481,17 +463,6 @@
     document.addEventListener('DOMContentLoaded', initFilters);
   } else {
     initFilters();
-  }
-
-  const applyFilterBtn = document.getElementById("applyFilter");
-  if (applyFilterBtn) {
-    applyFilterBtn.onclick = () => {
-      const blockEl = document.getElementById("filterBlock");
-      const levelEl = document.getElementById("filterLevel");
-      const block = blockEl ? blockEl.value : "";
-      const level = levelEl ? levelEl.value : "";
-      document.dispatchEvent(new CustomEvent("applyFilter", { detail: { block, level } }));
-    };
   }
 
   // Поиск обрабатывается в events.js через DOMCache и debounce

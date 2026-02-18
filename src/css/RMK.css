@@ -1330,7 +1330,14 @@ body.dark .modal-body .custom-select-modal .select-options {
   background: var(--input-bg);
 }
 
-.custom-select-modal .select-options .add-new-option-content {
+.custom-select-modal .select-options .add-new-option .field-error-message,
+.add-new-vendor-option .field-error-message,
+.add-new-integrator-option .field-error-message {
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.add-new-option-content {
   display: flex;
   gap: 6px;
   align-items: center;
@@ -1396,6 +1403,75 @@ body.dark .custom-select-modal .select-options li.add-new-option:hover {
 .custom-select-modal .select-options li.select-option-item.selected,
 .custom-select-modal .select-options li.select-option-item:hover {
   background: var(--accent-08);
+}
+
+/* Редактирование и удаление вендоров */
+.custom-select-modal .select-options li.vendor-option-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.custom-select-modal .select-options li.vendor-option-item .option-label {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+.custom-select-modal .select-options .vendor-option-actions,
+.custom-select-modal .select-options .integrator-option-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.custom-select-modal .select-options .edit-vendor-btn,
+.custom-select-modal .select-options .delete-vendor-btn,
+.custom-select-modal .select-options .edit-integrator-btn,
+.custom-select-modal .select-options .delete-integrator-btn {
+  padding: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted, #666);
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s, background 0.2s;
+}
+
+.custom-select-modal .select-options .edit-vendor-btn:hover,
+.custom-select-modal .select-options .delete-vendor-btn:hover,
+.custom-select-modal .select-options .edit-integrator-btn:hover,
+.custom-select-modal .select-options .delete-integrator-btn:hover {
+  color: var(--accent);
+  background: var(--accent-08);
+}
+
+.custom-select-modal .select-options .delete-vendor-btn:hover,
+.custom-select-modal .select-options .delete-integrator-btn:hover {
+  color: var(--error-color, #e74c3c);
+  background: rgba(231, 76, 60, 0.1);
+}
+
+.custom-select-modal .select-options .vendor-edit-input,
+.custom-select-modal .select-options .integrator-edit-input {
+  width: 100%;
+  max-width: 180px;
+  padding: 6px 8px;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.custom-select-modal .select-options li.vendor-option-item .vendor-edit-error,
+.custom-select-modal .select-options li.integrator-option-item .integrator-edit-error {
+  width: 100%;
+  flex-basis: 100%;
+  margin-top: 4px;
 }
 
 body.dark .custom-select-modal .select-options li.select-option-item.selected,
@@ -3502,6 +3578,40 @@ body.dark .form-group input:hover:not(:focus),
 body.dark .form-group select:hover:not(:focus),
 body.dark .form-group textarea:hover:not(:focus) {
   border-color: rgba(206, 144, 104, 0.6);
+}
+
+/* Подсветка поля при дубликате названия технологии */
+input.duplicate-name-error,
+.form-group input.duplicate-name-error {
+  border-color: var(--error-color, #e74c3c);
+  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2);
+}
+body.dark input.duplicate-name-error,
+body.dark .form-group input.duplicate-name-error {
+  border-color: #e74c3c;
+  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.25);
+}
+
+/* Сообщение об ошибке под полем ввода (дубликат названия и т.п.) */
+.field-error-message {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.875rem;
+  color: var(--error-color, #e74c3c);
+  min-height: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+}
+.field-error-message.visible {
+  opacity: 1;
+  visibility: visible;
+}
+body.dark .field-error-message {
+  color: #f87171;
+}
+body.dark .field-error-message.visible {
+  color: #f87171;
 }
 
 /* Стили для строки оценок */
@@ -5666,70 +5776,6 @@ body.dark #exportProspectsChartBtn:hover {
   #exportProspectsChartBtn {
     justify-content: center;
   }
-}
-
-/* Анимация для SVG в кнопке toggleProspectsChartBtn */
-#toggleProspectsChartBtn svg {
-  transition: transform 0.2s ease;
-}
-
-#toggleProspectsChartBtn:active svg {
-  transform: scale(0.95);
-}
-
-#toggleProspectsChartBtn svg polyline,
-#toggleProspectsChartBtn svg circle {
-  transition: transform 0.3s ease, opacity 0.3s ease;
-}
-
-/* Новая анимация - плавное появление и вращение */
-@keyframes slideInUp {
-  0% {
-    transform: translateY(10px);
-    opacity: 0;
-  }
-
-  100% {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-@keyframes rotateIn {
-  0% {
-    transform: rotate(-180deg) scale(0.5);
-    opacity: 0;
-  }
-
-  100% {
-    transform: rotate(0deg) scale(1);
-    opacity: 1;
-  }
-}
-
-@keyframes bounce {
-
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-
-  50% {
-    transform: translateY(-8px);
-  }
-}
-
-#toggleProspectsChartBtn.animating svg {
-  animation: bounce 0.5s ease;
-}
-
-#toggleProspectsChartBtn.animating svg polyline {
-  animation: slideInUp 0.5s ease forwards;
-}
-
-#toggleProspectsChartBtn.animating svg circle {
-  animation: rotateIn 0.5s ease forwards;
-  animation-delay: 0.1s;
 }
 
 /* Стили для таблицы технологий в графике "Перспективные" */

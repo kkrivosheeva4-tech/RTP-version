@@ -550,6 +550,38 @@
           window.handleAddTechFormSubmit(e);
         }
       };
+
+      // Живая проверка дубликата названия при вводе (сообщение под полем)
+      const techNameInput = document.getElementById("techName");
+      const techNameErrorEl = document.getElementById("techNameError");
+      const submitAddBtn = document.getElementById("submitAddTech");
+      if (techNameInput && typeof window.validateDuplicateTechnology === "function") {
+        var addNameDebounceTimer;
+        function checkAddNameDuplicate() {
+          var name = techNameInput.value;
+          var result = window.validateDuplicateTechnology(name, null);
+          if (!result.valid && result.message) {
+            techNameInput.classList.add("duplicate-name-error");
+            if (submitAddBtn) submitAddBtn.disabled = true;
+            if (techNameErrorEl) {
+              techNameErrorEl.textContent = result.message;
+              techNameErrorEl.classList.add("visible");
+            }
+          } else {
+            techNameInput.classList.remove("duplicate-name-error");
+            if (submitAddBtn) submitAddBtn.disabled = false;
+            if (techNameErrorEl) {
+              techNameErrorEl.textContent = "";
+              techNameErrorEl.classList.remove("visible");
+            }
+          }
+        }
+        techNameInput.addEventListener("input", function () {
+          clearTimeout(addNameDebounceTimer);
+          addNameDebounceTimer = setTimeout(checkAddNameDuplicate, 400);
+        });
+        techNameInput.addEventListener("blur", checkAddNameDuplicate);
+      }
     }
 
     // Обработчик формы редактирования технологии
@@ -570,6 +602,40 @@
         if (!e || !e.target) return;
         updateEditTechPriorityPreview();
       });
+
+      // Живая проверка дубликата названия при редактировании (сообщение под полем)
+      var editNameInput = document.getElementById("editName");
+      var editNameErrorEl = document.getElementById("editNameError");
+      var editSubmitBtn = editTechForm.querySelector('button[type="submit"]');
+      if (editNameInput && typeof window.validateDuplicateTechnology === "function") {
+        var editNameDebounceTimer;
+        function checkEditNameDuplicate() {
+          var newName = editNameInput.value;
+          var editIdEl = document.getElementById("editId");
+          var excludeId = editIdEl && editIdEl.value !== "" && editIdEl.value !== undefined ? +editIdEl.value : null;
+          var result = window.validateDuplicateTechnology(newName, excludeId);
+          if (!result.valid && result.message) {
+            editNameInput.classList.add("duplicate-name-error");
+            if (editSubmitBtn) editSubmitBtn.disabled = true;
+            if (editNameErrorEl) {
+              editNameErrorEl.textContent = result.message;
+              editNameErrorEl.classList.add("visible");
+            }
+          } else {
+            editNameInput.classList.remove("duplicate-name-error");
+            if (editSubmitBtn) editSubmitBtn.disabled = false;
+            if (editNameErrorEl) {
+              editNameErrorEl.textContent = "";
+              editNameErrorEl.classList.remove("visible");
+            }
+          }
+        }
+        editNameInput.addEventListener("input", function () {
+          clearTimeout(editNameDebounceTimer);
+          editNameDebounceTimer = setTimeout(checkEditNameDuplicate, 400);
+        });
+        editNameInput.addEventListener("blur", checkEditNameDuplicate);
+      }
     }
 
     // ===== ОБРАБОТЧИКИ КНОПОК РЕДАКТИРОВАНИЯ И УДАЛЕНИЯ =====
@@ -990,6 +1056,18 @@
     const StateAccessors = getStateAccessors();
     const DataLoader = getDataLoader();
     const Positioning = getPositioning();
+
+    // Валидация дубликата названия технологии (регистр, омоглифы, пробелы)
+    if (typeof window.validateDuplicateTechnology === "function") {
+      const techName = getFormFieldValue("techName");
+      const result = window.validateDuplicateTechnology(techName, null);
+      if (!result.valid) {
+        if (DataLoader && typeof DataLoader.showNotification === "function") {
+          DataLoader.showNotification(result.message || "Технология с таким названием уже существует", false);
+        }
+        return;
+      }
+    }
 
     // Показываем индикатор загрузки
     const loadingIndicator = document.getElementById('addTechLoadingIndicator');
@@ -1462,6 +1540,20 @@
     const Positioning = getPositioning();
 
     const RINGS = window.RINGS || [];
+
+    // Валидация дубликата названия технологии (регистр, омоглифы, пробелы)
+    if (typeof window.validateDuplicateTechnology === "function") {
+      const newName = getFormFieldValue("editName");
+      const editId = getFormFieldValue("editId");
+      const excludeId = editId !== "" && editId !== undefined ? +editId : null;
+      const result = window.validateDuplicateTechnology(newName, excludeId);
+      if (!result.valid) {
+        if (DataLoader && typeof DataLoader.showNotification === "function") {
+          DataLoader.showNotification(result.message || "Технология с таким названием уже существует", false);
+        }
+        return;
+      }
+    }
 
     // Валидация обязательных полей
     const requiredFields = [

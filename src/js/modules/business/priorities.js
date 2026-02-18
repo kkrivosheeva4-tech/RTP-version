@@ -262,8 +262,6 @@
 
     if (!sidebarFilteredTechs.length) {
       qpListEl.innerHTML = '<p style="font-size:12px; opacity:0.8;">В этом секторе нет технологий, соответствующих текущим фильтрам.</p>';
-      const qpSummaryEl = quadrantPriorityPanel.querySelector('#qpSummary');
-      if (qpSummaryEl) qpSummaryEl.textContent = '';
       return;
     }
 

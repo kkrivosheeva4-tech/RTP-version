@@ -218,29 +218,8 @@
     const g = getQuadrantGroup(targetQuadrant);
     if (!g) return;
 
-    // Проверяем, является ли это директорской страницей
-    const isDirectorPage = document.body.id === 'rmk-director';
-
-    // Для директорской страницы размер зависит от количества вендоров
-    // Три разреза: 0-1 вендор (8), 2-3 вендора (14), 4+ вендоров (20)
-    let size;
-    if (isDirectorPage) {
-      const vendorCount = (tech.vendors && Array.isArray(tech.vendors)) ? tech.vendors.length : 0;
-
-      // Определяем размер на основе количества вендоров
-      if (vendorCount <= 1) {
-        // Маленький: 0-1 вендор
-        size = 8;
-      } else if (vendorCount === 2 || vendorCount === 3) {
-        // Средний: 2-3 вендора
-        size = 14;
-      } else {
-        // Большой: 4+ вендоров
-        size = 20;
-      }
-    } else {
-      size = 10;
-    }
+    // Единый размер для всех технологий
+    const size = 10;
 
     // Все технологии отображаются кругами
     const shape = 'circle';
@@ -548,21 +527,8 @@
 
       const shape = computeShapeByTechType(t.techType, TECHTYPE_TO_SHAPE) || 'circle';
 
-      // Вычисляем размер для технологии (нужно для правильного разведения)
-      const isDirectorPage = document.body.id === 'rmk-director';
-      let size;
-      if (isDirectorPage) {
-        const vendorCount = (t.vendors && Array.isArray(t.vendors)) ? t.vendors.length : 0;
-        if (vendorCount <= 1) {
-          size = 8;
-        } else if (vendorCount === 2 || vendorCount === 3) {
-          size = 14;
-        } else {
-          size = 20;
-        }
-      } else {
-        size = 10;
-      }
+      // Единый размер для всех технологий (для правильного разведения)
+      const size = 10;
 
       techQuadrants.forEach((quadrantId) => {
         // Позиция вычисляется через математическую модель, ring не используется

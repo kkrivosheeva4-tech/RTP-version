@@ -328,24 +328,39 @@
     }
   }
 
+  function clearVendorsCache() {
+    vendorsListCache = null;
+  }
+
+  function clearIntegratorsCache() {
+    integratorsListCache = null;
+  }
+
+  function vendorKeyFromName(name) {
+    return encodeURIComponent(String(name || '').trim()).replace(/%/g, '_');
+  }
+
   // Обновление селектов вендоров в модальных окнах
-  function updateVendorsSelects() {
+  // vendorsListOverride — опционально: актуальный список (после rename/delete из DataLoader)
+  // vendorRenameMap — опционально: { oldName, newName } для переноса интеграторов при переименовании
+  function updateVendorsSelects(vendorsListOverride, vendorRenameMap) {
     const vendorFields = ['techVendors', 'editVendors'];
+    const loadList = vendorsListOverride && Array.isArray(vendorsListOverride)
+      ? Promise.resolve(vendorsListOverride)
+      : loadVendorsList();
+
     vendorFields.forEach(fieldId => {
       const customSelect = document.querySelector(`.custom-select-modal[data-field="${fieldId}"]`);
       if (customSelect && window.Filters && typeof window.Filters.populateSelectForModal === 'function') {
-        // Сохраняем текущие выбранные значения ПЕРЕД обновлением
         const hiddenInput = document.getElementById(fieldId);
         const savedValue = hiddenInput ? hiddenInput.value : '';
 
-        // Сохраняем значения интеграторов по вендорам для этого поля
         const prefix = fieldId === 'editVendors' ? 'edit' : 'tech';
         const integratorsContainerId = prefix === 'edit' ? 'editVendorIntegratorsByVendor' : 'techVendorIntegratorsByVendor';
         const integratorsContainer = document.getElementById(integratorsContainerId);
         const savedIntegratorsByVendor = new Map();
 
         if (integratorsContainer) {
-          // Сохраняем все значения интеграторов по вендорам
           integratorsContainer.querySelectorAll('input[type="hidden"][id^="' + prefix + 'VendorIntegrators__"]').forEach(input => {
             const fieldIdForIntegrators = input.id;
             const value = input.value || '';
@@ -355,23 +370,34 @@
           });
         }
 
-        loadVendorsList().then(vendorsList => {
-          if (Array.isArray(vendorsList) && vendorsList.length > 0) {
-            window.Filters.populateSelectForModal(fieldId, vendorsList, 'Выберите');
+        loadList.then(vendorsList => {
+          const list = Array.isArray(vendorsList) ? vendorsList : [];
+          if (list.length > 0) {
+            window.Filters.populateSelectForModal(fieldId, list, 'Выберите');
 
             // Восстанавливаем выбранные значения вендоров
             if (savedValue && typeof window.setCustomSelectValue === 'function') {
-              // Используем requestAnimationFrame для гарантии, что DOM обновлен
               requestAnimationFrame(() => {
                 window.setCustomSelectValue(fieldId, savedValue);
+                if (hiddenInput) {
+                  hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+                  hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+                }
 
-                // Восстанавливаем значения интеграторов по вендорам после небольшой задержки
-                // чтобы renderVendorIntegrators успел создать поля
+                // Восстанавливаем значения интеграторов по вендорам
                 setTimeout(() => {
                   savedIntegratorsByVendor.forEach((value, fieldIdForIntegrators) => {
-                    const integratorInput = document.getElementById(fieldIdForIntegrators);
+                    let targetFieldId = fieldIdForIntegrators;
+                    if (vendorRenameMap && vendorRenameMap.oldName && vendorRenameMap.newName) {
+                      const oldKey = vendorKeyFromName(vendorRenameMap.oldName);
+                      const newKey = vendorKeyFromName(vendorRenameMap.newName);
+                      if (fieldIdForIntegrators.includes(oldKey)) {
+                        targetFieldId = fieldIdForIntegrators.replace(oldKey, newKey);
+                      }
+                    }
+                    const integratorInput = document.getElementById(targetFieldId);
                     if (integratorInput && typeof window.setCustomSelectValue === 'function') {
-                      window.setCustomSelectValue(fieldIdForIntegrators, value);
+                      window.setCustomSelectValue(targetFieldId, value);
                     }
                   });
                 }, 300);
@@ -425,25 +451,9 @@
       }
     });
 
-    // Обновляем селекты интеграторов по вендорам
-    document.querySelectorAll('.custom-select-modal[data-field^="techVendorIntegrators__"], .custom-select-modal[data-field^="editVendorIntegrators__"]').forEach(customSelect => {
-      const fieldId = customSelect.getAttribute('data-field');
-      if (fieldId && window.Filters && typeof window.Filters.populateSelectForModal === 'function') {
-        loadIntegratorsList().then(integratorsList => {
-          if (Array.isArray(integratorsList) && integratorsList.length > 0) {
-            window.Filters.populateSelectForModal(fieldId, integratorsList, 'Выберите');
-
-            // Восстанавливаем выбранные значения
-            const savedValue = savedIntegratorValues.get(fieldId);
-            if (savedValue && typeof window.setCustomSelectValue === 'function') {
-              requestAnimationFrame(() => {
-                window.setCustomSelectValue(fieldId, savedValue);
-              });
-            }
-          }
-        });
-      }
-    });
+    // НЕ обновляем селекты интеграторов по вендорам здесь, так как это приводит к появлению элементов под полем добавления
+    // при редактировании вендора. Селекты интеграторов по вендорам обновляются через renderVendorIntegrators
+    // при изменении вендоров и через populateSelectForModal при их создании
   }
 
   // Создание элемента вендора
@@ -496,6 +506,7 @@
             <li class="add-new-vendor-option">
               <input type="text" class="new-vendor-input" placeholder="Введите название нового вендора" />
               <button type="button" class="add-new-vendor-btn">Добавить</button>
+              <span class="field-error-message vendor-field-error"></span>
             </li>
             ${vendorsOptions}
           </ul>
@@ -732,6 +743,26 @@
         const newVendorInput = vendorDiv.querySelector('.new-vendor-input');
 
         if (addNewVendorBtn && newVendorInput) {
+          const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+          const isVendorDup = (name, list) => { const norm = nf(name); return norm && (list || []).some(v => nf(v) === norm); };
+          const runVendorLiveValidation = async () => {
+            const val = (newVendorInput?.value || '').trim();
+            const addNewOpt = addNewVendorBtn.closest('.add-new-vendor-option');
+            if (!val) {
+              if (addNewOpt) { const e = addNewOpt.querySelector('.vendor-field-error'); if (e) { e.textContent = ''; e.classList.remove('visible'); } }
+              newVendorInput?.classList.remove('duplicate-name-error');
+              addNewVendorBtn?.removeAttribute('disabled');
+              return;
+            }
+            const currentVendors = await loadVendorsList();
+            const dup = isVendorDup(val, currentVendors);
+            if (addNewOpt) { const e = addNewOpt.querySelector('.vendor-field-error'); if (e) { e.textContent = dup ? 'Такой вендор уже существует' : ''; e.classList.toggle('visible', !!dup); } }
+            newVendorInput?.classList.toggle('duplicate-name-error', !!dup);
+            addNewVendorBtn?.toggleAttribute('disabled', !!dup);
+          };
+          let vendorValidationTimer = null;
+          const scheduleVendorValidation = () => { if (vendorValidationTimer) clearTimeout(vendorValidationTimer); vendorValidationTimer = setTimeout(() => runVendorLiveValidation(), 400); };
+
           const addNewVendor = async () => {
             const newVendorName = newVendorInput.value.trim();
             if (!newVendorName) return;
@@ -747,22 +778,19 @@
               options.style.removeProperty('z-index');
             }
 
-            // Проверяем, нет ли уже такого вендора
             const currentVendors = await loadVendorsList();
-            if (currentVendors.includes(newVendorName)) {
-              // Если вендор уже существует, просто выбираем его
-              if (typeof window.setCustomSelectValue === 'function') {
-                window.setCustomSelectValue(vendorFieldId, newVendorName);
-              } else {
-                vendorHiddenInput.value = newVendorName;
-                vendorHiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
-              }
-              newVendorInput.value = '';
-              toggleIntegratorsSection(true);
-              updateVendorUI();
-              updateVendorsHiddenInput(containerId, isEdit);
+            const addNewOpt = addNewVendorBtn.closest('.add-new-vendor-option');
+            if (isVendorDup(newVendorName, currentVendors)) {
+              const errEl = addNewOpt?.querySelector('.vendor-field-error');
+              if (errEl) { errEl.textContent = 'Такой вендор уже существует'; errEl.classList.add('visible'); }
+              newVendorInput?.classList.add('duplicate-name-error');
+              addNewVendorBtn?.setAttribute('disabled', '');
               return;
             }
+            const errEl = addNewOpt?.querySelector('.vendor-field-error');
+            if (errEl) { errEl.textContent = ''; errEl.classList.remove('visible'); }
+            newVendorInput?.classList.remove('duplicate-name-error');
+            addNewVendorBtn?.removeAttribute('disabled');
 
             // Добавляем в список вендоров
             if (!currentVendors.includes(newVendorName)) {
@@ -954,6 +982,9 @@
               handleAddVendorKeypress(e);
             }
           }, false);
+
+          newVendorInput.addEventListener('blur', () => runVendorLiveValidation());
+          newVendorInput.addEventListener('input', scheduleVendorValidation);
         }
 
       }
@@ -1112,6 +1143,7 @@
           <li class="add-new-integrator-option">
             <input type="text" class="new-integrator-input" placeholder="Введите название нового интегратора" />
             <button type="button" class="add-new-integrator-btn">Добавить</button>
+            <span class="field-error-message integrator-field-error"></span>
           </li>
           ${integratorsOptions}
         </ul>
@@ -1230,14 +1262,52 @@
       const newIntegratorInput = integratorDiv.querySelector('.new-integrator-input');
 
       if (addNewIntegratorBtn && newIntegratorInput) {
+        const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+        const isIntegratorDupInList = (name, list) => { const norm = nf(name); return norm && (list || []).some(v => nf(v) === norm); };
+        const addNewOpt = () => addNewIntegratorBtn.closest('.add-new-integrator-option');
+        const errEl = () => addNewOpt()?.querySelector('.integrator-field-error');
+        const showIntegratorError = (msg) => {
+          const el = errEl();
+          if (el) { el.textContent = msg || ''; el.classList.toggle('visible', !!msg); }
+          newIntegratorInput?.classList.toggle('duplicate-name-error', !!msg);
+          addNewIntegratorBtn?.toggleAttribute('disabled', !!msg);
+        };
+        const getCurrentIntegratorValues = () => {
+          let currentValues = [];
+          try {
+            const cv = integratorHiddenInput ? integratorHiddenInput.value : '';
+            if (cv) {
+              const parsed = JSON.parse(cv);
+              currentValues = Array.isArray(parsed) ? parsed : (parsed ? [parsed] : []);
+            }
+          } catch (e) { currentValues = []; }
+          return currentValues;
+        };
+        const runIntegratorLiveValidation = () => {
+          const val = (newIntegratorInput?.value || '').trim();
+          if (!val) { showIntegratorError(''); return; }
+          const currentValues = getCurrentIntegratorValues();
+          const dup = isIntegratorDupInList(val, currentValues);
+          showIntegratorError(dup ? 'Такой интегратор уже добавлен' : '');
+        };
+        let integratorValidationTimer = null;
+        const scheduleIntegratorValidation = () => {
+          if (integratorValidationTimer) clearTimeout(integratorValidationTimer);
+          integratorValidationTimer = setTimeout(runIntegratorLiveValidation, 400);
+        };
         const addNewIntegrator = async () => {
           const newIntegratorName = newIntegratorInput.value.trim();
           if (!newIntegratorName) return;
 
-          // Получаем текущий список интеграторов
+          const currentValues = getCurrentIntegratorValues();
+          if (isIntegratorDupInList(newIntegratorName, currentValues)) {
+            showIntegratorError('Такой интегратор уже добавлен');
+            return;
+          }
+          showIntegratorError('');
+
           const currentIntegrators = await loadIntegratorsList();
 
-          // Сохраняем в список интеграторов, если еще нет
           if (!currentIntegrators.includes(newIntegratorName)) {
             currentIntegrators.push(newIntegratorName);
 
@@ -1336,20 +1406,7 @@
             }
           }
 
-          // Добавляем к выбранным значениям (множественный выбор)
-          let currentValues = [];
-          try {
-            const currentValue = integratorHiddenInput.value;
-            if (currentValue) {
-              currentValues = JSON.parse(currentValue);
-              if (!Array.isArray(currentValues)) {
-                currentValues = currentValues ? [currentValues] : [];
-              }
-            }
-          } catch (e) {
-            currentValues = [];
-          }
-
+          // Добавляем к выбранным значениям (множественный выбор) — currentValues уже получен выше
           if (!currentValues.includes(newIntegratorName)) {
             currentValues.push(newIntegratorName);
           }
@@ -1475,6 +1532,10 @@
             handleAddIntegratorKeypress(e);
           }
         }, false);
+
+        // Живая проверка при вводе и при потере фокуса (как для вендоров)
+        newIntegratorInput.addEventListener('blur', runIntegratorLiveValidation);
+        newIntegratorInput.addEventListener('input', scheduleIntegratorValidation);
       }
     }
 
@@ -2330,35 +2391,22 @@
 
                 const currentVendors = await loadVendorsList();
 
-                if (currentVendors.includes(newVendorName)) {
-                  // Закрываем селект и сбрасываем inline стили для существующего вендора
-                  vendorSelect.classList.remove('open');
-                  const options = vendorSelect.querySelector('.select-options');
-                  if (options) {
-                    options.style.removeProperty('display');
-                    options.style.removeProperty('visibility');
-                    options.style.removeProperty('opacity');
-                    options.style.removeProperty('pointer-events');
-                    options.style.removeProperty('z-index');
-                  }
-                  if (typeof window.setCustomSelectValue === 'function') {
-                    window.setCustomSelectValue(vendorFieldId, newVendorName);
-                  } else if (vendorHiddenInput) {
-                    vendorHiddenInput.value = newVendorName;
-                    vendorHiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
-                  }
-
-                  // Показываем секцию интеграторов для существующего вендора
-                  const vendorIntegratorsSection = vendorDiv.querySelector('.vendor-integrators');
-                  if (vendorIntegratorsSection) {
-                    vendorIntegratorsSection.style.display = '';
-                    vendorIntegratorsSection.setAttribute('aria-hidden', 'false');
-                  }
-
-                  input.value = '';
-                  if (containerId) updateVendorsHiddenInput(containerId, isEdit);
+                const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+                const isVendorDup = (name, list) => { const norm = nf(name); return norm && (list || []).some(v => nf(v) === norm); };
+                if (isVendorDup(newVendorName, currentVendors)) {
+                  const addNewOpt = addVendorBtn.closest('.add-new-vendor-option');
+                  const errEl = addNewOpt?.querySelector('.vendor-field-error');
+                  if (errEl) { errEl.textContent = 'Такой вендор уже существует'; errEl.classList.add('visible'); }
+                  input?.classList.add('duplicate-name-error');
+                  addVendorBtn?.setAttribute('disabled', '');
                   return;
                 }
+
+                const addNewOpt = addVendorBtn.closest('.add-new-vendor-option');
+                const errEl = addNewOpt?.querySelector('.vendor-field-error');
+                if (errEl) { errEl.textContent = ''; errEl.classList.remove('visible'); }
+                input?.classList.remove('duplicate-name-error');
+                addVendorBtn?.removeAttribute('disabled');
 
                 if (!currentVendors.includes(newVendorName)) {
                   currentVendors.push(newVendorName);
@@ -2487,6 +2535,30 @@
                 const newIntegratorName = input.value.trim();
                 if (!newIntegratorName) return;
 
+                let currentValues = [];
+                try {
+                  const cv = integratorHiddenInput ? integratorHiddenInput.value : '';
+                  if (cv) {
+                    const parsed = JSON.parse(cv);
+                    currentValues = Array.isArray(parsed) ? parsed : (parsed ? [parsed] : []);
+                  }
+                } catch (e) { currentValues = []; }
+                const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+                const isIntDup = (name, list) => { const norm = nf(name); return norm && (list || []).some(v => nf(v) === norm); };
+                if (isIntDup(newIntegratorName, currentValues)) {
+                  const addNewOpt = addIntegratorBtn.closest('.add-new-integrator-option');
+                  const errEl = addNewOpt?.querySelector('.integrator-field-error');
+                  if (errEl) { errEl.textContent = 'Такой интегратор уже добавлен'; errEl.classList.add('visible'); }
+                  input?.classList.add('duplicate-name-error');
+                  addIntegratorBtn?.setAttribute('disabled', '');
+                  return;
+                }
+                const addNewOpt = addIntegratorBtn.closest('.add-new-integrator-option');
+                const errEl = addNewOpt?.querySelector('.integrator-field-error');
+                if (errEl) { errEl.textContent = ''; errEl.classList.remove('visible'); }
+                input?.classList.remove('duplicate-name-error');
+                addIntegratorBtn?.removeAttribute('disabled');
+
                 const currentIntegrators = await loadIntegratorsList();
 
                 if (!currentIntegrators.includes(newIntegratorName)) {
@@ -2571,19 +2643,7 @@
                   }
                 }
 
-                let currentValues = [];
-                try {
-                  const currentValue = integratorHiddenInput ? integratorHiddenInput.value : '';
-                  if (currentValue) {
-                    currentValues = JSON.parse(currentValue);
-                    if (!Array.isArray(currentValues)) {
-                      currentValues = currentValues ? [currentValues] : [];
-                    }
-                  }
-                } catch (e) {
-                  currentValues = [];
-                }
-
+                // currentValues уже получен выше для проверки дубликата
                 if (!currentValues.includes(newIntegratorName)) {
                   currentValues.push(newIntegratorName);
                 }
@@ -2653,6 +2713,8 @@
     initVendorsManagement,
     loadVendorsIntoForm,
     updateVendorsHiddenInput,
+    updateVendorsSelects,
+    clearVendorsCache,
     initFilesManagement,
     loadFilesIntoForm,
     getVendorsList,
@@ -2661,6 +2723,8 @@
     saveIntegratorsList,
     addVendor,
     addIntegrator,
+    clearVendorsCache,
+    clearIntegratorsCache,
     resetInitialization,
     resetFileInputInitialization
   };

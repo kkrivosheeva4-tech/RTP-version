@@ -868,6 +868,698 @@
     // Пересчет funcCover завершен
   }
 
+  // ===== CRUD ВЕНДОРОВ (шаги 2.2, 2.3, 2.4) =====
+  const VENDORS_STORAGE_KEY = 'rmk_vendors_list';
+
+  function getVendorsList() {
+    let list = getState('vendorsList') || [];
+    try {
+      const stored = localStorage.getItem(VENDORS_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          list = [...new Set([...list, ...parsed])];
+        }
+      }
+    } catch (e) { /* ignore */ }
+    return list;
+  }
+
+  function saveVendorsList(list) {
+    setState('vendorsList', list);
+    try {
+      localStorage.setItem(VENDORS_STORAGE_KEY, JSON.stringify(list));
+    } catch (e) {
+      if (window.Logger) window.Logger.warn('Ошибка сохранения вендоров в localStorage', e);
+    }
+  }
+
+  function isVendorUsedInTechnologies(vendorName) {
+    const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+    const norm = nf(vendorName);
+    if (!norm) return false;
+    const technologies = getState('technologies') || [];
+    return technologies.some(tech => {
+      const vendors = Array.isArray(tech.vendors) ? tech.vendors : [];
+      return vendors.some(v => {
+        const name = (v && typeof v === 'object') ? v.name : v;
+        return name && nf(name) === norm;
+      });
+    });
+  }
+
+  function renameVendorInTechnologies(oldName, newName) {
+    const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+    const normOld = nf(oldName);
+    if (!normOld) return;
+    const technologies = getState('technologies') || [];
+    let changed = false;
+    technologies.forEach(tech => {
+      const vendors = Array.isArray(tech.vendors) ? tech.vendors : [];
+      vendors.forEach(v => {
+        const name = (v && typeof v === 'object') ? v.name : v;
+        if (name && nf(name) === normOld) {
+          if (v && typeof v === 'object') v.name = newName;
+          changed = true;
+        }
+      });
+    });
+    if (changed) {
+      setState('technologies', [...technologies]);
+      try {
+        vfsWrite('technologies.json', technologies);
+      } catch (e) {
+        if (window.Logger) window.Logger.warn('Ошибка записи technologies.json', e);
+      }
+    }
+  }
+
+  function removeVendorFromTechnologies(vendorName) {
+    const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+    const norm = nf(vendorName);
+    if (!norm) return;
+    const technologies = getState('technologies') || [];
+    let changed = false;
+    technologies.forEach(tech => {
+      if (!Array.isArray(tech.vendors)) return;
+      const before = tech.vendors.length;
+      tech.vendors = tech.vendors.filter(v => {
+        const name = (v && typeof v === 'object') ? v.name : v;
+        return !(name && nf(name) === norm);
+      });
+      if (tech.vendors.length !== before) changed = true;
+    });
+    if (changed) {
+      setState('technologies', [...technologies]);
+      try {
+        vfsWrite('technologies.json', technologies);
+      } catch (e) {
+        if (window.Logger) window.Logger.warn('Ошибка записи technologies.json', e);
+      }
+    }
+  }
+
+  function renameVendorInFormSelections(oldName, newName, nf) {
+    ['techVendors', 'editVendors'].forEach(fieldId => {
+      const el = document.getElementById(fieldId);
+      if (!el || !el.value) return;
+      try {
+        let vals = [];
+        if (el.value.trim().startsWith('[')) {
+          vals = JSON.parse(el.value);
+          if (!Array.isArray(vals)) vals = [vals];
+        } else {
+          vals = [el.value.trim()];
+        }
+        const normOld = nf(oldName);
+        vals = vals.map(v => (v && nf(v) === normOld) ? newName : v);
+        el.value = vals.length ? JSON.stringify(vals) : '';
+      } catch (e) { /* ignore */ }
+    });
+  }
+
+  function renameVendor(oldName, newName) {
+    const list = getVendorsList();
+    const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+    const normOld = nf(oldName);
+    const normNew = nf(newName);
+    if (!normOld || !normNew) return false;
+    const idx = list.findIndex(v => nf(v) === normOld);
+    if (idx === -1) return false;
+    const otherDup = list.some((v, i) => i !== idx && nf(v) === normNew);
+    if (otherDup) return false;
+    list[idx] = newName;
+    saveVendorsList(list);
+    renameVendorInTechnologies(oldName, newName);
+    renameVendorInFormSelections(oldName, newName, nf);
+    refreshAllVendorSelects(list, { vendorRenameMap: { oldName, newName } });
+    return true;
+  }
+
+  function deleteVendor(vendorName) {
+    const list = getVendorsList();
+    const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+    const norm = nf(vendorName);
+    if (!norm) return false;
+    const newList = list.filter(v => nf(v) !== norm);
+    if (newList.length === list.length) return false;
+    saveVendorsList(newList);
+    removeVendorFromTechnologies(vendorName);
+    removeVendorFromFormSelections(vendorName, nf);
+    refreshAllVendorSelects(newList);
+    return true;
+  }
+
+  function removeVendorFromFormSelections(vendorName, nf) {
+    ['techVendors', 'editVendors'].forEach(fieldId => {
+      const el = document.getElementById(fieldId);
+      if (!el || !el.value) return;
+      try {
+        let vals = [];
+        if (el.value.trim().startsWith('[')) {
+          vals = JSON.parse(el.value);
+          if (!Array.isArray(vals)) vals = [vals];
+        } else {
+          vals = [el.value.trim()];
+        }
+        const norm = nf(vendorName);
+        const filtered = vals.filter(v => !(v && nf(v) === norm));
+        el.value = Array.isArray(filtered) ? JSON.stringify(filtered) : '';
+      } catch (e) { /* ignore */ }
+    });
+  }
+
+  function refreshAllVendorSelects(vendorsListOverride, options) {
+    if (window.VendorsFiles) {
+      if (typeof window.VendorsFiles.clearVendorsCache === 'function') {
+        window.VendorsFiles.clearVendorsCache();
+      }
+      if (typeof window.VendorsFiles.updateVendorsSelects === 'function') {
+        window.VendorsFiles.updateVendorsSelects(vendorsListOverride, options?.vendorRenameMap);
+      }
+    }
+    document.querySelectorAll('.vendor-select').forEach(select => {
+      const optionsList = select.querySelector('.select-options');
+      if (!optionsList) return;
+      const addOpt = optionsList.querySelector('.add-new-vendor-option, .add-new-option[data-add-new="vendor"]');
+      const list = getVendorsList();
+      const vendorOpts = optionsList.querySelectorAll('li[data-value]:not(.add-new-vendor-option):not(.add-new-option)');
+      const currentValues = new Set(Array.from(vendorOpts).map(li => li.getAttribute('data-value')).filter(Boolean));
+      list.forEach(v => {
+        if (currentValues.has(v)) return;
+        const li = document.createElement('li');
+        li.textContent = v;
+        li.setAttribute('data-value', v);
+        li.style.cursor = 'pointer';
+        if (addOpt && addOpt.nextSibling) {
+          optionsList.insertBefore(li, addOpt.nextSibling);
+        } else if (addOpt) {
+          optionsList.appendChild(li);
+        } else {
+          optionsList.appendChild(li);
+        }
+      });
+      const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+      const listNorm = new Set(list.map(v => nf(v)));
+      vendorOpts.forEach(li => {
+        const val = li.getAttribute('data-value');
+        if (val && !listNorm.has(nf(val))) li.remove();
+      });
+    });
+    if (typeof window.initVendorsSelect === 'function') {
+      window.initVendorsSelect();
+    }
+    if (typeof window.updateRadar === 'function') {
+      window.updateRadar();
+    }
+  }
+
+  // ===== CRUD ИНТЕГРАТОРОВ (шаг 2.6) =====
+  const INTEGRATORS_STORAGE_KEY = 'rmk_integrators_list';
+
+  async function getIntegratorsList() {
+    let list = getState('integratorsList') || [];
+    try {
+      // Загружаем из JSON
+      const jsonData = await loadJsonPreferVfs('integrators.json');
+      if (Array.isArray(jsonData)) {
+        list = [...new Set([...list, ...jsonData])];
+      }
+    } catch (e) { /* ignore */ }
+    try {
+      const stored = localStorage.getItem(INTEGRATORS_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          list = [...new Set([...list, ...parsed])];
+        }
+      }
+    } catch (e) { /* ignore */ }
+    return list;
+  }
+
+  async function saveIntegratorsList(list) {
+    setState('integratorsList', list);
+    try {
+      // Получаем список интеграторов из JSON, чтобы сохранить в localStorage только пользовательские
+      let jsonIntegrators = [];
+      try {
+        const jsonData = await loadJsonPreferVfs('integrators.json');
+        if (Array.isArray(jsonData)) {
+          jsonIntegrators = jsonData;
+        }
+      } catch (e) { /* ignore */ }
+      
+      // Фильтруем список: оставляем только те интеграторы, которых нет в JSON
+      // Это пользовательские интеграторы, которые нужно сохранить в localStorage
+      const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+      const jsonNormSet = new Set(jsonIntegrators.map(i => nf(String(i))));
+      const userIntegrators = list.filter(i => !jsonNormSet.has(nf(String(i))));
+      
+      // Сохраняем только пользовательские интеграторы в localStorage
+      localStorage.setItem(INTEGRATORS_STORAGE_KEY, JSON.stringify(userIntegrators));
+      
+      // Очищаем кэш после сохранения
+      if (window.VendorsFiles && typeof window.VendorsFiles.clearIntegratorsCache === 'function') {
+        window.VendorsFiles.clearIntegratorsCache();
+      }
+    } catch (e) {
+      if (window.Logger) window.Logger.warn('Ошибка сохранения интеграторов в localStorage', e);
+    }
+  }
+
+  function isIntegratorUsedInTechnologies(integratorName) {
+    const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+    const norm = nf(integratorName);
+    if (!norm) return false;
+    const technologies = getState('technologies') || [];
+    return technologies.some(tech => {
+      const vendors = Array.isArray(tech.vendors) ? tech.vendors : [];
+      return vendors.some(v => {
+        const integrators = Array.isArray(v.integrators) ? v.integrators : [];
+        return integrators.some(i => {
+          const name = (i && typeof i === 'object') ? i.name : i;
+          return name && nf(name) === norm;
+        });
+      });
+    });
+  }
+
+  function renameIntegratorInTechnologies(oldName, newName) {
+    const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+    const normOld = nf(oldName);
+    if (!normOld) return;
+    const technologies = getState('technologies') || [];
+    let changed = false;
+    technologies.forEach(tech => {
+      const vendors = Array.isArray(tech.vendors) ? tech.vendors : [];
+      vendors.forEach(v => {
+        const integrators = Array.isArray(v.integrators) ? v.integrators : [];
+        integrators.forEach(i => {
+          const name = (i && typeof i === 'object') ? i.name : i;
+          if (name && nf(name) === normOld) {
+            if (i && typeof i === 'object') i.name = newName;
+            else if (typeof i === 'string') {
+              const idx = integrators.indexOf(i);
+              if (idx !== -1) integrators[idx] = newName;
+            }
+            changed = true;
+          }
+        });
+      });
+    });
+    if (changed) {
+      setState('technologies', [...technologies]);
+      try {
+        vfsWrite('technologies.json', technologies);
+      } catch (e) {
+        if (window.Logger) window.Logger.warn('Ошибка записи technologies.json', e);
+      }
+    }
+  }
+
+  function removeIntegratorFromTechnologies(integratorName) {
+    const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+    const norm = nf(integratorName);
+    if (!norm) return;
+    const technologies = getState('technologies') || [];
+    let changed = false;
+    technologies.forEach(tech => {
+      const vendors = Array.isArray(tech.vendors) ? tech.vendors : [];
+      vendors.forEach(v => {
+        if (!Array.isArray(v.integrators)) return;
+        const before = v.integrators.length;
+        v.integrators = v.integrators.filter(i => {
+          const name = (i && typeof i === 'object') ? i.name : i;
+          return !(name && nf(name) === norm);
+        });
+        if (v.integrators.length !== before) changed = true;
+      });
+    });
+    if (changed) {
+      setState('technologies', [...technologies]);
+      try {
+        vfsWrite('technologies.json', technologies);
+      } catch (e) {
+        if (window.Logger) window.Logger.warn('Ошибка записи technologies.json', e);
+      }
+    }
+  }
+
+  function renameIntegratorInFormSelections(oldName, newName, nf) {
+    // Обновляем основные селекты интеграторов
+    ['techIntegrators', 'editIntegrators'].forEach(fieldId => {
+      const el = document.getElementById(fieldId);
+      if (!el || !el.value) return;
+      try {
+        let vals = [];
+        if (el.value.trim().startsWith('[')) {
+          vals = JSON.parse(el.value);
+          if (!Array.isArray(vals)) vals = [vals];
+        } else {
+          vals = [el.value.trim()];
+        }
+        const normOld = nf(oldName);
+        const hasOld = vals.some(v => v && nf(v) === normOld);
+        vals = vals.map(v => (v && nf(v) === normOld) ? newName : v);
+        el.value = vals.length ? JSON.stringify(vals) : '';
+        // Обновляем визуальное отображение
+        if (hasOld && typeof window.setCustomSelectValue === 'function') {
+          const customSelect = document.querySelector(`.custom-select-modal[data-field="${fieldId}"]`);
+          if (customSelect) {
+            requestAnimationFrame(() => {
+              window.setCustomSelectValue(fieldId, el.value);
+            });
+          }
+        }
+      } catch (e) { /* ignore */ }
+    });
+
+    // Обновляем селекты интеграторов по вендорам
+    document.querySelectorAll('input[type="hidden"][id^="techVendorIntegrators__"], input[type="hidden"][id^="editVendorIntegrators__"]').forEach(el => {
+      if (!el || !el.value) return;
+      try {
+        let vals = [];
+        if (el.value.trim().startsWith('[')) {
+          vals = JSON.parse(el.value);
+          if (!Array.isArray(vals)) vals = [vals];
+        } else {
+          vals = [el.value.trim()];
+        }
+        const normOld = nf(oldName);
+        const hasOld = vals.some(v => v && nf(v) === normOld);
+        vals = vals.map(v => (v && nf(v) === normOld) ? newName : v);
+        el.value = vals.length ? JSON.stringify(vals) : '';
+        // Обновляем визуальное отображение
+        if (hasOld && typeof window.setCustomSelectValue === 'function') {
+          const fieldId = el.id;
+          const customSelect = document.querySelector(`.custom-select-modal[data-field="${fieldId}"]`);
+          if (customSelect) {
+            requestAnimationFrame(() => {
+              window.setCustomSelectValue(fieldId, el.value);
+            });
+          }
+        }
+      } catch (e) { /* ignore */ }
+    });
+  }
+
+  async function renameIntegrator(oldName, newName) {
+    // Очищаем кэш перед получением списка, чтобы получить актуальные данные
+    if (window.VendorsFiles && typeof window.VendorsFiles.clearIntegratorsCache === 'function') {
+      window.VendorsFiles.clearIntegratorsCache();
+    }
+    const list = await getIntegratorsList();
+    const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+    const normOld = nf(oldName);
+    const normNew = nf(newName);
+    if (!normOld || !normNew) return false;
+    const idx = list.findIndex(i => nf(i) === normOld);
+    if (idx === -1) {
+      // Интегратор не найден в основном списке - возможно, он только что добавлен и еще не синхронизирован
+      // Попробуем обновить напрямую в localStorage
+      try {
+        const stored = localStorage.getItem(INTEGRATORS_STORAGE_KEY);
+        if (stored) {
+          let localList = JSON.parse(stored);
+          if (Array.isArray(localList)) {
+            const localIdx = localList.findIndex(i => nf(String(i)) === normOld);
+            if (localIdx !== -1) {
+              const otherDup = localList.some((i, iIdx) => iIdx !== localIdx && nf(String(i)) === normNew);
+              if (otherDup) return false;
+              localList[localIdx] = newName;
+              localStorage.setItem(INTEGRATORS_STORAGE_KEY, JSON.stringify(localList));
+              // Очищаем кэш после сохранения
+              if (window.VendorsFiles && typeof window.VendorsFiles.clearIntegratorsCache === 'function') {
+                window.VendorsFiles.clearIntegratorsCache();
+              }
+              renameIntegratorInTechnologies(oldName, newName);
+              renameIntegratorInFormSelections(oldName, newName, nf);
+              // Получаем обновленный список для обновления селектов
+              const updatedList = await getIntegratorsList();
+              refreshAllIntegratorSelects(updatedList, { integratorRenameMap: { oldName, newName } });
+              return true;
+            }
+          }
+        }
+      } catch (e) {
+        if (window.Logger) window.Logger.warn('Ошибка при переименовании интегратора в localStorage', e);
+      }
+      return false;
+    }
+    const otherDup = list.some((i, iIdx) => iIdx !== idx && nf(i) === normNew);
+    if (otherDup) return false;
+    list[idx] = newName;
+    await saveIntegratorsList(list);
+    renameIntegratorInTechnologies(oldName, newName);
+    renameIntegratorInFormSelections(oldName, newName, nf);
+    refreshAllIntegratorSelects(list, { integratorRenameMap: { oldName, newName } });
+    return true;
+  }
+
+  async function deleteIntegrator(integratorName) {
+    // Очищаем кэш перед получением списка, чтобы получить актуальные данные
+    if (window.VendorsFiles && typeof window.VendorsFiles.clearIntegratorsCache === 'function') {
+      window.VendorsFiles.clearIntegratorsCache();
+    }
+    const list = await getIntegratorsList();
+    const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+    const norm = nf(integratorName);
+    if (!norm) return false;
+    const newList = list.filter(i => nf(i) !== norm);
+    if (newList.length === list.length) {
+      // Интегратор не найден в списке - возможно, он только что добавлен и еще не синхронизирован
+      // Попробуем удалить напрямую из localStorage
+      try {
+        const stored = localStorage.getItem(INTEGRATORS_STORAGE_KEY);
+        if (stored) {
+          let localList = JSON.parse(stored);
+          if (Array.isArray(localList)) {
+            const beforeLength = localList.length;
+            localList = localList.filter(i => nf(String(i)) !== norm);
+            if (localList.length !== beforeLength) {
+              localStorage.setItem(INTEGRATORS_STORAGE_KEY, JSON.stringify(localList));
+              // Очищаем кэш
+              if (window.VendorsFiles && typeof window.VendorsFiles.clearIntegratorsCache === 'function') {
+                window.VendorsFiles.clearIntegratorsCache();
+              }
+              removeIntegratorFromTechnologies(integratorName);
+              removeIntegratorFromFormSelections(integratorName, nf);
+              refreshAllIntegratorSelects(localList);
+              return true;
+            }
+          }
+        }
+      } catch (e) {
+        if (window.Logger) window.Logger.warn('Ошибка при удалении интегратора из localStorage', e);
+      }
+      return false;
+    }
+    saveIntegratorsList(newList);
+    // Очищаем кэш после сохранения
+    if (window.VendorsFiles && typeof window.VendorsFiles.clearIntegratorsCache === 'function') {
+      window.VendorsFiles.clearIntegratorsCache();
+    }
+    removeIntegratorFromTechnologies(integratorName);
+    removeIntegratorFromFormSelections(integratorName, nf);
+    refreshAllIntegratorSelects(newList);
+    return true;
+  }
+
+  function removeIntegratorFromFormSelections(integratorName, nf) {
+    // Удаляем из основных селектов интеграторов
+    ['techIntegrators', 'editIntegrators'].forEach(fieldId => {
+      const el = document.getElementById(fieldId);
+      if (!el || !el.value) return;
+      try {
+        let vals = [];
+        if (el.value.trim().startsWith('[')) {
+          vals = JSON.parse(el.value);
+          if (!Array.isArray(vals)) vals = [vals];
+        } else {
+          vals = [el.value.trim()];
+        }
+        const norm = nf(integratorName);
+        const beforeLength = vals.length;
+        const filtered = vals.filter(v => !(v && nf(v) === norm));
+        el.value = Array.isArray(filtered) ? JSON.stringify(filtered) : '';
+        // Обновляем визуальное отображение, если значение изменилось
+        if (beforeLength !== filtered.length && typeof window.setCustomSelectValue === 'function') {
+          const customSelect = document.querySelector(`.custom-select-modal[data-field="${fieldId}"]`);
+          if (customSelect) {
+            requestAnimationFrame(() => {
+              window.setCustomSelectValue(fieldId, el.value);
+            });
+          }
+        }
+      } catch (e) { /* ignore */ }
+    });
+
+    // Удаляем из селектов интеграторов по вендорам
+    document.querySelectorAll('input[type="hidden"][id^="techVendorIntegrators__"], input[type="hidden"][id^="editVendorIntegrators__"]').forEach(el => {
+      if (!el || !el.value) return;
+      try {
+        let vals = [];
+        if (el.value.trim().startsWith('[')) {
+          vals = JSON.parse(el.value);
+          if (!Array.isArray(vals)) vals = [vals];
+        } else {
+          vals = [el.value.trim()];
+        }
+        const norm = nf(integratorName);
+        const beforeLength = vals.length;
+        const filtered = vals.filter(v => !(v && nf(v) === norm));
+        el.value = Array.isArray(filtered) ? JSON.stringify(filtered) : '';
+        // Обновляем визуальное отображение, если значение изменилось
+        if (beforeLength !== filtered.length && typeof window.setCustomSelectValue === 'function') {
+          const fieldId = el.id;
+          const customSelect = document.querySelector(`.custom-select-modal[data-field="${fieldId}"]`);
+          if (customSelect) {
+            requestAnimationFrame(() => {
+              window.setCustomSelectValue(fieldId, el.value);
+            });
+          }
+        }
+      } catch (e) { /* ignore */ }
+    });
+  }
+
+  function refreshAllIntegratorSelects(integratorsListOverride, options) {
+    // НЕ вызываем updateIntegratorsSelects здесь, так как это приводит к появлению элементов под полем добавления
+    // при редактировании вендора. Селекты интеграторов по вендорам обновляются через renderVendorIntegrators
+    // Обновляем только основные селекты интеграторов (techIntegrators, editIntegrators)
+    // и селекты интеграторов по вендорам, которые уже существуют в DOM
+    document.querySelectorAll('.custom-select-modal[data-field="techIntegrators"], .custom-select-modal[data-field="editIntegrators"]').forEach(select => {
+      const optionsList = select.querySelector('.select-options');
+      if (!optionsList) return;
+      const addOpt = optionsList.querySelector('.add-new-integrator-option, .add-new-option[data-add-new="integrator"]');
+      const list = integratorsListOverride || getState('integratorsList') || [];
+      const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+      let integratorOpts = Array.from(optionsList.querySelectorAll('li.select-option-item[data-value]:not(.add-new-integrator-option):not(.add-new-option)'));
+      
+      // СНАЧАЛА обновляем названия в существующих опциях при переименовании
+      if (options && options.integratorRenameMap) {
+        const { oldName, newName } = options.integratorRenameMap;
+        integratorOpts.forEach(li => {
+          const val = li.getAttribute('data-value');
+          if (val && nf(val) === nf(oldName)) {
+            // Обновляем data-value и текст
+            li.setAttribute('data-value', newName);
+            const textSpan = li.querySelector('.integrator-option-text');
+            if (textSpan) {
+              textSpan.textContent = newName;
+            }
+            // Также обновляем текст в label, если есть
+            const labelSpan = li.querySelector('label span:not(.integrator-option-text)');
+            if (labelSpan) {
+              labelSpan.textContent = newName;
+            }
+          }
+        });
+        // Обновляем визуальное отображение выбранных значений
+        const customSelectEl = select.closest('.custom-select-modal') || select;
+        const fieldId = customSelectEl.getAttribute('data-field');
+        if (fieldId && typeof window.renderMultiSelectTags === 'function') {
+          requestAnimationFrame(() => {
+            window.renderMultiSelectTags(customSelectEl);
+          });
+        }
+        // Обновляем список опций после переименования
+        integratorOpts = Array.from(optionsList.querySelectorAll('li.select-option-item[data-value]:not(.add-new-integrator-option):not(.add-new-option)'));
+      }
+      
+      // ПОТОМ проверяем, какие элементы нужно добавить
+      const currentValues = new Set(integratorOpts.map(li => {
+        const val = li.getAttribute('data-value');
+        return val ? nf(val) : null;
+      }).filter(Boolean));
+      
+      list.forEach(i => {
+        const normI = nf(i);
+        if (currentValues.has(normI)) return; // Элемент уже есть (возможно, после переименования)
+        
+        const li = document.createElement('li');
+        li.className = 'select-option-item';
+        li.setAttribute('data-value', i);
+        const escaped = (window.escapeHtml ? window.escapeHtml(i) : String(i).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]));
+        li.innerHTML = `
+          <label class="option-label">
+            <input type="checkbox" class="option-checkbox" />
+            <span class="integrator-option-text">${escaped}</span>
+          </label>
+          <div class="integrator-option-actions">
+            <button type="button" class="edit-integrator-btn" title="Редактировать" aria-label="Редактировать">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button type="button" class="delete-integrator-btn" title="Удалить" aria-label="Удалить">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+            </button>
+          </div>
+        `;
+        li.classList.add('integrator-option-item');
+        const editBtn = li.querySelector('.edit-integrator-btn');
+        const deleteBtn = li.querySelector('.delete-integrator-btn');
+        if (editBtn && window.Filters && typeof window.Filters.startIntegratorEdit === 'function') {
+          editBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            const customSelectEl = select.closest('.custom-select-modal') || select;
+            const fieldId = customSelectEl.getAttribute('data-field') || '';
+            const hiddenInputEl = document.getElementById(fieldId);
+            const isMultiEl = customSelectEl.getAttribute('data-multi') === 'true';
+            const currentName = li.getAttribute('data-value') || i;
+            window.Filters.startIntegratorEdit(li, currentName, optionsList, customSelectEl, hiddenInputEl, fieldId, isMultiEl);
+          });
+        }
+        if (deleteBtn && window.Filters && typeof window.Filters.handleIntegratorDelete === 'function') {
+          deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            const customSelectEl = select.closest('.custom-select-modal') || select;
+            const fieldId = customSelectEl.getAttribute('data-field') || '';
+            const hiddenInputEl = document.getElementById(fieldId);
+            const isMultiEl = customSelectEl.getAttribute('data-multi') === 'true';
+            const currentName = li.getAttribute('data-value') || i;
+            window.Filters.handleIntegratorDelete(currentName, li, optionsList, customSelectEl, hiddenInputEl, fieldId, isMultiEl, true);
+          });
+        }
+        if (addOpt && addOpt.nextSibling) {
+          optionsList.insertBefore(li, addOpt.nextSibling);
+        } else if (addOpt) {
+          optionsList.appendChild(li);
+        } else {
+          optionsList.appendChild(li);
+        }
+      });
+      
+      const listNorm = new Set(list.map(i => nf(i)));
+      integratorOpts.forEach(li => {
+        const val = li.getAttribute('data-value');
+        if (val && !listNorm.has(nf(val))) {
+          // Если удаляемая опция была выбрана, нужно обновить визуальное отображение
+          const checkbox = li.querySelector('input[type="checkbox"]');
+          if (checkbox && checkbox.checked) {
+            const customSelectEl = select.closest('.custom-select-modal') || select;
+            const fieldId = customSelectEl.getAttribute('data-field');
+            if (fieldId) {
+              const hiddenInputEl = document.getElementById(fieldId);
+              if (hiddenInputEl && typeof window.setCustomSelectValue === 'function') {
+                // Значение уже обновлено в removeIntegratorFromFormSelections, просто обновляем визуально
+                requestAnimationFrame(() => {
+                  window.setCustomSelectValue(fieldId, hiddenInputEl.value);
+                });
+              }
+            }
+          }
+          li.remove();
+        }
+      });
+    });
+    if (typeof window.updateRadar === 'function') {
+      window.updateRadar();
+    }
+  }
+
   window.DataLoader = {
     vfsRead,
     vfsWrite,
@@ -880,7 +1572,13 @@
     switchEnterprise,
     showNotification,
     initFilters,
-    recalculateFuncCoverForAllTechnologies
+    recalculateFuncCoverForAllTechnologies,
+    isVendorUsedInTechnologies,
+    renameVendor,
+    deleteVendor,
+    isIntegratorUsedInTechnologies,
+    renameIntegrator,
+    deleteIntegrator
   };
 
   // initFilters экспортируется из filter-init.js; data-loader оставляет обёртку для совместимости
@@ -951,8 +1649,43 @@
         </svg>
         <span>Добавить</span>
       </button>
+      <span class="field-error-message" id="newVendorError"></span>
     `;
     optionsList.appendChild(addNewOption);
+
+    // Проверка дубликата вендора по нормализованному имени (с учётом омоглифов, регистра)
+    function isVendorDuplicate(name, list) {
+      const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+      const normalized = nf(name);
+      if (!normalized) return false;
+      return (list || []).some(v => nf(v) === normalized);
+    }
+
+    function showVendorError(msg) {
+      const errEl = addNewOption.querySelector('#newVendorError');
+      if (errEl) {
+        errEl.textContent = msg || '';
+        errEl.classList.toggle('visible', !!msg);
+      }
+      newVendorInput?.classList.toggle('duplicate-name-error', !!msg);
+      addNewVendorBtn?.toggleAttribute('disabled', !!msg);
+    }
+
+    function runVendorLiveValidation() {
+      const val = (newVendorInput?.value || '').trim();
+      if (!val) {
+        showVendorError('');
+        return;
+      }
+      const dup = isVendorDuplicate(val, vendorsList);
+      showVendorError(dup ? 'Такой вендор уже существует' : '');
+    }
+
+    let vendorValidationTimer = null;
+    function scheduleVendorValidation() {
+      if (vendorValidationTimer) clearTimeout(vendorValidationTimer);
+      vendorValidationTimer = setTimeout(runVendorLiveValidation, 400);
+    }
 
     // Затем добавляем все опции вендоров
     vendorsList.forEach(vendor => {
@@ -971,13 +1704,12 @@
         const newVendorName = newVendorInput.value.trim();
         if (!newVendorName) return;
 
-        // Проверяем, нет ли уже такого вендора
-        if (vendorsList.includes(newVendorName)) {
-          if (window.showNotification) {
-            window.showNotification('Такой вендор уже существует', false);
-          }
+        // Проверяем дубликат по нормализованному имени (с учётом омоглифов, регистра)
+        if (isVendorDuplicate(newVendorName, vendorsList)) {
+          showVendorError('Такой вендор уже существует');
           return;
         }
+        showVendorError('');
 
         // Добавляем в список
         vendorsList.push(newVendorName);
@@ -1094,6 +1826,10 @@
           addNewVendor();
         }
       });
+
+      // Живая проверка при вводе и при потере фокуса
+      newVendorInput.addEventListener('blur', runVendorLiveValidation);
+      newVendorInput.addEventListener('input', scheduleVendorValidation);
     }
 
     // Устанавливаем placeholder

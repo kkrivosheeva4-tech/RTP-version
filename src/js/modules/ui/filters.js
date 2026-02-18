@@ -869,6 +869,126 @@
     }
   }
 
+  // Функции редактирования и удаления интеграторов (вынесены для доступа извне)
+  function startIntegratorEdit(li, oldName, optionsList, customSelect, hiddenInput, selectId, isMulti) {
+    const span = li.querySelector('.integrator-option-text');
+    const actions = li.querySelector('.integrator-option-actions');
+    if (!span || !actions) return;
+    const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+    const isDup = (name, exclude) => {
+      const norm = nf(name);
+      if (!norm) return true;
+      return Array.from(optionsList.querySelectorAll('li.integrator-option-item[data-value]')).some(other => {
+        if (other === li) return false;
+        const v = other.getAttribute('data-value');
+        return v && nf(v) === norm && v !== exclude;
+      });
+    };
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = oldName;
+    input.className = 'integrator-edit-input';
+    const errSpan = document.createElement('span');
+    errSpan.className = 'field-error-message integrator-edit-error';
+    const saveBtn = document.createElement('button');
+    saveBtn.type = 'button';
+    saveBtn.className = 'btn-primary btn-small';
+    saveBtn.textContent = 'Сохранить';
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.className = 'btn-secondary btn-small';
+    cancelBtn.textContent = 'Отмена';
+    span.style.display = 'none';
+    actions.style.display = 'none';
+    li.querySelector('.option-label')?.appendChild(input);
+    li.appendChild(errSpan);
+    li.appendChild(saveBtn);
+    li.appendChild(cancelBtn);
+    input.focus();
+    const cleanup = () => {
+      span.style.display = '';
+      actions.style.display = '';
+      input.remove();
+      errSpan.remove();
+      saveBtn.remove();
+      cancelBtn.remove();
+    };
+    const doSave = async () => {
+      const newName = input.value.trim();
+      if (!newName) {
+        errSpan.textContent = 'Введите название';
+        errSpan.classList.add('visible');
+        return;
+      }
+      if (isDup(newName, oldName)) {
+        errSpan.textContent = 'Такой интегратор уже существует';
+        errSpan.classList.add('visible');
+        return;
+      }
+      errSpan.textContent = '';
+      errSpan.classList.remove('visible');
+      const ok = window.DataLoader && typeof window.DataLoader.renameIntegrator === 'function' && await window.DataLoader.renameIntegrator(oldName, newName);
+      cleanup();
+      if (ok) {
+        // Обновляем элемент в DOM после cleanup
+        // refreshAllIntegratorSelects уже обновила элемент через integratorRenameMap,
+        // но убеждаемся, что изменения применены
+        requestAnimationFrame(() => {
+          li.setAttribute('data-value', newName);
+          // Находим span заново после cleanup
+          const updatedSpan = li.querySelector('.integrator-option-text');
+          if (updatedSpan && updatedSpan.textContent !== newName) {
+            updatedSpan.textContent = newName;
+          }
+          // Также обновляем текст в label, если есть
+          const labelSpan = li.querySelector('label span:not(.integrator-option-text)');
+          if (labelSpan && labelSpan.textContent !== newName) {
+            labelSpan.textContent = newName;
+          }
+          // Обновляем визуальное отображение в селекте
+          if (hiddenInput && typeof window.setCustomSelectValue === 'function') {
+            const fieldId = hiddenInput.id || selectId;
+            window.setCustomSelectValue(fieldId, hiddenInput.value);
+            // Также обновляем отображение тегов
+            if (customSelect && typeof window.renderMultiSelectTags === 'function') {
+              window.renderMultiSelectTags(customSelect);
+            }
+          } else if (customSelect && typeof window.renderMultiSelectTags === 'function') {
+            window.renderMultiSelectTags(customSelect);
+          }
+        });
+        if (window.showNotification) window.showNotification(`Интегратор переименован в "${newName}"`, true);
+      }
+    };
+    saveBtn.addEventListener('click', (e) => { e.stopPropagation(); doSave(); });
+    cancelBtn.addEventListener('click', (e) => { e.stopPropagation(); cleanup(); });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); doSave(); }
+      if (e.key === 'Escape') { e.preventDefault(); cleanup(); }
+    });
+  }
+
+  async function handleIntegratorDelete(integratorName, li, optionsList, customSelect, hiddenInput, selectId, isMulti, needsCheckboxes) {
+    const used = window.DataLoader && typeof window.DataLoader.isIntegratorUsedInTechnologies === 'function' && window.DataLoader.isIntegratorUsedInTechnologies(integratorName);
+    if (used) {
+      const msg = `Интегратор "${integratorName}" используется в технологиях. Удалить из всех технологий и из списка интеграторов?`;
+      if (!confirm(msg)) return;
+    }
+    const ok = window.DataLoader && typeof window.DataLoader.deleteIntegrator === 'function' && await window.DataLoader.deleteIntegrator(integratorName);
+    if (ok) {
+      // Удаляем элемент из списка опций
+      li.remove();
+      // Обновляем визуальное отображение селекта
+      if (hiddenInput && typeof window.setCustomSelectValue === 'function') {
+        const fieldId = hiddenInput.id || selectId;
+        requestAnimationFrame(() => {
+          window.setCustomSelectValue(fieldId, hiddenInput.value);
+        });
+      }
+      if (window.showNotification) window.showNotification(`Интегратор "${integratorName}" удалён`, true);
+    }
+  }
+
   // Заполнить селект для модального окна
   function populateSelectForModal(selectId, items, placeholder) {
     const customSelect = document.querySelector(`.custom-select-modal[data-field="${selectId}"]`);
@@ -934,18 +1054,177 @@
       allOption.setAttribute('data-value', '');
       optionsList.appendChild(allOption);
     }
+    const isVendorField = selectId === 'techVendors' || selectId === 'editVendors';
+    const isIntegratorField = selectId === 'techIntegrators' || selectId === 'editIntegrators'
+      || isVendorIntegratorsByVendor;
+
+    function startVendorEdit(li, oldName, optionsList, customSelect, hiddenInput, selectId, isMulti) {
+      const span = li.querySelector('.vendor-option-text');
+      const actions = li.querySelector('.vendor-option-actions');
+      if (!span || !actions) return;
+      const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+      const isDup = (name, exclude) => {
+        const norm = nf(name);
+        if (!norm) return true;
+        return Array.from(optionsList.querySelectorAll('li.vendor-option-item[data-value]')).some(other => {
+          if (other === li) return false;
+          const v = other.getAttribute('data-value');
+          return v && nf(v) === norm && v !== exclude;
+        });
+      };
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = oldName;
+      input.className = 'vendor-edit-input';
+      const errSpan = document.createElement('span');
+      errSpan.className = 'field-error-message vendor-edit-error';
+      const saveBtn = document.createElement('button');
+      saveBtn.type = 'button';
+      saveBtn.className = 'btn-primary btn-small';
+      saveBtn.textContent = 'Сохранить';
+      const cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.className = 'btn-secondary btn-small';
+      cancelBtn.textContent = 'Отмена';
+      span.style.display = 'none';
+      actions.style.display = 'none';
+      li.querySelector('.option-label')?.appendChild(input);
+      li.appendChild(errSpan);
+      li.appendChild(saveBtn);
+      li.appendChild(cancelBtn);
+      input.focus();
+      const cleanup = () => {
+        span.style.display = '';
+        actions.style.display = '';
+        input.remove();
+        errSpan.remove();
+        saveBtn.remove();
+        cancelBtn.remove();
+      };
+      const doSave = () => {
+        const newName = input.value.trim();
+        if (!newName) {
+          errSpan.textContent = 'Введите название';
+          errSpan.classList.add('visible');
+          return;
+        }
+        if (isDup(newName, oldName)) {
+          errSpan.textContent = 'Такой вендор уже существует';
+          errSpan.classList.add('visible');
+          return;
+        }
+        errSpan.textContent = '';
+        errSpan.classList.remove('visible');
+        const ok = window.DataLoader && typeof window.DataLoader.renameVendor === 'function' && window.DataLoader.renameVendor(oldName, newName);
+        cleanup();
+        if (ok) {
+          li.setAttribute('data-value', newName);
+          span.textContent = newName;
+          if (window.showNotification) window.showNotification(`Вендор переименован в "${newName}"`, true);
+        }
+      };
+      saveBtn.addEventListener('click', (e) => { e.stopPropagation(); doSave(); });
+      cancelBtn.addEventListener('click', (e) => { e.stopPropagation(); cleanup(); });
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); doSave(); }
+        if (e.key === 'Escape') { e.preventDefault(); cleanup(); }
+      });
+    }
+
+
+    function handleVendorDelete(vendorName, li, optionsList, customSelect, hiddenInput, selectId, isMulti, needsCheckboxes) {
+      const used = window.DataLoader && typeof window.DataLoader.isVendorUsedInTechnologies === 'function' && window.DataLoader.isVendorUsedInTechnologies(vendorName);
+      if (used) {
+        const msg = `Вендор "${vendorName}" используется в технологиях. Удалить из всех технологий и из списка вендоров?`;
+        if (!confirm(msg)) return;
+      }
+      const ok = window.DataLoader && typeof window.DataLoader.deleteVendor === 'function' && window.DataLoader.deleteVendor(vendorName);
+      if (ok) {
+        if (window.showNotification) window.showNotification(`Вендор "${vendorName}" удалён`, true);
+      }
+    }
+
     items.forEach(item => {
       if (needsCheckboxes) {
-        // Создаём элемент с чекбоксом для блоков и функций
         const li = document.createElement('li');
         li.classList.add('select-option-item');
         li.setAttribute('data-value', item);
-        li.innerHTML = `
-          <label class="option-label">
-            <input type="checkbox" class="option-checkbox" />
-            <span>${item}</span>
-          </label>
-        `;
+        if (isVendorField) {
+          const escaped = (window.escapeHtml ? window.escapeHtml(item) : String(item).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]));
+          li.classList.add('vendor-option-item');
+          li.innerHTML = `
+            <label class="option-label">
+              <input type="checkbox" class="option-checkbox" />
+              <span class="vendor-option-text">${escaped}</span>
+            </label>
+            <div class="vendor-option-actions">
+              <button type="button" class="edit-vendor-btn" title="Редактировать" aria-label="Редактировать">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
+              <button type="button" class="delete-vendor-btn" title="Удалить" aria-label="Удалить">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+              </button>
+            </div>
+          `;
+          const editBtn = li.querySelector('.edit-vendor-btn');
+          const deleteBtn = li.querySelector('.delete-vendor-btn');
+          if (editBtn) {
+            editBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              startVendorEdit(li, item, optionsList, customSelect, hiddenInput, selectId, isMulti);
+            });
+          }
+          if (deleteBtn) {
+            deleteBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              handleVendorDelete(item, li, optionsList, customSelect, hiddenInput, selectId, isMulti, needsCheckboxes);
+            });
+          }
+        } else if (isIntegratorField) {
+          const escaped = (window.escapeHtml ? window.escapeHtml(item) : String(item).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]));
+          li.classList.add('integrator-option-item');
+          li.innerHTML = `
+            <label class="option-label">
+              <input type="checkbox" class="option-checkbox" />
+              <span class="integrator-option-text">${escaped}</span>
+            </label>
+            <div class="integrator-option-actions">
+              <button type="button" class="edit-integrator-btn" title="Редактировать" aria-label="Редактировать">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
+              <button type="button" class="delete-integrator-btn" title="Удалить" aria-label="Удалить">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+              </button>
+            </div>
+          `;
+          const editBtn = li.querySelector('.edit-integrator-btn');
+          const deleteBtn = li.querySelector('.delete-integrator-btn');
+          if (editBtn) {
+            editBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              const currentName = li.getAttribute('data-value') || item;
+              startIntegratorEdit(li, currentName, optionsList, customSelect, hiddenInput, selectId, isMulti);
+            });
+          }
+          if (deleteBtn) {
+            deleteBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              const currentName = li.getAttribute('data-value') || item;
+              handleIntegratorDelete(currentName, li, optionsList, customSelect, hiddenInput, selectId, isMulti, needsCheckboxes);
+            });
+          }
+        } else {
+          li.innerHTML = `
+            <label class="option-label">
+              <input type="checkbox" class="option-checkbox" />
+              <span>${item}</span>
+            </label>
+          `;
+        }
         optionsList.appendChild(li);
       } else {
         const li = document.createElement('li');
@@ -956,10 +1235,6 @@
     });
 
     // Добавляем опцию "Добавить новый" для вендоров и интеграторов
-    const isVendorField = selectId === 'techVendors' || selectId === 'editVendors';
-    const isIntegratorField = selectId === 'techIntegrators' || selectId === 'editIntegrators'
-      || isVendorIntegratorsByVendor;
-
     if (isVendorField || isIntegratorField) {
       const addNewLi = document.createElement('li');
       addNewLi.className = 'add-new-option';
@@ -974,29 +1249,62 @@
             </svg>
           </button>
         </div>
+        <span class="field-error-message add-new-field-error"></span>
       `;
       optionsList.appendChild(addNewLi);
 
       // Обработчик для добавления нового значения
       const addNewInput = addNewLi.querySelector('.add-new-input');
       const addNewBtn = addNewLi.querySelector('.add-new-btn');
+      const errorSpan = addNewLi.querySelector('.add-new-field-error');
+
+      const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+      const isDuplicate = (val, existing) => {
+        const norm = nf(val);
+        if (!norm) return false;
+        return (existing || []).some(v => nf(v) === norm);
+      };
+      const showAddNewError = (msg) => {
+        if (errorSpan) {
+          errorSpan.textContent = msg || '';
+          errorSpan.classList.toggle('visible', !!msg);
+        }
+        addNewInput?.classList.toggle('duplicate-name-error', !!msg);
+        addNewBtn?.toggleAttribute('disabled', !!msg);
+      };
+      const runLiveValidation = () => {
+        const val = (addNewInput?.value || '').trim();
+        if (!val) {
+          showAddNewError('');
+          return;
+        }
+        const existingValues = Array.from(optionsList.querySelectorAll('li[data-value]'))
+          .map(li => li.getAttribute('data-value'))
+          .filter(Boolean);
+        const dup = isDuplicate(val, existingValues);
+        showAddNewError(dup ? `${isVendorField ? 'Такой вендор' : 'Такой интегратор'} уже существует` : '');
+      };
+      let validationTimer = null;
+      const scheduleValidation = () => {
+        if (validationTimer) clearTimeout(validationTimer);
+        validationTimer = setTimeout(runLiveValidation, 400);
+      };
 
       if (addNewInput && addNewBtn) {
         const handleAddNew = () => {
           const newValue = addNewInput.value.trim();
           if (!newValue) return;
 
-          // Проверяем, что такого значения еще нет
+          // Проверяем дубликат по нормализованному имени (с учётом омоглифов, регистра)
           const existingValues = Array.from(optionsList.querySelectorAll('li[data-value]'))
             .map(li => li.getAttribute('data-value'))
             .filter(Boolean);
 
-          if (existingValues.includes(newValue)) {
-            if (window.showNotification) {
-              window.showNotification(`${isVendorField ? 'Вендор' : 'Интегратор'} "${newValue}" уже существует`, false);
-            }
+          if (isDuplicate(newValue, existingValues)) {
+            showAddNewError(`${isVendorField ? 'Такой вендор' : 'Такой интегратор'} уже существует`);
             return;
           }
+          showAddNewError('');
 
           // Сохраняем текущую позицию прокрутки перед добавлением
           const optionsContainer = optionsList.closest('.select-options') || optionsList;
@@ -1045,13 +1353,66 @@
             newLi = document.createElement('li');
             newLi.classList.add('select-option-item', 'selected');
             newLi.setAttribute('data-value', newValue);
-            newLi.innerHTML = `
-              <label class="option-label">
-                <input type="checkbox" class="option-checkbox" checked />
-                <span>${newValue}</span>
-              </label>
-            `;
-            // Вставляем перед опцией "Добавить новый"
+            if (isVendorField) {
+              const escaped = (window.escapeHtml ? window.escapeHtml(newValue) : String(newValue).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]));
+              newLi.classList.add('vendor-option-item');
+              newLi.innerHTML = `
+                <label class="option-label">
+                  <input type="checkbox" class="option-checkbox" checked />
+                  <span class="vendor-option-text">${escaped}</span>
+                </label>
+                <div class="vendor-option-actions">
+                  <button type="button" class="edit-vendor-btn" title="Редактировать" aria-label="Редактировать">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </button>
+                  <button type="button" class="delete-vendor-btn" title="Удалить" aria-label="Удалить">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                  </button>
+                </div>
+              `;
+              const editBtn = newLi.querySelector('.edit-vendor-btn');
+              const deleteBtn = newLi.querySelector('.delete-vendor-btn');
+              if (editBtn) editBtn.addEventListener('click', (e) => { e.stopPropagation(); e.preventDefault(); startVendorEdit(newLi, newValue, optionsList, customSelect, hiddenInput, selectId, isMulti); });
+              if (deleteBtn) deleteBtn.addEventListener('click', (e) => { e.stopPropagation(); e.preventDefault(); handleVendorDelete(newValue, newLi, optionsList, customSelect, hiddenInput, selectId, isMulti, needsCheckboxes); });
+            } else if (isIntegratorField) {
+              const escaped = (window.escapeHtml ? window.escapeHtml(newValue) : String(newValue).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]));
+              newLi.classList.add('integrator-option-item');
+              newLi.innerHTML = `
+                <label class="option-label">
+                  <input type="checkbox" class="option-checkbox" checked />
+                  <span class="integrator-option-text">${escaped}</span>
+                </label>
+                <div class="integrator-option-actions">
+                  <button type="button" class="edit-integrator-btn" title="Редактировать" aria-label="Редактировать">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </button>
+                  <button type="button" class="delete-integrator-btn" title="Удалить" aria-label="Удалить">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                  </button>
+                </div>
+              `;
+              const editBtn = newLi.querySelector('.edit-integrator-btn');
+              const deleteBtn = newLi.querySelector('.delete-integrator-btn');
+              if (editBtn) editBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                const currentName = newLi.getAttribute('data-value') || newValue;
+                startIntegratorEdit(newLi, currentName, optionsList, customSelect, hiddenInput, selectId, isMulti);
+              });
+              if (deleteBtn) deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                const currentName = newLi.getAttribute('data-value') || newValue;
+                handleIntegratorDelete(currentName, newLi, optionsList, customSelect, hiddenInput, selectId, isMulti, needsCheckboxes);
+              });
+            } else {
+              newLi.innerHTML = `
+                <label class="option-label">
+                  <input type="checkbox" class="option-checkbox" checked />
+                  <span>${newValue}</span>
+                </label>
+              `;
+            }
             optionsList.insertBefore(newLi, addNewLi);
           } else {
             newLi = document.createElement('li');
@@ -1240,6 +1601,9 @@
             handleAddNew();
           }
         });
+
+        addNewInput.addEventListener('blur', runLiveValidation);
+        addNewInput.addEventListener('input', scheduleValidation);
       }
     }
 
@@ -1406,7 +1770,9 @@
     getAllTechnologies,
     getAllUniqueBlocks,
     setCustomSelectValue,
-    resetCustomSelects
+    resetCustomSelects,
+    startIntegratorEdit,
+    handleIntegratorDelete
   };
 
   // Экспорт функций в window для обратной совместимости с events.js

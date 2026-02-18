@@ -359,29 +359,13 @@
   }
 
   /**
-   * Вычисляет размер элемента (радиус в пикселях) на основе технологии
-   * Размер зависит от количества вендоров на директорской странице
+   * Вычисляет размер элемента (радиус в пикселях) для технологии.
+   * Единый размер для всех технологий.
    * @param {Object} tech - Объект технологии
    * @returns {number} - Размер элемента (радиус в пикселях)
    */
   function calculateElementSize(tech) {
-    const isDirectorPage = document.body && document.body.id === 'rmk-director';
-    let size;
-
-    if (isDirectorPage) {
-      const vendorCount = (tech.vendors && Array.isArray(tech.vendors)) ? tech.vendors.length : 0;
-      if (vendorCount <= 1) {
-        size = 8;
-      } else if (vendorCount === 2 || vendorCount === 3) {
-        size = 14;
-      } else {
-        size = 20;
-      }
-    } else {
-      size = 10;
-    }
-
-    return size;
+    return 10;
   }
 
   /**

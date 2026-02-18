@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; base-uri 'self';" />
+    content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; base-uri 'self';" />
   <meta name="description"
     content="Радар технологий для директоров и РП - интерактивная визуализация технологических решений с расширенным функционалом для принятия решений" />
   <meta name="keywords" content="радар технологий, визуализация, технологии, фильтры, экспорт, приоритеты" />
@@ -28,22 +28,19 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Радар технологий" />
   <title>Радар технологий</title>
-  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin="anonymous" />
-  <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin="anonymous" />
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
   <link rel="icon" href="/assets/images/icon.png" type="image/png" />
   <link rel="shortcut icon" href="/assets/images/icon.png" type="image/png" />
   <link rel="stylesheet" href="/src/css/common.css" />
   <link rel="stylesheet" href="/src/css/RMK.css" />
   <link rel="stylesheet" href="/src/css/about.css" />
   <link rel="stylesheet" href="/src/css/rmk-inline-styles.css" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
-    integrity="sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAOnx5S09ydFYWWNSfcEqDTTHgtNA=="
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"
     crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"
-    integrity="sha512-03CCNkeosDFN2zCCu4vLpu3pJfZcrL48F3yB8k87ejT+OVMwco7IH3FW02vtbGhdncS6gyYZ/duYaC/K62xQPQ=="
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.28/dist/jspdf.plugin.autotable.min.js"
     crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
-    integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA=="
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"
     crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 
@@ -468,6 +465,7 @@
               <span class="required-star" data-tooltip="Это поле является обязательным">*</span>
             </label>
             <input type="text" id="techName" required />
+            <span class="field-error-message" id="techNameError" role="alert" aria-live="polite"></span>
           </div>
           <div class="form-group">
             <label>Направления цифрового развития
@@ -814,6 +812,7 @@
               <span class="required-star" data-tooltip="Это поле является обязательным">*</span>
             </label>
             <input type="text" id="editName" required />
+            <span class="field-error-message" id="editNameError" role="alert" aria-live="polite"></span>
           </div>
           <div class="form-group">
             <label>Направления цифрового развития

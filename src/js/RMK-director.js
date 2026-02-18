@@ -36,6 +36,7 @@ async function loadAllModules() {
     '/src/js/modules/core/data-loader.js',
     '/src/js/modules/core/state-utils.js',  // state-accessors + state-subscriptions
     '/src/js/modules/core/data-indexing.js',  // data-index + tech-index
+    '/src/js/modules/core/validators.js',  // валидация дубликатов (технологии, омоглифы)
 
     // UI модули (detail-panel должен быть загружен до radar-wrappers, так как использует showDetail)
     '/src/js/modules/ui/detail-panel.js',

@@ -26,11 +26,6 @@
       position: 'bottom',
       showOnce: true
     },
-    'chartIconBtn': {
-      message: 'Откройте график перспективных технологий для визуального анализа',
-      position: 'bottom',
-      showOnce: true
-    },
     'reportIconBtn': {
       message: 'Экспортируйте данные радара в PDF для дальнейшего анализа',
       position: 'bottom',
@@ -355,7 +350,7 @@
     loadSettings();
 
     // Подсказки для кнопок при первом клике
-    const buttonHints = ['searchIconBtn', 'filterIconBtn', 'resetIconBtn', 'chartIconBtn', 'reportIconBtn', 'addIconBtn'];
+    const buttonHints = ['searchIconBtn', 'filterIconBtn', 'resetIconBtn', 'reportIconBtn', 'addIconBtn'];
     buttonHints.forEach(buttonId => {
       const button = document.getElementById(buttonId);
       if (button) {

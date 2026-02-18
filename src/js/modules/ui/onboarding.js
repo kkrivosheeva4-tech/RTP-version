@@ -1677,24 +1677,6 @@
     createOverlay();
     createTooltip();
 
-    // Для шага prospects-chart подсвечиваем кнопку "График" в боковой панели
-    // Делаем это после создания overlay, чтобы кнопка была видна поверх затемнения
-    if (step.id === 'prospects-chart') {
-      const chartIconBtn = document.getElementById('chartIconBtn');
-      if (chartIconBtn) {
-        chartIconBtn.classList.add('onboarding-highlight');
-        // Добавляем класс к родительским контейнерам для правильного z-index
-        const sidebarButtons = document.getElementById('sidebarButtons');
-        const sidebarWrapper = document.querySelector('.sidebar-wrapper');
-        if (sidebarButtons) {
-          sidebarButtons.classList.add('onboarding-highlight-container');
-        }
-        if (sidebarWrapper) {
-          sidebarWrapper.classList.add('onboarding-highlight-container');
-        }
-      }
-    }
-
     // Для шага report-button подсвечиваем кнопку "Отчеты" в боковой панели
     // Делаем это после создания overlay, чтобы кнопка была видна поверх затемнения
     if (step.id === 'report-button') {
