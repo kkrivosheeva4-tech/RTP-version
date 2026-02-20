@@ -121,7 +121,7 @@ window.ErrorDisplay = (function() {
     });
 
     // Логируем ошибку для разработчиков
-    console.error(`[ErrorDisplay] ${type}`, {
+    window.Logger?.warn(`[ErrorDisplay] ${type}`, {
       error,
       context,
       userMessage,
@@ -192,7 +192,7 @@ window.ErrorDisplay = (function() {
           try {
             retryCallback();
           } catch (retryError) {
-            console.error('[ErrorDisplay] Retry failed', retryError);
+            window.Logger?.warn('[ErrorDisplay] Retry failed', retryError);
             show(retryError, 'Ошибка при повторе операции');
           }
         });

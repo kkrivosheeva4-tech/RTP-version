@@ -269,7 +269,7 @@
         // Сначала скрываем окно подтверждения, затем выполняем callback и гарантированно закрываем целевую панель
         setTimeout(() => {
           confirmEl.style.display = 'none';
-          try { if (typeof confirmEl._onClose === 'function') confirmEl._onClose(); } catch (e) { console.error(e); }
+          try { if (typeof confirmEl._onClose === 'function') confirmEl._onClose(); } catch (e) { window.Logger?.warn('Confirm close callback error', e); }
           try {
             const related = confirmEl._relatedPanel;
             if (related) hideModal(related);

@@ -14,7 +14,7 @@ const MobileNav = {
       this.createMobileMenu();
       this.attachEventListeners();
     } catch (error) {
-      console.error('Ошибка инициализации MobileNav:', error);
+      window.Logger?.warn('Ошибка инициализации MobileNav:', error);
     }
   },
 

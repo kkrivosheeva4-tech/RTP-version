@@ -28,7 +28,7 @@
 
   const ErrorHandler = {
     handle(error, context = '') {
-      console.error(`[ErrorHandler] ${context || 'no-context'}`, error);
+      window.Logger?.warn(`[ErrorHandler] ${context || 'no-context'}`, error);
 
       // Используем ErrorDisplay, если доступен
       const ErrorDisplay = getErrorDisplay();
@@ -185,7 +185,7 @@
 
   function run() {
     queue.forEach(fn => {
-      try { fn(); } catch (e) { console.error('RenderQueue handler error', e); }
+      try { fn(); } catch (e) { window.Logger?.warn('RenderQueue handler error', e); }
     });
     queue.clear();
     pending = false;

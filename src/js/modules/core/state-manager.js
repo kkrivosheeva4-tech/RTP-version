@@ -13,7 +13,7 @@
     try {
       fn(...args);
     } catch (e) {
-      console.error('StateManager listener error', e);
+      window.Logger?.warn('StateManager listener error', e);
     }
   }
 
