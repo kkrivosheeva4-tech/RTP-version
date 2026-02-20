@@ -26,16 +26,7 @@
   const setState = (key, value) => {
     const sm = getStateManager();
     sm.set(key, value);
-    // TODO: убрать после перевода всех потребителей на state. Синхронизация с window для обратной совместимости.
-    if (key === 'technologies') window.technologies = value;
-    if (key === 'enterpriseData') window.enterpriseData = value;
-    if (key === 'currentEnterprise') window.currentEnterprise = value;
-    if (key === 'blocksList') window.blocksList = value;
-    if (key === 'functions') window.functions = value;
-    if (key === 'nameToBlockId') window.nameToBlockId = value;
-    if (key === 'functionToBlockMap') window.functionToBlockMap = value;
-    // УДАЛЕНО (2026-01-29): blockToQuadrant больше не используется
-    // Блоки не привязаны к квадрантам, они являются отдельными критериями технологии
+    // Синхронизация с window.* убрана: все потребители переведены на StateManager / StateAccessors (П.6).
   };
 
   const getDOMCache = () => {

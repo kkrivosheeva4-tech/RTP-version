@@ -2434,8 +2434,6 @@
           }
         }
 
-        // TODO: убрать запись в window после перевода всех потребителей на state
-        window.blocksList = blocksListUpdated;
         if (window.StateManager && window.StateManager.set) {
           window.StateManager.set('blocksList', blocksListUpdated);
         }
@@ -2476,10 +2474,6 @@
                 if (selectedSectors.length > 0) {
                   // Используем setTimeout для гарантии, что данные обновились и populateSelectForModal завершился
                   setTimeout(() => {
-                    // TODO: убрать после перевода всех потребителей на state
-                    if (window.StateAccessors) {
-                      window.blocksList = window.StateAccessors.getBlocksList() || blocksListUpdated;
-                    }
                     window.updateModalBlocksForSectors(selectedSectors);
                   }, 50);
                 }

@@ -170,10 +170,10 @@
     enterpriseButtons.forEach((button) => {
       button.addEventListener("click", () => {
         const selectedEnterprise = button.textContent.trim();
-        if (
-          typeof window.currentEnterprise !== "undefined" &&
-          selectedEnterprise === window.currentEnterprise
-        )
+        const currentEnterprise = (window.StateAccessors && typeof window.StateAccessors.getCurrentEnterprise === 'function')
+          ? window.StateAccessors.getCurrentEnterprise()
+          : (window.StateManager && window.StateManager.get ? window.StateManager.get('currentEnterprise') : undefined);
+        if (currentEnterprise !== undefined && selectedEnterprise === currentEnterprise)
           return;
 
         // Обновляем UI кнопок

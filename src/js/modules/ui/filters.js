@@ -330,13 +330,15 @@
 
       // Затем фильтруем по выбранным блокам, если они выбраны
       const selectedBlocks = getFilterValues('block');
-      if (selectedBlocks.length > 0 && typeof window.nameToBlockId !== 'undefined' && window.nameToBlockId && typeof window.functionToBlockMap !== 'undefined' && window.functionToBlockMap) {
+      const nameToBlockId = (window.StateAccessors && typeof window.StateAccessors.getNameToBlockId === 'function') ? (window.StateAccessors.getNameToBlockId() || {}) : {};
+      const functionToBlockMap = (window.StateAccessors && typeof window.StateAccessors.getFunctionToBlockMap === 'function') ? (window.StateAccessors.getFunctionToBlockMap() || {}) : {};
+      if (selectedBlocks.length > 0 && nameToBlockId && Object.keys(nameToBlockId).length > 0 && functionToBlockMap && Object.keys(functionToBlockMap).length > 0) {
         const selectedBlockIds = selectedBlocks
-          .map(blockName => window.nameToBlockId[blockName])
+          .map(blockName => nameToBlockId[blockName])
           .filter(id => id != null);
         if (selectedBlockIds.length > 0) {
           filteredItems = filteredItems.filter(funcName => {
-            const blockIds = window.functionToBlockMap[funcName];
+            const blockIds = functionToBlockMap[funcName];
             if (!blockIds) return false;
             // blockIds может быть числом или массивом чисел
             const funcBlockIds = Array.isArray(blockIds) ? blockIds : [blockIds];

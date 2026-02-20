@@ -87,7 +87,7 @@
       const blockNames = Array.isArray(parsed) ? parsed : [parsed];
 
       // Преобразуем названия блоков в ID блоков
-      const nameToBlockId = window.nameToBlockId || {};
+      const nameToBlockId = (window.StateAccessors && typeof window.StateAccessors.getNameToBlockId === 'function') ? (window.StateAccessors.getNameToBlockId() || {}) : {};
       const blockIds = blockNames
         .map(name => {
           if (typeof name === 'number') return name;

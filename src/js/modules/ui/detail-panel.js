@@ -128,7 +128,7 @@
 
   const getCurrentEnterprise = () => {
     const sm = getStateManager();
-    return sm ? sm.get('currentEnterprise') : (window.currentEnterprise || null);
+    return sm ? sm.get('currentEnterprise') : null;
   };
 
   const getCurrentZoomedQuadrant = () => {
@@ -679,12 +679,12 @@
       // Используем setProperty с 'important' для гарантированного применения
       // Проверяем ширину экрана для определения правильного позиционирования
       const isMobile = window.innerWidth <= 699;
-      
+
       detailPanel.style.setProperty('visibility', 'visible', 'important');
       detailPanel.style.setProperty('opacity', '1', 'important');
       detailPanel.style.setProperty('position', 'fixed', 'important');
       detailPanel.style.setProperty('z-index', '10002', 'important');
-      
+
       // Для мобильных устройств используем центрирование, для десктопа - справа
       if (isMobile) {
         detailPanel.style.setProperty('top', '50%', 'important');
@@ -700,7 +700,7 @@
       detailPanel.style.opacity = '1';
       detailPanel.style.position = 'fixed';
       detailPanel.style.zIndex = '10002';
-      
+
       if (isMobile) {
         detailPanel.style.top = '50%';
         detailPanel.style.left = '50%';
@@ -1055,7 +1055,7 @@
     }
 
     const isMobile = window.innerWidth <= 699;
-    
+
     if (isMobile) {
       detailPanel.style.setProperty('top', '50%', 'important');
       detailPanel.style.setProperty('left', '50%', 'important');

@@ -67,7 +67,7 @@
    */
   function computePriority(tech, model = 'mult', company = null) {
     // Если не указано предприятие, но есть текущее предприятие и технология с несколькими предприятиями, используем его
-    const getCurrentEnterprise = window.getCurrentEnterprise || (() => window.currentEnterprise);
+    const getCurrentEnterprise = window.getCurrentEnterprise || (() => (window.StateManager && window.StateManager.get ? window.StateManager.get('currentEnterprise') : undefined));
     const currentEnterprise = getCurrentEnterprise();
     if (!company && currentEnterprise &&
       Array.isArray(tech.company) && tech.company.includes(currentEnterprise)) {
@@ -125,7 +125,7 @@
    */
   function getPriorityWeakLinkComment(tech, company = null) {
     // Если не указано предприятие, но есть текущее предприятие и технология с несколькими предприятиями, используем его
-    const getCurrentEnterprise = window.getCurrentEnterprise || (() => window.currentEnterprise);
+    const getCurrentEnterprise = window.getCurrentEnterprise || (() => (window.StateManager && window.StateManager.get ? window.StateManager.get('currentEnterprise') : undefined));
     const currentEnterprise = getCurrentEnterprise();
     if (!company && typeof currentEnterprise !== 'undefined' && currentEnterprise &&
       Array.isArray(tech.company) && tech.company.includes(currentEnterprise)) {
@@ -151,6 +151,48 @@
       return 'Слабое звено: технологическая готовность – важно доработать прототипы и архитектуру.';
     }
     return 'Слабое звено: стадия TRL – технология ещё на ранней исследовательской стадии.';
+  }
+
+  /**
+   * Определяет, внедрена ли технология на всех предприятиях.
+   * Если на одном внедрена, на других нет — возвращает false (показываем в «Невнедренные»).
+   */
+  function isFullyImplemented(tech) {
+    const companies = Array.isArray(tech.company) ? tech.company : (tech.company ? [tech.company] : []);
+    if (companies.length === 0) {
+      const statusLower = String(tech.status || tech.level || '').trim().toLowerCase();
+      return tech.isImplemented === true || statusLower === 'внедрена' || statusLower === 'внедренна';
+    }
+    if (companies.length === 1 && tech.companyRatings && typeof tech.companyRatings === 'object') {
+      const ratings = tech.companyRatings[companies[0]];
+      return ratings && ratings.isImplemented === true;
+    }
+    if (companies.length > 1 && tech.companyRatings && typeof tech.companyRatings === 'object') {
+      return companies.every(company => {
+        const ratings = tech.companyRatings[company];
+        return ratings && ratings.isImplemented === true;
+      });
+    }
+    return tech.isImplemented === true;
+  }
+
+  /**
+   * Определяет, внедрена ли технология хотя бы на одном предприятии.
+   * Используется для фильтра «Внедренные» в модальном окне приоритетов.
+   */
+  function isImplementedAtAnyCompany(tech) {
+    const companies = Array.isArray(tech.company) ? tech.company : (tech.company ? [tech.company] : []);
+    if (companies.length === 0) {
+      const statusLower = String(tech.status || tech.level || '').trim().toLowerCase();
+      return tech.isImplemented === true || statusLower === 'внедрена' || statusLower === 'внедренна';
+    }
+    if (tech.companyRatings && typeof tech.companyRatings === 'object') {
+      return companies.some(company => {
+        const ratings = tech.companyRatings[company];
+        return ratings && ratings.isImplemented === true;
+      });
+    }
+    return tech.isImplemented === true;
   }
 
   /**
@@ -186,11 +228,11 @@
       return;
     }
 
-    // Учитываем фильтры из левой панели и строку поиска
+    // Учитываем фильтры из левой панели (логика должна совпадать с radar-update.js для соответствия радара и модального окна)
+    const e = getFilterValues('enterprise');
     const d = getFilterValues('direction');
     const b = getFilterValues('block');
     const f = getFilterValues('function');
-    // Фильтр "Тип технологий" удален
     const l = getFilterValues('level');
     // Поиск: используем поле поиска в панели приоритетов (qpSearchInput) или основной поиск (searchInput)
     const qpQuery = (qpSearchInput && qpSearchInput.value ? qpSearchInput.value : '').toLowerCase().trim();
@@ -198,6 +240,11 @@
     const textQuery = qpQuery || sidebarQuery;
 
     let sidebarFilteredTechs = allTechs.filter(t => {
+      // Фильтр по предприятию (как на радаре)
+      if (e.length > 0) {
+        const techCompanies = Array.isArray(t.company) ? t.company : (t.company ? [t.company] : []);
+        if (techCompanies.length === 0 || !techCompanies.some(company => e.includes(company))) return false;
+      }
       // Фильтр по направлениям (t.directions или t.direction)
       if (d.length > 0) {
         const techDirections = t.directions && Array.isArray(t.directions) ? t.directions : (t.direction ? [t.direction] : []);
@@ -213,41 +260,22 @@
         const techFunctions = t.functions && Array.isArray(t.functions) ? t.functions : (t.func ? [t.func] : []);
         if (!techFunctions.some(func => f.includes(func))) return false;
       }
-      // Фильтр "Тип технологий" удален
-      // Фильтр по статусу (Внедренная/Невнедренная) на основе isImplemented
+      // Фильтр по статусу (Внедренная/Невнедренная): логика как в radar-update.js — внедрена хотя бы на одном предприятии
       if (l.length > 0) {
-        // Для технологий с несколькими предприятиями проверяем isImplemented для каждого предприятия
-        const companies = Array.isArray(t.company) ? t.company : (t.company ? [t.company] : []);
-        let isImplemented = false;
-
-        if (companies.length > 1 && t.companyRatings && typeof t.companyRatings === 'object') {
-          // Для нескольких предприятий проверяем, есть ли хотя бы одно с isImplemented = true
-          isImplemented = companies.some(company => {
-            const ratings = t.companyRatings[company];
-            return ratings && ratings.isImplemented === true;
-          });
-        } else {
-          // Для одного предприятия или общего значения
-          if (companies.length === 1 && t.companyRatings && typeof t.companyRatings === 'object') {
-            const ratings = t.companyRatings[companies[0]];
-            isImplemented = ratings && ratings.isImplemented === true;
-          } else {
-            isImplemented = t.isImplemented === true;
-          }
-        }
-
-        const statusValue = isImplemented ? 'Внедренная' : 'Невнедренная';
+        const statusValue = isImplementedAtAnyCompany(t) ? 'Внедренная' : 'Невнедренная';
         if (!l.includes(statusValue)) return false;
       }
       return true;
     });
 
-    // Текстовый поиск
+    // Текстовый поиск (набор полей как в radar-update.js)
     if (textQuery) {
       sidebarFilteredTechs = sidebarFilteredTechs.filter(t => {
         const fields = [
           String(t.name || ''),
           String(t.description || ''),
+          String(t.direction || ''),
+          ...(t.directions && Array.isArray(t.directions) ? t.directions : []),
           String(t.block || ''),
           ...(t.blocks || []),
           String(t.func || ''),
@@ -255,8 +283,8 @@
           String(t.techType || ''),
           String(t.level || ''),
           String(t.id || '')
-        ];
-        return fields.some(fld => fld.toLowerCase().includes(textQuery));
+        ].map(fld => String(fld || '').toLowerCase());
+        return fields.some(fld => fld.includes(textQuery));
       });
     }
 
@@ -265,51 +293,9 @@
       return;
     }
 
-    // Фильтрация по статусу внедрения на панели
-    const implementationButtons = Array.from(quadrantPriorityPanel.querySelectorAll('.qp-filter-btn'));
-
-    // По умолчанию показываем только "Невнедренные".
-    // Если пользователь отключил все статусы — возвращаемся к дефолту (только "Невнедренные"),
-    // чтобы "Внедренные" не включались автоматически.
-    if (!implementationButtons.some(btn => btn.classList.contains('active'))) {
-      implementationButtons.forEach(btn => btn.classList.remove('active'));
-      const nonImplBtn = implementationButtons.find(btn =>
-        String(btn.getAttribute('data-implementation-status') || '').trim() === 'Невнедренные'
-      );
-      if (nonImplBtn) nonImplBtn.classList.add('active');
-    }
-
-    const activeImplementationStatuses = implementationButtons
-      .filter(btn => btn.classList.contains('active'))
-      .map(btn => btn.getAttribute('data-implementation-status'));
-
-    const filteredTechs = sidebarFilteredTechs.filter(t => {
-      if (!activeImplementationStatuses.length) return true;
-
-      // Определяем статус внедрения технологии
-      const companies = Array.isArray(t.company) ? t.company : (t.company ? [t.company] : []);
-      let isImplemented = false;
-
-      if (companies.length > 1 && t.companyRatings && typeof t.companyRatings === 'object') {
-        // Для нескольких предприятий проверяем, есть ли хотя бы одно с isImplemented = true
-        isImplemented = companies.some(company => {
-          const ratings = t.companyRatings[company];
-          return ratings && ratings.isImplemented === true;
-        });
-      } else {
-        // Для одного предприятия или общего значения
-        if (companies.length === 1 && t.companyRatings && typeof t.companyRatings === 'object') {
-          const ratings = t.companyRatings[companies[0]];
-          isImplemented = ratings && ratings.isImplemented === true;
-        } else {
-          const statusLower = String(t.status || t.level || '').trim().toLowerCase();
-          isImplemented = t.isImplemented === true || statusLower === 'внедрена' || statusLower === 'внедренна';
-        }
-      }
-
-      const implementationStatus = isImplemented ? 'Внедренные' : 'Невнедренные';
-      return activeImplementationStatuses.includes(implementationStatus);
-    });
+    // В модальном окне показываем все технологии зуммированного квадранта, прошедшие фильтры боковой панели
+    // (без отдельной фильтрации по статусу внедрения внутри модального окна)
+    const filteredTechs = sidebarFilteredTechs;
 
     // Сортируем по названию по алфавиту (русская локаль)
     filteredTechs.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ru'));
@@ -430,14 +416,6 @@
     if (qpTitleEl) {
       qpTitleEl.textContent = `${getQuadrantName(qId)}`;
     }
-
-    // По умолчанию в модальном окне приоритетов показываем только "Невнедренные".
-    const implementationButtons = Array.from(quadrantPriorityPanel.querySelectorAll('.qp-filter-btn'));
-    implementationButtons.forEach(btn => btn.classList.remove('active'));
-    const nonImplBtn = implementationButtons.find(btn =>
-      String(btn.getAttribute('data-implementation-status') || '').trim() === 'Невнедренные'
-    );
-    if (nonImplBtn) nonImplBtn.classList.add('active');
 
     recomputeQuadrantPriorityList(qId);
   }

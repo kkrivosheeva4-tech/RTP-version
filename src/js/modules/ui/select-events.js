@@ -1503,13 +1503,6 @@
           hiddenInputId === "techSector" &&
           typeof window.updateModalBlocksForSectors === "function"
         ) {
-          // TODO: убрать после перевода всех потребителей на state. Синхронизация для обратной совместимости.
-          if (window.StateAccessors) {
-            try {
-              window.blocksList = window.StateAccessors.getBlocksList() || window.blocksList || [];
-              window.blockToQuadrant = window.StateAccessors.getBlockToQuadrant() || window.blockToQuadrant || {};
-            } catch (e) { window.Logger?.warn('select-events: StateAccessors sync', e); }
-          }
           window.updateModalBlocksForSectors(selected);
         } else if (
           hiddenInputId === "techBlock" &&
@@ -1768,12 +1761,6 @@
             typeof window.updateModalBlocksForSectors === "function"
           ) {
             // TODO: убрать после перевода всех потребителей на state. Синхронизация для обратной совместимости.
-            if (window.StateAccessors) {
-              try {
-                window.blocksList = window.StateAccessors.getBlocksList() || window.blocksList || [];
-                window.blockToQuadrant = window.StateAccessors.getBlockToQuadrant() || window.blockToQuadrant || {};
-              } catch (e) { window.Logger?.warn('select-events: StateAccessors sync', e); }
-            }
             window.updateModalBlocksForSectors(selectedValues);
           } else if (
             hiddenInputId === "techBlock" &&
@@ -1862,13 +1849,6 @@
           hiddenInputId === "techSector" &&
           typeof window.updateModalBlocksForSectors === "function"
         ) {
-          // TODO: убрать после перевода всех потребителей на state. Синхронизация для обратной совместимости.
-          if (window.StateAccessors) {
-            try {
-              window.blocksList = window.StateAccessors.getBlocksList() || window.blocksList || [];
-              window.blockToQuadrant = window.StateAccessors.getBlockToQuadrant() || window.blockToQuadrant || {};
-            } catch (e) { window.Logger?.warn('select-events: StateAccessors sync', e); }
-          }
           window.updateModalBlocksForSectors(selected);
         } else if (
           hiddenInputId === "techBlock" &&
