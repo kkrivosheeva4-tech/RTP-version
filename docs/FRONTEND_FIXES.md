@@ -314,13 +314,15 @@ const [b1, f1, f2, ...] = await Promise.all([
 
 ---
 
-### Этап 6. Тесты (1–2 дня)
+### Этап 6. Тесты (1–2 дня) ✅ Выполнено
 
 | Шаг | Задача | Действия |
 |-----|--------|----------|
-| 6.1 | **П.13** Unit-тесты | Установить Vitest: `npm i -D vitest`. Добавить в package.json: `"test": "vitest"`, `"test:run": "vitest run"`. Создать `src/js/modules/core/__tests__/validators.test.js` с тестами для `normalizeForComparison` и `validateDuplicateTechnology`. Запустить `npm run test`. |
-| 6.2 | Расширить тесты | Добавить тесты для func-cover-utils.js, data-normalize.js (опционально). |
-| 6.3 | Проверка | `npm run test:run` — все тесты зелёные. |
+| 6.1 | **П.13** Unit-тесты | ✅ Установлен Vitest: `npm i -D vitest`. Добавлено в package.json: `"test": "vitest"`, `"test:run": "vitest run"`. Создан `src/js/modules/core/__tests__/validators.test.js` с тестами для `normalizeForComparison` и `validateDuplicateTechnology` (18 тестов). Настроены vitest.config.js и vitest.setup.js с jsdom окружением. |
+| 6.2 | Расширить тесты | ✅ Добавлены тесты для func-cover-utils.js (`src/js/modules/utils/__tests__/func-cover-utils.test.js` — 21 тест) и data-normalize.js (`src/js/modules/core/__tests__/data-normalize.test.js` — 17 тестов). |
+| 6.3 | Проверка | ✅ `npm run test:run` — все 56 тестов зелёные. |
+
+**Этап 6 завершён:** 20.02.2026 — Установлен Vitest с jsdom окружением. Созданы тесты для validators.js (18 тестов), func-cover-utils.js (21 тест) и data-normalize.js (17 тестов). Все 56 тестов проходят успешно.
 
 ---
 
