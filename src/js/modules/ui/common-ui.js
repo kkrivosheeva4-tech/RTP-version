@@ -156,13 +156,13 @@
     let savedTheme = null;
     try {
       savedTheme = localStorage.getItem("theme");
-    } catch (_) {}
+    } catch (e) { window.Logger?.warn('common-ui: theme localStorage getItem', e); }
 
     if (!savedTheme) {
       savedTheme = document.body.classList.contains("dark") ? "dark" : "light";
       try {
         localStorage.setItem("theme", savedTheme);
-      } catch (_) {}
+      } catch (e) { window.Logger?.warn('common-ui: theme localStorage setItem', e); }
     }
 
     const isDark = savedTheme === "dark";

@@ -1508,7 +1508,7 @@
             try {
               window.blocksList = window.StateAccessors.getBlocksList() || window.blocksList || [];
               window.blockToQuadrant = window.StateAccessors.getBlockToQuadrant() || window.blockToQuadrant || {};
-            } catch (e) {}
+            } catch (e) { window.Logger?.warn('select-events: StateAccessors sync', e); }
           }
           window.updateModalBlocksForSectors(selected);
         } else if (
@@ -1772,7 +1772,7 @@
               try {
                 window.blocksList = window.StateAccessors.getBlocksList() || window.blocksList || [];
                 window.blockToQuadrant = window.StateAccessors.getBlockToQuadrant() || window.blockToQuadrant || {};
-              } catch (e) {}
+              } catch (e) { window.Logger?.warn('select-events: StateAccessors sync', e); }
             }
             window.updateModalBlocksForSectors(selectedValues);
           } else if (
@@ -1867,7 +1867,7 @@
             try {
               window.blocksList = window.StateAccessors.getBlocksList() || window.blocksList || [];
               window.blockToQuadrant = window.StateAccessors.getBlockToQuadrant() || window.blockToQuadrant || {};
-            } catch (e) {}
+            } catch (e) { window.Logger?.warn('select-events: StateAccessors sync', e); }
           }
           window.updateModalBlocksForSectors(selected);
         } else if (

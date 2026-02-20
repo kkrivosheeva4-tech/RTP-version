@@ -1612,8 +1612,8 @@
     const rawFuncE = getFormFieldValue("editFunc");
     let blocksValE = rawBlockE;
     let functionsValE = rawFuncE;
-    try { if (rawBlockE && rawBlockE.trim().startsWith('[')) blocksValE = JSON.parse(rawBlockE); } catch (err) { }
-    try { if (rawFuncE && rawFuncE.trim().startsWith('[')) functionsValE = JSON.parse(rawFuncE); } catch (err) { }
+    try { if (rawBlockE && rawBlockE.trim().startsWith('[')) blocksValE = JSON.parse(rawBlockE); } catch (err) { window.Logger?.warn('form-management: parse blocks JSON (edit)', err); }
+    try { if (rawFuncE && rawFuncE.trim().startsWith('[')) functionsValE = JSON.parse(rawFuncE); } catch (err) { window.Logger?.warn('form-management: parse functions JSON (edit)', err); }
 
     // Получаем направления цифрового развития
     const rawDirectionsE = getFormFieldValue("editDirections");

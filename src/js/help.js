@@ -31,7 +31,7 @@
 
         try {
           sessionStorage.setItem('silentEnterpriseNav', '1');
-        } catch (err) {}
+        } catch (err) { window.Logger?.warn('help: sessionStorage setItem', err); }
 
         window.location.href = 'radar.html';
       });
