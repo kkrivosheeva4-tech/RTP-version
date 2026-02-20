@@ -143,25 +143,7 @@
       });
     }
 
-    const quadrantPriorityPanel = DOMCache.get("quadrantPriorityPanel");
-    if (quadrantPriorityPanel) {
-      quadrantPriorityPanel.addEventListener("click", (e) => {
-        const target = e.target;
-        if (!(target instanceof HTMLElement)) return;
-        if (target.classList.contains("qp-filter-btn")) {
-          target.classList.toggle("active");
-          if (typeof window.getCurrentZoomedQuadrant === "function") {
-            const currentZoomed = window.getCurrentZoomedQuadrant();
-            if (
-              currentZoomed != null &&
-              typeof window.recomputeQuadrantPriorityList === "function"
-            ) {
-              window.recomputeQuadrantPriorityList(currentZoomed);
-            }
-          }
-        }
-      });
-    }
+    // Обработчик кликов по quadrantPriorityPanel (фильтр по статусу в модальном окне убран — список зависит только от фильтров боковой панели)
 
     const qpSearchInput = DOMCache.get("qpSearchInput");
     if (qpSearchInput) {
@@ -253,6 +235,16 @@
         });
       const searchInput = DOMCache.get("searchInput");
       if (searchInput) searchInput.value = "";
+      try {
+        localStorage.removeItem("selectedEnterprise");
+      } catch (_) {}
+      document
+        .querySelectorAll(".enterprise-nav button")
+        .forEach((b) => b.classList.remove("active"));
+      // Перестроить списки блоков и функций под «все предприятия» (без фильтра)
+      if (typeof window.Filters?.updateFiltersForEnterprises === "function") {
+        window.Filters.updateFiltersForEnterprises();
+      }
       if (typeof window.updateRadar === "function") {
         window.updateRadar();
       }
