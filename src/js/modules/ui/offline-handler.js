@@ -6,6 +6,8 @@
 
   let offlineNotification = null;
   let onlineNotification = null;
+  let _onOffline = null;
+  let _onOnline = null;
 
   /**
    * Показывает уведомление об отсутствии соединения
@@ -123,29 +125,34 @@
    * Инициализация обработчиков online/offline событий
    */
   function init() {
-    // Обработчик потери соединения
-    window.addEventListener('offline', () => {
-      showOfflineNotification();
-    });
+    if (_onOffline || _onOnline) {
+      return; // уже инициализировано
+    }
+    _onOffline = () => showOfflineNotification();
+    _onOnline = () => showOnlineNotification();
 
-    // Обработчик восстановления соединения
-    window.addEventListener('online', () => {
-      showOnlineNotification();
-    });
+    window.addEventListener('offline', _onOffline);
+    window.addEventListener('online', _onOnline);
 
-    // Проверяем начальное состояние соединения
     if (!navigator.onLine) {
       showOfflineNotification();
     }
   }
 
   /**
-   * Очистка обработчиков (для предотвращения утечек памяти)
+   * Очистка обработчиков (для предотвращения утечек памяти при SPA-навигации / повторной инициализации)
    */
   function destroy() {
+    if (_onOffline) {
+      window.removeEventListener('offline', _onOffline);
+      _onOffline = null;
+    }
+    if (_onOnline) {
+      window.removeEventListener('online', _onOnline);
+      _onOnline = null;
+    }
     hideOfflineNotification();
     hideOnlineNotification();
-    // Обработчики событий будут автоматически удалены при закрытии страницы
   }
 
   // Экспорт в window

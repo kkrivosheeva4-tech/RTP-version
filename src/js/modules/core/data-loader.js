@@ -155,12 +155,13 @@
         'enterprises.json',
       ];
 
-      // Принудительно перезагружаем данные с диска, игнорируя кэш
-      // Это гарантирует, что изменения в JSON файлах будут видны сразу после обновления страницы
+      // Принудительно перезагружаем данные с диска, игнорируя кэш.
+      // Независимые файлы загружаются параллельно (Promise.all) для ускорения.
+      const results = await Promise.all(fileNames.map(fn => loadJsonPreferVfs(fn, true)));
       const fetched = {};
-      for (const fn of fileNames) {
-        fetched[fn] = await loadJsonPreferVfs(fn, true); // forceReload = true
-      }
+      fileNames.forEach((fn, i) => {
+        fetched[fn] = results[i];
+      });
 
       // Соберём список отсутствующих/непреобразованных файлов
       const missing = [];

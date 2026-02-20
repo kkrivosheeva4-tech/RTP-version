@@ -48,7 +48,7 @@
 
 ## Важные
 
-### 4. OfflineHandler: утечка обработчиков при destroy()
+### 4. OfflineHandler: утечка обработчиков при destroy() ✅ Выполнено
 
 **Файл:** `src/js/modules/ui/offline-handler.js`
 
@@ -81,7 +81,7 @@
 
 ---
 
-### 7. Последовательная загрузка JSON в loadData()
+### 7. Последовательная загрузка JSON в loadData() ✅ Выполнено
 
 **Файл:** `src/js/modules/core/data-loader.js`
 
@@ -272,6 +272,8 @@ const [b1, f1, f2, ...] = await Promise.all([
 | 2.1 | **П.7** Параллельная загрузка JSON | В `data-loader.js` в `loadData()`: собрать `fileNames` в группы по зависимостям. `blocks.json` — отдельно (нужен первым). Остальные 8 файлов — загрузить через `const results = await Promise.all(fileNames.map(fn => loadJsonPreferVfs(fn, true)))`. Распарсить `results` и присвоить в `fetched`. |
 | 2.2 | **П.4** OfflineHandler removeEventListener | В `offline-handler.js`: сохранить ссылки `_onOffline` и `_onOnline` при добавлении обработчиков. В `destroy()` вызвать `window.removeEventListener('offline', _onOffline)` и `window.removeEventListener('online', _onOnline)`. Обнулить ссылки. |
 | 2.3 | Проверка | Перезагрузить страницу, проверить скорость загрузки и работу офлайн-режима. |
+
+**Этап 2 завершён:** 20.02.2026 — П.7 (параллельная загрузка JSON в data-loader.js через Promise.all), П.4 (OfflineHandler: снятие обработчиков offline/online в destroy() для предотвращения утечек при повторной инициализации).
 
 ---
 
