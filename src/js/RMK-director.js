@@ -33,6 +33,7 @@ async function loadAllModules() {
     '/src/js/modules/core/api-client.js',  // заглушка запросов к API (Authorization, 401, таймауты)
     '/src/js/modules/core/data-source.js',  // VFS + fetch + loadJsonPreferVfs (этап 2)
     '/src/js/modules/core/data-normalize.js',  // normalizeTechnologyFromNewFormat, buildBlockMaps (этап 2)
+    '/src/js/modules/core/escape-utils.js',  // escapeHtml для безопасной вставки текста (XSS), до data-loader и toast
     '/src/js/modules/core/data-loader.js',
     '/src/js/modules/core/state-utils.js',  // state-accessors + state-subscriptions
     '/src/js/modules/core/data-indexing.js',  // data-index + tech-index

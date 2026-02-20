@@ -58,7 +58,7 @@
 
 ---
 
-### 5. XSS-риск при использовании innerHTML с пользовательским вводом
+### 5. XSS-риск при использовании innerHTML с пользовательским вводом ✅ Выполнено
 
 **Файлы:** Модули, где в `innerHTML` попадают данные из форм/JSON (уведомления, карточки, панели).
 
@@ -121,7 +121,7 @@ const [b1, f1, f2, ...] = await Promise.all([
 
 ---
 
-### 10. Вынесение общей логики escapeHtml
+### 10. Вынесение общей логики escapeHtml ✅ Выполнено
 
 **Проблема:** Экранирование HTML делается в нескольких местах по-разному (в Toast, data-loader, и т.д.).
 
@@ -129,7 +129,7 @@ const [b1, f1, f2, ...] = await Promise.all([
 
 ---
 
-### 11. Улучшение отображения ошибок загрузки данных
+### 11. Улучшение отображения ошибок загрузки данных ✅ Выполнено
 
 **Файл:** `src/js/modules/core/data-loader.js` / `app-init.js`
 
@@ -285,6 +285,8 @@ const [b1, f1, f2, ...] = await Promise.all([
 | 3.2 | **П.5** XSS | Пройти по модулям с innerHTML (toast, data-loader, notifications, offline-handler, modals, detail-panel и др.): везде, где вставляется пользовательский текст, обернуть в `escapeHtml()`. Для статичного HTML оставить как есть. |
 | 3.3 | **П.11** ErrorDisplay при loadData | В `data-loader.js` в `catch` блока `loadData`: вызвать `window.ErrorDisplay?.show(error, 'Загрузка данных', () => DataLoader.loadData())` перед `throw`. Убедиться, что LoadingManager скрывается в `finally`. |
 | 3.4 | Проверка | Проверить отображение уведомлений, ошибок и экранирование спецсимволов в полях ввода. |
+
+**Этап 3 завершён:** 20.02.2026 — П.10 (единый escape-utils.js, подключён в RMK-director до data-loader и toast); П.5 (XSS: везде, где в innerHTML подставляется пользовательский/данные из JSON — escapeHtml: notifications.js через window.escapeHtml, form-management.js и filters.js — экранирование опций и выбранных значений, detail-panel и data-loader уже использовали экранирование); П.11 (при ошибке loadData показ через reportError с retryCallback и подпись «Загрузка данных», fallback на ErrorDisplay.show с кнопкой «Повторить»).
 
 ---
 

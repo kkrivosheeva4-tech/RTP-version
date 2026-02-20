@@ -1341,7 +1341,8 @@
           const li = document.createElement('li');
           li.classList.add('select-option-item');
           li.setAttribute('data-value', blockKeyForLookup);
-          li.innerHTML = `<label class="option-label"><input type="checkbox" class="option-checkbox" /><span>${blockKeyForLookup}</span></label>`;
+          const escapedBlock = (typeof window.escapeHtml === 'function' ? window.escapeHtml(blockKeyForLookup) : String(blockKeyForLookup));
+          li.innerHTML = `<label class="option-label"><input type="checkbox" class="option-checkbox" /><span>${escapedBlock}</span></label>`;
           opts.appendChild(li);
         }
       });

@@ -567,15 +567,15 @@
   }
 
   /**
-   * Экранирование HTML
+   * Экранирование HTML — используем единую утилиту из escape-utils.js
    */
   function escapeHtml(text) {
-    if (typeof text !== 'string') {
-      text = String(text);
-    }
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    if (window.escapeHtml) return window.escapeHtml(text);
+    if (text == null) return '';
+    const s = String(text);
+    return s.replace(/[&<>"']/g, function (m) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m] || m;
+    });
   }
 
   /**

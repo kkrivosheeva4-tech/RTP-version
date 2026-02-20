@@ -642,15 +642,17 @@
         window.LoadingManager.hide(loaderId);
       }
     } catch (error) {
-      // Скрываем индикатор загрузки при ошибке
+      // Скрываем индикатор загрузки при ошибке (П.11: показ через ErrorDisplay с кнопкой «Повторить» — в reportError)
       if (loaderId && typeof window !== 'undefined' && window.LoadingManager) {
         window.LoadingManager.hide(loaderId);
       }
       if (typeof window.reportError === 'function') {
-        window.reportError(error, 'Загрузка данных приложения', { retryCallback: loadData });
+        window.reportError(error, 'Загрузка данных', { retryCallback: loadData });
+      } else if (window.ErrorDisplay && typeof window.ErrorDisplay.show === 'function') {
+        window.ErrorDisplay.show(error, 'Загрузка данных', function () { DataLoader.loadData(); });
       } else {
         const msg = error?.message || String(error) || 'Неизвестная ошибка';
-        alert('Не удалось загрузить данные приложения. ' + msg);
+        alert('Не удалось загрузить данные. ' + msg);
       }
     }
   }

@@ -5,6 +5,10 @@
 (function () {
   'use strict';
 
+  function _esc(s) {
+    return (typeof window.escapeHtml === 'function' ? window.escapeHtml(s) : String(s ?? '').replace(/[&<>"']/g, function (m) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m] || m; }));
+  }
+
   // Вспомогательные функции для создания элементов списка
   function createCheckboxOptionLi(value, labelText) {
     const li = document.createElement('li');
@@ -13,7 +17,7 @@
     li.innerHTML = `
       <label class="option-label">
         <input type="checkbox" class="option-checkbox" />
-        <span>${labelText}</span>
+        <span>${_esc(labelText)}</span>
       </label>
     `;
     return li;
@@ -442,7 +446,7 @@
         const span = document.createElement('span');
         span.className = 'multi-tag';
         span.setAttribute('data-value', val);
-        span.innerHTML = `${val} <button type="button" class="multi-tag-remove" aria-label="Удалить">&times;</button>`;
+        span.innerHTML = `${_esc(val)} <button type="button" class="multi-tag-remove" aria-label="Удалить">&times;</button>`;
         // Предотвращаем открытие выпадающего списка при клике на тег
         span.addEventListener('click', (ev) => {
           // Разрешаем только клики на кнопку удаления
@@ -1218,10 +1222,11 @@
             });
           }
         } else {
+          const escapedItem = _esc(item);
           li.innerHTML = `
             <label class="option-label">
               <input type="checkbox" class="option-checkbox" />
-              <span>${item}</span>
+              <span>${escapedItem}</span>
             </label>
           `;
         }
