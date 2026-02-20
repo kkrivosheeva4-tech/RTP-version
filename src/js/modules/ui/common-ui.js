@@ -6,19 +6,19 @@
   'use strict';
 
   // ===== АУТЕНТИФИКАЦИЯ =====
-  // Основано на modules/business/auth.js
+  // Основано на modules/business/auth.js; единый выход — AuthModule.safeLogout / clearAuthFromStorage
 
   function safeLogout() {
-    try {
-      const role = localStorage.getItem('role') || '';
-      if (typeof window.appendAdminAudit === 'function') {
-        window.appendAdminAudit('logout', `Выход из системы${role ? ` (${role})` : ''}`);
-      }
-    } catch (err) {}
-    try { localStorage.removeItem('isLoggedIn'); } catch (_) {}
-    try { localStorage.removeItem('username'); } catch (_) {}
-    try { localStorage.removeItem('userName'); } catch (_) {}
-    try { localStorage.removeItem('role'); } catch (_) {}
+    if (typeof window.AuthModule !== 'undefined' && typeof window.AuthModule.safeLogout === 'function') {
+      window.AuthModule.safeLogout();
+    } else if (typeof window.clearAuthFromStorage === 'function') {
+      window.clearAuthFromStorage();
+    } else {
+      try { localStorage.removeItem('isLoggedIn'); } catch (_) {}
+      try { localStorage.removeItem('username'); } catch (_) {}
+      try { localStorage.removeItem('userName'); } catch (_) {}
+      try { localStorage.removeItem('role'); } catch (_) {}
+    }
   }
 
   function checkArchitectRole() {

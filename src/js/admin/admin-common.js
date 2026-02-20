@@ -94,10 +94,16 @@
   }
 
   function safeLogout() {
-    try { localStorage.removeItem('isLoggedIn'); } catch (_) { }
-    try { localStorage.removeItem('username'); } catch (_) { }
-    try { localStorage.removeItem('userName'); } catch (_) { }
-    try { localStorage.removeItem('role'); } catch (_) { }
+    if (typeof window.AuthModule !== 'undefined' && typeof window.AuthModule.safeLogout === 'function') {
+      window.AuthModule.safeLogout();
+    } else if (typeof window.clearAuthFromStorage === 'function') {
+      window.clearAuthFromStorage();
+    } else {
+      try { localStorage.removeItem('isLoggedIn'); } catch (_) { }
+      try { localStorage.removeItem('username'); } catch (_) { }
+      try { localStorage.removeItem('userName'); } catch (_) { }
+      try { localStorage.removeItem('role'); } catch (_) { }
+    }
   }
 
   function computeBytes(str) {

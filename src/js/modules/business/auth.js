@@ -154,6 +154,13 @@ window.AuthModule = (function() {
   return {
     checkArchitectRole,
     checkDirectorRole,
-    renderAuth
+    renderAuth,
+    safeLogout
   };
 })();
+
+// Единая точка выхода: алиас для вызова из любых страниц (auth.html, common-ui, admin)
+if (typeof window.AuthModule !== 'undefined' && typeof window.AuthModule.safeLogout === 'function') {
+  window.clearAuthFromStorage = window.AuthModule.safeLogout;
+  window.safeLogout = window.AuthModule.safeLogout;
+}

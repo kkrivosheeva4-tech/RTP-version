@@ -64,8 +64,12 @@ document.addEventListener('DOMContentLoaded', function() {
             return; // Прерываем выполнение
         } else {
             // Если пользователь сохранен, но не найден в списке, очищаем localStorage
-            localStorage.removeItem('isLoggedIn');
-            localStorage.removeItem('username');
+            if (typeof window.clearAuthFromStorage === 'function') {
+                window.clearAuthFromStorage();
+            } else {
+                localStorage.removeItem('isLoggedIn');
+                localStorage.removeItem('username');
+            }
         }
     }
 
