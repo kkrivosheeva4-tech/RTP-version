@@ -101,7 +101,7 @@
 **Ключи localStorage (по факту использования в файле):**
 
 - `theme` — `light|dark`
-- `role` — `admin|architect|guest|...`
+- `role` — `admin|architect|director|project_manager|analyst`
 - `selectedEnterprise` — имя предприятия (например `РМК`)
 - в `safeLogout()` чистятся: `isLoggedIn`, `username`, `userName`, `role`
 
@@ -163,7 +163,7 @@
 
 ### `src/js/auth.js`
 
-**Назначение:** логика страницы `src/pages/auth.html` (логин/гость/тема/показ пароля/уведомления).
+**Назначение:** логика страницы `src/pages/auth.html` (логин/тема/показ пароля/уведомления).
 
 **Особенность:** этот файл — отдельный путь авторизации, не использующий модуль `modules/business/auth.js`.
 
@@ -171,7 +171,6 @@
 
 - `admin/admin123` → `role=admin`
 - `architect/architect123` → `role=architect`
-- `guest/guest123` → `role=guest`
 
 **Ключи localStorage:**
 
@@ -243,7 +242,7 @@
 
 **Главные функции:**
 
-- проверка доступа (роль `admin` или `architect`), при отсутствии — редирект;
+- проверка доступа (роль `admin`), при отсутствии — редирект;
 - инициализация темы через `CommonUI.initTheme()` и синхронизация с графиками (`AdminDashboard.applyChartsTheme`);
 - навигация по разделам (`dashboard`, `users`, `audit`, `export`, `backup`, `enterprises`) и вызов соответствующих подмодулей (`AdminDashboard`, `AdminUsers`, `AdminAudit`, `AdminExport`, `AdminBackups`, `AdminEnterprises`);
 - загрузка данных и обновление текущего раздела при переключении.

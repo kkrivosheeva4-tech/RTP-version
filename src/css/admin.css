@@ -37,10 +37,6 @@ body {
   background: var(--bg);
   color: var(--text);
 }
-
-/* ===== Typography: force same font as rest of app =====
-   common.css defines the global font on `html, body, * ...`.
-   This rule is a safety net in case another stylesheet overrides fonts. */
 .admin-main,
 .admin-main * {
   font-family: inherit;

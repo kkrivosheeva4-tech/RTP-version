@@ -136,9 +136,10 @@ window.AuthModule = (function() {
       logoutContainer.querySelector(".login").onclick = () => {
         window.location.href = "auth.html";
       };
-      // Редирект на страницу авторизации, если пользователь не авторизован и находится на странице радара
-      const isRadarPage = document.body.id === "rmk-director" || window.location.pathname.includes("radar.html");
-      if (isRadarPage) {
+      // Редирект на страницу авторизации, если пользователь не авторизован
+      // Только авторизованные пользователи могут использовать приложение
+      const isAuthPage = window.location.pathname.includes("auth.html");
+      if (!isAuthPage) {
         window.location.href = "auth.html";
       }
     }

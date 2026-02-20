@@ -1049,8 +1049,30 @@
     }).filter(Boolean);
   }
 
+  /**
+   * Включает или выключает состояние «загрузка» у кнопки (спиннер, disabled, aria-busy).
+   * @param {HTMLButtonElement|null} btn - кнопка
+   * @param {boolean} loading - true = показать спиннер и отключить кнопку
+   * @param {string} [loadingText] - при loading: подпись (например «Сохранение…»)
+   */
+  function setButtonLoading(btn, loading, loadingText) {
+    if (!btn) return;
+    const textEl = btn.querySelector('.btn-text');
+    if (loading) {
+      btn.classList.add('loading');
+      btn.disabled = true;
+      btn.setAttribute('aria-busy', 'true');
+      if (textEl && loadingText) textEl.textContent = loadingText;
+    } else {
+      btn.classList.remove('loading');
+      btn.disabled = false;
+      btn.removeAttribute('aria-busy');
+      if (textEl && btn.dataset.defaultText) textEl.textContent = btn.dataset.defaultText;
+    }
+  }
+
   // Обработчик формы добавления технологии
-  function handleAddTechFormSubmit(e) {
+  async function handleAddTechFormSubmit(e) {
     e.preventDefault();
     const DOMCache = getDOMCache();
     const StateAccessors = getStateAccessors();
@@ -1069,23 +1091,14 @@
       }
     }
 
-    // Показываем индикатор загрузки
-    const loadingIndicator = document.getElementById('addTechLoadingIndicator');
-    if (loadingIndicator) {
-      loadingIndicator.classList.add('active');
-    }
-
     // Валидация формы через TechTabsManager
     if (window.TechTabsManager && typeof window.TechTabsManager.validateForm === 'function') {
       const validation = window.TechTabsManager.validateForm();
       if (!validation.valid) {
-        const errorMessage = 'Пожалуйста, заполните все обязательные поля:\n' + validation.errors.join('\n');
-        DataLoader.showNotification(errorMessage, false);
-
-        // Скрываем индикатор загрузки при ошибке
-        if (loadingIndicator) {
-          loadingIndicator.classList.remove('active');
+        if (typeof window.TechTabsManager.showValidationErrors === 'function') {
+          window.TechTabsManager.showValidationErrors(validation.fieldErrors || {});
         }
+        DataLoader.showNotification('Заполните обязательные поля, отмеченные в форме', false);
         return;
       }
     }
@@ -1098,14 +1111,13 @@
 
     if (!holdingWideChecked && !companiesSelected) {
       DataLoader.showNotification('Пожалуйста, отметьте "Применима в холдинге" или выберите конкретные предприятия', false);
-
-      // Скрываем индикатор загрузки при ошибке
-      if (loadingIndicator) {
-        loadingIndicator.classList.remove('active');
-      }
       return;
     }
 
+    const submitAddBtn = document.getElementById('submitAddTech');
+    setButtonLoading(submitAddBtn, true, 'Добавление…');
+    await new Promise(function (r) { setTimeout(r, 1500); });
+    try {
     // Получаем глобальные переменные
     const RINGS = window.RINGS || [];
     const QUADRANTS = window.QUADRANTS || [];
@@ -1394,10 +1406,7 @@
 
     DataLoader.ensureAndPersistNewTech(t);
 
-    // Скрываем индикатор загрузки после успешного сохранения
-    if (loadingIndicator) {
-      loadingIndicator.classList.remove('active');
-    }
+    setButtonLoading(submitAddBtn, false);
 
     // Очищаем состояние формы из localStorage после успешного сохранения
     if (window.TechTabsManager && typeof window.TechTabsManager.clearFormState === 'function') {
@@ -1529,10 +1538,13 @@
     if (typeof window.appendAdminAudit === 'function') {
       window.appendAdminAudit('create', `Создана технология: "${t.name}" (ID: ${t.id})`);
     }
+    } finally {
+      setButtonLoading(submitAddBtn, false);
+    }
   }
 
   // Обработчик формы редактирования технологии
-  function handleEditTechFormSubmit(e) {
+  async function handleEditTechFormSubmit(e) {
     e.preventDefault();
     const DOMCache = getDOMCache();
     const StateAccessors = getStateAccessors();
@@ -1579,6 +1591,10 @@
       DataLoader.showNotification(errorMessage, false);
       return;
     }
+
+    const editSubmitBtn = document.getElementById('submitEditTech');
+    setButtonLoading(editSubmitBtn, true, 'Сохранение…');
+    await new Promise(function (r) { setTimeout(r, 1500); });
 
     const id = +getFormFieldValue("editId");
     const technologies = StateAccessors.getTechnologies();
@@ -1971,6 +1987,8 @@
     } catch (err) {
       if (window.Logger) window.Logger.warn('Не удалось выполнить финальное сохранение в VFS перед закрытием модального окна', err);
     }
+
+    setButtonLoading(editSubmitBtn, false);
 
     if (typeof window.hideModal === 'function') {
       window.hideModal('editTechPanel');
@@ -2536,6 +2554,7 @@
     window.getFormFieldValue = getFormFieldValue;
     window.handleAddTechFormSubmit = handleAddTechFormSubmit;
     window.handleEditTechFormSubmit = handleEditTechFormSubmit;
+    window.setButtonLoading = setButtonLoading;
 
     // Экспорт FormHandlers для обратной совместимости
     window.FormHandlers = {

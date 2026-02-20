@@ -417,9 +417,8 @@ window.ExportModule = (function() {
 
   // Основная функция экспорта PDF (оркестрация: prepareSourceList + ExportPdf.generatePdf)
   async function performPdfExport(selectedFields, filters = {}) {
-    let loaderId = null;
-    if (typeof window !== 'undefined' && window.LoadingManager) {
-      loaderId = window.LoadingManager.show('Генерация PDF отчета...');
+    if (typeof window !== 'undefined' && typeof window.showReportLoading === 'function') {
+      window.showReportLoading();
     }
 
     try {
@@ -438,8 +437,8 @@ window.ExportModule = (function() {
 
       const { enterpriseName: name, fieldsCount } = await window.ExportPdf.generatePdf(sourceList, enterpriseName, selectedFields, companyFilterForDisplay);
 
-      if (loaderId && typeof window !== 'undefined' && window.LoadingManager) {
-        window.LoadingManager.hide(loaderId);
+      if (typeof window !== 'undefined' && typeof window.showReportSuccess === 'function') {
+        window.showReportSuccess();
       }
       if (typeof window !== 'undefined' && window.Toast) {
         window.Toast.success('PDF отчет успешно сгенерирован и сохранен');
@@ -472,8 +471,8 @@ window.ExportModule = (function() {
         if (window.Logger) window.Logger.warn('Ошибка при логировании экспорта:', err);
       }
     } catch (error) {
-      if (loaderId && typeof window !== 'undefined' && window.LoadingManager) {
-        window.LoadingManager.hide(loaderId);
+      if (typeof window !== 'undefined' && typeof window.showReportError === 'function') {
+        window.showReportError(error && error.message ? error.message : 'Ошибка при генерации отчета');
       }
       if (typeof window.reportError === 'function') {
         window.reportError(error, 'Экспорт PDF отчета');
@@ -1173,6 +1172,9 @@ window.ExportModule = (function() {
           }
         });
 
+        const setButtonLoading = typeof window.setButtonLoading === 'function' ? window.setButtonLoading : function () {};
+        setButtonLoading(exportBtn, true, 'Экспорт…');
+
         if (typeof window.hideModal === 'function') {
           window.hideModal('exportPdfModal');
         }
@@ -1182,7 +1184,8 @@ window.ExportModule = (function() {
           // Успех обрабатывается внутри performPdfExport
         } catch (error) {
           // Ошибка обрабатывается внутри performPdfExport
-          // Ошибка экспорта PDF
+        } finally {
+          setButtonLoading(exportBtn, false);
         }
       });
     }

@@ -235,11 +235,14 @@ body.dark .sidebar-toggle-btn:hover {
   background: var(--gradient-btn-dark);
 }
 
+/* Все кнопки сайдбара (включая «Сбросить») — единый размер и иконки */
 .sidebar-icon-btn svg,
-.sidebar-toggle-btn svg {
+.sidebar-toggle-btn svg,
+#sidebarButtons .reset-button-movable svg {
   width: 20px;
   height: 20px;
   transition: transform 0.2s ease;
+  flex-shrink: 0;
 }
 
 .sidebar-toggle-btn svg {
@@ -288,6 +291,7 @@ body.dark .sidebar-toggle-btn:hover {
   transform: translateX(0);
   opacity: 1;
   width: 270px;
+  max-width: min(270px, calc(100vw - 80px));
   pointer-events: auto;
 }
 
@@ -902,6 +906,256 @@ body.not-authorized #editTechPanel {
 body.not-authorized #addTechPanel .modal-body>*:last-child,
 body.not-authorized #editTechPanel .modal-body>*:last-child {
   margin-bottom: 0;
+}
+
+/* Уменьшение отступов между элементами в модальных окнах на устройствах меньше декстопа */
+@media (max-width: 1024px) {
+  #addTechPanel .modal-body .form-group,
+  #editTechPanel .modal-body .form-group {
+    margin-bottom: 12px;
+  }
+
+  #addTechPanel .modal-body .form-group label,
+  #editTechPanel .modal-body .form-group label {
+    margin-bottom: 2px !important;
+  }
+
+  /* Уменьшение отступов в контенте вкладок предприятий */
+  #addTechPanel .modal-body .enterprise-tab-content,
+  #editTechPanel .modal-body .enterprise-tab-content {
+    margin-bottom: 10px;
+  }
+
+  #addTechPanel .modal-body .enterprise-tab-content .form-group,
+  #editTechPanel .modal-body .enterprise-tab-content .form-group {
+    margin-bottom: 10px;
+  }
+
+  /* Уменьшение отступов в группах полей готовности */
+  #addTechPanel .modal-body .readiness-fields,
+  #editTechPanel .modal-body .readiness-fields {
+    gap: 10px;
+    margin-bottom: 5px;
+  }
+
+  /* Уменьшение отступов в разделителях секций */
+  #addTechPanel .modal-body .form-section-divider,
+  #editTechPanel .modal-body .form-section-divider {
+    margin: 20px 0 14px;
+  }
+
+  /* Уменьшение отступов в группах "ИЛИ" */
+  #addTechPanel .modal-body .form-group-or,
+  #editTechPanel .modal-body .form-group-or {
+    margin: 10px 0;
+  }
+
+  /* Уменьшение отступов в строках оценок */
+  #addTechPanel .modal-body .ratings-row,
+  #editTechPanel .modal-body .ratings-row {
+    gap: 10px;
+    margin-top: 6px;
+  }
+
+  /* Уменьшение размера выбранных элементов (тегов) в фильтрах */
+  #addTechPanel .modal-body .multi-tag,
+  #editTechPanel .modal-body .multi-tag {
+    padding: 3px 6px !important;
+    font-size: 12px !important;
+    gap: 4px !important;
+    margin-right: 4px !important;
+    margin-bottom: 3px !important;
+    border-radius: 12px !important;
+  }
+
+  #addTechPanel .modal-body .multi-tag .multi-tag-remove,
+  #editTechPanel .modal-body .multi-tag .multi-tag-remove {
+    font-size: 12px !important;
+    padding: 0 2px !important;
+  }
+
+  #addTechPanel .modal-body .custom-select-modal .selected-text,
+  #editTechPanel .modal-body .custom-select-modal .selected-text {
+    gap: 4px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  #addTechPanel .modal-body .form-group,
+  #editTechPanel .modal-body .form-group {
+    margin-bottom: 10px;
+  }
+
+  #addTechPanel .modal-body .form-group label,
+  #editTechPanel .modal-body .form-group label {
+    margin-bottom: 2px !important;
+  }
+
+  #addTechPanel .modal-body .form-subgroup,
+  #editTechPanel .modal-body .form-subgroup {
+    gap: 8px;
+  }
+
+  #addTechPanel .modal-body .checkbox-group,
+  #editTechPanel .modal-body .checkbox-group {
+    gap: 6px;
+  }
+
+  /* Уменьшение отступов в контенте вкладок предприятий */
+  #addTechPanel .modal-body .enterprise-tab-content,
+  #editTechPanel .modal-body .enterprise-tab-content {
+    padding: 6px 0;
+    margin-bottom: 8px;
+  }
+
+  #addTechPanel .modal-body .enterprise-tab-content .form-group,
+  #editTechPanel .modal-body .enterprise-tab-content .form-group {
+    margin-bottom: 8px;
+  }
+
+  /* Уменьшение отступов в группах полей готовности */
+  #addTechPanel .modal-body .readiness-fields,
+  #editTechPanel .modal-body .readiness-fields {
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  /* Уменьшение отступов в разделителях секций */
+  #addTechPanel .modal-body .form-section-divider,
+  #editTechPanel .modal-body .form-section-divider {
+    margin: 18px 0 12px;
+    padding: 6px 0;
+  }
+
+  /* Уменьшение отступов в группах "ИЛИ" */
+  #addTechPanel .modal-body .form-group-or,
+  #editTechPanel .modal-body .form-group-or {
+    margin: 10px 0;
+  }
+
+  /* Уменьшение отступов в строках оценок */
+  #addTechPanel .modal-body .ratings-row,
+  #editTechPanel .modal-body .ratings-row {
+    gap: 10px;
+    margin-top: 6px;
+  }
+
+  #addTechPanel .modal-body .ratings-row > div,
+  #editTechPanel .modal-body .ratings-row > div {
+    gap: 5px;
+  }
+
+  /* Уменьшение размера выбранных элементов (тегов) в фильтрах */
+  #addTechPanel .modal-body .multi-tag,
+  #editTechPanel .modal-body .multi-tag {
+    padding: 2px 5px !important;
+    font-size: 11px !important;
+    gap: 3px !important;
+    margin-right: 3px !important;
+    margin-bottom: 2px !important;
+    border-radius: 10px !important;
+  }
+
+  #addTechPanel .modal-body .multi-tag .multi-tag-remove,
+  #editTechPanel .modal-body .multi-tag .multi-tag-remove {
+    font-size: 11px !important;
+    padding: 0 2px !important;
+  }
+
+  #addTechPanel .modal-body .custom-select-modal .selected-text,
+  #editTechPanel .modal-body .custom-select-modal .selected-text {
+    gap: 3px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  #addTechPanel .modal-body .form-group,
+  #editTechPanel .modal-body .form-group {
+    margin-bottom: 8px;
+  }
+
+  #addTechPanel .modal-body .form-group label,
+  #editTechPanel .modal-body .form-group label {
+    margin-bottom: 1px !important;
+  }
+
+  #addTechPanel .modal-body .form-subgroup,
+  #editTechPanel .modal-body .form-subgroup {
+    gap: 6px;
+  }
+
+  #addTechPanel .modal-body .checkbox-group,
+  #editTechPanel .modal-body .checkbox-group {
+    gap: 5px;
+  }
+
+  /* Уменьшение отступов в контенте вкладок предприятий */
+  #addTechPanel .modal-body .enterprise-tab-content,
+  #editTechPanel .modal-body .enterprise-tab-content {
+    padding: 8px 0;
+    margin-bottom: 8px;
+  }
+
+  #addTechPanel .modal-body .enterprise-tab-content .form-group,
+  #editTechPanel .modal-body .enterprise-tab-content .form-group {
+    margin-bottom: 8px;
+  }
+
+  /* Уменьшение отступов в группах полей готовности */
+  #addTechPanel .modal-body .readiness-fields,
+  #editTechPanel .modal-body .readiness-fields {
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  /* Уменьшение отступов в разделителях секций */
+  #addTechPanel .modal-body .form-section-divider,
+  #editTechPanel .modal-body .form-section-divider {
+    margin: 16px 0 10px;
+    padding: 6px 0;
+  }
+
+  /* Уменьшение отступов в группах "ИЛИ" */
+  #addTechPanel .modal-body .form-group-or,
+  #editTechPanel .modal-body .form-group-or {
+    margin: 8px 0;
+  }
+
+  /* Уменьшение отступов в строках оценок */
+  #addTechPanel .modal-body .ratings-row,
+  #editTechPanel .modal-body .ratings-row {
+    gap: 8px;
+    margin-top: 6px;
+  }
+
+  #addTechPanel .modal-body .ratings-row > div,
+  #editTechPanel .modal-body .ratings-row > div {
+    gap: 4px;
+  }
+
+  /* Уменьшение размера выбранных элементов (тегов) в фильтрах */
+  #addTechPanel .modal-body .multi-tag,
+  #editTechPanel .modal-body .multi-tag {
+    padding: 2px 4px !important;
+    font-size: 10px !important;
+    gap: 2px !important;
+    margin-right: 2px !important;
+    margin-bottom: 2px !important;
+    border-radius: 8px !important;
+    line-height: 1.2 !important;
+  }
+
+  #addTechPanel .modal-body .multi-tag .multi-tag-remove,
+  #editTechPanel .modal-body .multi-tag .multi-tag-remove {
+    font-size: 10px !important;
+    padding: 0 1px !important;
+    line-height: 1 !important;
+  }
+
+  #addTechPanel .modal-body .custom-select-modal .selected-text,
+  #editTechPanel .modal-body .custom-select-modal .selected-text {
+    gap: 2px !important;
+  }
 }
 
 /* Встроенное окно подтверждения */
@@ -2378,10 +2632,18 @@ body.dark .blip.selected {
 .detail-panel h2 {
   margin: 0;
   font-size: 20px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  padding-right: 8px;
 }
 
 .detail-panel .detail-header {
   padding: 10px 16px;
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   z-index: 6;
   display: flex;
@@ -2395,6 +2657,7 @@ body.dark .blip.selected {
   /* Закреплен сверху, не сжимается */
   flex-grow: 0 !important;
   /* Не растягивается */
+  gap: 8px;
 }
 
 .detail-panel .close-btn {
@@ -2470,6 +2733,8 @@ body.dark .blip.selected {
   /* Принудительно устанавливаем height: 0 для flex-элемента, чтобы flex: 1 работал корректно */
   box-sizing: border-box;
   padding: 9px 18px 18px 18px;
+  padding-left: max(18px, env(safe-area-inset-left));
+  padding-right: max(18px, env(safe-area-inset-right));
   overflow-y: auto;
   /* Скролл появляется при переполнении */
   overflow-x: hidden;
@@ -2814,6 +3079,9 @@ body.dark .chip {
   display: flex;
   gap: 10px;
   padding: 12px 18px;
+  padding-left: max(18px, env(safe-area-inset-left));
+  padding-right: max(18px, env(safe-area-inset-right));
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
   border-top: 1px solid rgba(0, 0, 0, 0.08);
   background: var(--modal-bg);
   flex: 0 0 auto;
@@ -2832,6 +3100,8 @@ body.dark .chip {
   box-sizing: border-box;
   margin-top: auto;
   /* Прижимается к низу */
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 body.dark .detail-panel .tech-actions {
@@ -3230,14 +3500,14 @@ body.dark #hoverLabel::after {
 }
 
 
-/* ===== Модальные окна ===== */
+/* ===== Модальные окна (общие, не переопределяют ширину add/edit панелей) ===== */
 .modal-panel {
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   width: 90%;
-  max-width: 500px;
+  max-width: 640px;
   max-height: 90vh;
   background: var(--modal-bg);
   border: 1px solid var(--accent);
@@ -3458,6 +3728,11 @@ body.dark .modal-header {
   margin: 0;
   font-size: 20px;
   color: #fff;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-right: 8px;
 }
 
 .close-btn {
@@ -3542,6 +3817,28 @@ body.dark .modal-header {
   color: var(--text);
 }
 
+/* Переопределение для модальных окон добавления и редактирования технологии на мобильных устройствах */
+@media (max-width: 1024px) {
+  #addTechPanel .modal-body .form-group label,
+  #editTechPanel .modal-body .form-group label {
+    margin-bottom: 2px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  #addTechPanel .modal-body .form-group label,
+  #editTechPanel .modal-body .form-group label {
+    margin-bottom: 2px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  #addTechPanel .modal-body .form-group label,
+  #editTechPanel .modal-body .form-group label {
+    margin-bottom: 1px !important;
+  }
+}
+
 .form-group input,
 .form-group select,
 .form-group textarea {
@@ -3612,6 +3909,28 @@ body.dark .field-error-message {
 }
 body.dark .field-error-message.visible {
   color: #f87171;
+}
+
+/* Подсветка обязательных полей с ошибкой валидации в модальном окне */
+#addTechPanel .form-group.has-error input:not([type="hidden"]),
+#addTechPanel .form-group.has-error textarea,
+#addTechPanel .form-group.has-error input.readonly-field {
+  border: 2px solid var(--error-color, #e74c3c) !important;
+  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.35);
+  background-color: rgba(231, 76, 60, 0.06);
+}
+#addTechPanel .form-group.has-error .custom-select-modal .select-trigger {
+  border: 2px solid var(--error-color, #e74c3c) !important;
+  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.35);
+  background-color: rgba(231, 76, 60, 0.06);
+}
+body.dark #addTechPanel .form-group.has-error input:not([type="hidden"]),
+body.dark #addTechPanel .form-group.has-error textarea,
+body.dark #addTechPanel .form-group.has-error input.readonly-field,
+body.dark #addTechPanel .form-group.has-error .custom-select-modal .select-trigger {
+  border-color: #f87171 !important;
+  box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.4);
+  background-color: rgba(248, 113, 113, 0.08);
 }
 
 /* Стили для строки оценок */
@@ -4119,6 +4438,11 @@ body.dark .detail-panel .ratings-hint {
   position: sticky;
   bottom: 0;
   z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+  align-items: center;
 }
 
 body.dark .modal-panel .form-actions {
@@ -5072,12 +5396,17 @@ body.dark #resetSectorBtn img {
 
 /* ===== Адаптивность ===== */
 @media (max-width: 1024px) {
+  .sidebar-wrapper {
+    left: 12px;
+  }
+
   .sidebar {
-    width: 250px;
+    width: min(250px, calc(100vw - 76px));
+    padding: clamp(8px, 1.5vw, 10px);
   }
 
   .sidebar-wrapper.expanded .sidebar {
-    width: 250px;
+    width: min(250px, calc(100vw - 76px));
   }
 
   .radar-container {
@@ -5089,33 +5418,202 @@ body.dark #resetSectorBtn img {
     max-width: 220px;
     font-size: 15px;
   }
+
+  .sidebar-icon-btn,
+  .sidebar-toggle-btn,
+  #sidebarButtons .reset-button-movable {
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    min-height: 42px;
+  }
+
+  .sidebar-icon-btn svg,
+  .sidebar-toggle-btn svg,
+  #sidebarButtons .reset-button-movable svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .modal-panel {
+    width: min(92vw, 600px);
+    max-width: min(92vw, 600px);
+    max-height: calc(100vh - 32px);
+    margin: 0;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 12px;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
+  }
+
+  #addTechPanel,
+  #editTechPanel {
+    width: min(92vw, 600px);
+    max-width: min(92vw, 600px);
+  }
+
+  .modal-panel .modal-header {
+    padding: 14px 16px 14px max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+
+  .modal-panel .modal-body {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+
+  .modal-panel .form-actions {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+
+  /* Панель подробной информации на планшетах */
+  .detail-panel {
+    width: min(92vw, 400px);
+    max-width: min(92vw, 400px);
+    right: max(16px, env(safe-area-inset-right));
+    top: calc(var(--header-height, 64px) + max(16px, env(safe-area-inset-top)));
+    height: calc(100vh - var(--header-height, 64px) - max(32px, calc(env(safe-area-inset-top) + env(safe-area-inset-bottom) + 16px)));
+    max-height: calc(100vh - var(--header-height, 64px) - max(32px, calc(env(safe-area-inset-top) + env(safe-area-inset-bottom) + 16px)));
+  }
+
+  .detail-panel .detail-header {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+
+  .detail-panel .tech-info {
+    padding-left: max(18px, env(safe-area-inset-left));
+    padding-right: max(18px, env(safe-area-inset-right));
+  }
+
+  .detail-panel .tech-actions {
+    padding-left: max(18px, env(safe-area-inset-left));
+    padding-right: max(18px, env(safe-area-inset-right));
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+}
+
+/* Панель подробной информации на экранах меньше 700px - по центру как модальное окно */
+@media (max-width: 699px) {
+  .detail-panel {
+    width: min(95vw, 600px) !important;
+    max-width: min(95vw, 600px) !important;
+    height: calc(100vh - 24px) !important;
+    max-height: calc(100vh - 24px) !important;
+    top: 50% !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translate(-50%, -50%) scale(0.98) !important;
+    border-radius: 12px;
+    position: fixed !important;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+    transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+  }
+
+  .detail-panel.active {
+    transform: translate(-50%, -50%) scale(1) !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto;
+  }
+
+  .detail-panel .detail-header {
+    border-radius: 12px 12px 0 0;
+    padding: 12px 16px 12px max(16px, env(safe-area-inset-left));
+    padding-right: max(48px, env(safe-area-inset-right));
+  }
+
+  .detail-panel h2 {
+    font-size: 17px;
+  }
+
+  .detail-panel .close-btn {
+    min-width: 44px;
+    min-height: 44px;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+  }
+
+  .detail-panel .detail-back-btn {
+    min-height: 36px;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .detail-panel .tech-info {
+    padding: 12px 16px;
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+    max-height: calc(100vh - 200px);
+  }
+
+  .detail-panel .tech-actions {
+    border-radius: 0 0 12px 12px;
+    padding: 12px 16px max(12px, env(safe-area-inset-bottom));
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+    gap: 10px;
+  }
 }
 
 @media (max-width: 768px) {
 
   /* На планшетах detail-panel использует базовые стили (справа) */
   .modal-panel {
-    width: 95%;
-    max-width: 600px;
-    max-height: 95vh;
+    width: min(95vw, 600px);
+    max-width: min(95vw, 600px);
+    max-height: calc(100vh - 24px);
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    border-radius: 8px;
+    border-radius: 12px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+  }
+
+  #addTechPanel,
+  #editTechPanel {
+    width: min(95vw, 600px);
+    max-width: min(95vw, 600px);
   }
 
   /* Улучшаем адаптивность модальных окон */
   .modal-panel .modal-body {
     padding: 16px;
-    max-height: calc(95vh - 60px);
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+    max-height: calc(100vh - 120px);
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
 
   .modal-panel .modal-header {
-    padding: 16px;
-    font-size: 18px;
+    padding: 12px 16px 12px max(16px, env(safe-area-inset-left));
+    padding-right: max(48px, env(safe-area-inset-right));
+    font-size: 17px;
     flex-shrink: 0;
+  }
+
+  .modal-panel .modal-header h2 {
+    font-size: 17px;
+  }
+
+  .modal-panel .form-actions {
+    padding: 12px 16px max(12px, env(safe-area-inset-bottom));
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+    gap: 10px;
   }
 
   .legend {
@@ -5129,26 +5627,46 @@ body.dark #resetSectorBtn img {
     padding: 8px;
   }
 
-  /* На планшетах сохраняем базовые стили */
+  /* На планшетах сохраняем базовые стили, сайдбар адаптивен в раскрытом состоянии */
   .sidebar-wrapper {
     display: flex;
     top: 50%;
     transform: translateY(-50%);
+    left: 10px;
   }
 
   .sidebar-buttons {
     padding: 8px 6px;
+    gap: 6px;
   }
 
   .sidebar-icon-btn,
-  .sidebar-toggle-btn {
+  .sidebar-toggle-btn,
+  #sidebarButtons .reset-button-movable {
     width: 40px;
     height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    padding: 8px;
+  }
+
+  .sidebar-icon-btn svg,
+  .sidebar-toggle-btn svg,
+  #sidebarButtons .reset-button-movable svg {
+    width: 18px;
+    height: 18px;
   }
 
   .sidebar {
-    width: 280px;
+    width: min(280px, calc(100vw - 72px));
+    max-width: min(280px, calc(100vw - 72px));
     max-height: calc(100vh - var(--header-height) - 24px);
+    padding: 10px;
+  }
+
+  .sidebar-wrapper.expanded .sidebar {
+    width: min(280px, calc(100vw - 72px));
+    max-width: min(280px, calc(100vw - 72px));
   }
 
   .radar-container {
@@ -5161,28 +5679,41 @@ body.dark #resetSectorBtn img {
   .sidebar-wrapper {
     top: 50%;
     transform: translateY(-50%);
+    left: 8px;
   }
 
   .sidebar-buttons {
     padding: 6px 4px;
+    gap: 5px;
   }
 
   .sidebar-icon-btn,
-  .sidebar-toggle-btn {
-    width: 36px;
-    height: 36px;
+  .sidebar-toggle-btn,
+  #sidebarButtons .reset-button-movable {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
+    padding: 6px;
   }
 
   .sidebar-icon-btn svg,
-  .sidebar-toggle-btn svg {
-    width: 18px;
-    height: 18px;
+  .sidebar-toggle-btn svg,
+  #sidebarButtons .reset-button-movable svg {
+    width: 17px;
+    height: 17px;
   }
 
   .sidebar {
-    width: calc(100vw - 60px);
-    max-width: 300px;
+    width: min(300px, calc(100vw - 56px));
+    max-width: min(300px, calc(100vw - 56px));
     max-height: calc(100vh - var(--header-height) - 24px);
+    padding: 8px;
+  }
+
+  .sidebar-wrapper.expanded .sidebar {
+    width: min(300px, calc(100vw - 56px));
+    max-width: min(300px, calc(100vw - 56px));
   }
 
   .radar-container {
@@ -5205,13 +5736,120 @@ body.dark #resetSectorBtn img {
 
 @media (max-width: 480px) {
   .modal-panel {
-    width: 95%;
-    max-width: 95%;
-    max-height: 95vh;
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+    max-height: calc(100vh - 24px);
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    border-radius: 8px;
+    border-radius: 12px;
+    margin: 0;
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.3);
+  }
+
+  #addTechPanel,
+  #editTechPanel {
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+  }
+
+  .modal-panel .modal-header {
+    padding: 12px 12px 12px max(12px, env(safe-area-inset-left));
+    padding-right: max(48px, env(safe-area-inset-right));
+    font-size: 16px;
+  }
+
+  .modal-panel .modal-header h2 {
+    font-size: 16px;
+  }
+
+  .modal-panel .modal-body {
+    padding: 12px;
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+    max-height: calc(100vh - 110px);
+  }
+
+  .modal-panel .form-actions {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px;
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    gap: 10px;
+  }
+
+  .modal-panel .form-actions .btn-primary,
+  .modal-panel .form-actions .btn-secondary {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+  }
+
+  .close-btn {
+    min-width: 44px;
+    min-height: 44px;
+    width: 44px;
+    height: 44px;
+  }
+
+  /* Панель подробной информации на маленьких экранах */
+  .detail-panel {
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+    height: calc(100vh - 24px);
+    max-height: calc(100vh - 24px);
+    border-radius: 12px;
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.3);
+  }
+
+  .detail-panel .detail-header {
+    padding: 12px 12px 12px max(12px, env(safe-area-inset-left));
+    padding-right: max(48px, env(safe-area-inset-right));
+  }
+
+  .detail-panel h2 {
+    font-size: 16px;
+  }
+
+  .detail-panel .tech-info {
+    padding: 12px;
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+    max-height: calc(100vh - 180px);
+  }
+
+  .detail-panel .tech-actions {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px;
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    gap: 10px;
+  }
+
+  .detail-panel .tech-actions button {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+    font-size: 14px;
+    padding: 10px 16px;
+  }
+
+  .detail-panel .close-btn {
+    min-width: 44px;
+    min-height: 44px;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+  }
+
+  .detail-panel .detail-back-btn {
+    min-height: 36px;
+    padding: 6px 10px;
+    font-size: 13px;
   }
 
   .radar-container {
@@ -5221,6 +5859,49 @@ body.dark #resetSectorBtn img {
 }
 
 @media (max-width: 360px) {
+  .modal-panel {
+    width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
+    max-height: calc(100vh - 16px);
+    border-radius: 10px;
+  }
+
+  #addTechPanel,
+  #editTechPanel {
+    width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
+  }
+
+  .modal-panel .modal-header,
+  .modal-panel .modal-body,
+  .modal-panel .form-actions {
+    padding-left: max(10px, env(safe-area-inset-left));
+    padding-right: max(10px, env(safe-area-inset-right));
+  }
+
+  /* Панель подробной информации на очень маленьких экранах */
+  .detail-panel {
+    width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
+    max-height: calc(100vh - 16px);
+    border-radius: 10px;
+  }
+
+  .detail-panel .detail-header,
+  .detail-panel .tech-info,
+  .detail-panel .tech-actions {
+    padding-left: max(10px, env(safe-area-inset-left));
+    padding-right: max(10px, env(safe-area-inset-right));
+  }
+
+  .detail-panel .detail-header {
+    padding-right: max(48px, env(safe-area-inset-right));
+  }
+
+  .detail-panel .tech-actions {
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+  }
+
   .radar-container {
     height: 75vh;
   }
@@ -6050,7 +6731,8 @@ body.dark .loading-error-message {
 
   /* Кнопки сайдбара компактные на мобильных */
   .sidebar-icon-btn,
-  .sidebar-toggle-btn {
+  .sidebar-toggle-btn,
+  #sidebarButtons .reset-button-movable {
     width: 40px;
     height: 40px;
     min-width: 40px;
@@ -6059,19 +6741,21 @@ body.dark .loading-error-message {
   }
 
   .sidebar-icon-btn svg,
-  .sidebar-toggle-btn svg {
+  .sidebar-toggle-btn svg,
+  #sidebarButtons .reset-button-movable svg {
     width: 18px;
     height: 18px;
   }
 
-  /* Сайдбар выезжает справа от кнопок */
+  /* Сайдбар выезжает справа от кнопок, ширина адаптивна под экран */
   .sidebar {
     position: relative;
     top: 0;
     left: 0;
     margin-left: 10px;
-    width: 280px;
-    max-width: calc(100vw - 80px);
+    width: min(280px, calc(100vw - 72px));
+    max-width: min(280px, calc(100vw - 72px));
+    min-width: 240px;
     height: calc(100vh - var(--header-height) - 20px);
     max-height: calc(100vh - var(--header-height) - 20px);
     background: var(--bg);
@@ -6087,10 +6771,11 @@ body.dark .loading-error-message {
     z-index: 1000;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 12px;
+    padding: clamp(8px, 2vw, 12px);
     display: flex;
     flex-direction: column;
     pointer-events: none;
+    -webkit-overflow-scrolling: touch;
   }
 
   .sidebar-wrapper.expanded .sidebar {
@@ -6098,6 +6783,8 @@ body.dark .loading-error-message {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
+    width: min(280px, calc(100vw - 72px));
+    max-width: min(280px, calc(100vw - 72px));
   }
 
   .sidebar-wrapper.collapsed .sidebar {
@@ -6129,36 +6816,126 @@ body.dark .loading-error-message {
   .sidebar .search-container,
   .sidebar .filter-panel {
     padding: 0;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
   }
 
-  /* Модальные окна - по центру на мобильных */
+  /* Поле поиска в сайдбаре — адаптивно и удобно для тача */
+  .sidebar .search-container .search-box input {
+    padding: 10px 12px;
+    font-size: 14px;
+    min-height: 44px;
+    border-radius: 8px;
+  }
+
+  /* Контент сайдбара: компактные отступы */
+  .sidebar .sidebar-content {
+    gap: 10px;
+    padding-right: 2px;
+  }
+
+  /* Фильтры в сайдбаре: удобная высота для тача, читаемый текст */
+  .sidebar #filterPanel .filter-group {
+    margin-bottom: 8px;
+  }
+
+  .sidebar #filterPanel .filter-group .custom-select {
+    min-height: 44px;
+  }
+
+  .sidebar #filterPanel .filter-group .custom-select .select-trigger {
+    min-height: 44px;
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .sidebar #filterPanel .filter-group .custom-select .select-trigger .selected-text {
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: calc(100% - 24px);
+  }
+
+  .sidebar #filterPanel .custom-select .select-options {
+    max-height: min(320px, 50vh);
+    font-size: 13px;
+  }
+
+  .sidebar #filterPanel .custom-select .select-options li {
+    padding: 10px 12px;
+    min-height: 44px;
+    box-sizing: border-box;
+  }
+
+  .sidebar #filterPanel .custom-select .select-options .select-search input {
+    padding: 10px 12px;
+    font-size: 13px;
+    min-height: 40px;
+  }
+
+  .sidebar #filterPanel .custom-select .arrow svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  /* Секторы в сайдбаре — компактно на мобильных */
+  .sidebar .sector-item {
+    padding: 8px 6px 10px 6px;
+    font-size: 14px;
+  }
+
+  .sidebar .tech-list-item {
+    padding: 8px 6px;
+    font-size: 13px;
+  }
+
+  /* Кнопка «Сбросить выбор» в контейнере внутри сайдбара */
+  .sidebar #resetButtonContainer .reset-button-movable {
+    min-height: 44px;
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  #sidebarButtons .reset-button-movable {
+    min-width: 40px;
+    min-height: 40px;
+    width: 40px;
+    height: 40px;
+  }
+
+  #sidebarButtons .reset-button-movable svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* Модальные окна - по центру на мобильных (согласовано с блоками 768px/480px) */
   .modal-panel {
-    width: 95%;
-    max-width: 95%;
-    max-height: 95vh;
+    width: min(95vw, 600px);
+    max-width: min(95vw, 600px);
+    max-height: calc(100vh - 24px);
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    border-radius: 8px;
+    border-radius: 12px;
     position: fixed;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
   }
 
   .modal-panel .modal-header {
-    border-radius: 0;
+    border-radius: 12px 12px 0 0;
   }
 
   /* На мобильных: detail-panel как модальное окно по центру */
   .detail-panel {
-    width: 95%;
-    max-width: 600px;
-    height: 95vh;
-    max-height: 95vh;
+    width: min(95vw, 600px);
+    max-width: min(95vw, 600px);
+    height: calc(100vh - 24px);
+    max-height: calc(100vh - 24px);
     top: 50%;
     left: 50%;
     right: auto;
     transform: translate(-50%, -50%) scale(0.98);
-    border-radius: 8px;
+    border-radius: 12px;
     position: fixed;
     opacity: 0;
     visibility: hidden;
@@ -6166,6 +6943,7 @@ body.dark .loading-error-message {
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
   }
 
   .detail-panel.active {
@@ -6176,12 +6954,42 @@ body.dark .loading-error-message {
   }
 
   .detail-panel .detail-header {
-    border-radius: 8px 8px 0 0;
+    border-radius: 12px 12px 0 0;
+    padding: 12px 16px 12px max(16px, env(safe-area-inset-left));
+    padding-right: max(48px, env(safe-area-inset-right));
+  }
+
+  .detail-panel h2 {
+    font-size: 17px;
+  }
+
+  .detail-panel .close-btn {
+    min-width: 44px;
+    min-height: 44px;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+  }
+
+  .detail-panel .detail-back-btn {
+    min-height: 36px;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .detail-panel .tech-info {
+    padding: 12px 16px;
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+    max-height: calc(100vh - 200px);
   }
 
   .detail-panel .tech-actions {
-    border-radius: 0 0 8px 8px;
-    /* Скругление нижних углов для мобильных */
+    border-radius: 0 0 12px 12px;
+    padding: 12px 16px max(12px, env(safe-area-inset-bottom));
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+    gap: 10px;
   }
 
   /* Радар - масштабирование для мобильных */
@@ -6213,7 +7021,8 @@ body.dark .loading-error-message {
 
   /* Увеличиваем размеры кнопок для touch */
   .sidebar-icon-btn,
-  .sidebar-toggle-btn {
+  .sidebar-toggle-btn,
+  #sidebarButtons .reset-button-movable {
     min-width: 44px;
     min-height: 44px;
     width: 44px;
@@ -6249,18 +7058,257 @@ body.dark .loading-error-message {
   }
 }
 
-/* ===== Tablet (768px - 1024px) ===== */
-@media (min-width: 768px) and (max-width: 1024px) {
+/* ===== Очень узкие экраны: сайдбар и элементы ещё компактнее ===== */
+@media (max-width: 480px) {
+  .sidebar-wrapper {
+    left: 6px;
+  }
+
+  .sidebar-buttons {
+    padding: 5px 4px;
+    gap: 4px;
+  }
+
+  .sidebar-icon-btn,
+  .sidebar-toggle-btn,
+  #sidebarButtons .reset-button-movable {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    padding: 6px;
+  }
+
+  .sidebar-icon-btn svg,
+  .sidebar-toggle-btn svg,
+  #sidebarButtons .reset-button-movable svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .sidebar,
+  .sidebar-wrapper.expanded .sidebar {
+    width: min(100%, calc(100vw - 52px));
+    max-width: calc(100vw - 52px);
+    min-width: 200px;
+    padding: 8px;
+  }
+
+  .sidebar .search-container .search-box input {
+    padding: 8px 10px;
+    font-size: 13px;
+    min-height: 42px;
+  }
+
+  .sidebar #filterPanel .filter-group .custom-select .select-trigger {
+    min-height: 42px;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .sidebar #filterPanel .filter-group .custom-select .select-trigger .selected-text {
+    font-size: 12px;
+  }
+
+  .sidebar #filterPanel .custom-select .select-options {
+    max-height: min(280px, 45vh);
+  }
+
+  .sidebar #filterPanel .custom-select .select-options li {
+    padding: 8px 10px;
+    min-height: 40px;
+    font-size: 12px;
+  }
+
+  .sidebar .sector-item {
+    padding: 6px 4px 8px 4px;
+    font-size: 13px;
+  }
+
+  .sidebar .tech-list-item {
+    padding: 6px 4px;
+    font-size: 12px;
+  }
+
+  .sidebar #resetButtonContainer .reset-button-movable {
+    min-height: 42px;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  #sidebarButtons .reset-button-movable {
+    min-width: 36px;
+    min-height: 36px;
+    width: 36px;
+    height: 36px;
+    padding: 6px;
+  }
+}
+
+/* ===== Горизонтальная панель под шапкой при ширине < 860px (приоритет над вертикальным сайдбаром) ===== */
+@media (max-width: 860px) {
+  .sidebar-wrapper {
+    position: fixed !important;
+    top: var(--header-height, 60px) !important;
+    left: 0 !important;
+    right: 0 !important;
+    transform: none !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 12px;
+    background: var(--bg);
+    border-top: 1px solid var(--accent);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    z-index: 999 !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  .sidebar-wrapper.collapsed,
+  .sidebar-wrapper.expanded {
+    transform: none !important;
+    left: 0 !important;
+    right: 0 !important;
+  }
+
+  .sidebar-buttons {
+    display: flex !important;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    min-height: 0;
+    max-height: none;
+    height: auto;
+    align-self: center;
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.1);
+    visibility: visible !important;
+  }
+
+  .sidebar-wrapper.collapsed .sidebar-buttons {
+    border-right: 1px solid var(--accent);
+  }
+
+  .sidebar-icon-btn,
+  .sidebar-toggle-btn,
+  #sidebarButtons .reset-button-movable {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    padding: 8px;
+  }
+
+  .sidebar-icon-btn svg,
+  .sidebar-toggle-btn svg,
+  #sidebarButtons .reset-button-movable svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .sidebar-wrapper.collapsed .sidebar-toggle-btn svg {
+    transform: rotate(90deg);
+  }
+
+  .sidebar-wrapper.expanded .sidebar-toggle-btn svg {
+    transform: rotate(-90deg);
+  }
+
+  .sidebar {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 24px);
+    max-width: 720px;
+    margin-top: 8px;
+    height: auto;
+    max-height: min(55vh, 400px);
+    min-height: 0;
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 10px 12px;
+    align-self: stretch;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    z-index: 1000;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  }
+
+  .sidebar-wrapper.collapsed .sidebar {
+    display: none;
+    pointer-events: none;
+    overflow: hidden;
+    max-height: 0;
+    margin: 0;
+    padding: 0;
+    border: none;
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  .sidebar-wrapper.expanded .sidebar {
+    display: flex;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    max-height: min(55vh, 400px);
+    transform: translateX(-50%);
+  }
+
+  .main-content {
+    padding-top: 0;
+  }
+
+  .radar-container {
+    top: calc(var(--header-height, 60px) + 64px + ((100vh - var(--header-height, 60px) - 64px) / 2));
+    transform: translate(-50%, -50%);
+  }
+}
+
+/* ===== Tablet (768px - 1024px): только когда ширина > 860px, иначе используется горизонтальная панель выше ===== */
+@media (min-width: 861px) and (max-width: 1024px) {
   .sidebar-wrapper {
     left: 10px;
   }
 
   .sidebar {
-    width: 260px;
+    width: min(260px, calc(100vw - 76px));
+    padding: 10px;
   }
 
   .sidebar-wrapper.expanded .sidebar {
-    width: 260px;
+    width: min(260px, calc(100vw - 76px));
+  }
+
+  /* Элементы внутри сайдбара на планшете */
+  .sidebar .search-box input {
+    padding: 9px 12px;
+    font-size: 14px;
+  }
+
+  .sidebar #filterPanel .filter-group .custom-select .select-trigger {
+    min-height: 42px;
+    padding: 9px 12px;
+    font-size: 13px;
+  }
+
+  .sidebar #filterPanel .custom-select .select-options {
+    max-height: min(320px, 45vh);
+  }
+
+  .sidebar .sector-item {
+    font-size: 15px;
   }
 
   .detail-panel {
@@ -8257,4 +9305,42 @@ body.dark .form-loading-indicator {
   color: var(--text-color);
   font-size: 14px;
   font-weight: 500;
+}
+
+/* Индикация загрузки в кнопках (Добавить / Сохранить / Экспортировать) */
+.btn-loading-spinner {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+}
+
+.btn-loading-spinner-icon {
+  width: 16px;
+  height: 16px;
+  color: currentColor;
+  transform-origin: center;
+  animation: btn-spin 0.8s linear infinite;
+}
+
+/* Дуга спиннера задаётся в SVG через stroke-dasharray="9 29" (видна ~1/4 окружности) */
+
+@keyframes btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.btn-with-icon.loading .btn-icon {
+  display: none;
+}
+
+.btn-with-icon.loading .btn-loading-spinner {
+  display: inline-flex;
+}
+
+.btn-with-icon.loading:disabled {
+  cursor: not-allowed;
+  opacity: 0.85;
 }

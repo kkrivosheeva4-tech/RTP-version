@@ -104,6 +104,39 @@
           }, 100);
         }
       }
+
+      // Заполнение списка направлений в модальном окне «Добавить функциональный блок» из directionToQuadrant.json
+      if (panel.id === 'addBlockPanel') {
+        populateBlockSectorDirections(panel);
+      }
+    });
+  }
+
+  /**
+   * Заполняет селект «Направления» в форме добавления функционального блока из window.directionToQuadrant.
+   * Порядок направлений — по номеру квадранта (1, 2, 3, 4).
+   * @param {HTMLElement} panel — модальная панель addBlockPanel
+   */
+  function populateBlockSectorDirections(panel) {
+    const directionToQuadrant = typeof window !== 'undefined' ? window.directionToQuadrant : null;
+    if (!directionToQuadrant || typeof directionToQuadrant !== 'object') return;
+
+    const optionsList = panel.querySelector('.custom-select-modal[data-field="blockSector"] .select-options');
+    if (!optionsList) return;
+
+    const entries = Object.entries(directionToQuadrant);
+    const sorted = entries.sort((a, b) => {
+      const qA = Array.isArray(a[1]) && a[1].length > 0 ? Number(a[1][0]) : 0;
+      const qB = Array.isArray(b[1]) && b[1].length > 0 ? Number(b[1][0]) : 0;
+      return qA - qB;
+    });
+
+    optionsList.innerHTML = '';
+    sorted.forEach(([name]) => {
+      const li = document.createElement('li');
+      li.setAttribute('data-value', name);
+      li.textContent = name;
+      optionsList.appendChild(li);
     });
   }
 

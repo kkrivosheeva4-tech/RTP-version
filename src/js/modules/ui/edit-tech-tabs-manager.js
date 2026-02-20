@@ -387,7 +387,9 @@
      * Переключение между вкладками
      * @param {string} tabId - ID вкладки
      */
-    function switchTab(tabId) {
+    function switchTab(tabId, options = {}) {
+        const scrollToTop = options.scrollToTop !== false;
+
         // Переключение на вкладку
 
         // Сохраняем данные текущей вкладки
@@ -410,10 +412,12 @@
         if (tabContent) {
             tabContent.classList.add('active');
 
-            // Скроллим к верху контента
-            const modalBody = document.querySelector('#editTechPanel .modal-body');
-            if (modalBody) {
-                modalBody.scrollTop = 0;
+            // Скроллим к верху только при явном переключении вкладки пользователем, не при программном (например, при снятии вкладок предприятий)
+            if (scrollToTop) {
+                const modalBody = document.querySelector('#editTechPanel .modal-body');
+                if (modalBody) {
+                    modalBody.scrollTop = 0;
+                }
             }
         }
 
@@ -437,9 +441,9 @@
         // Удаляем из хранилища
         enterpriseTabs.delete(enterpriseName);
 
-        // Если удалили активную вкладку, переключаемся на общую информацию
+        // Если удалили активную вкладку, переключаемся на общую информацию (без сброса прокрутки, чтобы не выкидывать пользователя наверх)
         if (activeTab === `edit-enterprise-${enterpriseName}`) {
-            switchTab('edit-general-info');
+            switchTab('edit-general-info', { scrollToTop: false });
         }
     }
 
@@ -454,8 +458,8 @@
             removeEnterpriseTab(name);
         });
 
-        // Переключаемся на общую информацию
-        switchTab('edit-general-info');
+        // Переключаемся на общую информацию без сброса прокрутки (чтобы не выкидывать пользователя наверх при галочке "применима в холдинге")
+        switchTab('edit-general-info', { scrollToTop: false });
     }
 
     /**

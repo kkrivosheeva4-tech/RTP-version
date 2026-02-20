@@ -71,6 +71,150 @@ const MobileNav = {
     mobileMenu.className = 'mobile-enterprise-menu';
     mobileMenu.setAttribute('aria-hidden', 'true');
 
+    // Секция «Помощь», «Уведомления» и переключатель темы
+    const helpBtn = header.querySelector('#helpBtn');
+    const notificationsBtn = header.querySelector('#notificationsBtn');
+    const themeToggle = header.querySelector('#themeToggle');
+    if (helpBtn || notificationsBtn || themeToggle) {
+      const quickSection = document.createElement('div');
+      quickSection.className = 'mobile-menu-section';
+
+      if (notificationsBtn) {
+        const notifBtn = document.createElement('button');
+        notifBtn.type = 'button';
+        notifBtn.className = 'mobile-menu-btn mobile-menu-action-btn';
+        notifBtn.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span>Уведомления</span>
+        `;
+        notifBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          notificationsBtn.click();
+          this.closeMenu();
+        });
+        quickSection.appendChild(notifBtn);
+      }
+
+      if (helpBtn) {
+        const isRMKPage = window.location.pathname.includes('radar.html') || window.location.href.includes('radar.html');
+        const helpWrapper = document.createElement('div');
+        helpWrapper.className = 'mobile-menu-help-wrapper';
+
+        const helpMenuBtn = document.createElement('button');
+        helpMenuBtn.type = 'button';
+        helpMenuBtn.className = 'mobile-menu-btn mobile-menu-action-btn mobile-menu-help-trigger';
+        helpMenuBtn.setAttribute('aria-expanded', 'false');
+        helpMenuBtn.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          <span>Помощь</span>
+          <svg class="mobile-menu-help-chevron" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6,9 12,15 18,9"></polyline>
+          </svg>
+        `;
+        helpMenuBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const expanded = helpWrapper.classList.toggle('expanded');
+          helpMenuBtn.setAttribute('aria-expanded', String(expanded));
+        });
+        helpWrapper.appendChild(helpMenuBtn);
+
+        const helpSub = document.createElement('div');
+        helpSub.className = 'mobile-menu-help-sub';
+
+        if (isRMKPage) {
+          const tourBtn = document.createElement('button');
+          tourBtn.type = 'button';
+          tourBtn.className = 'mobile-menu-btn mobile-menu-action-btn mobile-menu-help-sub-btn';
+          tourBtn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M12 16v-4"></path>
+              <path d="M12 8h.01"></path>
+            </svg>
+            <span>Интерактивный тур</span>
+          `;
+          tourBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (window.OnboardingTour && typeof window.OnboardingTour.startTour === 'function') {
+              window.OnboardingTour.startTour();
+            } else {
+              if (window.Logger) window.Logger.warn('OnboardingTour модуль не загружен');
+              if (window.Toast) {
+                window.Toast.error('Модуль обучения не загружен. Пожалуйста, обновите страницу.');
+              } else {
+                alert('Модуль обучения не загружен. Пожалуйста, обновите страницу.');
+              }
+            }
+            this.closeMenu();
+          });
+          helpSub.appendChild(tourBtn);
+        }
+
+        const helpLinkBtn = document.createElement('button');
+        helpLinkBtn.type = 'button';
+        helpLinkBtn.className = 'mobile-menu-btn mobile-menu-action-btn mobile-menu-help-sub-btn';
+        helpLinkBtn.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          </svg>
+          <span>Справка</span>
+        `;
+        helpLinkBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          window.location.href = 'help.html';
+          this.closeMenu();
+        });
+        helpSub.appendChild(helpLinkBtn);
+
+        helpWrapper.appendChild(helpSub);
+        quickSection.appendChild(helpWrapper);
+      }
+
+      // Переключатель темы
+      if (themeToggle) {
+        const themeLabel = header.querySelector('label.theme-switch');
+        if (themeLabel) {
+          const themeBtn = document.createElement('button');
+          themeBtn.className = 'mobile-menu-btn mobile-menu-action-btn';
+          themeBtn.type = 'button';
+          themeBtn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="5"></circle>
+              <line x1="12" y1="1" x2="12" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="23"></line>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+              <line x1="1" y1="12" x2="3" y2="12"></line>
+              <line x1="21" y1="12" x2="23" y2="12"></line>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+            <span>${themeToggle.checked ? 'Светлая тема' : 'Тёмная тема'}</span>
+          `;
+          themeBtn.addEventListener('click', () => {
+            themeToggle.checked = !themeToggle.checked;
+            themeToggle.dispatchEvent(new Event('change', { bubbles: true }));
+            const span = themeBtn.querySelector('span');
+            if (span) {
+              span.textContent = themeToggle.checked ? 'Светлая тема' : 'Тёмная тема';
+            }
+          });
+          quickSection.appendChild(themeBtn);
+        }
+      }
+
+      mobileMenu.appendChild(quickSection);
+    }
+
     // Секция предприятий
     const enterpriseNav = header.querySelector('.enterprise-nav');
     if (enterpriseNav) {
@@ -102,56 +246,6 @@ const MobileNav = {
       });
 
       mobileMenu.appendChild(enterpriseSection);
-    }
-
-    // Секция действий
-    const actionsSection = document.createElement('div');
-    actionsSection.className = 'mobile-menu-section';
-
-    // Переключатель темы
-    const themeToggle = header.querySelector('#themeToggle');
-    if (themeToggle) {
-      const themeLabel = header.querySelector('label.theme-switch');
-      if (themeLabel) {
-        const themeBtn = document.createElement('button');
-        themeBtn.className = 'mobile-menu-btn mobile-menu-action-btn';
-        themeBtn.type = 'button';
-        themeBtn.innerHTML = `
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="5"></circle>
-            <line x1="12" y1="1" x2="12" y2="3"></line>
-            <line x1="12" y1="21" x2="12" y2="23"></line>
-            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-            <line x1="1" y1="12" x2="3" y2="12"></line>
-            <line x1="21" y1="12" x2="23" y2="12"></line>
-            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-          </svg>
-          <span>${themeToggle.checked ? 'Светлая тема' : 'Тёмная тема'}</span>
-        `;
-        themeBtn.addEventListener('click', () => {
-          themeToggle.checked = !themeToggle.checked;
-          themeToggle.dispatchEvent(new Event('change', { bubbles: true }));
-          // Обновляем текст кнопки
-          const span = themeBtn.querySelector('span');
-          if (span) {
-            span.textContent = themeToggle.checked ? 'Светлая тема' : 'Тёмная тема';
-          }
-        });
-        actionsSection.appendChild(themeBtn);
-      }
-    }
-
-    // Добавляем разделитель только если есть элементы в actionsSection
-    if (actionsSection.children.length > 0) {
-      // Разделитель перед секцией действий (если есть предприятия)
-      if (enterpriseNav && enterpriseNav.querySelectorAll('button').length > 0) {
-        const divider1 = document.createElement('div');
-        divider1.className = 'mobile-menu-divider';
-        mobileMenu.appendChild(divider1);
-      }
-      mobileMenu.appendChild(actionsSection);
     }
 
     // Секция пользователя

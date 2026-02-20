@@ -56,8 +56,14 @@
     };
 
     // Слушаем изменения всех полей формы
-    form.addEventListener('input', debouncedSave);
-    form.addEventListener('change', debouncedSave);
+    form.addEventListener('input', function () {
+      clearValidationErrors();
+      debouncedSave();
+    });
+    form.addEventListener('change', function () {
+      clearValidationErrors();
+      debouncedSave();
+    });
   }
 
   /**
@@ -355,7 +361,9 @@
    * Переключение между вкладками
    * @param {string} tabId - ID вкладки
    */
-  function switchTab(tabId) {
+  function switchTab(tabId, options = {}) {
+    const scrollToTop = options.scrollToTop !== false;
+
     // Переключение на вкладку
 
     // Сохраняем данные текущей вкладки
@@ -378,10 +386,12 @@
     if (tabContent) {
       tabContent.classList.add('active');
 
-      // Скроллим к верху контента
-      const modalBody = document.querySelector('#addTechPanel .modal-body');
-      if (modalBody) {
-        modalBody.scrollTop = 0;
+      // Скроллим к верху только при явном переключении вкладки пользователем, не при программном (например, при снятии вкладок предприятий)
+      if (scrollToTop) {
+        const modalBody = document.querySelector('#addTechPanel .modal-body');
+        if (modalBody) {
+          modalBody.scrollTop = 0;
+        }
       }
     }
 
@@ -405,9 +415,9 @@
     // Удаляем из хранилища
     enterpriseTabs.delete(enterpriseName);
 
-    // Если удалили активную вкладку, переключаемся на общую информацию
+    // Если удалили активную вкладку, переключаемся на общую информацию (без сброса прокрутки, чтобы не выкидывать пользователя наверх)
     if (activeTab === `enterprise-${enterpriseName}`) {
-      switchTab('general-info');
+      switchTab('general-info', { scrollToTop: false });
     }
   }
 
@@ -422,8 +432,8 @@
       removeEnterpriseTab(name);
     });
 
-    // Переключаемся на общую информацию
-    switchTab('general-info');
+    // Переключаемся на общую информацию без сброса прокрутки (чтобы не выкидывать пользователя наверх при галочке "применима в холдинге")
+    switchTab('general-info', { scrollToTop: false });
   }
 
   /**
@@ -609,45 +619,53 @@
 
   /**
    * Валидация данных формы
-   * @returns {Object} { valid: boolean, errors: string[] }
+   * @returns {Object} { valid: boolean, errors: string[], fieldErrors: Object.<string, string> }
    */
   function validateForm() {
     const errors = [];
+    const fieldErrors = {};
 
     // Проверяем обязательные поля на вкладке "Общая информация"
     const techName = document.getElementById('techName');
     if (!techName || !techName.value.trim()) {
       errors.push('Заполните поле "Название"');
+      fieldErrors.techName = 'Заполните поле "Название"';
     }
 
     const techDirections = document.getElementById('techDirections');
     if (!techDirections || !techDirections.value.trim()) {
       errors.push('Выберите "Направления цифрового развития"');
+      fieldErrors.techDirections = 'Выберите "Направления цифрового развития"';
     }
 
     const techBlock = document.getElementById('techBlock');
     if (!techBlock || !techBlock.value.trim()) {
       errors.push('Выберите "Функциональный блок"');
+      fieldErrors.techBlock = 'Выберите "Функциональный блок"';
     }
 
     const techFunc = document.getElementById('techFunc');
     if (!techFunc || !techFunc.value.trim()) {
       errors.push('Выберите "Функцию"');
+      fieldErrors.techFunc = 'Выберите "Функцию"';
     }
 
     const techTrlStage = document.getElementById('techTrlStage');
     if (!techTrlStage || !techTrlStage.value.trim()) {
       errors.push('Выберите "TRL (стадия готовности технологии)"');
+      fieldErrors.techTrlStage = 'Выберите "TRL (стадия готовности технологии)"';
     }
 
     const techFuncCover = document.getElementById('techFuncCover');
-    if (!techFuncCover || !techFuncCover.value.trim()) {
+    if (!techFuncCover || !techFuncCover.value.trim() || techFuncCover.value.trim() === '—') {
       errors.push('Выберите "Покрытие функций"');
+      fieldErrors.techFuncCover = 'Выберите "Покрытие функций"';
     }
 
     const techDesc = document.getElementById('techDesc');
     if (!techDesc || !techDesc.value.trim()) {
       errors.push('Заполните поле "Описание"');
+      fieldErrors.techDesc = 'Заполните поле "Описание"';
     }
 
     // Проверяем поле "Область применения"
@@ -658,12 +676,57 @@
 
     if (!holdingWideChecked && !companiesSelected) {
       errors.push('Отметьте "Применима в холдинге" или выберите конкретные предприятия');
+      fieldErrors.techCompany = 'Отметьте "Применима в холдинге" или выберите конкретные предприятия';
     }
 
     return {
       valid: errors.length === 0,
-      errors: errors
+      errors: errors,
+      fieldErrors: fieldErrors
     };
+  }
+
+  /**
+   * Показать подсветку и сообщения об ошибках у незаполненных полей в модальном окне
+   * @param {Object.<string, string>} fieldErrors - объект fieldId -> сообщение об ошибке
+   */
+  function showValidationErrors(fieldErrors) {
+    if (!fieldErrors || typeof fieldErrors !== 'object') return;
+    clearValidationErrors();
+    const addModal = document.getElementById('addTechPanel');
+    if (!addModal) return;
+    for (const [fieldId, message] of Object.entries(fieldErrors)) {
+      const errorElId = fieldId + 'Error';
+      const errorEl = document.getElementById(errorElId);
+      const fieldEl = document.getElementById(fieldId);
+      const formGroup = fieldEl ? fieldEl.closest('.form-group') : addModal.querySelector('[data-field="' + fieldId + '"]');
+      const group = formGroup ? formGroup.closest('.form-group') : null;
+      const targetGroup = group || (fieldEl && fieldEl.closest('.form-group'));
+      if (targetGroup) {
+        targetGroup.classList.add('has-error');
+      }
+      if (errorEl) {
+        errorEl.textContent = message;
+        errorEl.classList.add('visible');
+        errorEl.setAttribute('aria-live', 'polite');
+      }
+    }
+    switchTab('general-info');
+  }
+
+  /**
+   * Снять подсветку и скрыть сообщения об ошибках валидации
+   */
+  function clearValidationErrors() {
+    const addModal = document.getElementById('addTechPanel');
+    if (!addModal) return;
+    addModal.querySelectorAll('.form-group.has-error').forEach(function (el) {
+      el.classList.remove('has-error');
+    });
+    addModal.querySelectorAll('.field-error-message.visible').forEach(function (el) {
+      el.classList.remove('visible');
+      el.textContent = '';
+    });
   }
 
   /**
@@ -671,6 +734,7 @@
    */
   function resetForm() {
     // Сброс формы
+    clearValidationErrors();
 
     // Очищаем все вкладки предприятий
     clearAllEnterpriseTabs();
@@ -694,6 +758,8 @@
     loadFormState: loadFormState,
     clearFormState: clearFormState,
     validateForm: validateForm,
+    showValidationErrors: showValidationErrors,
+    clearValidationErrors: clearValidationErrors,
     resetForm: resetForm,
     getActiveTabs: () => Array.from(enterpriseTabs.keys()),
     getActiveTab: () => activeTab

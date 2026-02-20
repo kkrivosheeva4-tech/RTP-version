@@ -15,7 +15,7 @@
 
   function checkAdminAccess() {
     var role = localStorage.getItem('role');
-    if (role !== 'admin' && role !== 'architect') {
+    if (role !== 'admin') {
       if (typeof window.AdminCommon !== 'undefined' && window.AdminCommon.showNotification) {
         window.AdminCommon.showNotification('Ошибка доступа', 'У вас нет прав для доступа к админ панели', 'error');
       }
@@ -147,14 +147,6 @@
     });
     common.initializeEnhancedSelects();
     initializeNavigation();
-    if (window.MobileNav && typeof window.MobileNav.init === 'function') {
-      window.MobileNav.init();
-      window.addEventListener('resize', function () {
-        if (window.MobileNav && typeof window.MobileNav.handleResize === 'function') {
-          window.MobileNav.handleResize();
-        }
-      });
-    }
     loadAdminDataFromStorage();
     window.addAdminAuditLog = addAdminAuditLog;
     if (typeof window.appendAdminAudit === 'function') {

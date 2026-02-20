@@ -7,7 +7,7 @@
 
 ## Критичные
 
-### 1. Дублирующиеся блоки `#addChoicePopover` в radar.html
+### 1. Дублирующиеся блоки `#addChoicePopover` в radar.html ✅ Выполнено
 
 **Файл:** `src/pages/radar.html`  
 

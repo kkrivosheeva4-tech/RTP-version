@@ -677,18 +677,38 @@
       // ПРИНУДИТЕЛЬНО устанавливаем стили для показа панели через inline стили с !important
       // Это необходимо, так как CSS может быть переопределен другими правилами
       // Используем setProperty с 'important' для гарантированного применения
+      // Проверяем ширину экрана для определения правильного позиционирования
+      const isMobile = window.innerWidth <= 699;
+      
       detailPanel.style.setProperty('visibility', 'visible', 'important');
       detailPanel.style.setProperty('opacity', '1', 'important');
-      detailPanel.style.setProperty('transform', 'translateX(0)', 'important');
       detailPanel.style.setProperty('position', 'fixed', 'important');
       detailPanel.style.setProperty('z-index', '10002', 'important');
+      
+      // Для мобильных устройств используем центрирование, для десктопа - справа
+      if (isMobile) {
+        detailPanel.style.setProperty('top', '50%', 'important');
+        detailPanel.style.setProperty('left', '50%', 'important');
+        detailPanel.style.setProperty('right', 'auto', 'important');
+        detailPanel.style.setProperty('transform', 'translate(-50%, -50%) scale(1)', 'important');
+      } else {
+        detailPanel.style.setProperty('transform', 'translateX(0)', 'important');
+      }
 
       // Также устанавливаем через обычные свойства для совместимости
       detailPanel.style.visibility = 'visible';
       detailPanel.style.opacity = '1';
-      detailPanel.style.transform = 'translateX(0)';
       detailPanel.style.position = 'fixed';
       detailPanel.style.zIndex = '10002';
+      
+      if (isMobile) {
+        detailPanel.style.top = '50%';
+        detailPanel.style.left = '50%';
+        detailPanel.style.right = 'auto';
+        detailPanel.style.transform = 'translate(-50%, -50%) scale(1)';
+      } else {
+        detailPanel.style.transform = 'translateX(0)';
+      }
 
       // Проверяем, что панель действительно видна
       const computedStyle = window.getComputedStyle(detailPanel);
@@ -713,21 +733,38 @@
 
         if (isHidden) {
           // Принудительно показываем через inline стили с !important через setProperty
+          const isMobileCheck = window.innerWidth <= 699;
           detailPanel.style.setProperty('visibility', 'visible', 'important');
           detailPanel.style.setProperty('opacity', '1', 'important');
-          detailPanel.style.setProperty('transform', 'translateX(0)', 'important');
+          if (isMobileCheck) {
+            detailPanel.style.setProperty('top', '50%', 'important');
+            detailPanel.style.setProperty('left', '50%', 'important');
+            detailPanel.style.setProperty('right', 'auto', 'important');
+            detailPanel.style.setProperty('transform', 'translate(-50%, -50%) scale(1)', 'important');
+          } else {
+            detailPanel.style.setProperty('transform', 'translateX(0)', 'important');
+          }
         } else {
           // Проверяем финальное состояние панели
           const finalRect = detailPanel.getBoundingClientRect();
+          const isMobileCheck = window.innerWidth <= 699;
           const isInViewport = finalRect.top >= 0 &&
             finalRect.left >= 0 &&
             finalRect.right <= window.innerWidth &&
             finalRect.bottom <= window.innerHeight;
 
           // Если панель не в видимой области, принудительно позиционируем
-          if (!isInViewport && (finalRect.right > window.innerWidth || finalRect.left < 0)) {
-            detailPanel.style.right = '16px';
-            detailPanel.style.left = 'auto';
+          // Для мобильных устройств центрируем, для десктопа - справа
+          if (!isInViewport) {
+            if (isMobileCheck) {
+              detailPanel.style.setProperty('top', '50%', 'important');
+              detailPanel.style.setProperty('left', '50%', 'important');
+              detailPanel.style.setProperty('right', 'auto', 'important');
+              detailPanel.style.setProperty('transform', 'translate(-50%, -50%) scale(1)', 'important');
+            } else if (finalRect.right > window.innerWidth || finalRect.left < 0) {
+              detailPanel.style.right = '16px';
+              detailPanel.style.left = 'auto';
+            }
           }
         }
       }, 50);
@@ -1008,10 +1045,50 @@
     return labels[fieldName] || fieldName;
   }
 
+  /**
+   * Обновляет позиционирование панели при изменении размера окна
+   */
+  function updateDetailPanelPosition() {
+    const detailPanel = getDOMElement('detailPanel');
+    if (!detailPanel || !detailPanel.classList.contains('active')) {
+      return;
+    }
+
+    const isMobile = window.innerWidth <= 699;
+    
+    if (isMobile) {
+      detailPanel.style.setProperty('top', '50%', 'important');
+      detailPanel.style.setProperty('left', '50%', 'important');
+      detailPanel.style.setProperty('right', 'auto', 'important');
+      detailPanel.style.setProperty('transform', 'translate(-50%, -50%) scale(1)', 'important');
+      detailPanel.style.top = '50%';
+      detailPanel.style.left = '50%';
+      detailPanel.style.right = 'auto';
+      detailPanel.style.transform = 'translate(-50%, -50%) scale(1)';
+    } else {
+      detailPanel.style.setProperty('transform', 'translateX(0)', 'important');
+      detailPanel.style.transform = 'translateX(0)';
+      // Убираем центрирование для десктопа
+      detailPanel.style.top = '';
+      detailPanel.style.left = '';
+      detailPanel.style.right = '';
+    }
+  }
+
+  // Обработчик изменения размера окна для обновления позиционирования панели
+  let resizeTimeout;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      updateDetailPanelPosition();
+    }, 150);
+  });
+
   // Экспорт функций в window для обратной совместимости
   window.showDetail = showDetail;
   window.getFieldValue = getFieldValue;
   window.getFieldLabel = getFieldLabel;
+  window.updateDetailPanelPosition = updateDetailPanelPosition;
 
   // Экспорт в объект для модульной структуры (опционально)
   window.DetailPanel = {

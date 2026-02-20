@@ -128,41 +128,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     })();
 
-    // Обработчик кнопки "Войти как гость"
-    const guestBtn = document.getElementById('guestBtn');
-    if (guestBtn) {
-        guestBtn.addEventListener('click', function() {
-            // Логируем вход как гость (если пользователь выбирает гостевой режим)
-            try {
-                let ok = false;
-                if (typeof window.appendAdminAudit === 'function') {
-                    ok = !!window.appendAdminAudit('login', 'Вход как гость');
-                }
-                if (!ok) {
-                    const key = 'adminAuditLogs';
-                    const raw = localStorage.getItem(key);
-                    const list = raw ? (JSON.parse(raw) || []) : [];
-                    const arr = Array.isArray(list) ? list : [];
-                    const now = getAuditTimestampLocal();
-                    const nextId = arr.length > 0 ? (Math.max(...arr.map(x => Number(x && x.id) || 0)) + 1) : 1;
-                    arr.unshift({
-                        id: nextId,
-                        date: now,
-                        user: 'guest',
-                        action: 'login',
-                        details: 'Вход как гость',
-                        tz: 'local',
-                        ip: 'local'
-                    });
-                    localStorage.setItem(key, JSON.stringify(arr));
-                }
-            } catch (err) {
-                if (window.Logger) window.Logger.warn('Ошибка при логировании входа гостя:', err);
-            }
-            // Перенаправляем на основное приложение без авторизации
-            window.location.href = 'index.html';
-        });
-    }
     // Обработка формы входа
     const form = document.getElementById('loginForm');
     if (form) {

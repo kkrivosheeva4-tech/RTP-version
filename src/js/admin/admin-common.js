@@ -155,8 +155,7 @@
       'architect': 'Архитектор',
       'director': 'Директор',
       'project_manager': 'Руководитель проекта',
-      'analyst': 'Аналитик',
-      'guest': 'Гость'
+      'analyst': 'Аналитик'
     };
     return roles[role] || role;
   }

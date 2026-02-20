@@ -421,7 +421,7 @@
       <div id="qpList" class="qp-list"></div>
     </div>
   </div>
-
+  <!-- Окно добавления технологии -->
   <div id="addTechPanel" class="modal-panel tabbed-modal">
     <div class="modal-header">
       <h2>Добавить технологию</h2>
@@ -441,7 +441,7 @@
           <span>Общая информация</span>
         </button>
         <div id="enterpriseTabsContainer" class="enterprise-tabs">
-          <!-- Динамические вкладки предприятий будут добавляться здесь -->
+          <!-- Вкладки предприятий (кнопки). Заполняются через TechTabsManager. -->
         </div>
       </div>
     </div>
@@ -492,6 +492,7 @@
               <ul class="select-options"></ul>
             </div>
             <input type="hidden" id="techDirections" name="techDirections" required />
+            <span class="field-error-message" id="techDirectionsError" role="alert" aria-live="polite"></span>
           </div>
           <div class="form-group">
             <label>Функциональный блок
@@ -518,6 +519,7 @@
               <ul class="select-options"></ul>
             </div>
             <input type="hidden" id="techBlock" name="techBlock" required />
+            <span class="field-error-message" id="techBlockError" role="alert" aria-live="polite"></span>
           </div>
           <div class="form-group">
             <label>Функция
@@ -544,6 +546,7 @@
               <ul class="select-options"></ul>
             </div>
             <input type="hidden" id="techFunc" name="techFunc" required />
+            <span class="field-error-message" id="techFuncError" role="alert" aria-live="polite"></span>
           </div>
           <div class="form-group">
             <label>TRL (стадия готовности технологии)
@@ -574,6 +577,7 @@
               </ul>
             </div>
             <input type="hidden" id="techTrlStage" name="techTrlStage" required />
+            <span class="field-error-message" id="techTrlStageError" role="alert" aria-live="polite"></span>
           </div>
           <div class="form-group">
             <label>Покрытие функций
@@ -588,6 +592,7 @@
               </span>
             </label>
             <input type="text" id="techFuncCover" name="techFuncCover" readonly class="readonly-field" value="—" />
+            <span class="field-error-message" id="techFuncCoverError" role="alert" aria-live="polite"></span>
           </div>
           <div class="form-group">
             <label>Описание
@@ -603,6 +608,7 @@
               <span class="required-star" data-tooltip="Это поле является обязательным">*</span>
             </label>
             <textarea id="techDesc" rows="4" required></textarea>
+            <span class="field-error-message" id="techDescError" role="alert" aria-live="polite"></span>
           </div>
           <div class="form-group">
             <label>Выбор предприятий
@@ -643,6 +649,7 @@
                 <input type="hidden" id="techCompany" name="techCompany" />
               </div>
             </div>
+            <span class="field-error-message" id="techCompanyError" role="alert" aria-live="polite"></span>
           </div>
 
           <!-- Необязательные поля -->
@@ -737,19 +744,23 @@
           </div>
         </div>
         <!-- Конец вкладки "Общая информация" -->
-
-        <!-- Динамические вкладки предприятий будут добавляться здесь через JavaScript -->
+        <!-- Контент вкладок предприятий. Заполняется через TechTabsManager. -->
         <div id="enterpriseTabsContent"></div>
 
       </form>
     </div>
     <div class="form-actions">
-      <button type="submit" form="addTechForm" class="btn-primary btn-with-icon" id="submitAddTech">
+      <button type="submit" form="addTechForm" class="btn-primary btn-with-icon" id="submitAddTech" data-default-text="Добавить технологию">
         <svg class="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"
             stroke-linejoin="round" />
         </svg>
-        <span>Добавить технологию</span>
+        <span class="btn-loading-spinner" aria-hidden="true">
+          <svg class="btn-loading-spinner-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <circle class="btn-spinner-arc" cx="8" cy="8" r="6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="9 29" fill="none" />
+          </svg>
+        </span>
+        <span class="btn-text">Добавить технологию</span>
       </button>
       <button type="button" id="cancelAdd" class="btn-secondary btn-with-icon">
         <svg class="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -786,7 +797,7 @@
           <span>Общая информация</span>
         </button>
         <div id="editEnterpriseTabsContainer" class="enterprise-tabs">
-          <!-- Динамические вкладки предприятий будут добавляться здесь -->
+          <!-- Вкладки предприятий (кнопки). Заполняются через EditTechTabsManager. -->
         </div>
       </div>
     </div>
@@ -1085,18 +1096,23 @@
         </div>
         <!-- Конец вкладки "Общая информация" -->
 
-        <!-- Динамические вкладки предприятий будут добавляться здесь через JavaScript -->
+        <!-- Контент вкладок предприятий. Заполняется через EditTechTabsManager. -->
         <div id="editEnterpriseTabsContent"></div>
 
       </form>
     </div>
     <div class="form-actions">
-      <button type="submit" form="editTechForm" class="btn-primary btn-with-icon">
+      <button type="submit" form="editTechForm" class="btn-primary btn-with-icon" id="submitEditTech" data-default-text="Сохранить">
         <svg class="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M13.5 4.5L6 12L2.5 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"
             stroke-linejoin="round" />
         </svg>
-        <span>Сохранить</span>
+        <span class="btn-loading-spinner" aria-hidden="true">
+          <svg class="btn-loading-spinner-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <circle class="btn-spinner-arc" cx="8" cy="8" r="6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="9 29" fill="none" />
+          </svg>
+        </span>
+        <span class="btn-text">Сохранить</span>
       </button>
       <button type="button" id="cancelEdit" class="btn-secondary btn-with-icon">
         <svg class="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1112,40 +1128,6 @@
       <div class="spinner"></div>
       <span>Сохранение...</span>
     </div>
-  </div>
-
-  <div id="addChoicePopover" class="popover-menu hidden">
-    <button id="chooseAddTech" class="btn-primary btn-with-icon">
-      <svg class="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-          stroke-linejoin="round" />
-      </svg>
-      <span>Добавить новую технологию</span>
-    </button>
-    <button id="chooseAddBlock" class="btn-secondary btn-with-icon">
-      <svg class="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5" />
-        <path d="M5 8h6M8 5v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-      </svg>
-      <span>Добавить функциональный блок</span>
-    </button>
-  </div>
-
-  <div id="addChoicePopover" class="popover-menu hidden">
-    <button id="chooseAddTech" class="btn-primary btn-with-icon">
-      <svg class="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-          stroke-linejoin="round" />
-      </svg>
-      <span>Добавить новую технологию</span>
-    </button>
-    <button id="chooseAddBlock" class="btn-secondary btn-with-icon">
-      <svg class="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.5" />
-        <path d="M5 8h6M8 5v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-      </svg>
-      <span>Добавить функциональный блок</span>
-    </button>
   </div>
 
   <div id="addChoicePopover" class="popover-menu hidden">
@@ -1193,11 +1175,7 @@
               </svg>
             </div>
             <ul class="select-options">
-              <li data-value="Единый центр данных (Data Hub)">Единый центр данных (Data Hub)</li>
-              <li data-value="Искусственный интеллект во всех процессах">Искусственный интеллект во всех процессах</li>
-              <li data-value="Автономные комплексы на всех предприятиях">Автономные комплексы на всех предприятиях</li>
-              <li data-value="Надёжная и безопасная цифровая инфраструктура">Надёжная и безопасная цифровая
-                инфраструктура</li>
+              <!-- Направления подгружаются из directionToQuadrant.json при открытии модального окна -->
             </ul>
           </div>
           <input type="hidden" id="blockSector" name="blockSector" required />
@@ -1477,14 +1455,19 @@
         </div>
       </div>
       <div class="form-actions">
-        <button type="button" id="exportPdfConfirm" class="btn-primary btn-with-icon">
+        <button type="button" id="exportPdfConfirm" class="btn-primary btn-with-icon" data-default-text="Экспортировать">
           <svg class="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"
             xmlns="http://www.w3.org/2000/svg">
             <path
               d="M14 10v2.667A1.333 1.333 0 0 1 12.667 14H3.333A1.333 1.333 0 0 1 2 12.667V10M4.667 6.667L8 10l3.333-3.333M8 10V2"
               stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
-          <span>Экспортировать</span>
+          <span class="btn-loading-spinner" aria-hidden="true">
+            <svg class="btn-loading-spinner-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <circle class="btn-spinner-arc" cx="8" cy="8" r="6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="9 29" fill="none" />
+            </svg>
+          </span>
+          <span class="btn-text">Экспортировать</span>
         </button>
         <button type="button" id="cancelExportPdf" class="btn-secondary btn-with-icon">
           <svg class="btn-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"
@@ -1498,8 +1481,8 @@
     </div>
   </div>
 
-  <!-- Модальное окно загрузки отчета -->
-  <div id="reportLoadingModal" class="modal-panel loading-modal hidden">
+  <!-- Модальное окно загрузки отчета (видимость управляется showModal/hideModal) -->
+  <div id="reportLoadingModal" class="modal-panel loading-modal">
     <div class="loading-modal-content">
       <div class="loading-spinner-container">
         <div class="loading-spinner" id="loadingSpinner">

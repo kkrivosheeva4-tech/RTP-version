@@ -964,8 +964,8 @@ body.dark .slider::after {
   /* По умолчанию скрыто, показывается только на мобильных */
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 34px;
+  height: 34px;
   background: transparent;
   border: 1px solid var(--accent);
   border-radius: 6px;
@@ -1679,24 +1679,30 @@ body.dark .slider::after {
     max-width: calc(100% - 40px);
   }
 
-  /* Хедер - бургер-меню вместо полной навигации */
+  /* Хедер - логотип и кнопка меню слева */
   header {
     flex-direction: row;
     flex-wrap: wrap;
     padding: 10px 15px;
     height: auto;
     min-height: var(--header-height);
+    justify-content: flex-start;
   }
 
   .logo span {
     font-size: clamp(14px, 4vw, 18px);
   }
 
+  .logo {
+    order: 1;
+  }
 
   .controls {
+    order: 2;
     gap: 10px;
-    flex: 1;
-    justify-content: flex-end;
+    flex: none;
+    justify-content: flex-start;
+    margin-left: 0;
   }
 
   /* Скрываем элементы controls на мобильных (кроме бургер-меню) */
@@ -1829,6 +1835,58 @@ body.dark .slider::after {
   /* Кнопки действий */
   .mobile-menu-action-btn {
     justify-content: flex-start;
+  }
+
+  /* Раскрывающаяся секция «Помощь» в бургер-меню */
+  .mobile-menu-help-wrapper {
+    margin-bottom: 8px;
+  }
+
+  .mobile-menu-help-wrapper .mobile-menu-btn:last-child {
+    margin-bottom: 0;
+  }
+
+  .mobile-menu-help-trigger {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .mobile-menu-help-chevron {
+    margin-left: auto;
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+  }
+
+  .mobile-menu-help-wrapper.expanded .mobile-menu-help-chevron {
+    transform: rotate(180deg);
+  }
+
+  .mobile-menu-help-sub {
+    display: none;
+    padding: 4px 0 4px 12px;
+    margin-left: 32px;
+    border-left: 2px solid var(--accent);
+    opacity: 0.9;
+  }
+
+  .mobile-menu-help-wrapper.expanded .mobile-menu-help-sub {
+    display: block;
+  }
+
+  .mobile-menu-help-sub-btn {
+    padding: 10px 14px;
+    margin-bottom: 6px;
+    font-size: 14px;
+  }
+
+  .mobile-menu-help-sub-btn:last-child {
+    margin-bottom: 0;
+  }
+
+  .mobile-menu-help-sub-btn svg {
+    width: 18px;
+    height: 18px;
   }
 
   /* Секция пользователя */

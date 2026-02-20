@@ -11,7 +11,6 @@
     ARCHITECT: 'architect',
     DIRECTOR: 'director',
     PROJECT_MANAGER: 'project_manager',
-    GUEST: 'guest',
     ANALYST: 'analyst'
   };
 
@@ -21,7 +20,6 @@
     architect: 'Архитектор',
     director: 'Директор',
     project_manager: 'Руководитель проекта',
-    guest: 'Гость',
     analyst: 'Аналитик'
   };
 
@@ -30,8 +28,7 @@
     { username: 'admin', role: ROLES.ADMIN },
     { username: 'architect', role: ROLES.ARCHITECT },
     { username: 'director', role: ROLES.DIRECTOR },
-    { username: 'project_manager', role: ROLES.PROJECT_MANAGER },
-    { username: 'guest', role: ROLES.GUEST }
+    { username: 'project_manager', role: ROLES.PROJECT_MANAGER }
   ];
 
   /**
@@ -42,8 +39,7 @@
     admin: 'admin123',
     architect: 'architect123',
     director: 'director123',
-    project_manager: 'pm123',
-    guest: 'guest123'
+    project_manager: 'pm123'
   };
 
   /**

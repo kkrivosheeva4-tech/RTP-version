@@ -156,7 +156,6 @@
 - `#username`, `#password`, `#remember`
 - `#passwordToggle` + `#eyeOn/#eyeOff` — показать/скрыть пароль
 - `#submitBtn` — кнопка входа (есть состояние «loading»)
-- `#guestBtn` — вход как гость
 - `#themeToggle`, `#iconSun`, `#iconMoon` — переключение темы на странице логина
 
 **Как работает:**
@@ -200,7 +199,7 @@
 
 **Как работает (высокоуровнево):**
 
-- проверка доступа по роли (localStorage, только `admin`/`architect`);
+- проверка доступа по роли (localStorage, только `admin`);
 - `admin.js` координирует разделы; данные читаются/пишутся через `AdminCommon` в localStorage (`adminUsers`, `adminAuditLogs`, `adminBackups` и т.д.);
 - разделы «Пользователи», «Аудит», «Экспорт», «Бэкапы», «Предприятия» реализованы в `admin/*.js`; графики — Chart.js с синхронизацией темы.
 

@@ -27,8 +27,7 @@
           { username: 'admin', role: 'admin' },
           { username: 'architect', role: 'architect' },
           { username: 'director', role: 'director' },
-          { username: 'project_manager', role: 'project_manager' },
-          { username: 'guest', role: 'guest' }
+          { username: 'project_manager', role: 'project_manager' }
         ];
     return base.map(function (u, idx) {
       return {
@@ -61,7 +60,7 @@
           id: id,
           name: (u.name != null ? String(u.name) : '').trim() || ('user-' + id),
           email: (u.email != null ? String(u.email) : '').trim() || ('user-' + id + '@local'),
-          role: (u.role != null ? String(u.role) : '').trim() || 'guest',
+          role: (u.role != null ? String(u.role) : '').trim() || 'analyst',
           status: (u.status === 'inactive' ? 'inactive' : 'active'),
           createdAt: createdAt
         };
