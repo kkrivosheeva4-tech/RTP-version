@@ -71,7 +71,7 @@
 
 ---
 
-### 6. Синхронизация state с window (legacy)
+### 6. Синхронизация state с window (legacy) ✅ Выполнено
 
 **Файл:** `src/js/modules/core/data-loader.js`
 
@@ -171,7 +171,7 @@ const [b1, f1, f2, ...] = await Promise.all([
 
 ---
 
-### 14. Дублирование кода выхода в auth
+### 14. Дублирование кода выхода в auth ✅ Выполнено
 
 **Файлы:** `src/js/auth.js`, `src/js/modules/business/auth.js`, `src/js/modules/ui/common-ui.js`
 
@@ -226,7 +226,7 @@ const [b1, f1, f2, ...] = await Promise.all([
 | 3  | Логирование в catch       | Низкая    | form-management, select-events, help, common-ui |
 | 4  | OfflineHandler removeEventListener | Средняя | offline-handler.js             |
 | 5  | XSS / escapeHtml          | Средняя   | несколько модулей              |
-| 6  | Убрать window.* sync      | Средняя   | data-loader, потребители       |
+| 6  | Убрать window.* sync      | Средняя   | data-loader, потребители ✅     |
 | 7  | Параллельная загрузка JSON| Низкая    | data-loader.js                 |
 | 8  | aria-label для qpSearchInput | Низкая | radar.html                     |
 | 9  | ContextualHints           | Низкая    | app-init.js                    |
@@ -234,7 +234,7 @@ const [b1, f1, f2, ...] = await Promise.all([
 | 11 | ErrorDisplay при loadData | Низкая    | data-loader, app-init          |
 | 12 | Разбить RMK.css           | Средняя   | RMK.css                        |
 | 13 | Unit-тесты                | Средняя   | package.json, validators, utils|
-| 14 | Вынести safeLogout        | Низкая    | auth.js, auth (business), common-ui |
+| 14 | Вынести safeLogout        | Низкая    | auth.js, auth (business), common-ui ✅ |
 | 15 | ES modules + Vite         | Высокая   | весь проект                    |
 
 ---
@@ -297,6 +297,8 @@ const [b1, f1, f2, ...] = await Promise.all([
 | 4.1 | **П.14** Вынести safeLogout | В `auth.js` (business) функция `safeLogout` уже есть. Экспортировать её в `window.AuthModule.safeLogout` и в `window.clearAuthFromStorage` (алиас). В auth.js (страница входа) и common-ui.js заменить дублирующую логику на вызов `window.AuthModule?.safeLogout()` или `window.clearAuthFromStorage?.()`. |
 | 4.2 | **П.6** Убрать window.* sync | Выбрать один ключ, например `technologies`. В data-loader убрать `window.technologies = value`. Найти все `window.technologies` в проекте (grep), заменить на `StateManager.get('technologies')` или `StateAccessors.getTechnologies()`. Повторить для `enterpriseData`, `currentEnterprise`, `blocksList`, `functions`, `nameToBlockId`, `functionToBlockMap` по одному. |
 | 4.3 | Проверка | Проверить загрузку данных, фильтры, отображение радара. |
+
+**Этап 4 завершён:** 20.02.2026 — П.14 (единый safeLogout в AuthModule, алиас clearAuthFromStorage; вызовы в auth.js, common-ui.js, admin-common.js); П.6 (убрана синхронизация window.* в data-loader; потребители переведены на StateManager/StateAccessors: detail-panel, priorities, events, filters, auto-func-cover, form-management, select-events).
 
 ---
 
