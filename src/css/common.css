@@ -348,106 +348,11 @@
 
 /* Темная тема для onboarding уже учтена через переменные */
 
-/* ===== Contextual Hints ===== */
-.contextual-hint {
-  position: fixed;
-  z-index: 10000;
-  max-width: 300px;
-  opacity: 0;
-  transform: translateY(-10px);
-  transition: opacity 0.3s ease, transform 0.3s ease;
-  pointer-events: none;
-}
-
-.contextual-hint.visible {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
-}
-
-.contextual-hint-content {
-  background: var(--modal-bg);
-  border: 1px solid var(--accent);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  padding: 12px 16px;
-  position: relative;
-  color: var(--text);
-}
-
-.contextual-hint-content::before {
-  content: '';
-  position: absolute;
-  width: 0;
-  height: 0;
-  border: 6px solid transparent;
-}
-
-.contextual-hint[data-position="top"] .contextual-hint-content::before {
-  bottom: -12px;
-  left: 20px;
-  border-top-color: var(--accent);
-}
-
-.contextual-hint[data-position="bottom"] .contextual-hint-content::before {
-  top: -12px;
-  left: 20px;
-  border-bottom-color: var(--accent);
-}
-
-.contextual-hint[data-position="left"] .contextual-hint-content::before {
-  right: -12px;
-  top: 50%;
-  transform: translateY(-50%);
-  border-left-color: var(--accent);
-}
-
-.contextual-hint[data-position="right"] .contextual-hint-content::before {
-  left: -12px;
-  top: 50%;
-  transform: translateY(-50%);
-  border-right-color: var(--accent);
-}
-
-.contextual-hint-message {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--text);
-  opacity: 0.9;
-}
-
-.contextual-hint-close {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px;
-  color: var(--text);
-  transition: color 0.2s, opacity 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.7;
-}
-
-.contextual-hint-close:hover {
-  opacity: 1;
-  color: var(--accent);
-}
-
-/* Адаптивность для onboarding и hints */
+/* Адаптивность для onboarding */
 @media (max-width: 768px) {
   .onboarding-tooltip {
     max-width: calc(100vw - 32px);
     min-width: auto;
-    margin: 16px;
-  }
-
-  .contextual-hint {
-    max-width: calc(100vw - 32px);
     margin: 16px;
   }
 }

@@ -1,0 +1,1966 @@
+/* rmk-layout.css */
+/* Layout: sidebar, header, main */
+@import url('rmk-base.css');
+
+/* ===== Боковая панель ===== */
+.sidebar-wrapper {
+  position: fixed;
+  top: 50%;
+  left: 20px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: stretch;
+  z-index: 100;
+  transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  height: calc(64vh - var(--header-height, 60px) - 40px);
+  max-height: calc(100vh - var(--header-height, 60px) - 40px);
+}
+
+.sidebar-wrapper.collapsed {
+  left: 20px;
+  transform: translateY(-50%);
+}
+
+.sidebar-wrapper.expanded {
+  left: 20px;
+  transform: translateY(-50%);
+}
+
+/* Вертикальная панель кнопок */
+.sidebar-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 8px;
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+  align-self: stretch;
+  height: fit-content;
+  min-height: calc(64vh - var(--header-height, 60px) - 40px);
+  max-height: calc(64vh - var(--header-height, 60px) - 40px);
+  transition: border-radius 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-wrapper.collapsed .sidebar-buttons {
+  border-right: 1px solid var(--accent);
+  border-radius: 8px;
+}
+
+.sidebar-icon-btn,
+.sidebar-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 10px;
+  border: 1px solid var(--input-border, #d0d0d0);
+  border-radius: 10px;
+  background: #FFF;
+  color: var(--text, #333);
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+
+.sidebar-icon-btn::before,
+.sidebar-toggle-btn::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  background: var(--gradient-sheen-light);
+  transform: translateX(-120%);
+  pointer-events: none;
+}
+
+.sidebar-icon-btn:hover,
+.sidebar-toggle-btn:hover {
+  border-color: var(--accent, #ce9068);
+  color: var(--accent, #ce9068);
+  box-shadow: var(--shadow-btn);
+  transform: translateY(-1px);
+  background: var(--gradient-btn-light);
+}
+
+.sidebar-icon-btn:hover::before,
+.sidebar-toggle-btn:hover::before {
+  animation: fileInputSheen 0.85s ease;
+}
+
+.sidebar-icon-btn:active,
+.sidebar-toggle-btn:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: var(--shadow-btn-active);
+}
+
+.sidebar-icon-btn:focus-visible,
+.sidebar-toggle-btn:focus-visible {
+  outline: none;
+  border-color: var(--accent, #ce9068);
+  box-shadow: var(--shadow-focus);
+}
+
+body.dark .sidebar-icon-btn,
+body.dark .sidebar-toggle-btn {
+  border-color: var(--input-border, #404040);
+  background: var(--gradient-btn-dark);
+  color: var(--text, #e0e0e0);
+}
+
+body.dark .sidebar-icon-btn::before,
+body.dark .sidebar-toggle-btn::before {
+  background: var(--gradient-sheen-dark);
+}
+
+body.dark .sidebar-icon-btn:hover,
+body.dark .sidebar-toggle-btn:hover {
+  border-color: var(--accent, #ce9068);
+  color: var(--accent, #ce9068);
+  box-shadow: var(--shadow-btn-dark);
+  background: var(--gradient-btn-dark);
+}
+
+/* Все кнопки сайдбара (включая «Сбросить») — единый размер и иконки */
+.sidebar-icon-btn svg,
+.sidebar-toggle-btn svg,
+#sidebarButtons .reset-button-movable svg {
+  width: 20px;
+  height: 20px;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.sidebar-toggle-btn svg {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-wrapper.collapsed .sidebar-toggle-btn svg {
+  transform: rotate(0deg);
+}
+
+.sidebar-wrapper.expanded .sidebar-toggle-btn svg {
+  transform: rotate(180deg);
+}
+
+/* Основная боковая панель */
+.sidebar {
+  position: relative;
+  width: 290px;
+  height: 100%;
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+  transform-origin: left center;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  align-self: stretch;
+}
+
+.sidebar-wrapper.collapsed .sidebar {
+  transform: translateX(-100%);
+  opacity: 0;
+  width: 0;
+  padding: 0;
+  border: none;
+  pointer-events: none;
+}
+
+.sidebar-wrapper.expanded .sidebar {
+  transform: translateX(0);
+  opacity: 1;
+  width: 270px;
+  max-width: min(270px, calc(100vw - 80px));
+  pointer-events: auto;
+}
+
+.sidebar,
+.sidebar-content {
+  overflow: auto;
+  -ms-overflow-style: none;
+  /* IE 10+ */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+.sidebar::-webkit-scrollbar,
+.sidebar-content::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.sidebar:hover::-webkit-scrollbar,
+.sidebar:focus-within::-webkit-scrollbar,
+.sidebar-content:hover::-webkit-scrollbar,
+.sidebar-content:focus-within::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.sidebar:hover::-webkit-scrollbar-thumb,
+.sidebar-content:hover::-webkit-scrollbar-thumb {
+  background: var(--accent-45);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.sidebar:hover::-webkit-scrollbar-track,
+.sidebar-content:hover::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.12) transparent;
+}
+
+.sidebar-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  padding-right: 4px;
+  min-height: 0;
+  overflow-x: hidden;
+}
+
+.search-container {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+
+.search-box {
+  width: 100%;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--input-border, #d0d0d0);
+  border-radius: 6px;
+  background: var(--input-bg, #fff);
+  color: var(--input-color);
+  font-size: 14px;
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.search-box input:hover,
+.search-box input:focus {
+  border-color: var(--accent, #ce9068);
+  outline: none;
+  box-shadow: var(--shadow-btn);
+  background: var(--gradient-btn-light);
+}
+
+body.dark .search-box input {
+  border-color: var(--input-border, #404040);
+  background: #000;
+}
+
+body.dark .search-box input:hover,
+body.dark .search-box input:focus {
+  border-color: var(--accent, #ce9068);
+  box-shadow: var(--shadow-btn-dark);
+  background: var(--gradient-btn-dark);
+}
+
+.sector-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.sector-item {
+  position: relative;
+  padding: 8px 8px 10px 8px;
+  border: 1px solid transparent;
+  transition: background-color 0.2s ease;
+}
+
+.sector-item.q1:hover {
+  background-color: var(--quadrant-bg-q1);
+}
+
+.sector-item.q2:hover {
+  background-color: var(--quadrant-bg-q2);
+}
+
+.sector-item.q3:hover {
+  background-color: var(--quadrant-bg-q3);
+}
+
+.sector-item.q4:hover {
+  background-color: var(--quadrant-bg-q4);
+}
+
+/* Сохранение цвета при зуме */
+.sector-item.q1.active {
+  background-color: var(--quadrant-bg-q1);
+}
+
+.sector-item.q2.active {
+  background-color: var(--quadrant-bg-q2);
+}
+
+.sector-item.q3.active {
+  background-color: var(--quadrant-bg-q3);
+}
+
+.sector-item.q4.active {
+  background-color: var(--quadrant-bg-q4);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: color 0.2s ease, background 0.2s ease;
+  text-align: left;
+  line-height: 1.4;
+}
+
+.sector-item::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 4px;
+  height: 2px;
+  background: var(--accent);
+  transform: scale(0);
+  transition: transform 0.25s ease;
+}
+
+.sector-item:hover {
+  background: var(--accent-06);
+}
+
+.sector-item:hover::after {
+  transform: scale(1);
+}
+
+.sector-item.active {
+  background: var(--accent-10);
+}
+
+.sector-item.active::after {
+  transform: scale(1);
+}
+
+.tech-list {
+  margin: 2px 0 4px 6px;
+  padding-left: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: max-height 280ms cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 260ms cubic-bezier(0.4, 0, 0.2, 1),
+    transform 260ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tech-list.open {
+  max-height: 260px;
+  opacity: 1;
+  transform: none;
+  overflow-y: auto;
+}
+
+.tech-list-item {
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text);
+  background: transparent;
+  transition: background 0.12s, transform 0.12s;
+  position: relative;
+  padding-bottom: 8px;
+}
+
+.tech-list-item:hover {
+  background: var(--accent-08);
+  transform: translate(2px);
+}
+
+.tech-list-item::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 2px;
+  height: 2px;
+  background: var(--accent);
+  transform: scale(0);
+  transition: transform 0.25s ease;
+}
+
+.tech-list-item:hover::after {
+  transform: scale(1);
+}
+
+.tech-list-item.selected::after {
+  transform: scale(1);
+}
+
+.tech-list-item.matched {
+  background: var(--accent);
+  font-weight: semi-bold;
+}
+
+/* Фильтры */
+.filter-panel-sidebar {
+  padding: 0;
+  background: transparent;
+  max-height: 0;
+  width: 100%;
+  overflow: hidden;
+  opacity: 0;
+  transform-origin: top;
+  transform: scaleY(0.85) translateY(-8px);
+  transition: max-height 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.filter-panel-sidebar.open {
+  max-height: 600px;
+  opacity: 1;
+  transform: scaleY(1) translateY(0);
+  position: relative;
+  /* позволяем выпадающим спискам перекрывать нижележащие элементы (сектора) */
+  overflow: visible;
+  z-index: 1;
+}
+
+#filterPanel .filter-group {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.98);
+  transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  position: relative;
+  z-index: 1;
+}
+
+/* Увеличиваем z-index для группы фильтра с открытым выпадающим списком */
+#filterPanel .filter-group:has(.custom-select.open),
+#filterPanel .filter-group.has-open-dropdown {
+  z-index: 10001;
+}
+
+#filterPanel .filter-group:last-child {
+  margin-bottom: 0;
+}
+
+#filterPanel .filter-group .custom-select {
+  flex: 1 1 auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  min-height: 40px;
+  border: 1px solid var(--input-border, #d0d0d0);
+  background: var(--input-bg, #fff);
+  border-radius: 6px;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+#filterPanel .filter-group .custom-select:hover {
+  border-color: var(--accent, #ce9068);
+}
+
+body.dark #filterPanel .filter-group .custom-select {
+  border-color: var(--input-border, #404040);
+  background: var(--input-bg);
+}
+
+body.dark #filterPanel .filter-group .custom-select:hover {
+  border-color: var(--accent, #ce9068);
+}
+
+#filterPanel.open .filter-group {
+  width: 100%;
+  opacity: 1;
+  transform: none;
+}
+
+#filterPanel.open .filter-group:nth-child(1) {
+  transition-delay: 40ms;
+}
+
+#filterPanel.open .filter-group:nth-child(2) {
+  transition-delay: 80ms;
+}
+
+#filterPanel.open .filter-group:nth-child(3) {
+  transition-delay: 120ms;
+}
+
+#filterPanel.open .filter-group:nth-child(4) {
+  transition-delay: 160ms;
+}
+
+#filterPanel.open .filter-group:nth-child(5) {
+  transition-delay: 200ms;
+}
+
+#filterPanel.open .filter-group:nth-child(6) {
+  transition-delay: 240ms;
+}
+
+/* Стили для перемещаемой кнопки "Сбросить выбор" */
+.reset-button-movable {
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), background 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Стиль кнопки в sidebar-buttons (иконка) */
+#sidebarButtons .reset-button-movable {
+  width: 44px;
+  height: 44px;
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Стиль кнопки в filterPanel (полная кнопка с текстом) */
+#resetButtonContainer .reset-button-movable {
+  width: 100%;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--input-border, #d0d0d0);
+  border-radius: 10px;
+  background: #FFF;
+  color: var(--text, #333);
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 4px;
+  height: auto;
+  user-select: none;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+  cursor: pointer;
+}
+
+#resetButtonContainer .reset-button-movable::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  background: var(--gradient-sheen-light);
+  transform: translateX(-120%);
+  pointer-events: none;
+}
+
+#resetButtonContainer .reset-button-movable:hover {
+  border-color: var(--accent, #ce9068);
+  color: var(--accent, #ce9068);
+  box-shadow: var(--shadow-btn);
+  transform: translateY(-1px);
+  background: var(--gradient-btn-light);
+}
+
+#resetButtonContainer .reset-button-movable:hover::before {
+  animation: fileInputSheen 0.85s ease;
+}
+
+#resetButtonContainer .reset-button-movable:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: var(--shadow-btn-active);
+}
+
+#resetButtonContainer .reset-button-movable:focus-visible {
+  outline: none;
+  border-color: var(--accent, #ce9068);
+  box-shadow: var(--shadow-focus);
+}
+
+body.dark #resetButtonContainer .reset-button-movable {
+  border-color: var(--input-border, #404040);
+  background: var(--gradient-btn-dark);
+  color: var(--text, #e0e0e0);
+}
+
+body.dark #resetButtonContainer .reset-button-movable::before {
+  background: var(--gradient-sheen-dark);
+}
+
+body.dark #resetButtonContainer .reset-button-movable:hover {
+  border-color: var(--accent, #ce9068);
+  color: var(--accent, #ce9068);
+  box-shadow: var(--shadow-btn-dark);
+  background: var(--gradient-btn-dark);
+}
+
+/* Скрытие/показ текста с плавной анимацией */
+.reset-button-text {
+  white-space: nowrap;
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
+  transition: opacity 0.3s ease 0.1s, width 0.3s ease 0.1s;
+}
+
+#sidebarButtons .reset-button-text {
+  display: none;
+}
+
+#resetButtonContainer .reset-button-text {
+  display: inline-block;
+  opacity: 1;
+  width: auto;
+}
+
+/* Анимация перемещения */
+.reset-button-movable.moving {
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* Стили для пустых секторов — визуально затемняем и блокируем курсор */
+.sector-item.empty {
+  opacity: 0.6;
+  cursor: not-allowed;
+  filter: grayscale(0.25);
+}
+
+.quadrant-group.empty path.quadrant-bg {
+  opacity: 0.04;
+  pointer-events: none;
+}
+
+/* Модальные панели: фиксируем header и делаем body прокручиваемым внутри панели */
+.modal-panel {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 640px;
+  max-width: calc(100% - 32px);
+  max-height: calc(100vh - 48px);
+  background: var(--modal-bg);
+  border-radius: 8px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 1100;
+}
+
+body.dark .modal-panel {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+}
+
+.modal-panel.open {
+  display: flex;
+}
+
+.modal-panel .modal-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  position: sticky;
+  top: 0;
+  background: #ce9068;
+  color: #fff;
+  z-index: 10010;
+  flex-shrink: 0;
+}
+
+body.dark .modal-panel .modal-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-panel .modal-body {
+  flex: 1;
+  min-height: 0;
+  padding: 16px;
+  padding-bottom: 0px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Специфичные стили для модальных окон добавления и редактирования технологии */
+#addTechPanel,
+#editTechPanel {
+  width: 600px;
+  height: auto;
+  max-height: calc(100vh - 48px);
+  display: none;
+  flex-direction: column;
+}
+
+#addTechPanel.open,
+#editTechPanel.open {
+  display: flex;
+}
+
+#addTechPanel .modal-body,
+#editTechPanel .modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px;
+  padding-bottom: 0px;
+}
+
+#addTechPanel .form-actions,
+#editTechPanel .form-actions {
+  flex-shrink: 0;
+  margin-top: 0;
+  padding: 12px 18px 18px 18px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  background: var(--modal-bg);
+  box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.08);
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+}
+
+body.dark #addTechPanel .form-actions,
+body.dark #editTechPanel .form-actions {
+  border-top-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.6);
+}
+
+/* Скрытие кнопок для неавторизованных пользователей */
+body.not-authorized #addTechPanel .form-actions,
+body.not-authorized #editTechPanel .form-actions {
+  display: none;
+}
+
+/* Настройка modal-body для неавторизованных пользователей */
+body.not-authorized #addTechPanel .modal-body,
+body.not-authorized #editTechPanel .modal-body {
+  padding-bottom: 5px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  margin-bottom: 0;
+}
+
+/* Обеспечиваем, что модальное окно правильно ограничивает контент снизу */
+body.not-authorized #addTechPanel,
+body.not-authorized #editTechPanel {
+  padding-bottom: 0;
+}
+
+/* Убеждаемся, что контент не выходит за границы модального окна */
+body.not-authorized #addTechPanel .modal-body>*:last-child,
+body.not-authorized #editTechPanel .modal-body>*:last-child {
+  margin-bottom: 0;
+}
+
+/* Уменьшение отступов между элементами в модальных окнах на устройствах меньше декстопа */
+@media (max-width: 1024px) {
+  #addTechPanel .modal-body .form-group,
+  #editTechPanel .modal-body .form-group {
+    margin-bottom: 12px;
+  }
+
+  #addTechPanel .modal-body .form-group label,
+  #editTechPanel .modal-body .form-group label {
+    margin-bottom: 2px !important;
+  }
+
+  /* Уменьшение отступов в контенте вкладок предприятий */
+  #addTechPanel .modal-body .enterprise-tab-content,
+  #editTechPanel .modal-body .enterprise-tab-content {
+    margin-bottom: 10px;
+  }
+
+  #addTechPanel .modal-body .enterprise-tab-content .form-group,
+  #editTechPanel .modal-body .enterprise-tab-content .form-group {
+    margin-bottom: 10px;
+  }
+
+  /* Уменьшение отступов в группах полей готовности */
+  #addTechPanel .modal-body .readiness-fields,
+  #editTechPanel .modal-body .readiness-fields {
+    gap: 10px;
+    margin-bottom: 5px;
+  }
+
+  /* Уменьшение отступов в разделителях секций */
+  #addTechPanel .modal-body .form-section-divider,
+  #editTechPanel .modal-body .form-section-divider {
+    margin: 20px 0 14px;
+  }
+
+  /* Уменьшение отступов в группах "ИЛИ" */
+  #addTechPanel .modal-body .form-group-or,
+  #editTechPanel .modal-body .form-group-or {
+    margin: 10px 0;
+  }
+
+  /* Уменьшение отступов в строках оценок */
+  #addTechPanel .modal-body .ratings-row,
+  #editTechPanel .modal-body .ratings-row {
+    gap: 10px;
+    margin-top: 6px;
+  }
+
+  /* Уменьшение размера выбранных элементов (тегов) в фильтрах */
+  #addTechPanel .modal-body .multi-tag,
+  #editTechPanel .modal-body .multi-tag {
+    padding: 3px 6px !important;
+    font-size: 12px !important;
+    gap: 4px !important;
+    margin-right: 4px !important;
+    margin-bottom: 3px !important;
+    border-radius: 12px !important;
+  }
+
+  #addTechPanel .modal-body .multi-tag .multi-tag-remove,
+  #editTechPanel .modal-body .multi-tag .multi-tag-remove {
+    font-size: 12px !important;
+    padding: 0 2px !important;
+  }
+
+  #addTechPanel .modal-body .custom-select-modal .selected-text,
+  #editTechPanel .modal-body .custom-select-modal .selected-text {
+    gap: 4px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  #addTechPanel .modal-body .form-group,
+  #editTechPanel .modal-body .form-group {
+    margin-bottom: 10px;
+  }
+
+  #addTechPanel .modal-body .form-group label,
+  #editTechPanel .modal-body .form-group label {
+    margin-bottom: 2px !important;
+  }
+
+  #addTechPanel .modal-body .form-subgroup,
+  #editTechPanel .modal-body .form-subgroup {
+    gap: 8px;
+  }
+
+  #addTechPanel .modal-body .checkbox-group,
+  #editTechPanel .modal-body .checkbox-group {
+    gap: 6px;
+  }
+
+  /* Уменьшение отступов в контенте вкладок предприятий */
+  #addTechPanel .modal-body .enterprise-tab-content,
+  #editTechPanel .modal-body .enterprise-tab-content {
+    padding: 6px 0;
+    margin-bottom: 8px;
+  }
+
+  #addTechPanel .modal-body .enterprise-tab-content .form-group,
+  #editTechPanel .modal-body .enterprise-tab-content .form-group {
+    margin-bottom: 8px;
+  }
+
+  /* Уменьшение отступов в группах полей готовности */
+  #addTechPanel .modal-body .readiness-fields,
+  #editTechPanel .modal-body .readiness-fields {
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  /* Уменьшение отступов в разделителях секций */
+  #addTechPanel .modal-body .form-section-divider,
+  #editTechPanel .modal-body .form-section-divider {
+    margin: 18px 0 12px;
+    padding: 6px 0;
+  }
+
+  /* Уменьшение отступов в группах "ИЛИ" */
+  #addTechPanel .modal-body .form-group-or,
+  #editTechPanel .modal-body .form-group-or {
+    margin: 10px 0;
+  }
+
+  /* Уменьшение отступов в строках оценок */
+  #addTechPanel .modal-body .ratings-row,
+  #editTechPanel .modal-body .ratings-row {
+    gap: 10px;
+    margin-top: 6px;
+  }
+
+  #addTechPanel .modal-body .ratings-row > div,
+  #editTechPanel .modal-body .ratings-row > div {
+    gap: 5px;
+  }
+
+  /* Уменьшение размера выбранных элементов (тегов) в фильтрах */
+  #addTechPanel .modal-body .multi-tag,
+  #editTechPanel .modal-body .multi-tag {
+    padding: 2px 5px !important;
+    font-size: 11px !important;
+    gap: 3px !important;
+    margin-right: 3px !important;
+    margin-bottom: 2px !important;
+    border-radius: 10px !important;
+  }
+
+  #addTechPanel .modal-body .multi-tag .multi-tag-remove,
+  #editTechPanel .modal-body .multi-tag .multi-tag-remove {
+    font-size: 11px !important;
+    padding: 0 2px !important;
+  }
+
+  #addTechPanel .modal-body .custom-select-modal .selected-text,
+  #editTechPanel .modal-body .custom-select-modal .selected-text {
+    gap: 3px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  #addTechPanel .modal-body .form-group,
+  #editTechPanel .modal-body .form-group {
+    margin-bottom: 8px;
+  }
+
+  #addTechPanel .modal-body .form-group label,
+  #editTechPanel .modal-body .form-group label {
+    margin-bottom: 1px !important;
+  }
+
+  #addTechPanel .modal-body .form-subgroup,
+  #editTechPanel .modal-body .form-subgroup {
+    gap: 6px;
+  }
+
+  #addTechPanel .modal-body .checkbox-group,
+  #editTechPanel .modal-body .checkbox-group {
+    gap: 5px;
+  }
+
+  /* Уменьшение отступов в контенте вкладок предприятий */
+  #addTechPanel .modal-body .enterprise-tab-content,
+  #editTechPanel .modal-body .enterprise-tab-content {
+    padding: 8px 0;
+    margin-bottom: 8px;
+  }
+
+  #addTechPanel .modal-body .enterprise-tab-content .form-group,
+  #editTechPanel .modal-body .enterprise-tab-content .form-group {
+    margin-bottom: 8px;
+  }
+
+  /* Уменьшение отступов в группах полей готовности */
+  #addTechPanel .modal-body .readiness-fields,
+  #editTechPanel .modal-body .readiness-fields {
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  /* Уменьшение отступов в разделителях секций */
+  #addTechPanel .modal-body .form-section-divider,
+  #editTechPanel .modal-body .form-section-divider {
+    margin: 16px 0 10px;
+    padding: 6px 0;
+  }
+
+  /* Уменьшение отступов в группах "ИЛИ" */
+  #addTechPanel .modal-body .form-group-or,
+  #editTechPanel .modal-body .form-group-or {
+    margin: 8px 0;
+  }
+
+  /* Уменьшение отступов в строках оценок */
+  #addTechPanel .modal-body .ratings-row,
+  #editTechPanel .modal-body .ratings-row {
+    gap: 8px;
+    margin-top: 6px;
+  }
+
+  #addTechPanel .modal-body .ratings-row > div,
+  #editTechPanel .modal-body .ratings-row > div {
+    gap: 4px;
+  }
+
+  /* Уменьшение размера выбранных элементов (тегов) в фильтрах */
+  #addTechPanel .modal-body .multi-tag,
+  #editTechPanel .modal-body .multi-tag {
+    padding: 2px 4px !important;
+    font-size: 10px !important;
+    gap: 2px !important;
+    margin-right: 2px !important;
+    margin-bottom: 2px !important;
+    border-radius: 8px !important;
+    line-height: 1.2 !important;
+  }
+
+  #addTechPanel .modal-body .multi-tag .multi-tag-remove,
+  #editTechPanel .modal-body .multi-tag .multi-tag-remove {
+    font-size: 10px !important;
+    padding: 0 1px !important;
+    line-height: 1 !important;
+  }
+
+  #addTechPanel .modal-body .custom-select-modal .selected-text,
+  #editTechPanel .modal-body .custom-select-modal .selected-text {
+    gap: 2px !important;
+  }
+}
+
+/* Встроенное окно подтверждения */
+#internalConfirm {
+  z-index: 10007;
+  /* Выше модального окна редактирования (10006) */
+}
+
+.confirm-panel .modal-header {
+  border-bottom: none;
+}
+
+.confirm-panel .modal-body {
+  padding: 24px 16px;
+  text-align: center;
+}
+
+.confirm-panel .form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding: 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  background: var(--modal-bg);
+}
+
+body.dark .confirm-panel .form-actions {
+  border-top-color: rgba(255, 255, 255, 0.15);
+}
+
+#filterPanel.closing .filter-group:nth-child(1) {
+  transition-delay: 240ms;
+}
+
+#filterPanel.closing .filter-group:nth-child(2) {
+  transition-delay: 200ms;
+}
+
+#filterPanel.closing .filter-group:nth-child(3) {
+  transition-delay: 160ms;
+}
+
+#filterPanel.closing .filter-group:nth-child(4) {
+  transition-delay: 120ms;
+}
+
+#filterPanel.closing .filter-group:nth-child(5) {
+  transition-delay: 80ms;
+}
+
+#filterPanel.closing .filter-group:nth-child(6) {
+  transition-delay: 40ms;
+}
+
+/* === Стили кастомных выпадающих списков === */
+.custom-select,
+.modal-body .custom-select-modal {
+  position: relative;
+  display: block;
+  width: 100%;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  background: var(--input-bg);
+  color: var(--input-color);
+  font-size: 14px;
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.custom-select:focus,
+.modal-body .custom-select-modal:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.custom-select .select-trigger,
+.modal-body .custom-select-modal .select-trigger {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  width: 100%;
+}
+
+#filterPanel .filter-group .custom-select .select-trigger {
+  flex: 1 1 auto;
+  height: 100%;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  background: var(--input-bg, #fff);
+  border-radius: 6px;
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#filterPanel .filter-group .custom-select .select-trigger:hover,
+#filterPanel .filter-group .custom-select .select-trigger:focus {
+  border-color: var(--accent, #ce9068);
+  outline: none;
+  box-shadow: var(--shadow-btn);
+  background: var(--gradient-btn-light);
+}
+
+body.dark #filterPanel .filter-group .custom-select .select-trigger {
+  border-color: var(--input-border, #404040);
+  background: var(--input-bg);
+}
+
+body.dark #filterPanel .filter-group .custom-select .select-trigger:hover,
+body.dark #filterPanel .filter-group .custom-select .select-trigger:focus {
+  border-color: var(--accent, #ce9068);
+  box-shadow: var(--shadow-btn-dark);
+  background: var(--gradient-btn-dark);
+}
+
+.custom-select .select-trigger:hover,
+.modal-body .custom-select-modal .select-trigger:hover {
+  background: var(--accent-08);
+}
+
+body.dark .custom-select .select-trigger:hover,
+body.dark .modal-body .custom-select-modal .select-trigger:hover {
+  background: var(--accent-15);
+}
+
+.custom-select .arrow,
+.modal-body .custom-select-modal .arrow {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  transition: transform 0.2s ease;
+}
+
+.custom-select .arrow svg,
+.modal-body .custom-select-modal .arrow svg {
+  width: 12px;
+  height: 12px;
+}
+
+.custom-select .arrow svg path,
+.modal-body .custom-select-modal .arrow svg path {
+  stroke: var(--muted);
+  transition: stroke 0.2s ease;
+}
+
+body.dark .custom-select .arrow svg path,
+body.dark .modal-body .custom-select-modal .arrow svg path {
+  stroke: var(--muted);
+}
+
+.custom-select.open .arrow,
+.modal-body .custom-select-modal.open .arrow {
+  transform: rotate(180deg);
+}
+
+.custom-select .select-options,
+.modal-body .custom-select-modal .select-options {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  width: 100%;
+  min-width: 0;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  z-index: 10000;
+  /* повысим чтобы выпадалки были поверх радара и модальных окон */
+  max-height: 320px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: none;
+  color: var(--text);
+  box-sizing: border-box;
+}
+
+#filterPanel .custom-select .select-options {
+  /* Непрозрачный фон (без градиента) */
+  background: var(--input-bg, #fff);
+  border: 1px solid var(--input-border, #d0d0d0);
+  z-index: 10002;
+  /* Выше родительской группы фильтра */
+}
+
+body.dark #filterPanel .custom-select .select-options {
+  border-color: var(--input-border, #404040);
+  /* Непрозрачный фон (без градиента) */
+  background: var(--input-bg, #000);
+}
+
+/* Убеждаемся, что выпадающий список вендоров виден */
+.vendor-header .vendor-select {
+  position: relative !important;
+  /* Для правильного позиционирования выпадающего списка */
+  overflow: visible !important;
+  /* Убеждаемся, что список не обрезается */
+}
+
+.vendor-item {
+  overflow: visible !important;
+  /* Убеждаемся, что список не обрезается на уровне vendor-item */
+}
+
+.vendor-header .vendor-select .select-options {
+  z-index: 10008 !important;
+  /* Выше всех панелей, модальных окон, иконок подсказок и кнопок */
+  position: absolute !important;
+  /* Возвращаемся к absolute для правильного позиционирования */
+  top: calc(100% + 6px) !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  display: none !important;
+  /* По умолчанию скрыт */
+  visibility: hidden !important;
+  opacity: 0 !important;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  max-height: 320px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 0;
+  box-sizing: border-box;
+  /* Убираем transition для мгновенного отображения */
+  transition: none !important;
+}
+
+body.dark .vendor-header .vendor-select .select-options {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+.vendor-header .vendor-select.open .select-options,
+.vendor-header .vendor-select[class*="open"] .select-options {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  /* Принудительно применяем все стили для мгновенного отображения */
+  pointer-events: auto;
+  /* Убеждаемся, что список виден */
+  transform: none !important;
+  max-height: 320px !important;
+}
+
+/* Общее правило для модальных селектов (но вендоры имеют более специфичное правило выше) */
+body.dark .custom-select .select-options,
+body.dark .modal-body .custom-select-modal .select-options {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+.custom-select.open .select-options,
+.modal-body .custom-select-modal.open .select-options {
+  display: block;
+}
+
+/* Специальное правило для селектов вендоров в модальных окнах - более специфичное */
+.modal-body .vendor-header .vendor-select.open .select-options,
+.modal-panel .vendor-header .vendor-select.open .select-options {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  z-index: 10007 !important;
+}
+
+/* Скрываем значки подсказки в выпадающих списках */
+.custom-select .select-options li .info-tooltip,
+.modal-body .custom-select-modal .select-options li .info-tooltip,
+.custom-select-modal .select-options li .info-tooltip {
+  display: none;
+}
+
+.custom-select .select-options li,
+.modal-body .custom-select-modal .select-options li {
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  color: var(--text);
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* Элементы с чекбоксами в фильтрах sidebar */
+.custom-select .select-options li.select-option-item,
+.custom-select .select-options li.select-all-option {
+  display: flex;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+  /* Ниже поля поиска (z-index: 20) */
+}
+
+.custom-select .select-options .option-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  cursor: pointer;
+  position: relative;
+}
+
+.custom-select .select-options .option-label input[type="checkbox"] {
+  pointer-events: auto;
+  z-index: 10 !important;
+}
+
+.custom-select .select-options .option-label span {
+  cursor: pointer;
+  flex: 1;
+}
+
+.custom-select .select-options .option-label input[type="checkbox"] {
+  pointer-events: auto;
+  z-index: 2;
+}
+
+.custom-select .select-options input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  min-height: 16px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+  transform: scale(0.75);
+  transform-origin: left center;
+  position: relative;
+  z-index: 10;
+  pointer-events: auto;
+  opacity: 1;
+}
+
+.custom-select .select-options li.select-all-option {
+  border-bottom: 1px solid var(--input-border);
+  margin-bottom: 4px;
+}
+
+.custom-select .select-options li.select-all-option span {
+  font-weight: 600;
+}
+
+/* Элементы с чекбоксами в модальных селектах (Блок и Функция) */
+.custom-select-modal .select-options li.select-option-item,
+.custom-select-modal .select-options li.select-all-option {
+  display: flex;
+  align-items: center;
+}
+
+.custom-select-modal .select-options .option-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  cursor: pointer;
+  user-select: none;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.custom-select-modal .select-options .option-label input[type="checkbox"] {
+  pointer-events: auto;
+  z-index: 2;
+}
+
+.custom-select-modal .select-options .option-label span {
+  cursor: pointer;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.custom-select-modal .select-options input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  min-height: 16px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+  transform: scale(0.75);
+  transform-origin: left center;
+  position: relative;
+  z-index: 10;
+  pointer-events: auto;
+  -webkit-appearance: checkbox;
+  appearance: checkbox;
+}
+
+.custom-select-modal .select-options li.select-all-option {
+  border-bottom: 1px solid var(--input-border);
+  margin-bottom: 4px;
+  padding-bottom: 10px;
+}
+
+.custom-select-modal .select-options li.select-all-option span {
+  font-weight: 600;
+}
+
+/* Стили для опции "Добавить новый" */
+.custom-select-modal .select-options li.add-new-option {
+  padding: 8px;
+  border-top: 1px solid var(--input-border);
+  margin-top: 4px;
+  background: var(--input-bg);
+}
+
+.custom-select-modal .select-options li.add-new-option:hover {
+  background: var(--input-bg);
+}
+
+.custom-select-modal .select-options .add-new-option .field-error-message,
+.add-new-vendor-option .field-error-message,
+.add-new-integrator-option .field-error-message {
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.add-new-option-content {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.custom-select-modal .select-options .add-new-input {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  background: var(--input-bg);
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.custom-select-modal .select-options .add-new-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-10);
+}
+
+.custom-select-modal .select-options .add-new-btn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  background: var(--accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.custom-select-modal .select-options .add-new-btn:hover {
+  background: var(--accent-hover, #b87d5a);
+  border-color: var(--accent-hover, #b87d5a);
+}
+
+.custom-select-modal .select-options .add-new-btn:active {
+  background: var(--accent-active, #a36d4a);
+  border-color: var(--accent-active, #a36d4a);
+}
+
+.custom-select-modal .select-options .add-new-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+body.dark .custom-select-modal .select-options li.add-new-option {
+  border-top-color: var(--input-border);
+  background: var(--input-bg);
+}
+
+body.dark .custom-select-modal .select-options li.add-new-option:hover {
+  background: var(--input-bg);
+}
+
+.custom-select-modal .select-options li.select-option-item.selected,
+.custom-select-modal .select-options li.select-option-item:hover {
+  background: var(--accent-08);
+}
+
+/* Редактирование и удаление вендоров */
+.custom-select-modal .select-options li.vendor-option-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.custom-select-modal .select-options li.vendor-option-item .option-label {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+.custom-select-modal .select-options .vendor-option-actions,
+.custom-select-modal .select-options .integrator-option-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.custom-select-modal .select-options .edit-vendor-btn,
+.custom-select-modal .select-options .delete-vendor-btn,
+.custom-select-modal .select-options .edit-integrator-btn,
+.custom-select-modal .select-options .delete-integrator-btn {
+  padding: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted, #666);
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s, background 0.2s;
+}
+
+.custom-select-modal .select-options .edit-vendor-btn:hover,
+.custom-select-modal .select-options .delete-vendor-btn:hover,
+.custom-select-modal .select-options .edit-integrator-btn:hover,
+.custom-select-modal .select-options .delete-integrator-btn:hover {
+  color: var(--accent);
+  background: var(--accent-08);
+}
+
+.custom-select-modal .select-options .delete-vendor-btn:hover,
+.custom-select-modal .select-options .delete-integrator-btn:hover {
+  color: var(--error-color, #e74c3c);
+  background: rgba(231, 76, 60, 0.1);
+}
+
+.custom-select-modal .select-options .vendor-edit-input,
+.custom-select-modal .select-options .integrator-edit-input {
+  width: 100%;
+  max-width: 180px;
+  padding: 6px 8px;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.custom-select-modal .select-options li.vendor-option-item .vendor-edit-error,
+.custom-select-modal .select-options li.integrator-option-item .integrator-edit-error {
+  width: 100%;
+  flex-basis: 100%;
+  margin-top: 4px;
+}
+
+body.dark .custom-select-modal .select-options li.select-option-item.selected,
+body.dark .custom-select-modal .select-options li.select-option-item:hover {
+  background: var(--accent-15);
+}
+
+.custom-select .select-options li:hover,
+.modal-body .custom-select-modal .select-options li:hover,
+.modal-body .custom-select-modal .select-options li.selected {
+  background: var(--accent-08);
+}
+
+body.dark .custom-select .select-options li:hover,
+body.dark .modal-body .custom-select-modal .select-options li:hover,
+body.dark .modal-body .custom-select-modal .select-options li.selected {
+  background: var(--accent-15);
+  color: var(--text);
+}
+
+.custom-select .select-options .select-search,
+.modal-body .custom-select-modal .select-options .select-search {
+  position: sticky;
+  top: 0;
+  background: var(--input-bg);
+  padding: 8px 8px 6px 8px;
+  border-bottom: 1px solid var(--input-border);
+  z-index: 20;
+  /* Поверх прокручиваемых элементов списка, включая чекбоксы */
+}
+
+/* Специальные стили для поля поиска в фильтрах боковой панели */
+#filterPanel .custom-select .select-options .select-search {
+  /* Непрозрачный фон (без градиента) */
+  background: #f5f2ef;
+}
+
+body.dark #filterPanel .custom-select .select-options .select-search {
+  /* Непрозрачный фон (без градиента) */
+  background: #222222;
+}
+
+.custom-select .select-options .select-search input,
+.modal-body .custom-select-modal .select-options .select-search input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  background: var(--input-bg);
+  color: var(--input-color);
+  font-size: 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.custom-select .select-options .select-search input:focus,
+.modal-body .custom-select-modal .select-options .select-search input:focus {
+  outline: none;
+  border-color: var(--accent, #ce9068);
+  box-shadow: 0 0 0 2px var(--accent-10);
+}
+
+/* Стили для обёртки select-dropdown (для мультиселекта с поиском) */
+.modal-body .custom-select-modal .select-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  z-index: 9999;
+  max-height: 320px;
+  display: none;
+  overflow: hidden;
+}
+
+body.dark .modal-body .custom-select-modal .select-dropdown {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+.modal-body .custom-select-modal.open .select-dropdown {
+  display: block;
+}
+
+.modal-body .custom-select-modal .select-dropdown .select-options {
+  position: relative;
+  top: 0;
+  left: 0;
+  margin: 0;
+  max-height: 280px;
+  overflow-y: auto;
+  display: block;
+}
+
+/* ===== Кнопки внизу панели (удалены, перенесены в вертикальную панель) ===== */
+
+/* Microinteraction animations for toolbar icons */
+
+/* Respect user preference */
+@media (prefers-reduced-motion: reduce) {
+
+  .icon-animate,
+  .icon-broom-leaf.animate,
+  .reset-icon.animate,
+  .icon-pdf.animate,
+  .icon-add.animate,
+  .icon-filter.toggle,
+  .icon-filter {
+    animation: none;
+    transition: none;
+  }
+}
+
+.icon-broom-leaf,
+.reset-icon {
+  display: inline-block;
+  vertical-align: middle;
+  transition: transform 0.2s;
+}
+
+/* Анимация метлы: движение влево-вправо */
+@keyframes broom-sweep-horizontal {
+  0% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-4px);
+  }
+
+  50% {
+    transform: translateX(0);
+  }
+
+  75% {
+    transform: translateX(4px);
+  }
+
+  100% {
+    transform: translateX(0);
+  }
+}
+
+/* Анимации листьев */
+@keyframes leaf-fly-left {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1) rotate(0deg);
+  }
+
+  /* Начинаем с opacity: 1 */
+  30% {
+    opacity: 1;
+    transform: translate(-5px, -8px) scale(1) rotate(-30deg);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-20px, -25px) scale(1.2) rotate(-60deg);
+  }
+}
+
+@keyframes leaf-fly-up {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1) rotate(0deg);
+  }
+
+  /* Начинаем с opacity: 1 */
+  30% {
+    opacity: 1;
+    transform: translate(0px, -10px) scale(1) rotate(20deg);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(0px, -30px) scale(1.2) rotate(40deg);
+  }
+}
+
+@keyframes leaf-fly-right {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1) rotate(0deg);
+  }
+
+  /* Начинаем с opacity: 1 */
+  30% {
+    opacity: 1;
+    transform: translate(5px, -8px) scale(1) rotate(30deg);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(20px, -25px) scale(1.2) rotate(60deg);
+  }
+}
+
+
+/* --- ГЛАВНОЕ ИЗМЕНЕНИЕ --- */
+/* Листья теперь видны по умолчанию */
+.leaves {
+  opacity: 1;
+}
+
+/* Применяем анимации при классе .animate */
+.icon-broom-leaf.animate .broom-sweeper,
+.reset-icon.animate .broom-sweeper {
+  animation: broom-sweep-horizontal 0.8s ease-in-out;
+}
+
+/* Листья начинают разлетаться с небольшой задержкой */
+.icon-broom-leaf.animate .leaf-1,
+.reset-icon.animate .leaf-1 {
+  animation: leaf-fly-left 1s ease-out 0.1s both;
+}
+
+.icon-broom-leaf.animate .leaf-2,
+.reset-icon.animate .leaf-2 {
+  animation: leaf-fly-up 1s ease-out 0.2s both;
+}
+
+.icon-broom-leaf.animate .leaf-3,
+.reset-icon.animate .leaf-3 {
+  animation: leaf-fly-right 1s ease-out 0.3s both;
+}
+
+.icon-pdf {
+  display: inline-block;
+  vertical-align: middle;
+  transform-origin: 50% 50%;
+}
+
+/* Пульсирующая анимация */
+@keyframes pulse-pdf {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.3);
+    opacity: 0.7;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Анимация для .icon-pdf при клике */
+.icon-pdf.animate {
+  animation: pulse-pdf 0.95s ease-in-out;
+}
+
+/* Add button spin and pulse */
+@keyframes add-spin-pulse {
+  0% {
+    transform: scale(1) rotate(0deg);
+    stroke-width: 2;
+  }
+
+  50% {
+    transform: scale(1.1) rotate(180deg);
+    stroke-width: 3;
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: scale(1) rotate(360deg);
+    stroke-width: 2;
+    opacity: 1;
+  }
+}
+
+.icon-add {
+  display: inline-block;
+  vertical-align: middle;
+  transform-origin: 50% 50%;
+}
+
+.icon-add svg {
+  display: block;
+}
+
+.icon-add.animate {
+  animation: add-spin-pulse 0.6s ease-out both;
+}
+
+.icon-add .add-line {
+  stroke: currentColor;
+  stroke-linecap: round;
+}
+
+
+/* Иконка фильтра */
+.icon-filter {
+  display: inline-block;
+  vertical-align: middle;
+  stroke: currentColor;
+  fill: none;
+  transition: stroke 0.3s ease;
+  transform-origin: center;
+  transform: rotate(0deg) scale(1);
+}
+
+/* При активации (фильтры открыты) — иконка вращается и масштабируется */
+.icon-filter.toggle {
+  animation: filter-rotate-scale 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+}
+
+/* При деактивации — иконка возвращается в исходное состояние */
+.icon-filter.filter-reset {
+  animation: filter-reset 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+}
+
+/* Анимация вращения и масштабирования при активации */
+@keyframes filter-rotate-scale {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+
+  50% {
+    transform: rotate(180deg) scale(1.2);
+  }
+
+  100% {
+    transform: rotate(180deg) scale(1);
+  }
+}
+
+/* Анимация возврата в исходное состояние */
+@keyframes filter-reset {
+  0% {
+    transform: rotate(180deg) scale(1);
+  }
+
+  50% {
+    transform: rotate(0deg) scale(1.2);
+  }
+
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+}
+

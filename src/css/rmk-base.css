@@ -1,0 +1,116 @@
+/* rmk-base.css */
+/* Базовые стили: :root переменные, темы, z-index для панелей */
+
+body {
+  margin: 0;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  transition: background 0.3s, color 0.3s;
+}
+
+/* ===== :root и темы ===== */
+:root {
+  --accent: #ce9068;
+  --muted: #808080;
+  --bg-light: #ffffff;
+  --bg-dark: #000000;
+  --text-light: #000000;
+  --text-dark: #ffffff;
+  --legend-bg-light: rgba(255, 255, 255, 0.95);
+  --legend-bg-dark: rgba(0, 0, 0, 0.8);
+  --hover-label-bg-light: rgba(255, 255, 255, 0.9);
+  --hover-label-bg-dark: rgba(0, 0, 0, 0.9);
+  --hover-label-color-light: var(--accent);
+  --hover-label-color-dark: #fff;
+  --quadrant-bg-q1: rgba(163, 190, 81, 0.2);
+  --quadrant-bg-q2: rgba(249, 124, 54, 0.2);
+  --quadrant-bg-q3: rgba(0, 166, 231, 0.2);
+  --quadrant-bg-q4: rgba(199, 1, 127, 0.2);
+
+  /* Акцентный цвет с различной прозрачностью */
+  --accent-04: rgba(206, 144, 104, 0.04);
+  --accent-05: rgba(206, 144, 104, 0.05);
+  --accent-06: rgba(206, 144, 104, 0.06);
+  --accent-08: rgba(206, 144, 104, 0.08);
+  --accent-10: rgba(206, 144, 104, 0.1);
+  --accent-14: rgba(206, 144, 104, 0.14);
+  --accent-22: rgba(206, 144, 104, 0.22);
+  --accent-70: rgba(206, 144, 104, 0.7);
+  --accent-15: rgba(206, 144, 104, 0.15);
+  --accent-18: rgba(206, 144, 104, 0.18);
+  --accent-30: rgba(206, 144, 104, 0.3);
+  --accent-45: rgba(206, 144, 104, 0.45);
+  --accent-85: rgba(206, 144, 104, 0.85);
+  --accent-90: rgba(206, 144, 104, 0.9);
+
+  /* Тени для кнопок и элементов */
+  --shadow-btn: 0 10px 20px rgba(0, 0, 0, 0.08), 0 2px 10px rgba(206, 144, 104, 0.18);
+  --shadow-btn-dark: 0 10px 22px rgba(0, 0, 0, 0.22), 0 2px 12px rgba(206, 144, 104, 0.18);
+  --shadow-btn-active: 0 6px 14px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(206, 144, 104, 0.14);
+  --shadow-focus: 0 0 0 3px rgba(206, 144, 104, 0.22), 0 10px 20px rgba(0, 0, 0, 0.08);
+
+  /* Градиенты для кнопок */
+  --gradient-btn-light: linear-gradient(180deg, rgba(206, 144, 104, 0.14), rgba(206, 144, 104, 0.04));
+  --gradient-btn-dark: linear-gradient(180deg, rgba(206, 144, 104, 0.18), rgba(0, 0, 0, 0));
+  --gradient-sheen-light: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.35) 20%, transparent 40%);
+  --gradient-sheen-dark: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.16) 20%, transparent 40%);
+}
+
+body.light {
+  --bg: var(--bg-light);
+  --text: var(--text-light);
+  --legend-bg: var(--legend-bg-light);
+  --legend-text: var(--text-light);
+  --radar-line: var(--muted);
+  --hover-label-bg: var(--hover-label-bg-light);
+  --hover-label-color: var(--hover-label-color-light);
+  --input-bg: #fff;
+  --input-border: #ccc;
+  --input-color: #333;
+  --modal-bg: var(--bg-light);
+  --info-bg: var(--bg-light);
+  /* Фон подписей колец без прозрачности, чтобы не просвечивались линии радара */
+  --ring-label-bg: #f0f0f0;
+  --ring-label-stroke: #d0d0d0;
+  --btn-secondary-bg: #e0e0e0;
+  --btn-secondary-hover: #d0d0d0;
+  --close-btn-hover: rgba(0, 0, 0, 0.1);
+}
+
+body.dark {
+  --bg: var(--bg-dark);
+  --text: var(--text-dark);
+  --legend-bg: var(--legend-bg-dark);
+  --legend-text: var(--text-dark);
+  --radar-line: #fff;
+  --hover-label-bg: var(--hover-label-bg-dark);
+  --hover-label-color: var(--hover-label-color-dark);
+  --input-bg: rgb(0, 0, 0);
+  --input-border: #555;
+  --input-color: #fff;
+  --modal-bg: var(--bg-dark);
+  --info-bg: var(--bg-dark);
+  /* Непрозрачный фон подписей колец и в тёмной теме */
+  --ring-label-bg: #2a2a2a;
+  --ring-label-stroke: #404040;
+  --btn-secondary-bg: #444;
+  --btn-secondary-hover: #555;
+  --close-btn-hover: rgba(255, 255, 255, 0.1);
+}
+
+/* Базовые z-index для панелей */
+.modal-panel {
+  z-index: 10001;
+}
+
+.detail-panel {
+  z-index: 10002;
+}
+
+/* Панель редактирования и модальное окно подтверждения удаления должны быть выше detail-panel */
+#editTechPanel,
+#deleteConfirmModal {
+  z-index: 10006;
+}

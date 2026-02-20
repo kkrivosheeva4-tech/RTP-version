@@ -162,11 +162,6 @@
       window.OnboardingTour.init();
     }
 
-    // Инициализация контекстных подсказок - ОТКЛЮЧЕНА
-    // if (window.ContextualHints && typeof window.ContextualHints.init === 'function') {
-    //   window.ContextualHints.init();
-    // }
-
     // Инициализация кнопки помощи
     initHelpButton();
   }

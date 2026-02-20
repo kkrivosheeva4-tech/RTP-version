@@ -77,7 +77,6 @@ async function loadAllModules() {
     '/src/js/modules/ui/keyboard-nav.js',
     '/src/js/modules/ui/aria-manager.js',
     '/src/js/modules/ui/onboarding.js',
-    '/src/js/modules/ui/contextual-hints.js',
     '/src/js/modules/ui/offline-handler.js',
 
     // Business модули (этап 3: конфиг полей, фильтры и PDF до export.js)

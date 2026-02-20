@@ -1,0 +1,1898 @@
+/* rmk-modals.css */
+/* Modals: модальные окна, формы, выпадающие списки */
+@import url('rmk-base.css');
+
+/* ===== Модальные окна (общие, не переопределяют ширину add/edit панелей) ===== */
+.modal-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: 640px;
+  max-height: 90vh;
+  background: var(--modal-bg);
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+  z-index: 3000;
+  display: none;
+  padding: 0;
+  overflow: hidden;
+  flex-direction: column;
+}
+
+/* Глобальный тонкий и аккуратный стиль скроллбаров для всех остальных прокручиваемых контейнеров */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* Firefox global */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.12) transparent;
+}
+
+/* Стили скроллбаров для темной темы */
+body.dark *::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+body.dark *::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+body.dark * {
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+/* Стили для тегов множественного выбора */
+.multi-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(206, 144, 104, 0.12);
+  color: var(--text);
+  border: 1px solid rgba(206, 144, 104, 0.22);
+  padding: 4px 8px;
+  border-radius: 14px;
+  margin-right: 6px;
+  margin-bottom: 4px;
+  font-size: 13px;
+  animation: tagIn 220ms ease;
+}
+
+.multi-tag .multi-tag-remove {
+  background: transparent;
+  border: none;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  color: inherit;
+  padding: 0 4px;
+}
+
+.custom-select-modal .selected-text {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  color: var(--text);
+}
+
+@keyframes tagIn {
+  from {
+    transform: translateY(-6px) scale(0.95);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes tagOut {
+  from {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+
+  to {
+    transform: translateY(-6px) scale(0.95);
+    opacity: 0;
+  }
+}
+
+/* Небольшие переходы для открытия/закрытия выпадающего списка */
+.custom-select-modal .select-options {
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.popover-menu {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 3500;
+  min-width: 200px;
+  max-width: calc(100% - 32px);
+  padding: 8px;
+  background: var(--modal-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  opacity: 0;
+  transform: translateY(-6px) scale(0.99);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+body.dark .popover-menu {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.popover-menu.open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.popover-menu button {
+  width: 100%;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  text-align: left;
+  margin-bottom: 5px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  background: var(--input-bg);
+  color: var(--text);
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.popover-menu button::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--accent);
+  transform: scale(0);
+  transition: transform 0.25s ease;
+}
+
+.popover-menu button:hover,
+.popover-menu button:focus {
+  background: var(--accent-10);
+  border-color: var(--accent);
+}
+
+body.dark .popover-menu button:hover,
+body.dark .popover-menu button:focus {
+  background: rgba(206, 144, 104, 0.2);
+}
+
+.popover-menu button:hover::after,
+.popover-menu button:focus::after {
+  transform: scaleX(1);
+}
+
+@media (max-width: 600px) {
+  .popover-menu {
+    left: 8px !important;
+    right: 8px !important;
+    bottom: 12px;
+    top: auto !important;
+    max-width: calc(100% - 16px);
+    border-radius: 10px;
+  }
+}
+
+.modal-header {
+  display: flex;
+  position: sticky;
+  top: 0;
+  z-index: 10010;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: #ce9068;
+  color: #fff;
+  border-bottom: 1px solid var(--accent);
+}
+
+body.dark .modal-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #fff;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-right: 8px;
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #fff;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+  width: 32px;
+  height: 32px;
+  position: relative;
+  z-index: 10011;
+}
+
+.close-btn svg,
+.close-btn .close-icon {
+  width: 20px;
+  height: 20px;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.close-btn:hover .close-icon {
+  transform: rotate(90deg) scale(1.1);
+}
+
+.close-btn:active .close-icon {
+  transform: rotate(90deg) scale(0.9);
+}
+
+.modal-body {
+  padding: 20px;
+  max-height: calc(70vh - 50px);
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-subgroup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 400;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: auto;
+  height: 18px;
+  width: 18px;
+  cursor: pointer;
+  accent-color: var(--accent, #ce9068);
+  margin: 0;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Переопределение для модальных окон добавления и редактирования технологии на мобильных устройствах */
+@media (max-width: 1024px) {
+  #addTechPanel .modal-body .form-group label,
+  #editTechPanel .modal-body .form-group label {
+    margin-bottom: 2px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  #addTechPanel .modal-body .form-group label,
+  #editTechPanel .modal-body .form-group label {
+    margin-bottom: 2px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  #addTechPanel .modal-body .form-group label,
+  #editTechPanel .modal-body .form-group label {
+    margin-bottom: 1px !important;
+  }
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  font-size: 14px;
+  background: var(--input-bg);
+  color: var(--input-color);
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+.form-group textarea {
+  resize: vertical;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--accent, #ce9068);
+  box-shadow: 0 0 0 3px rgba(206, 144, 104, 0.1);
+}
+
+.form-group input:hover:not(:focus),
+.form-group select:hover:not(:focus),
+.form-group textarea:hover:not(:focus) {
+  border-color: rgba(206, 144, 104, 0.5);
+}
+
+body.dark .form-group input:hover:not(:focus),
+body.dark .form-group select:hover:not(:focus),
+body.dark .form-group textarea:hover:not(:focus) {
+  border-color: rgba(206, 144, 104, 0.6);
+}
+
+/* Подсветка поля при дубликате названия технологии */
+input.duplicate-name-error,
+.form-group input.duplicate-name-error {
+  border-color: var(--error-color, #e74c3c);
+  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2);
+}
+body.dark input.duplicate-name-error,
+body.dark .form-group input.duplicate-name-error {
+  border-color: #e74c3c;
+  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.25);
+}
+
+/* Сообщение об ошибке под полем ввода (дубликат названия и т.п.) */
+.field-error-message {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.875rem;
+  color: var(--error-color, #e74c3c);
+  min-height: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease, visibility 0.15s ease;
+}
+.field-error-message.visible {
+  opacity: 1;
+  visibility: visible;
+}
+body.dark .field-error-message {
+  color: #f87171;
+}
+body.dark .field-error-message.visible {
+  color: #f87171;
+}
+
+/* Подсветка обязательных полей с ошибкой валидации в модальном окне */
+#addTechPanel .form-group.has-error input:not([type="hidden"]),
+#addTechPanel .form-group.has-error textarea,
+#addTechPanel .form-group.has-error input.readonly-field {
+  border: 2px solid var(--error-color, #e74c3c) !important;
+  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.35);
+  background-color: rgba(231, 76, 60, 0.06);
+}
+#addTechPanel .form-group.has-error .custom-select-modal .select-trigger {
+  border: 2px solid var(--error-color, #e74c3c) !important;
+  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.35);
+  background-color: rgba(231, 76, 60, 0.06);
+}
+body.dark #addTechPanel .form-group.has-error input:not([type="hidden"]),
+body.dark #addTechPanel .form-group.has-error textarea,
+body.dark #addTechPanel .form-group.has-error input.readonly-field,
+body.dark #addTechPanel .form-group.has-error .custom-select-modal .select-trigger {
+  border-color: #f87171 !important;
+  box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.4);
+  background-color: rgba(248, 113, 113, 0.08);
+}
+
+/* Стили для строки оценок */
+.ratings-row {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.ratings-row>div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ratings-row>div span {
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.ratings-row>div input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  font-size: 14px;
+  background: var(--input-bg);
+  color: var(--input-color);
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+.ratings-row>div input:focus {
+  outline: none;
+  border-color: var(--accent, #ce9068);
+  box-shadow: 0 0 0 3px rgba(206, 144, 104, 0.1);
+}
+
+.ratings-row>div input:hover:not(:focus) {
+  border-color: rgba(206, 144, 104, 0.5);
+}
+
+body.dark .ratings-row>div input:hover:not(:focus) {
+  border-color: rgba(206, 144, 104, 0.6);
+}
+
+.ratings-row>div select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  font-size: 14px;
+  background: var(--input-bg);
+  color: var(--input-color);
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.ratings-row>div select:focus {
+  outline: none;
+  border-color: var(--accent, #ce9068);
+  box-shadow: 0 0 0 3px rgba(206, 144, 104, 0.1);
+}
+
+.ratings-row>div select:hover:not(:focus) {
+  border-color: rgba(206, 144, 104, 0.5);
+}
+
+body.dark .ratings-row>div select:hover:not(:focus) {
+  border-color: rgba(206, 144, 104, 0.6);
+}
+
+/* Стили для custom-select-modal внутри ratings-row */
+.ratings-row>div .custom-select-modal {
+  width: 100%;
+  margin-top: 0;
+}
+
+.ratings-row>div .custom-select-modal .select-trigger {
+  padding: 8px 10px;
+  min-height: auto;
+}
+
+.ratings-row>div .custom-select-modal .select-trigger .selected-text {
+  font-size: 14px;
+  color: var(--input-color);
+}
+
+.ratings-row>div .custom-select-modal:focus {
+  outline: none;
+  border-color: var(--accent, #ce9068);
+  box-shadow: 0 0 0 3px rgba(206, 144, 104, 0.1);
+}
+
+.ratings-row>div .custom-select-modal:hover:not(:focus) {
+  border-color: rgba(206, 144, 104, 0.5);
+}
+
+body.dark .ratings-row>div .custom-select-modal:hover:not(:focus) {
+  border-color: rgba(206, 144, 104, 0.6);
+}
+
+/* Стили для контейнера полей оценок предприятий */
+#techCompanyRatingsContainer,
+#editCompanyRatingsContainer {
+  margin-top: 12px;
+}
+
+.company-ratings-group {
+  margin-bottom: 16px;
+  padding: 12px;
+  border: 1px solid rgba(206, 144, 104, 0.3);
+  border-radius: 6px;
+  background: var(--accent-10);
+}
+
+body.dark .company-ratings-group {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(206, 144, 104, 0.25);
+}
+
+.company-ratings-label {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.company-rating-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  background: var(--input-bg);
+  color: var(--input-color);
+  font-size: 14px;
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+.company-rating-input::placeholder {
+  color: var(--input-color);
+  opacity: 0.5;
+}
+
+.company-rating-input:focus {
+  outline: none;
+  border-color: var(--accent, #ce9068);
+  box-shadow: 0 0 0 3px rgba(206, 144, 104, 0.1);
+}
+
+.company-rating-input:hover:not(:focus) {
+  border-color: rgba(206, 144, 104, 0.5);
+}
+
+body.dark .company-rating-input:hover:not(:focus) {
+  border-color: rgba(206, 144, 104, 0.6);
+}
+
+/* Стили для строки оценок внутри группы предприятия */
+.company-ratings-group .ratings-row {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  margin-top: 0;
+}
+
+.company-ratings-group .ratings-row>div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.company-ratings-group .ratings-row>div span {
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.company-ratings-group .ratings-row>div input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  background: var(--input-bg);
+  color: var(--input-color);
+  font-size: 14px;
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+.company-ratings-group .ratings-row>div input:focus {
+  outline: none;
+  border-color: var(--accent, #ce9068);
+  box-shadow: 0 0 0 3px rgba(206, 144, 104, 0.1);
+}
+
+.company-ratings-group .ratings-row>div input:hover:not(:focus) {
+  border-color: rgba(206, 144, 104, 0.5);
+}
+
+body.dark .company-ratings-group .ratings-row>div input:hover:not(:focus) {
+  border-color: rgba(206, 144, 104, 0.6);
+}
+
+.company-ratings-group .ratings-row>div select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  font-size: 14px;
+  background: var(--input-bg);
+  color: var(--input-color);
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.company-ratings-group .ratings-row>div select:focus {
+  outline: none;
+  border-color: var(--accent, #ce9068);
+  box-shadow: 0 0 0 3px rgba(206, 144, 104, 0.1);
+}
+
+.company-ratings-group .ratings-row>div select:hover:not(:focus) {
+  border-color: rgba(206, 144, 104, 0.5);
+}
+
+body.dark .company-ratings-group .ratings-row>div select:hover:not(:focus) {
+  border-color: rgba(206, 144, 104, 0.6);
+}
+
+/* Подсветка блока оценок и кнопки редактирования при отсутствии оценок готовности */
+.detail-panel .ratings-hint {
+  margin: 4px 0 8px;
+  font-size: 13px;
+  color: #b94a48;
+  background: rgba(185, 74, 72, 0.07);
+  border-radius: 6px;
+  padding: 6px 10px;
+  border: 1px dashed rgba(185, 74, 72, 0.5);
+}
+
+.detail-panel .highlight-missing-ratings {
+  animation: highlight-missing-ratings-pulse 1.6s ease-in-out 0s 3;
+  border-color: #ff6b6b !important;
+  box-shadow: 0 0 0 2px rgba(255, 107, 107, 0.35);
+}
+
+body.dark .detail-panel .ratings-hint {
+  color: #ffb3ae;
+  background: rgba(255, 107, 107, 0.06);
+  border-color: rgba(255, 107, 107, 0.7);
+}
+
+@keyframes highlight-missing-ratings-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.0);
+  }
+
+  40% {
+    box-shadow: 0 0 0 6px rgba(255, 107, 107, 0.45);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 107, 107, 0.0);
+  }
+}
+
+/* Правая панель приоритета сектора при зуме */
+.quadrant-priority-panel {
+  position: fixed;
+  top: calc(var(--header-height, 64px) + 16px);
+  right: 16px;
+  width: 400px;
+  max-height: calc(100vh - var(--header-height, 64px) - 32px);
+  background: var(--modal-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transform: translateX(120%);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 2500;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.quadrant-priority-panel.open {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+.qp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--input-border);
+  background: var(--accent);
+}
+
+.qp-header h2 {
+  margin: 0;
+  font-size: 17px;
+  color: white;
+}
+
+.qp-body {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px 12px;
+  overflow: hidden;
+  gap: 8px;
+}
+
+.qp-search-container {
+  flex-shrink: 0;
+}
+
+.qp-search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  background: var(--input-bg);
+  color: var(--input-color);
+  font-size: 14px;
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+.qp-search-input:hover,
+.qp-search-input:focus {
+  background: var(--accent-10);
+  border-color: var(--accent);
+  outline: none;
+}
+
+.qp-search-input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+.qp-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.qp-filters-label {
+  font-weight: 500;
+  margin-right: 4px;
+}
+
+.qp-filter-btn {
+  padding: 3px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.qp-filter-btn.active {
+  background: rgba(206, 144, 104, 0.12);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.qp-summary {
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.qp-list {
+  margin-top: 4px;
+  overflow-y: auto;
+  padding-right: 4px;
+  max-height: 100%;
+}
+
+.qp-item {
+  padding: 10px 10px 10px 28px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+  position: relative;
+  list-style: none;
+}
+
+/* Списочный маркер */
+.qp-item::before {
+  content: '•';
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--accent);
+  font-size: 20px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.qp-item+.qp-item {
+  margin-top: 6px;
+}
+
+.qp-item:hover {
+  background: var(--accent-06);
+  transform: translateX(2px);
+}
+
+/* Подсветка элемента в модальном окне при наведении на blip на радаре */
+.qp-item.highlighted {
+  background: rgba(206, 144, 104, 0.12);
+  border-color: rgba(206, 144, 104, 0.4);
+  transform: translateX(2px);
+  box-shadow: 0 2px 8px rgba(206, 144, 104, 0.2);
+}
+
+.qp-item-title {
+  font-size: 15px;
+  font-weight: 500;
+  margin: 0;
+  color: var(--text-color);
+}
+
+@media (max-width: 1024px) {
+  .quadrant-priority-panel {
+    width: 340px;
+  }
+}
+
+@media (max-width: 767px) {
+  .quadrant-priority-panel {
+    /* На мобильных показываем как полноэкранное модальное окно */
+    position: fixed;
+    top: var(--header-height);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100vh - var(--header-height));
+    border-radius: 0;
+    z-index: 3000;
+    /* Панель скрыта по умолчанию */
+    display: flex;
+    opacity: 0;
+    transform: translateY(100%);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    pointer-events: none;
+  }
+
+  .quadrant-priority-panel.open {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .qp-header {
+    border-radius: 0;
+    padding: 16px;
+  }
+
+  .qp-body {
+    padding: 16px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+.detail-panel .priority-help-text {
+  margin-top: 6px;
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.modal-panel .form-actions {
+  flex-shrink: 0;
+  margin-top: 0;
+  padding: 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  background: var(--modal-bg);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.04);
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+body.dark .modal-panel .form-actions {
+  border-top-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Удалено: .modal-body .form-actions - теперь form-actions находится на уровне modal-panel */
+.btn-primary,
+.btn-secondary {
+  padding: 10px 20px;
+  border: 1px solid #ce9068;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  background: #fff;
+  color: rgb(0, 0, 0);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background-color 0.2s cubic-bezier(0.2, 0.9, 0.2, 1), border-color 0.2s cubic-bezier(0.2, 0.9, 0.2, 1), transform 0.2s cubic-bezier(0.2, 0.9, 0.2, 1), box-shadow 0.2s cubic-bezier(0.2, 0.9, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  font-weight: 500;
+}
+
+body.dark .btn-primary,
+body.dark .btn-secondary {
+  background: var(--input-bg);
+  color: var(--text);
+  border: 1px solid var(--input-border);
+}
+
+.btn-primary:hover,
+.btn-secondary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(206, 144, 104, 0.25);
+  border-color: #b8734a;
+}
+
+.btn-primary:active,
+.btn-secondary:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 2px 6px rgba(206, 144, 104, 0.2);
+}
+
+.btn-primary {
+  background: #ce9068;
+  color: #fff;
+  border-color: #ce9068;
+}
+
+.btn-primary:hover {
+  background: #b8734a;
+  border-color: #b8734a;
+  box-shadow: 0 4px 12px rgba(206, 144, 104, 0.35);
+}
+
+body.dark .btn-primary {
+  background: var(--accent, #ce9068);
+  color: #fff;
+}
+
+body.dark .btn-primary:hover {
+  background: #b8734a;
+}
+
+/* Стили для кнопок "Добавить новую технологию" и "Добавить функциональный блок" */
+.popover-menu #chooseAddTech,
+.popover-menu #chooseAddBlock {
+  padding: 10px 16px !important;
+  border: 1px solid var(--input-border, #d0d0d0) !important;
+  border-radius: 10px !important;
+  background: var(--gradient-btn-light) !important;
+  color: var(--text, #333) !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  line-height: 1 !important;
+  user-select: none;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease !important;
+  justify-content: center !important;
+  text-align: center !important;
+}
+
+.popover-menu #chooseAddTech::before,
+.popover-menu #chooseAddBlock::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  background: var(--gradient-sheen-light);
+  transform: translateX(-120%);
+  pointer-events: none;
+}
+
+.popover-menu #chooseAddTech::after,
+.popover-menu #chooseAddBlock::after {
+  display: none !important;
+}
+
+.popover-menu #chooseAddTech:hover,
+.popover-menu #chooseAddBlock:hover {
+  border-color: var(--accent, #ce9068) !important;
+  color: var(--accent, #ce9068) !important;
+  box-shadow: var(--shadow-btn) !important;
+  transform: translateY(-1px) !important;
+  background: var(--gradient-btn-light) !important;
+}
+
+.popover-menu #chooseAddTech:hover::before,
+.popover-menu #chooseAddBlock:hover::before {
+  animation: fileInputSheen 0.85s ease;
+}
+
+.popover-menu #chooseAddTech:active,
+.popover-menu #chooseAddBlock:active {
+  transform: translateY(0) scale(0.98) !important;
+  box-shadow: var(--shadow-btn-active) !important;
+}
+
+.popover-menu #chooseAddTech:focus-visible,
+.popover-menu #chooseAddBlock:focus-visible {
+  outline: none;
+  border-color: var(--accent, #ce9068) !important;
+  box-shadow: 0 0 0 3px var(--accent-22), 0 10px 20px rgba(0, 0, 0, 0.08) !important;
+}
+
+body.dark .popover-menu #chooseAddTech,
+body.dark .popover-menu #chooseAddBlock {
+  border-color: var(--input-border, #404040) !important;
+  background: var(--gradient-btn-dark) !important;
+  color: var(--text, #e0e0e0) !important;
+}
+
+body.dark .popover-menu #chooseAddTech::before,
+body.dark .popover-menu #chooseAddBlock::before {
+  background: var(--gradient-sheen-dark);
+}
+
+body.dark .popover-menu #chooseAddTech:hover,
+body.dark .popover-menu #chooseAddBlock:hover {
+  border-color: var(--accent, #ce9068) !important;
+  color: var(--accent, #ce9068) !important;
+  box-shadow: var(--shadow-btn-dark) !important;
+  background: var(--gradient-btn-dark) !important;
+}
+
+.btn-with-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-with-icon .btn-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+}
+
+/* Анимации для иконок в кнопках при наведении */
+.btn-primary:hover .btn-icon,
+.btn-secondary:hover .btn-icon,
+.edit-btn:hover .btn-icon,
+.delete-btn:hover .btn-icon {
+  transform: scale(1.15);
+}
+
+.btn-primary:active .btn-icon,
+.btn-secondary:active .btn-icon,
+.edit-btn:active .btn-icon,
+.delete-btn:active .btn-icon {
+  transform: scale(0.9);
+}
+
+/* Специфичные анимации для разных типов кнопок */
+/* Иконка добавления - вращение при наведении */
+#addFunctionRow:hover .btn-icon,
+#chooseAddTech:hover .btn-icon,
+form[id="addTechForm"]+.form-actions .btn-primary:hover .btn-icon {
+  transform: rotate(90deg) scale(1.15);
+  animation: add-pulse 0.6s ease;
+}
+
+@keyframes add-pulse {
+
+  0%,
+  100% {
+    transform: rotate(90deg) scale(1.15);
+  }
+
+  50% {
+    transform: rotate(90deg) scale(1.3);
+  }
+}
+
+/* Иконка редактирования - эффект "письма" */
+.edit-btn:hover .btn-icon {
+  animation: edit-write 0.6s ease;
+}
+
+@keyframes edit-write {
+
+  0%,
+  100% {
+    transform: scale(1.15) rotate(0deg);
+  }
+
+  25% {
+    transform: scale(1.2) rotate(-5deg);
+  }
+
+  75% {
+    transform: scale(1.2) rotate(5deg);
+  }
+}
+
+/* Иконка удаления - эффект "тряски" */
+.delete-btn:hover .btn-icon {
+  animation: delete-shake 0.5s ease;
+}
+
+@keyframes delete-shake {
+
+  0%,
+  100% {
+    transform: scale(1.15) translateX(0);
+  }
+
+  25% {
+    transform: scale(1.15) translateX(-2px);
+  }
+
+  75% {
+    transform: scale(1.15) translateX(2px);
+  }
+}
+
+/* Иконка сохранения - эффект "галочки" */
+form[id="editTechForm"]+.form-actions .btn-primary:hover .btn-icon {
+  animation: save-check 0.6s ease;
+}
+
+@keyframes save-check {
+  0% {
+    transform: scale(1.15) translateY(0);
+  }
+
+  50% {
+    transform: scale(1.25) translateY(-2px);
+  }
+
+  100% {
+    transform: scale(1.15) translateY(0);
+  }
+}
+
+/* Иконка экспорта - эффект "скачивания" */
+#exportPdfConfirm:hover .btn-icon {
+  animation: export-download 0.8s ease;
+}
+
+@keyframes export-download {
+
+  0%,
+  100% {
+    transform: scale(1.15) translateY(0);
+  }
+
+  50% {
+    transform: scale(1.2) translateY(3px);
+  }
+}
+
+/* Иконка отмены - эффект "закрытия" */
+#cancelAdd:hover .btn-icon,
+#cancelEdit:hover .btn-icon,
+#cancelExportPdf:hover .btn-icon,
+#cancelAddBlock:hover .btn-icon {
+  animation: cancel-close 0.5s ease;
+}
+
+@keyframes cancel-close {
+
+  0%,
+  100% {
+    transform: scale(1.15) rotate(0deg);
+  }
+
+  50% {
+    transform: scale(1.2) rotate(90deg);
+  }
+}
+
+/* Анимация для иконки добавления функции */
+#addFunctionRow:hover .btn-icon {
+  transform: rotate(90deg) scale(1.15);
+  animation: add-pulse 0.6s ease;
+}
+
+#addFunctionRow:active .btn-icon {
+  transform: rotate(90deg) scale(0.9);
+}
+
+/* Анимации при клике на кнопки */
+.btn-primary:active .btn-icon,
+.btn-secondary:active .btn-icon,
+.edit-btn:active .btn-icon,
+.delete-btn:active .btn-icon {
+  animation: none;
+  transform: scale(0.85);
+}
+
+/* Плавные переходы для всех иконок */
+.btn-icon,
+.close-icon {
+  will-change: transform;
+}
+
+/* Улучшенные анимации для кнопок с иконками в popover */
+.popover-menu .btn-with-icon:hover .btn-icon {
+  transform: scale(1.2);
+}
+
+.popover-menu .btn-primary:hover .btn-icon {
+  animation: add-pulse 0.6s ease;
+}
+
+/* Анимация для иконки блока в popover */
+#chooseAddBlock:hover .btn-icon {
+  animation: block-pulse 0.6s ease;
+}
+
+@keyframes block-pulse {
+
+  0%,
+  100% {
+    transform: scale(1.2);
+  }
+
+  50% {
+    transform: scale(1.35);
+  }
+}
+
+.function-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.function-row input {
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--input-color);
+  font-size: 14px;
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+.function-row input:focus {
+  outline: none;
+  border-color: var(--accent, #ce9068);
+  box-shadow: 0 0 0 3px rgba(206, 144, 104, 0.1);
+}
+
+.function-row input:hover:not(:focus) {
+  border-color: rgba(206, 144, 104, 0.5);
+}
+
+body.dark .function-row input:hover:not(:focus) {
+  border-color: rgba(206, 144, 104, 0.6);
+}
+
+/* ===== Модальное окно выбора полей для экспорта ===== */
+#exportPdfModal .modal-body {
+  overflow: visible;
+  max-height: calc(100vh - 50px);
+}
+
+.export-fields-container {
+  margin-bottom: 20px;
+}
+
+.export-fields-controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--input-border);
+}
+
+.toggle-all-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 1px solid var(--input-border, #d0d0d0);
+  border-radius: 10px;
+  background: var(--gradient-btn-light);
+  color: var(--text, #333);
+  font-size: 14px;
+  font-weight: 600;
+  height: auto;
+  user-select: none;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+  cursor: pointer;
+}
+
+body.dark .toggle-all-btn {
+  border-color: var(--input-border, #404040);
+  background: var(--gradient-btn-dark);
+  color: var(--text, #e0e0e0);
+}
+
+.toggle-all-btn::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  background: var(--gradient-sheen-light);
+  transform: translateX(-120%);
+  pointer-events: none;
+}
+
+body.dark .toggle-all-btn::before {
+  background: var(--gradient-sheen-dark);
+}
+
+.toggle-all-btn:hover {
+  border-color: var(--accent, #ce9068);
+  color: var(--accent, #ce9068);
+  box-shadow: var(--shadow-btn);
+  transform: translateY(-1px);
+  background: var(--gradient-btn-light);
+}
+
+body.dark .toggle-all-btn:hover {
+  border-color: var(--accent, #ce9068);
+  color: var(--accent, #ce9068);
+  box-shadow: var(--shadow-btn-dark);
+  background: var(--gradient-btn-dark);
+}
+
+.toggle-all-btn:hover::before {
+  animation: fileInputSheen 0.85s ease;
+}
+
+.toggle-all-btn:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: var(--shadow-btn-active);
+}
+
+.toggle-all-btn:focus-visible {
+  outline: none;
+  border-color: var(--accent, #ce9068);
+  box-shadow: var(--shadow-focus);
+}
+
+.toggle-all-btn .toggle-all-icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+}
+
+.toggle-all-btn .toggle-all-text {
+  line-height: 1;
+}
+
+.export-fields-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.export-field-item {
+  display: flex;
+  align-items: center;
+}
+
+.export-field-item label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-weight: normal;
+  margin: 0;
+  padding: 8px;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+}
+
+.export-field-item label:hover {
+  background-color: var(--close-btn-hover);
+}
+
+.export-field-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  min-height: 16px;
+  cursor: pointer;
+  margin: 0;
+  padding: 0;
+  flex-shrink: 0;
+  accent-color: var(--accent);
+  transform: scale(0.75);
+  transform-origin: left center;
+  position: relative;
+  z-index: 10;
+  pointer-events: auto;
+  -webkit-appearance: checkbox;
+  appearance: checkbox;
+}
+
+.export-field-item span {
+  user-select: none;
+  font-size: 14px;
+}
+
+.export-field-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.export-field-row label {
+  flex: 0 0 auto;
+  min-width: 200px;
+}
+
+.export-filter-select,
+.export-filter-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  font-size: 14px;
+  background: var(--input-bg);
+  color: var(--input-color);
+  min-width: 150px;
+}
+
+.export-filter-select:disabled,
+.export-filter-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--btn-secondary-bg);
+}
+
+/* Кастомные выпадающие списки в export-field-row */
+.export-field-row .custom-select-modal {
+  flex: 1;
+  min-width: 150px;
+}
+
+.export-filter-input {
+  flex: 1;
+}
+
+/* ===== Множественный выбор для экспорта ===== */
+.export-multi-select {
+  flex: 1;
+  min-width: 150px;
+  position: relative;
+}
+
+.export-multi-select.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.export-multi-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border: 1px solid var(--input-border, #d0d0d0);
+  border-radius: 6px;
+  background: var(--gradient-btn-light);
+  color: var(--input-color);
+  cursor: pointer;
+  font-size: 14px;
+  min-height: 40px;
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+body.dark .export-multi-select-trigger {
+  border-color: var(--input-border, #404040);
+  background: var(--gradient-btn-dark);
+}
+
+.export-multi-select-trigger:hover {
+  border-color: var(--accent, #ce9068);
+  box-shadow: var(--shadow-btn);
+  background: var(--gradient-btn-light);
+}
+
+body.dark .export-multi-select-trigger:hover {
+  border-color: var(--accent, #ce9068);
+  box-shadow: var(--shadow-btn-dark);
+  background: var(--gradient-btn-dark);
+}
+
+.export-multi-select-trigger:focus {
+  outline: none;
+  border-color: var(--accent, #ce9068);
+  box-shadow: var(--shadow-focus);
+}
+
+.export-multi-select-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.export-multi-select-arrow {
+  margin-left: 8px;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+  color: transparent !important;
+  position: relative;
+  overflow: hidden;
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+  text-indent: -9999px;
+}
+
+.export-multi-select-arrow::before {
+  content: '';
+  display: block;
+  width: 12px;
+  height: 12px;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 5L6 8L9 5' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-indent: 0;
+}
+
+body.dark .export-multi-select-arrow::before {
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 5L6 8L9 5' stroke='%23999' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.export-multi-select.open .export-multi-select-arrow {
+  transform: rotate(180deg);
+}
+
+.export-multi-select-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  width: 100%;
+  min-width: 0;
+  margin: 4px 0 0;
+  padding: 0;
+  background: linear-gradient(180deg, #faf8f5 0%, #f5f2ef 100%);
+  border: 1px solid var(--input-border, #d0d0d0);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  max-height: 300px;
+  overflow: hidden;
+  flex-direction: column;
+  list-style: none;
+}
+
+body.dark .export-multi-select-dropdown {
+  border-color: var(--input-border, #404040);
+  background: linear-gradient(180deg, #1a1a1a 0%, #222222 100%);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+.export-multi-select.open .export-multi-select-dropdown {
+  display: flex;
+}
+
+.export-multi-select-search {
+  padding: 8px;
+  border-bottom: 1px solid var(--input-border);
+}
+
+.export-multi-select-search input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  font-size: 14px;
+  background: var(--input-bg);
+  color: var(--input-color);
+}
+
+.export-multi-select-options {
+  overflow-y: auto;
+  max-height: 250px;
+  padding: 0;
+}
+
+.export-multi-select-option {
+  display: flex;
+  align-items: center;
+  padding: 2px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.15s ease;
+  color: var(--text);
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.export-multi-select-option:hover {
+  background: var(--accent-08);
+}
+
+body.dark .export-multi-select-option:hover {
+  background: var(--accent-15);
+}
+
+.export-multi-select-option label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  cursor: pointer;
+  position: relative;
+  margin: 0;
+}
+
+.export-multi-select-option input[type="checkbox"] {
+  margin-right: 0;
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  min-height: 16px;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  accent-color: var(--accent);
+  transform: scale(0.75);
+  transform-origin: left center;
+  position: relative;
+  z-index: 10;
+  pointer-events: auto;
+  -webkit-appearance: checkbox;
+  appearance: checkbox;
+  opacity: 1;
+}
+
+.export-multi-select-option label span,
+.export-multi-select-option label {
+  cursor: pointer;
+  flex: 1;
+}
+
+.export-multi-select-option.select-all-option {
+  border-bottom: 1px solid var(--input-border);
+  margin-bottom: 4px;
+  padding-bottom: 8px;
+}
+
+.export-multi-select-option.select-all-option label {
+  font-weight: 600;
+}
+
+.export-multi-select-option.hidden {
+  display: none;
+}
+
+/* Стили для ошибок валидации */
+.export-error-message {
+  color: #e74c3c;
+  font-size: 14px;
+  font-weight: 500;
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.export-field-item.has-error {
+  border-left: 3px solid #e74c3c;
+  padding-left: 5px;
+}
+
+.export-field-item.has-error .export-multi-select-trigger {
+  border-color: #e74c3c;
+  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2);
+}
+
+.export-multi-select.has-error .export-multi-select-trigger {
+  border-color: #e74c3c;
+  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2);
+}
+
+.remove-fn-btn {
+  min-width: 34px;
+  height: 34px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 120ms ease, transform 120ms ease;
+}
+
+.remove-fn-btn:hover {
+  background: rgba(255, 0, 0, 0.06);
+  transform: scale(1.03);
+}
+
+.remove-fn-btn:active {
+  transform: scale(0.98);
+}
+
+body.dark .remove-fn-btn {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--text);
+}
+
+.required-star {
+  color: #dc3545;
+  font-weight: bold;
+  margin-left: 4px;
+  cursor: pointer;
+  display: inline-block;
+  user-select: none;
+  transition: transform 0.15s ease, color 0.2s ease;
+  position: relative;
+}
+
+body.dark .required-star {
+  color: #ff6b6b;
+}
+
+.required-star:hover {
+  transform: scale(1.2);
+}
+
+
+body.dark #resetSectorBtn img {
+  filter: invert(1) brightness(1.6);
+}
+
+/* --- Анимации --- */
+.modal-panel {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.98);
+  transition: opacity 220ms cubic-bezier(.2, .9, .2, 1), transform 220ms cubic-bezier(.2, .9, .2, 1);
+  /* Всегда центрируем по экрану */
+  top: 50% !important;
+  left: 50% !important;
+}
+
+.modal-panel.open {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1) !important;
+}
+
+.close-btn {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: background-color 180ms ease;
+}
+
+.close-btn:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.close-btn:hover .close-icon {
+  transform: rotate(90deg) scale(1.1);
+}
+
+.close-btn:active .close-icon {
+  transform: rotate(90deg) scale(0.9);
+}
+
+.btn-primary,
+.btn-secondary {
+  transition: transform 160ms cubic-bezier(.2, .9, .2, 1), box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.btn-primary:hover,
+.btn-secondary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+.btn-primary:active,
+.btn-secondary:active {
+  transform: translateY(0) scale(0.99);
+  box-shadow: none;
+}
+
+.popover-menu button {
+  transition: transform 160ms cubic-bezier(.2, .9, .2, 1), box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.popover-menu button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+}
+
+.popover-menu button:active {
+  transform: translateY(0) scale(0.99);
+}
+
