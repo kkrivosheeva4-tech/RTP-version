@@ -9,6 +9,7 @@ import './js/modules/core/validators.js';
 import './js/modules/core/error-handler.js';
 import './js/modules/core/data-source.js';
 import './js/modules/core/data-normalize.js';
+import './js/modules/core/data-service.js';
 import './js/modules/core/data-loader.js';
 import './js/modules/core/state-utils.js';
 
