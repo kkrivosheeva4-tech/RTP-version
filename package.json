@@ -1,9 +1,12 @@
 {
-  "name": "package",
+  "name": "rmk-radar",
   "version": "1.0.0",
-  "description": "",
+  "description": "Радар технологий — интерактивная визуализация цифровой зрелости",
   "main": "rmk.js",
   "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run"
   },
@@ -12,9 +15,9 @@
   "dependencies": {
     "d3": "^7.9.0"
   },
-  "_comment": "ВНИМАНИЕ: Установка зависимостей через npm НЕ требуется! Проект работает без Node.js. Все библиотеки загружаются через CDN автоматически. Этот файл оставлен для совместимости, но не используется в работе проекта.",
   "devDependencies": {
     "jsdom": "^28.1.0",
+    "vite": "^7.3.1",
     "vitest": "^4.0.18"
   }
 }
