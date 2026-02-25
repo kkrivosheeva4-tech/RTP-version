@@ -1,7 +1,7 @@
 # Единый план доработки frontend до перехода к backend
 
 **Дата создания:** 20.02.2026  
-**Обновлено:** 25.02.2026 (шаг 9.2: слой data-service)  
+**Обновлено:** 25.02.2026 (шаг 9.3: переключение mock/API в DataService)  
 **Версия:** 1.2  
 **Назначение:** Объединённый план выполнения оставшихся задач по frontend перед переходом к разработке backend API.
 
@@ -370,6 +370,8 @@
 - Обработка ошибок в едином формате
 
 **Критерий приёмки:** DataService переключается между mock и API режимами, данные нормализуются одинаково.
+
+**Статус:** ✅ Выполнено (25.02.2026). Реализовано: mock-режим (loadJsonPreferVfs, vfsRead, vfsWrite), API-режим (ApiClient.get/post/put/patch/delete), маппинг через normalizeTechnologyFromNewFormat, wrapApiError для единого формата ошибок. Пути API: /api/v1/technologies, /api/v1/references/{name}.
 
 ---
 
