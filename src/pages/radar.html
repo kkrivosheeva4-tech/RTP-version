@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; base-uri 'self';" />
+    content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; worker-src 'self' blob:; base-uri 'self';" />
   <meta name="description"
     content="Радар технологий для директоров и РП - интерактивная визуализация технологических решений с расширенным функционалом для принятия решений" />
   <meta name="keywords" content="радар технологий, визуализация, технологии, фильтры, экспорт, приоритеты" />
@@ -24,14 +24,14 @@
   <!-- PWA мета-теги -->
   <meta name="theme-color" content="#ce9068" />
   <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Радар технологий" />
   <title>Радар технологий</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin="anonymous" />
   <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
-  <link rel="icon" href="/assets/images/icon.png" type="image/png" />
-  <link rel="shortcut icon" href="/assets/images/icon.png" type="image/png" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='55' height='64' viewBox='0 0 55 64' fill='none'><path d='M32.3111 24.2322L45.3017 31.7322M32.3111 24.2322L53.9609 1.73218M32.3111 24.2322L1.99998 31.7322M32.3111 24.2322V39.2329M45.3017 31.7322L53.9609 1.73218M45.3017 31.7322L32.3111 39.2329M45.3017 31.7322L53.9609 61.7322M53.9609 1.73218L1.99998 31.7322M53.9609 1.73218V61.7322M32.3111 39.2329L53.9609 61.7322M32.3111 39.2329L1.99998 31.7322M53.9609 61.7322L1.99998 31.7322' stroke='white' stroke-width='2'/></svg>" type="image/svg+xml" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='55' height='64' viewBox='0 0 55 64' fill='none'><path d='M32.3111 24.2322L45.3017 31.7322M32.3111 24.2322L53.9609 1.73218M32.3111 24.2322L1.99998 31.7322M32.3111 24.2322V39.2329M45.3017 31.7322L53.9609 1.73218M45.3017 31.7322L32.3111 39.2329M45.3017 31.7322L53.9609 61.7322M53.9609 1.73218L1.99998 31.7322M53.9609 1.73218V61.7322M32.3111 39.2329L53.9609 61.7322M32.3111 39.2329L1.99998 31.7322M53.9609 61.7322L1.99998 31.7322' stroke='url(%23paint0_linear)' stroke-width='2'/><defs><linearGradient id='paint0_linear' x1='53.9609' y1='1.73218' x2='-5.42356' y2='53.1601' gradientUnits='userSpaceOnUse'><stop stop-color='%23A37151'/><stop offset='1' stop-color='%23C8977F'/></linearGradient></defs></svg>" type="image/svg+xml" media="(prefers-color-scheme: light)">
   <link rel="stylesheet" href="/src/css/common.css" />
   <link rel="stylesheet" href="/src/css/RMK.css" />
   <link rel="stylesheet" href="/src/css/about.css" />
@@ -46,7 +46,7 @@
 
 <body class="light" id="rmk-director">
   <header role="banner">
-    <a class="logo" href="index.html" data-tooltip="На главную" aria-label="Радар технологий - на главную">
+    <a class="logo" href="/src/pages/index.html" data-tooltip="На главную" aria-label="Радар технологий - на главную">
       <img src="/assets/images/icon.png" alt="Logo" class="logo-img"
         onerror="this.style.display='none'; this.nextElementSibling?.style.display='inline';" />
       <span class="logo-fallback" style="display:none;">РТ</span>
@@ -706,6 +706,7 @@
                 </svg>
               </span>
             </label>
+            <p class="form-field-hint">Макс. 10 МБ на файл, 50 МБ на технологию</p>
             <div id="techFilesList" class="files-list">
               <!-- Список загруженных файлов будет отображаться здесь -->
             </div>
@@ -1057,6 +1058,7 @@
                 </svg>
               </span>
             </label>
+            <p class="form-field-hint">Макс. 10 МБ на файл, 50 МБ на технологию</p>
             <div id="editFilesList" class="files-list">
               <!-- Список загруженных файлов будет отображаться здесь -->
             </div>
@@ -1539,20 +1541,8 @@
   </div>
 
   <div id="notificationPanel" class="notification-panel"></div>
-  <!-- Все модули загружаются динамически через RMK-director.js (точка входа страницы радара) -->
-
-  <!-- Утилиты для расчета покрытия функций (должен быть загружен первым) -->
-  <script src="/src/js/modules/utils/func-cover-utils.js"></script>
-
-  <script src="/src/js/modules/ui/common-ui.js"></script>
-  <script src="/src/js/modules/ui/notifications.js"></script>
-  <script src="/src/js/modules/ui/tech-tabs-manager.js"></script>
-  <script src="/src/js/modules/ui/edit-tech-tabs-manager.js"></script>
-  <script src="/src/js/modules/ui/func-cover-calculator.js"></script>
-  <script src="/src/js/modules/ui/auto-func-cover.js"></script>
-  <!-- Проверка доступа: radar.html — основная страница радара для всех авторизованных пользователей -->
-  <!-- Все роли (архитекторы, директоры, РП, администраторы) работают на одной странице -->
-  <script src="/src/js/RMK-director.js"></script>
+  <!-- Точка входа: все модули загружаются через main.js (этап 7.2) -->
+  <script type="module" src="/src/main.js"></script>
 </body>
 
 </html>
