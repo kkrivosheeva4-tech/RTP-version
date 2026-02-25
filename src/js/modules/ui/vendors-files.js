@@ -1,8 +1,9 @@
-// Модуль управления вендорами и файлами для форм
+// Модуль управления вендорами и файлами для форм — ES module
 // Используется в формах добавления и редактирования технологий
 
-(function () {
-  'use strict';
+import Logger from '../core/logger.js';
+
+'use strict';
 
   // Хранение списков вендоров и интеграторов в localStorage (для новых значений)
   const VENDORS_STORAGE_KEY = 'rmk_vendors_list';
@@ -15,7 +16,7 @@
   // Загрузка списка вендоров из JSON и localStorage (объединение)
   async function loadVendorsList() {
     if (vendorsListCache) {
-      if (window.Logger) window.Logger.debug('Используем кэш списка вендоров', vendorsListCache.length);
+      if (Logger) Logger.debug('Используем кэш списка вендоров', vendorsListCache.length);
       return vendorsListCache;
     }
 
@@ -28,13 +29,13 @@
       if (response.ok) {
         jsonVendors = await response.json();
         if (!Array.isArray(jsonVendors)) {
-          if (window.Logger) window.Logger.warn('Данные вендоров из JSON не являются массивом, преобразуем', jsonVendors);
+          if (Logger) Logger.warn('Данные вендоров из JSON не являются массивом, преобразуем', jsonVendors);
           jsonVendors = Array.isArray(jsonVendors) ? jsonVendors : [];
         }
-        if (window.Logger) window.Logger.debug('Загружен список вендоров из JSON', jsonVendors.length);
+        if (Logger) Logger.debug('Загружен список вендоров из JSON', jsonVendors.length);
       }
     } catch (e) {
-      if (window.Logger) window.Logger.warn('Не удалось загрузить список вендоров из JSON', e);
+      if (Logger) Logger.warn('Не удалось загрузить список вендоров из JSON', e);
     }
 
     // Загружаем из localStorage
@@ -45,12 +46,12 @@
         if (!Array.isArray(localVendors)) {
           localVendors = [];
         }
-        if (window.Logger && localVendors.length > 0) {
-          window.Logger.debug('Загружен список вендоров из localStorage', localVendors.length);
+        if (Logger && localVendors.length > 0) {
+          Logger.debug('Загружен список вендоров из localStorage', localVendors.length);
         }
       }
     } catch (e) {
-      if (window.Logger) window.Logger.warn('Ошибка при чтении вендоров из localStorage', e);
+      if (Logger) Logger.warn('Ошибка при чтении вендоров из localStorage', e);
     }
 
     // Объединяем списки: сначала из JSON, потом из localStorage (уникальные значения)
@@ -63,8 +64,8 @@
     });
 
     vendorsListCache = combined;
-    if (window.Logger) {
-      window.Logger.debug('Объединенный список вендоров', {
+    if (Logger) {
+      Logger.debug('Объединенный список вендоров', {
         json: jsonVendors.length,
         local: localVendors.length,
         total: combined.length
@@ -89,10 +90,10 @@
         if (!Array.isArray(jsonIntegrators)) {
           jsonIntegrators = Array.isArray(jsonIntegrators) ? jsonIntegrators : [];
         }
-        if (window.Logger) window.Logger.debug('Загружен список интеграторов из JSON', jsonIntegrators.length);
+        if (Logger) Logger.debug('Загружен список интеграторов из JSON', jsonIntegrators.length);
       }
     } catch (e) {
-      if (window.Logger) window.Logger.warn('Не удалось загрузить список интеграторов из JSON', e);
+      if (Logger) Logger.warn('Не удалось загрузить список интеграторов из JSON', e);
     }
 
     // Загружаем из localStorage
@@ -103,12 +104,12 @@
         if (!Array.isArray(localIntegrators)) {
           localIntegrators = [];
         }
-        if (window.Logger && localIntegrators.length > 0) {
-          window.Logger.debug('Загружен список интеграторов из localStorage', localIntegrators.length);
+        if (Logger && localIntegrators.length > 0) {
+          Logger.debug('Загружен список интеграторов из localStorage', localIntegrators.length);
         }
       }
     } catch (e) {
-      if (window.Logger) window.Logger.warn('Ошибка при чтении интеграторов из localStorage', e);
+      if (Logger) Logger.warn('Ошибка при чтении интеграторов из localStorage', e);
     }
 
     // Объединяем списки: сначала из JSON, потом из localStorage (уникальные значения)
@@ -121,8 +122,8 @@
     });
 
     integratorsListCache = combined;
-    if (window.Logger) {
-      window.Logger.debug('Объединенный список интеграторов', {
+    if (Logger) {
+      Logger.debug('Объединенный список интеграторов', {
         json: jsonIntegrators.length,
         local: localIntegrators.length,
         total: combined.length
@@ -169,15 +170,15 @@
       // Обновляем кэш
       vendorsListCache = vendors;
 
-      if (window.Logger) {
-        window.Logger.debug('Сохранен список вендоров в localStorage', {
+      if (Logger) {
+        Logger.debug('Сохранен список вендоров в localStorage', {
           existing: existingVendors.length,
           new: vendors.length,
           total: combined.length
         });
       }
     } catch (e) {
-      if (window.Logger) window.Logger.warn('Не удалось сохранить список вендоров', e);
+      if (Logger) Logger.warn('Не удалось сохранить список вендоров', e);
     }
   }
 
@@ -218,15 +219,15 @@
       // Обновляем кэш
       integratorsListCache = integrators;
 
-      if (window.Logger) {
-        window.Logger.debug('Сохранен список интеграторов в localStorage', {
+      if (Logger) {
+        Logger.debug('Сохранен список интеграторов в localStorage', {
           existing: existingIntegrators.length,
           new: integrators.length,
           total: combined.length
         });
       }
     } catch (e) {
-      if (window.Logger) window.Logger.warn('Не удалось сохранить список интеграторов', e);
+      if (Logger) Logger.warn('Не удалось сохранить список интеграторов', e);
     }
   }
 
@@ -234,7 +235,7 @@
   function addVendor(vendorName) {
     const vendorStr = String(vendorName || '').trim();
     if (!vendorStr) {
-      if (window.Logger) window.Logger.warn('Попытка добавить пустое имя вендора');
+      if (Logger) Logger.warn('Попытка добавить пустое имя вендора');
       return false;
     }
 
@@ -255,7 +256,7 @@
 
       // Проверяем, нет ли уже такого вендора
       if (existingVendors.includes(vendorStr)) {
-        if (window.Logger) window.Logger.debug('Вендор уже существует в localStorage', vendorStr);
+        if (Logger) Logger.debug('Вендор уже существует в localStorage', vendorStr);
         return false;
       }
 
@@ -269,12 +270,12 @@
       // updateVendorsSelects будет вызван только если модальное окно будет закрыто и открыто заново
       // Это предотвращает сброс выбранных значений при добавлении нового вендора
 
-      if (window.Logger) {
-        window.Logger.debug('Добавлен новый вендор в localStorage', vendorStr);
+      if (Logger) {
+        Logger.debug('Добавлен новый вендор в localStorage', vendorStr);
       }
       return true;
     } catch (e) {
-      if (window.Logger) window.Logger.warn('Не удалось добавить вендора', e);
+      if (Logger) Logger.warn('Не удалось добавить вендора', e);
       return false;
     }
   }
@@ -283,7 +284,7 @@
   function addIntegrator(integratorName) {
     const integratorStr = String(integratorName || '').trim();
     if (!integratorStr) {
-      if (window.Logger) window.Logger.warn('Попытка добавить пустое имя интегратора');
+      if (Logger) Logger.warn('Попытка добавить пустое имя интегратора');
       return false;
     }
 
@@ -304,7 +305,7 @@
 
       // Проверяем, нет ли уже такого интегратора
       if (existingIntegrators.includes(integratorStr)) {
-        if (window.Logger) window.Logger.debug('Интегратор уже существует в localStorage', integratorStr);
+        if (Logger) Logger.debug('Интегратор уже существует в localStorage', integratorStr);
         return false;
       }
 
@@ -318,12 +319,12 @@
       // updateIntegratorsSelects будет вызван только если модальное окно будет закрыто и открыто заново
       // Это предотвращает сброс выбранных значений при добавлении нового интегратора
 
-      if (window.Logger) {
-        window.Logger.debug('Добавлен новый интегратор в localStorage', integratorStr);
+      if (Logger) {
+        Logger.debug('Добавлен новый интегратор в localStorage', integratorStr);
       }
       return true;
     } catch (e) {
-      if (window.Logger) window.Logger.warn('Не удалось добавить интегратора', e);
+      if (Logger) Logger.warn('Не удалось добавить интегратора', e);
       return false;
     }
   }
@@ -461,7 +462,7 @@
     try {
       const container = document.getElementById(containerId);
       if (!container) {
-        if (window.Logger) window.Logger.warn('Контейнер не найден при создании элемента вендора:', containerId);
+        if (Logger) Logger.warn('Контейнер не найден при создании элемента вендора:', containerId);
         return null;
       }
 
@@ -481,7 +482,7 @@
       // Загружаем список вендоров
       const vendorsList = await loadVendorsList();
       if (!vendorsList || !Array.isArray(vendorsList)) {
-        if (window.Logger) window.Logger.warn('Список вендоров не является массивом', vendorsList);
+        if (Logger) Logger.warn('Список вендоров не является массивом', vendorsList);
       }
       // Убеждаемся, что каждый элемент - строка
       const vendorsOptions = vendorsList
@@ -489,8 +490,8 @@
         .map(v => `<li data-value="${String(v)}">${String(v)}</li>`)
         .join('');
 
-      if (window.Logger && vendorsList.length > 0) {
-        window.Logger.debug('Создано опций вендоров для селекта:', vendorsList.length);
+      if (Logger && vendorsList.length > 0) {
+        Logger.debug('Создано опций вендоров для селекта:', vendorsList.length);
       }
 
       vendorDiv.innerHTML = `
@@ -543,8 +544,8 @@
             vendorIntegratorsSection.style.display = '';
             vendorIntegratorsSection.setAttribute('aria-hidden', 'false');
             // Убеждаемся, что секция видима
-            if (window.Logger) {
-              window.Logger.debug('Показываем секцию интеграторов для вендора');
+            if (Logger) {
+              Logger.debug('Показываем секцию интеграторов для вендора');
             }
           } else {
             vendorIntegratorsSection.style.display = 'none';
@@ -590,10 +591,10 @@
         const hasVendor = !!value && value !== 'Выберите вендора' && value !== '';
         toggleIntegratorsSection(hasVendor);
 
-        if (window.Logger && hasVendor) {
-          window.Logger.debug('Вендор выбран:', value, 'Показываем интеграторов');
-        } else if (window.Logger && !hasVendor) {
-          window.Logger.debug('Вендор не выбран, скрываем интеграторов');
+        if (Logger && hasVendor) {
+          Logger.debug('Вендор выбран:', value, 'Показываем интеграторов');
+        } else if (Logger && !hasVendor) {
+          Logger.debug('Вендор не выбран, скрываем интеграторов');
         }
 
         updateVendorsHiddenInput(containerId, isEdit);
@@ -817,12 +818,12 @@
               if (!localVendors.includes(newVendorName)) {
                 localVendors.push(newVendorName);
                 localStorage.setItem(VENDORS_STORAGE_KEY, JSON.stringify(localVendors));
-                if (window.Logger) {
-                  window.Logger.debug('Сохранен новый вендор в localStorage:', newVendorName);
+                if (Logger) {
+                  Logger.debug('Сохранен новый вендор в localStorage:', newVendorName);
                 }
               }
             } catch (e) {
-              if (window.Logger) window.Logger.warn('Не удалось сохранить вендора в localStorage', e);
+              if (Logger) Logger.warn('Не удалось сохранить вендора в localStorage', e);
             }
 
             // Обновляем кэш - объединяем текущий список с новым вендором
@@ -943,8 +944,8 @@
               e.stopPropagation();
               e.stopImmediatePropagation();
               e.preventDefault();
-              if (window.Logger) {
-                window.Logger.debug('Клик по кнопке добавления вендора');
+              if (Logger) {
+                Logger.debug('Клик по кнопке добавления вендора');
               }
               addNewVendor();
               return false;
@@ -957,8 +958,8 @@
               e.stopPropagation();
               e.stopImmediatePropagation();
               e.preventDefault();
-              if (window.Logger) {
-                window.Logger.debug('Enter в поле ввода вендора');
+              if (Logger) {
+                Logger.debug('Enter в поле ввода вендора');
               }
               addNewVendor();
               return false;
@@ -1089,7 +1090,7 @@
 
       return vendorDiv;
     } catch (error) {
-      if (window.Logger) window.Logger.warn('Ошибка при создании элемента вендора:', error);
+      if (Logger) Logger.warn('Ошибка при создании элемента вендора:', error);
       return null;
     }
   }
@@ -1331,12 +1332,12 @@
               if (!localIntegrators.includes(newIntegratorName)) {
                 localIntegrators.push(newIntegratorName);
                 localStorage.setItem(INTEGRATORS_STORAGE_KEY, JSON.stringify(localIntegrators));
-                if (window.Logger) {
-                  window.Logger.debug('Сохранен новый интегратор в localStorage:', newIntegratorName);
+                if (Logger) {
+                  Logger.debug('Сохранен новый интегратор в localStorage:', newIntegratorName);
                 }
               }
             } catch (e) {
-              if (window.Logger) window.Logger.warn('Не удалось сохранить интегратора в localStorage', e);
+              if (Logger) Logger.warn('Не удалось сохранить интегратора в localStorage', e);
             }
 
             // Обновляем кэш
@@ -1493,8 +1494,8 @@
             e.stopPropagation();
             e.stopImmediatePropagation();
             e.preventDefault();
-            if (window.Logger) {
-              window.Logger.debug('Клик по кнопке добавления интегратора');
+            if (Logger) {
+              Logger.debug('Клик по кнопке добавления интегратора');
             }
             addNewIntegrator();
             return false;
@@ -1507,8 +1508,8 @@
             e.stopPropagation();
             e.stopImmediatePropagation();
             e.preventDefault();
-            if (window.Logger) {
-              window.Logger.debug('Enter в поле ввода интегратора');
+            if (Logger) {
+              Logger.debug('Enter в поле ввода интегратора');
             }
             addNewIntegrator();
             return false;
@@ -1610,14 +1611,14 @@
   function initVendorsManagement(containerId, addButtonId, isEdit = false) {
     const container = document.getElementById(containerId);
     if (!container) {
-      if (window.Logger) window.Logger.warn('Контейнер вендоров не найден:', containerId);
+      if (Logger) Logger.warn('Контейнер вендоров не найден:', containerId);
       return;
     }
 
     // Проверяем, не инициализирован ли уже этот контейнер
     // Удаляем флаг при закрытии модального окна, но не при повторной инициализации
     if (initializedContainers.has(containerId)) {
-      if (window.Logger) window.Logger.debug('Контейнер вендоров уже инициализирован, пропускаем:', containerId);
+      if (Logger) Logger.debug('Контейнер вендоров уже инициализирован, пропускаем:', containerId);
       return;
     }
 
@@ -1665,10 +1666,10 @@
           label.appendChild(addVendorBtn);
         }
       } else {
-        if (window.Logger) window.Logger.warn('Label не найден в form-group для контейнера:', containerId);
+        if (Logger) Logger.warn('Label не найден в form-group для контейнера:', containerId);
       }
     } else {
-      if (window.Logger) window.Logger.warn('Form-group не найден для контейнера:', containerId);
+      if (Logger) Logger.warn('Form-group не найден для контейнера:', containerId);
     }
 
     // Функция для добавления нового вендора
@@ -1712,10 +1713,10 @@
           }
         });
       } else {
-        if (window.Logger) window.Logger.debug('Режим редактирования: не создаем пустой селект вендора');
+        if (Logger) Logger.debug('Режим редактирования: не создаем пустой селект вендора');
       }
     } else {
-      if (window.Logger) window.Logger.debug('Элементы вендоров уже существуют, не создаем дубликат');
+      if (Logger) Logger.debug('Элементы вендоров уже существуют, не создаем дубликат');
     }
 
   }
@@ -1725,7 +1726,7 @@
     try {
       const container = document.getElementById(containerId);
       if (!container) {
-        if (window.Logger) window.Logger.warn('Контейнер вендоров не найден:', containerId);
+        if (Logger) Logger.warn('Контейнер вендоров не найден:', containerId);
         return Promise.resolve();
       }
 
@@ -1744,12 +1745,12 @@
             const vendorEl = await createVendorElement(vendor, containerId, isEdit);
             if (vendorEl) {
               container.appendChild(vendorEl);
-              if (window.Logger) window.Logger.debug('Добавлен элемент вендора:', vendor.name || 'без названия');
+              if (Logger) Logger.debug('Добавлен элемент вендора:', vendor.name || 'без названия');
             } else {
-              if (window.Logger) window.Logger.warn('Не удалось создать элемент вендора:', vendor);
+              if (Logger) Logger.warn('Не удалось создать элемент вендора:', vendor);
             }
           } catch (err) {
-            if (window.Logger) window.Logger.warn('Ошибка при создании элемента вендора:', err);
+            if (Logger) Logger.warn('Ошибка при создании элемента вендора:', err);
           }
         }
       } else {
@@ -1759,12 +1760,12 @@
           const vendorEl = await createVendorElement({ id: Date.now(), name: '', integrators: [] }, containerId, isEdit);
           if (vendorEl) {
             container.appendChild(vendorEl);
-            if (window.Logger) window.Logger.debug('Создан пустой элемент вендора для режима', isEdit ? 'редактирования' : 'создания');
+            if (Logger) Logger.debug('Создан пустой элемент вендора для режима', isEdit ? 'редактирования' : 'создания');
           } else {
-            if (window.Logger) window.Logger.warn('Не удалось создать пустой элемент вендора');
+            if (Logger) Logger.warn('Не удалось создать пустой элемент вендора');
           }
         } catch (err) {
-          if (window.Logger) window.Logger.warn('Ошибка при создании пустого элемента вендора:', err);
+          if (Logger) Logger.warn('Ошибка при создании пустого элемента вендора:', err);
         }
       }
 
@@ -1800,7 +1801,7 @@
                     integratorsSection.setAttribute('aria-hidden', 'false');
                   }
                 } catch (e) {
-                  if (window.Logger) window.Logger.warn('Ошибка при установке значения вендора:', e);
+                  if (Logger) Logger.warn('Ошибка при установке значения вендора:', e);
                 }
               }
             }
@@ -1854,27 +1855,27 @@
                     }
                   }
                 } catch (e) {
-                  if (window.Logger) window.Logger.warn('Ошибка при установке значений интеграторов', e);
+                  if (Logger) Logger.warn('Ошибка при установке значений интеграторов', e);
                 }
               }
             });
           });
         } catch (e) {
-          if (window.Logger) window.Logger.warn('Ошибка при установке значений в селекты:', e);
+          if (Logger) Logger.warn('Ошибка при установке значений в селекты:', e);
         }
       }, 150);
 
       updateVendorsHiddenInput(containerId, isEdit);
 
       // Проверяем, что элементы действительно добавлены
-      if (window.Logger) {
+      if (Logger) {
         const addedItems = container.querySelectorAll('.vendor-item');
-        window.Logger.debug(`Всего элементов вендоров в контейнере: ${addedItems.length}`);
+        Logger.debug(`Всего элементов вендоров в контейнере: ${addedItems.length}`);
       }
 
       return Promise.resolve();
     } catch (error) {
-      if (window.Logger) window.Logger.warn('Критическая ошибка в loadVendorsIntoForm:', error);
+      if (Logger) Logger.warn('Критическая ошибка в loadVendorsIntoForm:', error);
       return Promise.reject(error);
     }
   }
@@ -2020,7 +2021,7 @@
 
     // Проверяем, не инициализирован ли уже этот input
     if (initializedFileInputs.has(inputId)) {
-      if (window.Logger) window.Logger.debug('Обработчик файлов уже инициализирован, пропускаем:', inputId);
+      if (Logger) Logger.debug('Обработчик файлов уже инициализирован, пропускаем:', inputId);
       return;
     }
 
@@ -2126,7 +2127,7 @@
             fileList.appendChild(fileEl);
           }
         } catch (err) {
-          if (window.Logger) window.Logger.warn('Ошибка при загрузке файла', err);
+          if (Logger) Logger.warn('Ошибка при загрузке файла', err);
           if (window.showNotification) {
             window.showNotification(`Ошибка при загрузке файла ${file.name}`, false);
           }
@@ -2302,7 +2303,7 @@
   // Сброс флага инициализации для контейнера
   function resetInitialization(containerId) {
     initializedContainers.delete(containerId);
-    if (window.Logger) window.Logger.debug('Сброшен флаг инициализации для контейнера:', containerId);
+    if (Logger) Logger.debug('Сброшен флаг инициализации для контейнера:', containerId);
   }
 
   // Сброс флага инициализации для файлового input
@@ -2356,7 +2357,7 @@
       linkContainer.style.display = 'none';
     }
 
-    if (window.Logger) window.Logger.debug('Сброшен флаг инициализации для файлового input:', inputId);
+    if (Logger) Logger.debug('Сброшен флаг инициализации для файлового input:', inputId);
   }
 
   // Глобальное делегирование событий для обработки добавления вендоров и интеграторов
@@ -2431,7 +2432,7 @@
                     localStorage.setItem(VENDORS_STORAGE_KEY, JSON.stringify(localVendors));
                   }
                 } catch (e) {
-                  if (window.Logger) window.Logger.warn('Не удалось сохранить вендора в localStorage', e);
+                  if (Logger) Logger.warn('Не удалось сохранить вендора в localStorage', e);
                 }
 
                 vendorsListCache = currentVendors;
@@ -2583,7 +2584,7 @@
                       localStorage.setItem(INTEGRATORS_STORAGE_KEY, JSON.stringify(localIntegrators));
                     }
                   } catch (e) {
-                    if (window.Logger) window.Logger.warn('Не удалось сохранить интегратора в localStorage', e);
+                    if (Logger) Logger.warn('Не удалось сохранить интегратора в localStorage', e);
                   }
 
                   integratorsListCache = currentIntegrators;
@@ -2709,7 +2710,7 @@
   }, true); // Используем capture phase для раннего перехвата
 
   // Экспорт функций
-  window.VendorsFiles = {
+  const VendorsFiles = {
     initVendorsManagement,
     loadVendorsIntoForm,
     updateVendorsHiddenInput,
@@ -2729,4 +2730,8 @@
     resetFileInputInitialization
   };
 
-})();
+  if (typeof window !== 'undefined') {
+    window.VendorsFiles = VendorsFiles;
+  }
+
+  export default VendorsFiles;

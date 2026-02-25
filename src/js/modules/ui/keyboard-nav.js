@@ -1,9 +1,7 @@
 // Модуль клавиатурной навигации
-// Обеспечивает полную навигацию с клавиатуры и keyboard shortcuts
-// Экспортирует функции в window.KeyboardNav для использования в других модулях
+// ES module — полная навигация с клавиатуры и keyboard shortcuts
 
-(function() {
-  'use strict';
+'use strict';
 
   // Конфигурация keyboard shortcuts
   const shortcuts = {
@@ -253,7 +251,7 @@
   }
 
   // Экспорт функций
-  window.KeyboardNav = {
+  const KeyboardNav = {
     init,
     handleEscape,
     handleSearch,
@@ -261,10 +259,13 @@
     updateTabNavigation
   };
 
-  // Инициализация при загрузке DOM
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
+  if (typeof window !== 'undefined') {
+    window.KeyboardNav = KeyboardNav;
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
   }
-})();
+
+  export default KeyboardNav;

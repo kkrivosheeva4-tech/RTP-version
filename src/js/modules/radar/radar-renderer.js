@@ -2,8 +2,9 @@
 // Экспортирует функции в window.RadarRenderer для использования в RMK-director.js
 // Использует глобальные переменные из RMK-director.js и функции из других модулей
 
-(function() {
-  'use strict';
+import Logger from '../core/logger.js';
+
+'use strict';
 
   // Флаг отрисовки фона (один раз за сессию)
   let radarBackgroundRendered = false;
@@ -338,8 +339,8 @@
       el.classList.add('blip-missing-data');
       el.classList.add('blip-insufficient-data'); // Дополнительный класс для недостаточных данных
       el.dataset.missingFactors = pos.missingFactors.join(',');
-      if (window.Logger && typeof window.Logger.debug === 'function') {
-        window.Logger.debug(`[RadarRenderer] Технология ${tech.id || 'unknown'} имеет недостаточно данных: ${pos.missingFactors.join(', ')}`);
+      if (Logger && typeof Logger.debug === 'function') {
+        Logger.debug(`[RadarRenderer] Технология ${tech.id || 'unknown'} имеет недостаточно данных: ${pos.missingFactors.join(', ')}`);
       }
     }
 
@@ -396,7 +397,7 @@
     // Обработчик клика на blip
     el.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (window.Logger) window.Logger.log('=== Клик на blip ===', {
+      if (Logger) Logger.log('=== Клик на blip ===', {
         id: el.dataset.id,
         quadrant: el.dataset.quadrant
       });
@@ -404,21 +405,21 @@
         const id = +el.dataset.id;
         const blipQuadrant = el.dataset.quadrant ? +el.dataset.quadrant : null;
         const t = getTechById(id);
-        if (window.Logger) window.Logger.log('blip click: технология найдена', {
+        if (Logger) Logger.log('blip click: технология найдена', {
           tech: t ? { id: t.id, name: t.name } : null
         });
 
         // Получаем showDetail из window в момент клика, а не из конфига
         const showDetailFn = (typeof window.showDetail === 'function') ? window.showDetail : null;
-        if (window.Logger) window.Logger.log('blip click: showDetail доступна', {
+        if (Logger) Logger.log('blip click: showDetail доступна', {
           available: !!showDetailFn,
           type: typeof window.showDetail
         });
 
         if (t && showDetailFn) {
-          if (window.Logger) window.Logger.log('blip click: вызываем showDetail');
+          if (Logger) Logger.log('blip click: вызываем showDetail');
           showDetailFn(t, 'blip', blipQuadrant);
-          if (window.Logger) window.Logger.log('blip click: showDetail вызвана');
+          if (Logger) Logger.log('blip click: showDetail вызвана');
         } else {
           if (!t) {
             // Ошибка при обработке клика на blip: технология не найдена
@@ -452,7 +453,7 @@
     const blipsToRemove = svg.querySelectorAll('.blip, .blip-warning');
     blipsToRemove.forEach(el => el.remove());
 
-    if (window.Logger) window.Logger.debug('renderRadar: start — input data length:', Array.isArray(techData) ? techData.length : 0);
+    if (Logger) Logger.debug('renderRadar: start — input data length:', Array.isArray(techData) ? techData.length : 0);
 
     // Фильтруем технологии по валидности
     // Все технологии отображаются на основе математической модели, проверяем только наличие квадрантов
@@ -463,7 +464,7 @@
         return true;
       });
 
-    if (window.Logger) window.Logger.debug('renderRadar: start — valid techs:', validTechs.length);
+    if (Logger) Logger.debug('renderRadar: start — valid techs:', validTechs.length);
 
     // Создаем структуру данных для отображения
     const renderData = [];
@@ -500,8 +501,8 @@
           : [];
         const showImplemented = levelFilter.includes('Внедренная') || levelFilter.includes('Внедренные');
         if (!showImplemented) {
-          if (window.Logger && typeof window.Logger.debug === 'function') {
-            window.Logger.debug(`[RadarRenderer] Технология ${t.id || 'unknown'} полностью внедрена, скрыта (показать только при фильтре «Внедренная»)`);
+          if (Logger && typeof Logger.debug === 'function') {
+            Logger.debug(`[RadarRenderer] Технология ${t.id || 'unknown'} полностью внедрена, скрыта (показать только при фильтре «Внедренная»)`);
           }
           return;
         }
@@ -512,8 +513,8 @@
       // ОБНОВЛЕНО (2026-01-29): Технологии без направлений теперь имеют fallback квадрант
       // Если квадрантов все еще нет, это означает проблему с данными
       if (techQuadrants.length === 0) {
-        if (window.Logger) {
-          window.Logger.warn('renderRadar: tech has no quadrants after fallback', {
+        if (Logger) {
+          Logger.warn('renderRadar: tech has no quadrants after fallback', {
             id: t.id,
             name: t.name,
             directions: t.directions,
@@ -545,7 +546,7 @@
       });
     });
 
-    if (window.Logger) window.Logger.debug('renderRadar: after mapping — renderData entries:', renderData.length);
+    if (Logger) Logger.debug('renderRadar: after mapping — renderData entries:', renderData.length);
 
     // ОБНОВЛЕНО: Сортируем renderData по ID для детерминированного порядка обработки
     // Это гарантирует стабильность позиций при повторных вызовах
@@ -622,7 +623,7 @@
 
     // Создаём blip'ы в SVG
     renderData.forEach((entry) => {
-      if (window.Logger) window.Logger.debug('renderRadar: rendering blip', {
+      if (Logger) Logger.debug('renderRadar: rendering blip', {
         id: entry.id,
         name: entry.name,
         quadrant: entry.quadrant,
@@ -672,8 +673,7 @@
     radarBackgroundRendered = false;
   }
 
-  // Экспорт в window.RadarRenderer
-  window.RadarRenderer = {
+  const RadarRenderer = {
     renderRadarBackground,
     renderRadar,
     createBlip,
@@ -681,4 +681,9 @@
     resetRadarBackground
   };
 
-})();
+  if (typeof window !== 'undefined') {
+    window.RadarRenderer = RadarRenderer;
+  }
+
+  export default RadarRenderer;
+  export { renderRadarBackground, renderRadar, createBlip, computeShapeByTechType, resetRadarBackground };

@@ -1,9 +1,8 @@
+// detail-panel.js — ES module
 // Модуль работы с детальной панелью
-// Экспортирует функции в window для использования в RMK2.js
-// Использует глобальные переменные из RMK2.js и функции из других модулей
 
-(function () {
-  'use strict';
+import { DOMCache } from '../core/dom-utils.js';
+import { escapeHtml } from '../core/escape-utils.js';
 
   /**
    * Получить пояснение для TRL-стадии
@@ -101,25 +100,14 @@
     `;
   }
 
-  // Получаем зависимости из других модулей и глобальных переменных (ленивая загрузка)
   const getDOMElement = (id) => {
-    if (window.DOMCache) {
-      let element = window.DOMCache.get(id);
-      // Если элемент не найден в кэше, попробуем обновить кэш
-      if (!element) {
-        element = window.DOMCache.refresh(id);
-      }
-      // Если все еще не найден, попробуем напрямую
-      if (!element) {
-        element = document.getElementById(id);
-        // Если нашли напрямую, обновим кэш
-        if (element && window.DOMCache.refresh) {
-          window.DOMCache.refresh(id);
-        }
-      }
-      return element;
+    let element = DOMCache.get(id);
+    if (!element) element = DOMCache.refresh(id);
+    if (!element) {
+      element = document.getElementById(id);
+      if (element && DOMCache.refresh) DOMCache.refresh(id);
     }
-    return document.getElementById(id);
+    return element || document.getElementById(id);
   };
 
   const getStateManager = () => {
@@ -293,7 +281,7 @@
       if (blockWrap) {
         if (blocksArr.length) {
           blockWrap.innerHTML = blocksArr.map(b => {
-            const escaped = window.escapeHtml ? window.escapeHtml(b) : String(b).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
+            const escaped = escapeHtml(b);
             return `<span class="multi-tag">${escaped}</span>`;
           }).join(' ');
         } else {
@@ -308,7 +296,7 @@
       if (funcWrap) {
         if (functionsArr.length) {
           funcWrap.innerHTML = functionsArr.map(f => {
-            const escaped = window.escapeHtml ? window.escapeHtml(f) : String(f).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
+            const escaped = escapeHtml(f);
             return `<span class="multi-tag">${escaped}</span>`;
           }).join(' ');
         } else {
@@ -511,7 +499,7 @@
       const vendorsEl = detailPanel.querySelector('#panelVendors');
       if (vendorsEl) {
         if (t.vendors && Array.isArray(t.vendors) && t.vendors.length > 0) {
-          const esc = (s) => (window.escapeHtml ? window.escapeHtml(String(s ?? '')) : String(s ?? ''));
+          const esc = (s) => escapeHtml(String(s ?? ''));
           const normalize = (x) => String(x ?? '').trim();
           const vendors = t.vendors
             .map(v => ({
@@ -570,7 +558,7 @@
                     </svg>
                   </div>
                   <div class="panel-file-info">
-                    <div class="panel-file-name">${window.escapeHtml ? window.escapeHtml(fileName) : fileName}</div>
+                    <div class="panel-file-name">${escapeHtml(fileName)}</div>
                     ${file.size ? `<div class="panel-file-size">${formatFileSize(file.size)}</div>` : ''}
                   </div>
                 </div>
@@ -770,7 +758,7 @@
       }, 50);
     } else {
       if (window.Logger) window.Logger.warn('showDetail: detailPanel не найден', {
-        DOMCache: window.DOMCache ? 'доступен' : 'недоступен',
+        DOMCache: DOMCache ? 'доступен' : 'недоступен',
         getElementById: document.getElementById('detailPanel') ? 'найден' : 'не найден'
       });
     }
@@ -1091,10 +1079,7 @@
   window.updateDetailPanelPosition = updateDetailPanelPosition;
 
   // Экспорт в объект для модульной структуры (опционально)
-  window.DetailPanel = {
-    showDetail,
-    getFieldValue,
-    getFieldLabel
-  };
-
-})();
+  const DetailPanel = { showDetail, getFieldValue, getFieldLabel };
+  if (typeof window !== 'undefined') window.DetailPanel = DetailPanel;
+  export default DetailPanel;
+  export { showDetail, getFieldValue, getFieldLabel };

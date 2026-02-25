@@ -1,36 +1,19 @@
 // radar-update.js
 // Функция обновления радара с фильтрацией
+// DataIndex и RenderQueue импортируются напрямую для корректного порядка загрузки в production
 
-(function() {
-  'use strict';
+import { DOMCache } from '../core/dom-utils.js';
+import { DataIndex } from '../core/data-indexing.js';
+import { RenderQueue } from '../core/core-utils.js';
 
-  // Ленивая загрузка зависимостей
+'use strict';
+
+  // Ленивая загрузка зависимостей (модули ещё загружаются через loadModule)
   function getFilters() {
     if (typeof window !== 'undefined' && window.Filters) {
       return window.Filters;
     }
     throw new Error('Filters не загружен');
-  }
-
-  function getDataIndex() {
-    if (typeof window !== 'undefined' && window.DataIndex) {
-      return window.DataIndex;
-    }
-    throw new Error('DataIndex не загружен');
-  }
-
-  function getRenderQueue() {
-    if (typeof window !== 'undefined' && window.RenderQueue) {
-      return window.RenderQueue;
-    }
-    throw new Error('RenderQueue не загружен');
-  }
-
-  function getDOMCache() {
-    if (typeof window !== 'undefined' && window.DOMCache) {
-      return window.DOMCache;
-    }
-    throw new Error('DOMCache не загружен');
   }
 
   function getStateAccessors() {
@@ -50,9 +33,6 @@
   // Внутренняя функция обновления радара (без debounce для синхронных вызовов)
   function updateRadarInternal() {
     const Filters = getFilters();
-    const DataIndex = getDataIndex();
-    const RenderQueue = getRenderQueue();
-    const DOMCache = getDOMCache();
     const StateAccessors = getStateAccessors();
     const DOMProxy = getDOMProxy();
 
@@ -159,9 +139,10 @@
     }
 
     // Оптимизация: группируем обновления DOM через RenderQueue
+    const isRadarPage = window.location.pathname.includes('radar.html') || window.location.href.includes('radar.html');
     RenderQueue.schedule(() => {
-      // Вызываем renderRadar из модуля radar-wrappers
-      if (typeof window.renderRadar === 'function') {
+      // Полный рендер с технологиями только на странице radar.html
+      if (isRadarPage && typeof window.renderRadar === 'function') {
         window.renderRadar(filtered);
       }
 
@@ -236,12 +217,13 @@
   // Экспорт модуля
   const RadarUpdate = {
     updateRadar,
-    updateRadarInternal // Экспортируем и внутреннюю функцию для случаев, когда нужен немедленный вызов
+    updateRadarInternal
   };
 
   if (typeof window !== 'undefined') {
     window.RadarUpdate = RadarUpdate;
-    // Экспорт функции в window для обратной совместимости
     window.updateRadar = updateRadar;
   }
-})();
+
+  export default RadarUpdate;
+  export { updateRadar, updateRadarInternal };

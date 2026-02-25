@@ -1,15 +1,18 @@
 // radar-wrappers.js
 // Обертки для рендеринга радара
 
-(function() {
-  'use strict';
+import RadarRenderer from './radar-renderer.js';
+import QuadrantCache from './quadrant-cache.js';
+import { DOMProxy } from '../core/dom-utils.js';
 
-  // Ленивая загрузка зависимостей
-  function getRadarRenderer() {
-    if (typeof window !== 'undefined' && window.RadarRenderer) {
-      return window.RadarRenderer;
+'use strict';
+
+  // Ленивая загрузка для модулей, ещё не переведённых на ES (Utils из script.js)
+  function getUtils() {
+    if (typeof window !== 'undefined' && window.Utils) {
+      return window.Utils;
     }
-    throw new Error('RadarRenderer не загружен');
+    throw new Error('Utils не загружен');
   }
 
   function getStateAccessors() {
@@ -17,20 +20,6 @@
       return window.StateAccessors;
     }
     throw new Error('StateAccessors не загружен');
-  }
-
-  function getQuadrantCache() {
-    if (typeof window !== 'undefined' && window.QuadrantCache) {
-      return window.QuadrantCache;
-    }
-    throw new Error('QuadrantCache не загружен');
-  }
-
-  function getUtils() {
-    if (typeof window !== 'undefined' && window.Utils) {
-      return window.Utils;
-    }
-    throw new Error('Utils не загружен');
   }
 
   function getPositioning() {
@@ -42,7 +31,6 @@
 
   // Форма по типу технологии (используем модуль RadarRenderer)
   function computeShapeByTechType(techType) {
-    const RadarRenderer = getRadarRenderer();
     const TECHTYPE_TO_SHAPE = window.TECHTYPE_TO_SHAPE || {};
     return RadarRenderer.computeShapeByTechType(techType, TECHTYPE_TO_SHAPE);
   }
@@ -50,8 +38,7 @@
   // Функции рендеринга вынесены в модуль radar-renderer.js
   // Используем обертки для обратной совместимости
   function renderRadarBackground() {
-    const RadarRenderer = getRadarRenderer();
-    const QuadrantCache = getQuadrantCache();
+    const QuadrantCacheRef = (typeof window !== 'undefined' && window.QuadrantCache) ? window.QuadrantCache : QuadrantCache;
 
     // Получаем константы из window
     const SVG_NS = window.SVG_NS || "http://www.w3.org/2000/svg";
@@ -62,10 +49,6 @@
     const QUADRANTS = window.QUADRANTS || [];
 
     // Получаем svg через DOMProxy
-    const DOMProxy = window.DOMProxy;
-    if (!DOMProxy) {
-      throw new Error('DOMProxy не загружен');
-    }
     const svg = DOMProxy.createDOMProxy("techRadar");
 
     RadarRenderer.renderRadarBackground({
@@ -76,7 +59,7 @@
       RINGS,
       QUADRANTS,
       svg,
-      clearQuadrantGroupsCache: QuadrantCache.clearQuadrantGroupsCache,
+      clearQuadrantGroupsCache: QuadrantCacheRef.clearQuadrantGroupsCache,
       polarToCartesian: window.polarToCartesian,
       describeArc: window.describeArc,
       describeWedge: window.describeWedge
@@ -86,10 +69,9 @@
 
   // Функция рендеринга радара (используем модуль)
   function renderRadar(data) {
-    const RadarRenderer = getRadarRenderer();
     const StateAccessors = getStateAccessors();
     const Positioning = getPositioning();
-    const QuadrantCache = getQuadrantCache();
+    const QuadrantCacheRef = (typeof window !== 'undefined' && window.QuadrantCache) ? window.QuadrantCache : QuadrantCache;
     const Utils = getUtils();
 
     // Получаем данные
@@ -99,10 +81,6 @@
     const TECHTYPE_TO_SHAPE = window.TECHTYPE_TO_SHAPE || {};
 
     // Получаем svg через DOMProxy
-    const DOMProxy = window.DOMProxy;
-    if (!DOMProxy) {
-      throw new Error('DOMProxy не загружен');
-    }
     const svg = DOMProxy.createDOMProxy("techRadar");
 
     RadarRenderer.renderRadar(technologies, {
@@ -115,7 +93,7 @@
       getAllQuadrantsForTech: Positioning.getAllQuadrantsForTech,
       assignFixedPositionForQuadrant: Positioning.assignFixedPositionForQuadrant,
       applyNonOverlappingLayout: Positioning.applyNonOverlappingLayout,
-      getQuadrantGroup: QuadrantCache.getQuadrantGroup,
+      getQuadrantGroup: QuadrantCacheRef.getQuadrantGroup,
       computeShapeByTechType,
       TECHTYPE_TO_SHAPE,
       createBlip: createBlipWrapper,
@@ -125,19 +103,14 @@
 
   // Обертка для createBlip из модуля
   function createBlipWrapper(tech, pos, quadrant) {
-    const RadarRenderer = getRadarRenderer();
     const StateAccessors = getStateAccessors();
-    const QuadrantCache = getQuadrantCache();
+    const QuadrantCacheRef = (typeof window !== 'undefined' && window.QuadrantCache) ? window.QuadrantCache : QuadrantCache;
     const Utils = getUtils();
 
     const SVG_NS = window.SVG_NS || "http://www.w3.org/2000/svg";
     const TECHTYPE_TO_SHAPE = window.TECHTYPE_TO_SHAPE || {};
 
     // Получаем svg через DOMProxy
-    const DOMProxy = window.DOMProxy;
-    if (!DOMProxy) {
-      throw new Error('DOMProxy не загружен');
-    }
     const svg = DOMProxy.createDOMProxy("techRadar");
 
     // Получаем showDetail напрямую из window во время вызова, чтобы гарантировать, что функция доступна
@@ -146,7 +119,7 @@
     RadarRenderer.createBlip(tech, pos, quadrant, {
       SVG_NS,
       svg,
-      getQuadrantGroup: QuadrantCache.getQuadrantGroup,
+      getQuadrantGroup: QuadrantCacheRef.getQuadrantGroup,
       computeShapeByTechType,
       TECHTYPE_TO_SHAPE,
       starPath: window.starPath,
@@ -173,11 +146,12 @@
 
   if (typeof window !== 'undefined') {
     window.RadarWrappers = RadarWrappers;
-    // Экспорт функций в window для обратной совместимости
     window.computeShapeByTechType = computeShapeByTechType;
     window.renderRadarBackground = renderRadarBackground;
     window.renderRadar = renderRadar;
     window.createBlipWrapper = createBlipWrapper;
     window.createBlip = createBlip;
   }
-})();
+
+  export default RadarWrappers;
+  export { computeShapeByTechType, renderRadarBackground, renderRadar, createBlipWrapper, createBlip };

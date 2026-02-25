@@ -1,15 +1,18 @@
 // events.js
 // Модуль централизованной обработки всех событий интерфейса
 // Использует EventManager для делегирования событий
+import { EventManager } from '../core/core-utils.js';
+import { DOMCache } from '../core/dom-utils.js';
 
-(function () {
-  "use strict";
+"use strict";
 
-  // Ленивая загрузка зависимостей для совместимости
+  // Ленивая загрузка зависимостей для совместимости (другие модули из window)
   function getDependency(name) {
+    if (name === "DOMCache") return DOMCache;
+    if (name === "EventManager") return EventManager;
     if (typeof window === "undefined" || !window[name]) {
       throw new Error(
-        `Зависимость ${name} не загружена. Подключите необходимые модули перед events.js`
+        `Зависимость ${name} не загружена. Подключите необходимые модули перед вызовом initEventHandlers.`
       );
     }
     return window[name];
@@ -17,7 +20,6 @@
 
   // Функция для инициализации поиска (может быть вызвана повторно)
   function initSearchHandler() {
-    const DOMCache = getDependency("DOMCache");
     let searchInput = DOMCache.get("searchInput");
     if (!searchInput) {
       searchInput = document.getElementById("searchInput");
@@ -57,7 +59,6 @@
 
     // Проверяем, что все зависимости доступны
     const EventManager = getDependency("EventManager");
-    const DOMCache = getDependency("DOMCache");
 
     // Ленивая загрузка функций из window (будут доступны после загрузки RMK2.js)
     function getWindowFunction(name) {
@@ -1182,31 +1183,7 @@
     toKebab
   };
 
-  // Инициализация при загрузке DOM
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => {
-      initEventHandlers();
-      // Повторная попытка инициализации поиска через небольшую задержку
-      setTimeout(() => {
-        if (!initSearchHandler()) {
-          // Если не удалось, пробуем еще раз через 500мс
-          setTimeout(initSearchHandler, 500);
-        }
-      }, 100);
-    });
-  } else {
-    // DOM уже загружен
-    initEventHandlers();
-    // Повторная попытка инициализации поиска через небольшую задержку
-    setTimeout(() => {
-      if (!initSearchHandler()) {
-        // Если не удалось, пробуем еще раз через 500мс
-        setTimeout(initSearchHandler, 500);
-      }
-    }, 100);
-  }
-
-  // Экспорт функции инициализации для повторного использования
+  // Экспорт в window и ES export (инициализация вызывается из app-init после загрузки всех модулей)
   if (typeof window !== "undefined") {
     window.initEventHandlers = initEventHandlers;
     window.initSearchHandler = initSearchHandler; // Экспорт функции инициализации поиска
@@ -1216,4 +1193,6 @@
       window[key] = Utils[key];
     });
   }
-})();
+
+  export default { initEventHandlers, initSearchHandler, Utils };
+  export { initEventHandlers, initSearchHandler, Utils, isRatingFilled, isNumericField, getReadinessColor, isReadinessField, toKebab };

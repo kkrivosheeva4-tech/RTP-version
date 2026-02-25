@@ -2,11 +2,10 @@
 // Экспортирует функции в window для использования в RMK2.js
 // Использует глобальные переменные из RMK2.js и функции из других модулей
 
-(function() {
-  'use strict';
+'use strict';
 
-  // Получаем зависимости из других модулей (StateAccessors — основной источник; window.* устарел)
-  const getTechnologies = () => {
+// Получаем зависимости из других модулей (StateAccessors — основной источник; window.* устарел)
+const getTechnologies = () => {
     if (window.StateAccessors && typeof window.StateAccessors.getTechnologies === 'function') {
       const techs = window.StateAccessors.getTechnologies();
       if (Array.isArray(techs) && techs.length > 0) return techs;
@@ -199,8 +198,7 @@
     closeQuadrantPriorityPanel();
   }
 
-  // Экспорт функций в window для использования в RMK2.js
-  window.Quadrants = {
+  const Quadrants = {
     getTechStatus,
     getQuadrantName,
     getTechnologiesForQuadrant,
@@ -209,10 +207,14 @@
   };
 
   // Экспорт функций напрямую в window для обратной совместимости
-  window.getTechStatus = getTechStatus;
-  window.getQuadrantName = getQuadrantName;
-  window.getTechnologiesForQuadrant = getTechnologiesForQuadrant;
-  window.zoomQuadrant = zoomQuadrant;
-  window.unzoom = unzoom;
+  if (typeof window !== 'undefined') {
+    window.Quadrants = Quadrants;
+    window.getTechStatus = getTechStatus;
+    window.getQuadrantName = getQuadrantName;
+    window.getTechnologiesForQuadrant = getTechnologiesForQuadrant;
+    window.zoomQuadrant = zoomQuadrant;
+    window.unzoom = unzoom;
+  }
 
-})();
+  export default Quadrants;
+  export { getTechStatus, getQuadrantName, getTechnologiesForQuadrant, zoomQuadrant, unzoom };

@@ -1,12 +1,11 @@
-// report-status.js
-// Модуль для управления индикатором загрузки отчета
+// report-status.js — ES module
+// Индикатор загрузки отчета
 
-(function() {
-  'use strict';
+import Modals from './modals.js';
 
-  const MODAL_ID = 'reportLoadingModal';
-  const SUCCESS_DELAY = 2000;
-  const ERROR_DELAY = 5000;
+const MODAL_ID = 'reportLoadingModal';
+const SUCCESS_DELAY = 2000;
+const ERROR_DELAY = 5000;
 
   function getModal() {
     return document.getElementById(MODAL_ID);
@@ -14,20 +13,6 @@
 
   function getElement(id) {
     return document.getElementById(id);
-  }
-
-  function getShowModal() {
-    if (typeof window !== 'undefined' && window.showModal) {
-      return window.showModal;
-    }
-    throw new Error('showModal не загружена');
-  }
-
-  function getHideModal() {
-    if (typeof window !== 'undefined' && window.hideModal) {
-      return window.hideModal;
-    }
-    throw new Error('hideModal не загружена');
   }
 
   function showReportLoading() {
@@ -50,7 +35,7 @@
       errorMessage.textContent = '';
     }
 
-    getShowModal()(MODAL_ID);
+    Modals.showModal(MODAL_ID);
   }
 
   function showReportSuccess() {
@@ -66,7 +51,7 @@
     if (text) text.textContent = 'Отчет успешно сформирован!';
 
     setTimeout(() => {
-      getHideModal()(MODAL_ID);
+      Modals.hideModal(MODAL_ID);
     }, SUCCESS_DELAY);
   }
 
@@ -88,11 +73,10 @@
     }
 
     setTimeout(() => {
-      getHideModal()(MODAL_ID);
+      Modals.hideModal(MODAL_ID);
     }, ERROR_DELAY);
   }
 
-  // Экспорт
   const ReportStatus = {
     showReportLoading,
     showReportSuccess,
@@ -105,4 +89,6 @@
     window.showReportSuccess = showReportSuccess;
     window.showReportError = showReportError;
   }
-})();
+
+  export default ReportStatus;
+  export { showReportLoading, showReportSuccess, showReportError };

@@ -2,10 +2,10 @@
  * Модуль улучшенной обработки отсутствующих данных
  * Использует методы машинного обучения (k-NN, регрессия) для предсказания отсутствующих значений
  */
-(function(window) {
-  'use strict';
 
-  // Модуль MissingDataPredictor инициализирован
+import Logger from '../core/logger.js';
+
+'use strict';
 
   /**
    * Вычисление евклидова расстояния между двумя технологиями
@@ -197,8 +197,8 @@
 
         if (prediction !== null) {
           predicted[factor] = prediction;
-          if (window.Logger && typeof window.Logger.debug === 'function') {
-            window.Logger.debug(`[MissingDataPredictor] Предсказано ${factor} = ${prediction.toFixed(2)} для технологии ${tech.id}`);
+          if (Logger && typeof Logger.debug === 'function') {
+            Logger.debug(`[MissingDataPredictor] Предсказано ${factor} = ${prediction.toFixed(2)} для технологии ${tech.id}`);
           }
         }
       }
@@ -219,14 +219,16 @@
     return technologies.map(tech => predictMissingValues(tech, technologies, options));
   }
 
-  // Публичный API
-  window.MissingDataPredictor = {
+  const MissingDataPredictor = {
     predictMissingValues: predictMissingValues,
     predictBatch: predictBatch,
     kNNPrediction: kNNPrediction,
     linearRegressionPrediction: linearRegressionPrediction
   };
 
-  // Модуль MissingDataPredictor загружен
+  if (typeof window !== 'undefined') {
+    window.MissingDataPredictor = MissingDataPredictor;
+  }
 
-})(window);
+  export default MissingDataPredictor;
+  export { predictMissingValues, predictBatch, kNNPrediction, linearRegressionPrediction };

@@ -9,10 +9,7 @@
  * ОБНОВЛЕНО (2026-01-29): Добавлен модуль аналитики для приоритета 3
  */
 
-(function() {
-  'use strict';
-
-  // Модуль ModelAnalytics инициализирован
+'use strict';
 
   /**
    * Вычисление коэффициента корреляции Пирсона между двумя массивами
@@ -672,8 +669,7 @@
     return report;
   }
 
-  // Экспорт в window.ModelAnalytics
-  window.ModelAnalytics = {
+  const ModelAnalytics = {
     analyzeFactorCorrelations,
     calculateQualityMetrics,
     analyzeSensitivity,
@@ -682,6 +678,16 @@
     calculateCorrelation
   };
 
-    // Модуль ModelAnalytics загружен
+  if (typeof window !== 'undefined') {
+    window.ModelAnalytics = ModelAnalytics;
+  }
 
-})();
+  export default ModelAnalytics;
+  export {
+    analyzeFactorCorrelations,
+    calculateQualityMetrics,
+    analyzeSensitivity,
+    performFullAnalysis,
+    extractFactors,
+    calculateCorrelation
+  };

@@ -1,18 +1,16 @@
-// state-utils.js
-// Объединенный модуль для работы с состоянием приложения
-// Объединяет функциональность state-accessors.js и state-subscriptions.js
+// state-utils.js — ES module
+// Объединенный модуль для работы с состоянием приложения (StateAccessors + StateSubscriptions)
 
-(function() {
-  'use strict';
+import StateManager from './state-manager.js';
+import { DOMCache } from './dom-utils.js';
+
+'use strict';
 
   // ===== STATE ACCESSORS =====
   // Геттеры и сеттеры для StateManager с синхронизацией window для обратной совместимости
 
   function getStateManager() {
-    if (typeof window !== 'undefined' && window.StateManager) {
-      return window.StateManager;
-    }
-    throw new Error('StateManager не загружен');
+    return StateManager;
   }
 
   // Создание пары getter/setter с опциональной синхронизацией с window
@@ -90,27 +88,28 @@
   // ===== STATE SUBSCRIPTIONS =====
   // Подписки на изменения состояния для синхронизации window и автоматического обновления UI
 
-  function getDOMCache() {
-    if (typeof window !== 'undefined' && window.DOMCache) {
-      return window.DOMCache;
-    }
-    throw new Error('DOMCache не загружен');
+  function getDOMCacheRef() {
+    return DOMCache;
   }
 
   // Проверка, открыто ли модальное окно
-  function isModalOpen(DOMCache) {
-    const editPanel = DOMCache.get('editTechPanel');
-    const addPanel = DOMCache.get('addTechPanel');
+  function isModalOpen(DOMCacheRef) {
+    const editPanel = DOMCacheRef.get('editTechPanel');
+    const addPanel = DOMCacheRef.get('addTechPanel');
     const isOpen = (panel) => panel && (panel.style.display === 'block' || panel.classList.contains('open'));
     return isOpen(editPanel) || isOpen(addPanel);
   }
 
   // Безопасное обновление радара
-  function safeUpdateRadar(DOMCache) {
+  // ИСПРАВЛЕНО: не проверяем svgEl.children — при первой загрузке данных SVG пуст,
+  // но updateRadar/renderRadar сами создадут фон и blip'ы
+  function safeUpdateRadar(DOMCacheRef) {
     if (typeof window.updateRadar !== 'function') return;
+    const isRadarPage = typeof window !== 'undefined' && (window.location.pathname.includes('radar.html') || window.location.href.includes('radar.html'));
+    if (!isRadarPage) return;
 
-    const svgEl = DOMCache.get('techRadar');
-    if (!svgEl || !svgEl.children || svgEl.children.length === 0) return;
+    const svgEl = DOMCacheRef.get('techRadar');
+    if (!svgEl) return;
 
     requestAnimationFrame(() => {
       try {
@@ -123,8 +122,8 @@
 
   // Инициализация подписок на изменения состояния
   function initStateSubscriptions() {
-    const StateManager = getStateManager();
-    const DOMCache = getDOMCache();
+    const SM = getStateManager();
+    const DOMCacheRef = getDOMCacheRef();
 
     // Синхронизация с window для обратной совместимости
     const syncKeys = [
@@ -133,7 +132,7 @@
     ];
 
     syncKeys.forEach(key => {
-      StateManager.subscribeToKey(key, (value) => {
+      SM.subscribeToKey(key, (value) => {
         if (typeof window !== 'undefined') {
           window[key] = value;
         }
@@ -141,7 +140,7 @@
     });
 
     // Обновление радара при изменении technologies
-    StateManager.subscribeToKey('technologies', (newTechnologies) => {
+    SM.subscribeToKey('technologies', (newTechnologies) => {
       if (typeof window.rebuildTechnologiesIndex === 'function') {
         window.rebuildTechnologiesIndex();
       }
@@ -164,21 +163,21 @@
         if (window.Logger) window.Logger.warn('Не удалось сохранить technologies в VFS при изменении', e);
       }
 
-      if (!isModalOpen(DOMCache)) {
-        safeUpdateRadar(DOMCache);
+      if (!isModalOpen(DOMCacheRef)) {
+        safeUpdateRadar(DOMCacheRef);
       }
     });
 
     // Обновление радара при изменении currentEnterprise
-    StateManager.subscribeToKey('currentEnterprise', () => {
-      if (!isModalOpen(DOMCache)) {
-        safeUpdateRadar(DOMCache);
+    SM.subscribeToKey('currentEnterprise', () => {
+      if (!isModalOpen(DOMCacheRef)) {
+        safeUpdateRadar(DOMCacheRef);
       }
     });
 
     // Обновление подсветки blip'ов при изменении selectedBlipId
-    StateManager.subscribeToKey('selectedBlipId', (newValue, oldValue) => {
-      const svgEl = DOMCache.get('techRadar');
+    SM.subscribeToKey('selectedBlipId', (newValue, oldValue) => {
+      const svgEl = DOMCacheRef.get('techRadar');
       if (!svgEl) return;
 
       if (oldValue) {
@@ -196,25 +195,19 @@
   // Экспорт StateSubscriptions
   const StateSubscriptions = { initStateSubscriptions };
 
-  // Экспорт в window для обратной совместимости
   if (typeof window !== 'undefined') {
     window.StateAccessors = StateAccessors;
-    // Экспорт функций в window для обратной совместимости
     Object.keys(StateAccessors).forEach(key => {
       window[key] = StateAccessors[key];
     });
-
     window.StateSubscriptions = StateSubscriptions;
-
-    // Автоматическая инициализация подписок
-    if (window.StateManager && window.StateAccessors) {
-      const init = () => setTimeout(initStateSubscriptions, 0);
-
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-      } else {
-        init();
-      }
+    const init = () => setTimeout(initStateSubscriptions, 0);
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
     }
   }
-})();
+
+  export default StateAccessors;
+  export { StateAccessors, StateSubscriptions };

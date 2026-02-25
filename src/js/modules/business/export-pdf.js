@@ -2,15 +2,16 @@
 // Генерация PDF-отчёта: построение таблицы на canvas, jsPDF, сохранение файла.
 // Вынесено из export.js для этапа 3 рефакторинга.
 
-(function () {
-  'use strict';
+import { EXPORT_COLUMN_ORDER } from './export-fields-config.js';
+
+'use strict';
 
   const margin = 14; // mm
   const DPI = 150;
   const pxPerMM = DPI / 25.4;
 
   function getColumnOrder() {
-    return (window.ExportFieldsConfig && window.ExportFieldsConfig.EXPORT_COLUMN_ORDER) || ['company', 'blocks', 'functions', 'name'];
+    return EXPORT_COLUMN_ORDER || ['company', 'blocks', 'functions', 'name'];
   }
 
   function prepareSelectedFieldsList(selectedFields) {
@@ -465,8 +466,14 @@
     return { enterpriseName, fieldsCount };
   }
 
-  window.ExportPdf = {
+  const ExportPdf = {
     generatePdf,
-    prepareSelectedFieldsList
+    prepareSelectedFieldsList,
   };
-})();
+
+  if (typeof window !== 'undefined') {
+    window.ExportPdf = ExportPdf;
+  }
+
+  export default ExportPdf;
+  export { generatePdf, prepareSelectedFieldsList };

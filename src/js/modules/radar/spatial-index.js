@@ -2,15 +2,14 @@
  * Модуль пространственных индексов для оптимизации алгоритма разведения наложений
  * Использует Quadtree для ускорения поиска коллизий
  */
-(function(window) {
-  'use strict';
+import Logger from '../core/logger.js';
 
-  // Модуль SpatialIndex инициализирован
+// Модуль SpatialIndex инициализирован
 
-  /**
-   * Простая реализация Quadtree для 2D пространства
-   */
-  class Quadtree {
+/**
+ * Простая реализация Quadtree для 2D пространства
+ */
+export class Quadtree {
     constructor(bounds, maxObjects = 10, maxLevels = 5, level = 0) {
       this.bounds = bounds; // {x, y, width, height}
       this.maxObjects = maxObjects;
@@ -262,20 +261,23 @@
       iteration++;
     }
 
-    if (window.Logger && typeof window.Logger.debug === 'function') {
-      window.Logger.debug(`[SpatialIndex] Оптимизация завершена за ${iteration} итераций, максимальное смещение: ${maxDisplacement.toFixed(2)}`);
+    if (Logger && typeof Logger.debug === 'function') {
+      Logger.debug(`[SpatialIndex] Оптимизация завершена за ${iteration} итераций, максимальное смещение: ${maxDisplacement.toFixed(2)}`);
     }
 
     return technologies;
   }
 
   // Публичный API
-  window.SpatialIndex = {
+  const SpatialIndex = {
     Quadtree: Quadtree,
     findCollisionsWithQuadtree: findCollisionsWithQuadtree,
     optimizeLayoutWithSpatialIndex: optimizeLayoutWithSpatialIndex
   };
 
-  // Модуль SpatialIndex загружен
+  if (typeof window !== 'undefined') {
+    window.SpatialIndex = SpatialIndex;
+  }
 
-})(window);
+  export { findCollisionsWithQuadtree, optimizeLayoutWithSpatialIndex };
+  export default SpatialIndex;

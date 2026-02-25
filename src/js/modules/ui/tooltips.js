@@ -1,12 +1,7 @@
-// tooltips.js
-// Объединенный модуль для работы с подсказками (tooltip и hover)
-// Объединяет функциональность tooltip.js и hover.js
+// tooltips.js — ES module
+// Подсказки (tooltip и hover)
 
-(function() {
-  'use strict';
-
-  // ===== TOOLTIP =====
-  // Модуль для tooltip на элементах с классом .required-star
+import { DOMCache } from '../core/dom-utils.js';
 
   const MIN_OFFSET = 5;
   const TOOLTIP_OFFSET = 10;
@@ -59,17 +54,6 @@
     });
   }
 
-  // ===== HOVER =====
-  // Модуль для работы с hover-подсказками
-
-  // Ленивая загрузка зависимостей
-  function getDOMCache() {
-    if (typeof window !== 'undefined' && window.DOMCache) {
-      return window.DOMCache;
-    }
-    throw new Error('DOMCache не загружен');
-  }
-
   function debounce(func, wait) {
     if (typeof window !== 'undefined' && window.debounce) {
       return window.debounce(func, wait);
@@ -92,8 +76,6 @@
   }
 
   function createDebouncedHover() {
-    const DOMCache = getDOMCache();
-
     return debounce((tech, visible) => {
       const hoverLabel = DOMCache.get('hoverLabel');
       if (!hoverLabel) return;
@@ -110,24 +92,17 @@
     }, 100);
   }
 
-  // Экспорт в window для обратной совместимости
   if (typeof window !== 'undefined') {
-    // Tooltip exports
     window.TooltipModule = { init: initTooltips };
-
-    // Hover exports
-    window.Hover = {
-      getHoverText,
-      createDebouncedHover
-    };
+    window.Hover = { getHoverText, createDebouncedHover };
     window.getHoverText = getHoverText;
     window.debouncedHover = createDebouncedHover();
-
-    // Инициализация tooltips
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', initTooltips);
     } else {
       initTooltips();
     }
   }
-})();
+
+  export { initTooltips, getHoverText, createDebouncedHover };
+  export default { init: initTooltips, getHoverText, createDebouncedHover };

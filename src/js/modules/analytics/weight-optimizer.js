@@ -3,10 +3,7 @@
  * Использует методы оптимизации (градиентный спуск, генетические алгоритмы)
  * для подбора оптимальных весов на основе исторических данных
  */
-(function(window) {
-  'use strict';
-
-  // Модуль WeightOptimizer инициализирован
+'use strict';
 
   /**
    * Функция потерь для оптимизации весов
@@ -283,14 +280,16 @@
     };
   }
 
-  // Публичный API
-  window.WeightOptimizer = {
+  const WeightOptimizer = {
     optimizeWeights: optimizeWeights,
     calculateLoss: calculateLoss,
     gradientDescent: gradientDescent,
     geneticAlgorithm: geneticAlgorithm
   };
 
-  // Модуль WeightOptimizer загружен
+  if (typeof window !== 'undefined') {
+    window.WeightOptimizer = WeightOptimizer;
+  }
 
-})(window);
+  export default WeightOptimizer;
+  export { optimizeWeights, calculateLoss, gradientDescent, geneticAlgorithm };

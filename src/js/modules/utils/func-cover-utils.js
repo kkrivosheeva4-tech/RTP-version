@@ -1,10 +1,7 @@
 /**
  * Утилиты для расчета покрытия функций (funcCover)
- * с учетом количества функций в блоках
+ * ES module (шаг 7.5).
  */
-(function (window) {
-  'use strict';
-
   // Модуль инициализирован
 
   // Кэш для данных functionToBlock
@@ -527,29 +524,26 @@
     await loadFunctionWeights();
   }
 
-  // Публичный API
-  window.FuncCoverUtils = {
-    init: init,
-    loadFunctionToBlockData: loadFunctionToBlockData,
-    loadFunctionWeights: loadFunctionWeights, // ОБНОВЛЕНО: Публичный доступ к загрузке весов
-    getFunctionCountInBlock: getFunctionCountInBlock,
-    getBlocksForFunction: getBlocksForFunction,
-    calculateFuncCover: calculateFuncCover,
-    calculateFuncCoverLegacy: calculateFuncCoverLegacy,
-    calculateFuncCoverSync: calculateFuncCoverSync, // ОБНОВЛЕНО (2026-01-29): Синхронный метод
-    getFuncCoverDescription: getFuncCoverDescription,
-    // Для тестирования и отладки
-    getBlockFunctionCounts: async () => {
-      if (!blockFunctionCounts) {
-        const ftb = await loadFunctionToBlockData();
-        blockFunctionCounts = calculateBlockFunctionCounts(ftb);
-      }
-      return blockFunctionCounts;
-    },
-    // ОБНОВЛЕНО (2026-01-29): Публичный доступ к кешу для проверки загрузки данных
-    _blockFunctionCounts: () => blockFunctionCounts
-  };
-
-  // Модуль FuncCoverUtils загружен
-
-})(window);
+  // Публичный API (экспорт в window для обратной совместимости)
+  if (typeof window !== 'undefined') {
+    window.FuncCoverUtils = {
+      init: init,
+      loadFunctionToBlockData: loadFunctionToBlockData,
+      loadFunctionWeights: loadFunctionWeights,
+      getFunctionCountInBlock: getFunctionCountInBlock,
+      getBlocksForFunction: getBlocksForFunction,
+      calculateFuncCover: calculateFuncCover,
+      calculateFuncCoverLegacy: calculateFuncCoverLegacy,
+      calculateFuncCoverSync: calculateFuncCoverSync,
+      getFuncCoverDescription: getFuncCoverDescription,
+      getBlockFunctionCounts: async () => {
+        if (!blockFunctionCounts) {
+          const ftb = await loadFunctionToBlockData();
+          blockFunctionCounts = calculateBlockFunctionCounts(ftb);
+        }
+        return blockFunctionCounts;
+      },
+      _blockFunctionCounts: () => blockFunctionCounts
+    };
+  }
+export {};

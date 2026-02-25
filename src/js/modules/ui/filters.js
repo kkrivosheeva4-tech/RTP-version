@@ -1,12 +1,11 @@
+// filters.js — ES module
 // Модуль фильтрации
-// Экспортирует функции в window.Filters для использования в RMK2.js
-// Использует глобальные переменные из RMK2.js и функции из других модулей
 
-(function () {
-  'use strict';
+import { escapeHtml } from '../core/escape-utils.js';
+import StateManager from '../core/state-manager.js';
 
   function _esc(s) {
-    return (typeof window.escapeHtml === 'function' ? window.escapeHtml(s) : String(s ?? '').replace(/[&<>"']/g, function (m) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m] || m; }));
+    return escapeHtml(s ?? '');
   }
 
   // Вспомогательные функции для создания элементов списка
@@ -67,34 +66,27 @@
     return [];
   }
 
-  // Получить все технологии (StateAccessors — основной источник)
   function getAllTechnologies() {
     if (window.StateAccessors && typeof window.StateAccessors.getTechnologies === 'function') {
       const techs = window.StateAccessors.getTechnologies();
       if (Array.isArray(techs) && techs.length > 0) return techs;
     }
-    if (window.StateManager && typeof window.StateManager.get === 'function') {
-      const techs = window.StateManager.get('technologies');
-      if (Array.isArray(techs) && techs.length > 0) return techs;
-    }
+    const techs = StateManager.get('technologies');
+    if (Array.isArray(techs) && techs.length > 0) return techs;
     if (typeof window.getTechnologies === 'function') {
-      const techs = window.getTechnologies();
-      if (Array.isArray(techs) && techs.length > 0) return techs;
+      const t = window.getTechnologies();
+      if (Array.isArray(t) && t.length > 0) return t;
     }
     return [];
   }
 
-  // Справочники — через StateAccessors (window.* устарел)
   function getBlocksListFromState() {
     if (window.StateAccessors && typeof window.StateAccessors.getBlocksList === 'function') {
       const list = window.StateAccessors.getBlocksList();
       return Array.isArray(list) ? list : [];
     }
-    if (window.StateManager && typeof window.StateManager.get === 'function') {
-      const list = window.StateManager.get('blocksList');
-      return Array.isArray(list) ? list : [];
-    }
-    return [];
+    const list = StateManager.get('blocksList');
+    return Array.isArray(list) ? list : [];
   }
 
   function getFunctionsFromState() {
@@ -102,11 +94,8 @@
       const list = window.StateAccessors.getFunctions();
       return Array.isArray(list) ? list : [];
     }
-    if (window.StateManager && typeof window.StateManager.get === 'function') {
-      const list = window.StateManager.get('functions');
-      return Array.isArray(list) ? list : [];
-    }
-    return [];
+    const list = StateManager.get('functions');
+    return Array.isArray(list) ? list : [];
   }
 
   function getNameToBlockIdFromState() {
@@ -114,11 +103,8 @@
       const map = window.StateAccessors.getNameToBlockId();
       return map && typeof map === 'object' ? map : {};
     }
-    if (window.StateManager && typeof window.StateManager.get === 'function') {
-      const map = window.StateManager.get('nameToBlockId');
-      return map && typeof map === 'object' ? map : {};
-    }
-    return {};
+    const map = StateManager.get('nameToBlockId');
+    return map && typeof map === 'object' ? map : {};
   }
 
   function getFunctionToBlockMapFromState() {
@@ -126,11 +112,8 @@
       const map = window.StateAccessors.getFunctionToBlockMap();
       return map && typeof map === 'object' ? map : {};
     }
-    if (window.StateManager && typeof window.StateManager.get === 'function') {
-      const map = window.StateManager.get('functionToBlockMap');
-      return map && typeof map === 'object' ? map : {};
-    }
-    return {};
+    const map = StateManager.get('functionToBlockMap');
+    return map && typeof map === 'object' ? map : {};
   }
 
   // Получить все уникальные блоки из технологий
@@ -1761,8 +1744,7 @@
     });
   }
 
-  // Экспорт функций
-  window.Filters = {
+  const Filters = {
     createCheckboxOptionLi,
     createSelectAllLi,
     getFilterValues,
@@ -1782,9 +1764,12 @@
     handleIntegratorDelete
   };
 
-  // Экспорт функций в window для обратной совместимости с events.js
-  window.renderMultiSelectTags = renderMultiSelectTags;
-  window.updateFunctionFilterForBlock = updateFunctionFilterForBlock;
-  window.setCustomSelectValue = setCustomSelectValue;
-  window.resetCustomSelects = resetCustomSelects;
-})();
+  if (typeof window !== 'undefined') {
+    window.Filters = Filters;
+    window.renderMultiSelectTags = renderMultiSelectTags;
+    window.updateFunctionFilterForBlock = updateFunctionFilterForBlock;
+    window.setCustomSelectValue = setCustomSelectValue;
+    window.resetCustomSelects = resetCustomSelects;
+  }
+
+  export default Filters;

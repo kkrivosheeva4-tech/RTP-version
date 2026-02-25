@@ -1,17 +1,9 @@
 /**
  * Модуль для автоматического расчета покрытия функций
- *
- * ПРИМЕЧАНИЕ: Этот модуль использует устаревший метод расчета на основе количества направлений.
- * Новый метод расчета (на основе процентного покрытия функций в блоках) реализован в
- * модуле func-cover-utils.js и автоматически применяется при загрузке данных.
- *
- * Этот модуль сохранен для обратной совместимости и может быть использован
- * в формах добавления/редактирования технологий как быстрая оценка.
+ * ПРИМЕЧАНИЕ: Устаревший метод (по количеству направлений). Новый — в func-cover-utils.js.
+ * ES module
  */
-(function (window) {
-    'use strict';
-
-    // Модуль FuncCoverCalculator инициализирован (устаревший метод)
+'use strict';
 
     /**
      * Вычисление значения покрытия функций на основе количества направлений
@@ -161,7 +153,7 @@
     }
 
     // Публичный API
-    window.FuncCoverCalculator = {
+    const FuncCoverCalculator = {
         init: init,
         initForEditForm: initForEditForm,
         calculateFuncCover: calculateFuncCover,
@@ -169,14 +161,13 @@
         handleDirectionsChange: handleDirectionsChange
     };
 
-    // Модуль FuncCoverCalculator загружен
-
-    // Автоматическая инициализация при загрузке модуля
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        // DOM уже загружен
-        setTimeout(init, 100);
+    if (typeof window !== 'undefined') {
+        window.FuncCoverCalculator = FuncCoverCalculator;
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            setTimeout(init, 100);
+        }
     }
 
-})(window);
+    export default FuncCoverCalculator;

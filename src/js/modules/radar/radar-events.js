@@ -2,18 +2,10 @@
 // Модуль обработки событий для радара технологий
 // Вынесено из events.js для улучшения читаемости и поддержки
 
-(function () {
-  "use strict";
+import { DOMCache } from '../core/dom-utils.js';
+import Logger from '../core/logger.js';
 
-  // Ленивая загрузка зависимостей для совместимости
-  function getDependency(name) {
-    if (typeof window === "undefined" || !window[name]) {
-      throw new Error(
-        `Зависимость ${name} не загружена. Подключите необходимые модули перед radar-events.js`
-      );
-    }
-    return window[name];
-  }
+"use strict";
 
   // Проверка: есть ли технологии в квадранте (учитывает технологии с несколькими блоками/квадрантами)
   function quadrantHasTechs(qId) {
@@ -54,7 +46,6 @@
   let currentHoveredBlip = null;
 
   function attachBlipHoverHandlers() {
-    const DOMCache = getDependency("DOMCache");
     const svg = DOMCache.get("techRadar");
     if (!svg) return;
 
@@ -156,9 +147,6 @@
 
   // Инициализация обработчиков событий для радара
   function initRadarEvents() {
-    const DOMCache = getDependency("DOMCache");
-
-    // Вызываем attachBlipHoverHandlers при инициализации, если DOM готов
     const svgForBlipHandlers = DOMCache.get("techRadar");
     if (svgForBlipHandlers) {
       // Вызываем attachBlipHoverHandlers после небольшой задержки, чтобы убедиться, что blip элементы созданы
@@ -208,7 +196,7 @@
           const blipQuadrant = blip.dataset.quadrant
             ? +blip.dataset.quadrant
             : null;
-          if (window.Logger) window.Logger.debug("radar-events.js: обработчик клика на blip", {
+          if (Logger) Logger.debug("radar-events.js: обработчик клика на blip", {
             techId: currentTech.id,
             techName: currentTech.name,
             detailPanel: detailPanel ? "найден" : "не найден",
@@ -221,10 +209,10 @@
             if (typeof window.showDetail === "function") {
               window.showDetail(currentTech, "blip", blipQuadrant);
             } else {
-              if (window.Logger) window.Logger.warn("radar-events.js: showDetail не доступна");
+              if (Logger) Logger.warn("radar-events.js: showDetail не доступна");
             }
           } else {
-            if (window.Logger) window.Logger.warn("radar-events.js: detailPanel не найден");
+            if (Logger) Logger.warn("radar-events.js: detailPanel не найден");
           }
 
           // При клике по blip НЕ открываем модальное окно списка технологий
@@ -305,7 +293,7 @@
                 }
               }
             } catch (err) {
-              if (window.Logger) window.Logger.warn("Не удалось открыть сектор в сайдбаре:", err);
+              if (Logger) Logger.warn("Не удалось открыть сектор в сайдбаре:", err);
             }
           }
         } else if (sectorLabel) {
@@ -456,9 +444,10 @@
   }
 
   // Экспорт функций для использования в events.js и RMK2.js
-  // Инициализация происходит через events.js, который правильно обрабатывает загрузку DOM
   if (typeof window !== "undefined") {
     window.initRadarEvents = initRadarEvents;
     window.attachBlipHoverHandlers = attachBlipHoverHandlers;
   }
-})();
+
+  export { initRadarEvents, attachBlipHoverHandlers };
+  export default { initRadarEvents, attachBlipHoverHandlers };

@@ -1,9 +1,6 @@
-// forms.js
-// Модуль работы с формами добавления/редактирования технологий
+// forms.js — ES module
+// Формы добавления/редактирования технологий
 
-// Экспорт функций в window для использования в RMK2.js и других модулях
-window.FormsModule = (function () {
-  'use strict';
 
   // ===== ФУНКЦИИ ДЛЯ УПРАВЛЕНИЯ СОСТОЯНИЕМ ФОРМ =====
 
@@ -552,19 +549,22 @@ window.FormsModule = (function () {
     }
   }
 
-  // Экспорт функций
-  return {
+  const FormsModule = {
     isFormDirty,
     snapshotFormInitial,
     createCompanyRatingsFields,
     updateTechRatingsVisibility,
     updateEditTechRatingsVisibility
   };
-})();
 
-// Экспорт функций в глобальную область для обратной совместимости
-window.isFormDirty = window.FormsModule.isFormDirty;
-window.snapshotFormInitial = window.FormsModule.snapshotFormInitial;
-window.createCompanyRatingsFields = window.FormsModule.createCompanyRatingsFields;
-window.updateTechRatingsVisibility = window.FormsModule.updateTechRatingsVisibility;
-window.updateEditTechRatingsVisibility = window.FormsModule.updateEditTechRatingsVisibility;
+  if (typeof window !== 'undefined') {
+    window.FormsModule = FormsModule;
+    window.isFormDirty = isFormDirty;
+    window.snapshotFormInitial = snapshotFormInitial;
+    window.createCompanyRatingsFields = createCompanyRatingsFields;
+    window.updateTechRatingsVisibility = updateTechRatingsVisibility;
+    window.updateEditTechRatingsVisibility = updateEditTechRatingsVisibility;
+  }
+
+  export default FormsModule;
+  export { isFormDirty, snapshotFormInitial, createCompanyRatingsFields, updateTechRatingsVisibility, updateEditTechRatingsVisibility };

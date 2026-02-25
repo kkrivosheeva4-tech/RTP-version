@@ -1,8 +1,9 @@
-// onboarding.js
+// onboarding.js — ES module
 // Модуль интерактивного тура по приложению
 
-(function() {
-  'use strict';
+import Logger from '../core/logger.js';
+
+'use strict';
 
   const STORAGE_KEY = 'rmk_onboarding_completed';
   const STORAGE_PROGRESS_KEY = 'rmk_onboarding_progress';
@@ -964,7 +965,7 @@
 
     // Проверяем, что overlay создан
     if (!overlay) {
-      if (window.Logger) window.Logger.warn('Onboarding: overlay не был создан');
+      if (Logger) Logger.warn('Onboarding: overlay не был создан');
       return;
     }
 
@@ -980,7 +981,7 @@
 
     // Проверяем, что элемент все еще существует в DOM
     if (!document.contains(element)) {
-      if (window.Logger) window.Logger.warn('Onboarding: элемент не найден в DOM');
+      if (Logger) Logger.warn('Onboarding: элемент не найден в DOM');
       overlay.style.display = 'block';
       overlay.style.setProperty('--highlight-top', '50%');
       overlay.style.setProperty('--highlight-left', '50%');
@@ -996,13 +997,13 @@
     const updateHighlight = () => {
       // Проверяем, что overlay все еще существует
       if (!overlay || !document.body.contains(overlay)) {
-        if (window.Logger) window.Logger.warn('Onboarding: overlay был удален');
+        if (Logger) Logger.warn('Onboarding: overlay был удален');
         return;
       }
 
       // Проверяем, что элемент все еще существует
       if (!document.contains(element)) {
-        if (window.Logger) window.Logger.warn('Onboarding: элемент был удален из DOM');
+        if (Logger) Logger.warn('Onboarding: элемент был удален из DOM');
         overlay.style.display = 'block';
         overlay.style.setProperty('--highlight-top', '50%');
         overlay.style.setProperty('--highlight-left', '50%');
@@ -1013,7 +1014,7 @@
 
       attempts++;
       if (attempts > maxAttempts) {
-        if (window.Logger) window.Logger.warn('Onboarding: превышено максимальное количество попыток обновления подсветки');
+        if (Logger) Logger.warn('Onboarding: превышено максимальное количество попыток обновления подсветки');
         // Если превышен лимит, используем центрированную подсветку или скрываем overlay
         if (overlay) {
           // Для панели детальной информации не показываем подсветку, если она не видна
@@ -1629,7 +1630,7 @@
 
         if (attempts >= maxAttempts) {
           // Если элемент не появился, все равно показываем шаг
-          if (window.Logger) window.Logger.warn(`Onboarding: элемент ${step.target} не найден или не виден после ${maxAttempts} попыток, показываем шаг без подсветки`);
+          if (Logger) Logger.warn(`Onboarding: элемент ${step.target} не найден или не виден после ${maxAttempts} попыток, показываем шаг без подсветки`);
           // Для панели детальной информации открываем её программно, если она не открыта
           if (step.target === '#detailPanel') {
             const detailPanel = document.getElementById('detailPanel');
@@ -2015,5 +2016,4 @@
     window.OnboardingTour = OnboardingTour;
   }
 
-  // Инициализация будет вызвана из app-init.js
-})();
+  export default OnboardingTour;

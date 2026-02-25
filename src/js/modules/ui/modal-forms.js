@@ -1,29 +1,16 @@
-// modal-forms.js
-// Модуль для работы с формами в модальных окнах (обновление списков блоков и функций)
+// modal-forms.js — ES module
+// Формы в модальных окнах (списки блоков и функций)
 
-(function() {
-  'use strict';
-
-  // Ленивая загрузка зависимостей
-  function getDOMCache() {
-    if (typeof window !== 'undefined' && window.DOMCache) {
-      return window.DOMCache;
-    }
-    throw new Error('DOMCache не загружен');
-  }
+import { DOMCache } from '../core/dom-utils.js';
+import StateManager from '../core/state-manager.js';
+import Logger from '../core/logger.js';
 
   function getFilters() {
-    if (typeof window !== 'undefined' && window.Filters) {
-      return window.Filters;
-    }
+    if (typeof window !== 'undefined' && window.Filters) return window.Filters;
     throw new Error('Filters не загружен');
   }
 
-  // Обновление списка функциональных блоков в модалке добавления/редактирования технологии
-  // ОБНОВЛЕНО (2026-01-29): Блоки больше не фильтруются по квадрантам
-  // Все блоки доступны для всех квадрантов, так как они являются отдельными критериями технологии
   function updateModalBlocksForSectors(sectorNames) {
-    const DOMCache = getDOMCache();
     const Filters = getFilters();
     const renderMultiSelectTags = Filters.renderMultiSelectTags;
 
@@ -34,8 +21,8 @@
     if (window.StateAccessors && typeof window.StateAccessors.getBlocksList === 'function') {
       blocksList = window.StateAccessors.getBlocksList() || [];
     }
-    if (!blocksList.length && window.StateManager && typeof window.StateManager.get === 'function') {
-      const list = window.StateManager.get('blocksList');
+    if (!blocksList.length) {
+      const list = StateManager.get('blocksList');
       blocksList = Array.isArray(list) ? list : [];
     }
     if (!blocksList.length && (window.getBlocksList && typeof window.getBlocksList === 'function')) {
@@ -43,7 +30,7 @@
     }
 
     if (!Array.isArray(blocksList) || blocksList.length === 0) {
-      if (window.Logger) window.Logger.warn('updateModalBlocksForSectors: blocksList пуст или не массив');
+      Logger.warn('updateModalBlocksForSectors: blocksList пуст или не массив');
       return;
     }
 
@@ -129,7 +116,6 @@
   // Обновление списка функций в модалке добавления/редактирования технологии
   // в зависимости от выбранных функциональных блоков
   function updateModalFunctionsForBlocks(blockNames, fieldId) {
-    const DOMCache = getDOMCache();
     const Filters = getFilters();
     const renderMultiSelectTags = Filters.renderMultiSelectTags;
 
@@ -142,11 +128,11 @@
       if (typeof window.StateAccessors.getFunctionToBlockMap === 'function') functionToBlockMap = window.StateAccessors.getFunctionToBlockMap() || {};
       if (typeof window.StateAccessors.getNameToBlockId === 'function') nameToBlockId = window.StateAccessors.getNameToBlockId() || {};
     }
-    if (!functions.length && window.StateManager && typeof window.StateManager.get === 'function') {
-      const f = window.StateManager.get('functions');
+    if (!functions.length) {
+      const f = StateManager.get('functions');
       functions = Array.isArray(f) ? f : [];
-      if (!Object.keys(functionToBlockMap).length) functionToBlockMap = window.StateManager.get('functionToBlockMap') || {};
-      if (!Object.keys(nameToBlockId).length) nameToBlockId = window.StateManager.get('nameToBlockId') || {};
+      if (!Object.keys(functionToBlockMap).length) functionToBlockMap = StateManager.get('functionToBlockMap') || {};
+      if (!Object.keys(nameToBlockId).length) nameToBlockId = StateManager.get('nameToBlockId') || {};
     }
 
     if (!Array.isArray(functions) || functions.length === 0) return;
@@ -247,8 +233,6 @@
   // Инициализация фильтрации при открытии модального окна добавления технологии
   // Применяет фильтрацию блоков по секторам и функций по блокам, если уже есть выбранные значения
   function initModalFilters() {
-    const DOMCache = getDOMCache();
-
     // Проверяем, открыто ли модальное окно добавления технологии
     const addTechPanel = DOMCache.get('addTechPanel');
     if (!addTechPanel || !addTechPanel.classList.contains('open')) {
@@ -305,15 +289,18 @@
     }
   }
 
-  // Экспорт функций
-  window.ModalForms = {
+  const ModalForms = {
     updateModalBlocksForSectors,
     updateModalFunctionsForBlocks,
     initModalFilters
   };
 
-  // Глобальные алиасы для обратной совместимости
-  window.updateModalBlocksForSectors = updateModalBlocksForSectors;
-  window.updateModalFunctionsForBlocks = updateModalFunctionsForBlocks;
-  window.initModalFilters = initModalFilters;
-})();
+  if (typeof window !== 'undefined') {
+    window.ModalForms = ModalForms;
+    window.updateModalBlocksForSectors = updateModalBlocksForSectors;
+    window.updateModalFunctionsForBlocks = updateModalFunctionsForBlocks;
+    window.initModalFilters = initModalFilters;
+  }
+
+  export default ModalForms;
+  export { updateModalBlocksForSectors, updateModalFunctionsForBlocks, initModalFilters };

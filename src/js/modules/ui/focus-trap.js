@@ -1,12 +1,8 @@
-// focus-trap.js
-// Модуль для управления фокусом в модальных окнах и диалогах
-// Реализует focus trap и восстановление фокуса
+// focus-trap.js — ES module
+// Управление фокусом в модальных окнах и диалогах
 
-(function() {
-  'use strict';
-
-  let savedFocusElement = null;
-  let activeTrap = null;
+let savedFocusElement = null;
+let activeTrap = null;
 
   /**
    * Получает все фокусируемые элементы внутри контейнера
@@ -120,7 +116,7 @@
         savedFocusElement.focus();
       } catch (e) {
         // Игнорируем ошибки фокусировки (элемент может быть удален)
-        if (window.Logger) window.Logger.debug('Не удалось восстановить фокус:', e);
+        if (typeof window !== 'undefined' && window.Logger) window.Logger.debug('Не удалось восстановить фокус:', e);
       }
     }
 
@@ -128,11 +124,6 @@
     activeTrap = null;
   }
 
-  // Экспорт в window
-  if (typeof window !== 'undefined') {
-    window.FocusTrap = {
-      trap: trapFocus,
-      release: releaseFocus
-    };
-  }
-})();
+  const FocusTrap = { trap: trapFocus, release: releaseFocus };
+  if (typeof window !== 'undefined') window.FocusTrap = FocusTrap;
+  export default FocusTrap;

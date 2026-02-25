@@ -1,27 +1,18 @@
+// sidebar.js — ES module
 // Модуль работы с сайдбаром
-// Экспортирует функции в window.Sidebar для использования в RMK2.js
-// Использует глобальные переменные из RMK2.js и функции из других модулей
 
-(function() {
-  'use strict';
+import StateManager from '../core/state-manager.js';
+import { DOMCache } from '../core/dom-utils.js';
 
-  // Получаем зависимости из других модулей и глобальных переменных (ленивая загрузка)
   const getAllQuadrantsForTech = (...args) => {
     const fn = window.getAllQuadrantsForTech;
     return fn ? fn(...args) : [];
   };
-  const getTechnologies = () => {
-    if (window.StateManager) {
-      return window.StateManager.get('technologies') || [];
-    }
-    return [];
-  };
+  const getTechnologies = () => StateManager.get('technologies') || [];
   const getTechById = (id) => {
-    if (window.StateManager) {
-      const technologiesById = window.StateManager.get('technologiesById');
-      if (technologiesById && technologiesById instanceof Map) {
-        return technologiesById.get(id) || null;
-      }
+    const technologiesById = StateManager.get('technologiesById');
+    if (technologiesById && technologiesById instanceof Map) {
+      return technologiesById.get(id) || null;
     }
     return null;
   };
@@ -33,11 +24,7 @@
     const fn = window.Positioning?.getQuadrantIdForBlock;
     return fn ? fn(block) : null;
   };
-  const setSelectedBlipId = (value) => {
-    if (window.StateManager) {
-      window.StateManager.set('selectedBlipId', value);
-    }
-  };
+  const setSelectedBlipId = (value) => StateManager.set('selectedBlipId', value);
   const setCurrentTech = (tech) => {
     const fn = window.setCurrentTech;
     if (fn) fn(tech);
@@ -51,24 +38,9 @@
     if (fn) fn(...args);
   };
 
-  // Получаем DOM элементы через DOMCache или напрямую
-  const getSvg = () => {
-    if (window.DOMCache) {
-      return window.DOMCache.get('techRadar');
-    }
-    return document.getElementById('techRadar');
-  };
-  const getHoverLabel = () => {
-    if (window.DOMCache) {
-      return window.DOMCache.get('hoverLabel');
-    }
-    return document.getElementById('hoverLabel');
-  };
-
-  // Получаем QUADRANTS из глобальной переменной
-  const getQuadrants = () => {
-    return window.QUADRANTS || [];
-  };
+  const getSvg = () => DOMCache.get('techRadar') || document.getElementById('techRadar');
+  const getHoverLabel = () => DOMCache.get('hoverLabel') || document.getElementById('hoverLabel');
+  const getQuadrants = () => window.QUADRANTS || [];
 
   /**
    * Обновляет списки технологий в сайдбаре на основе отфильтрованных технологий
@@ -289,18 +261,20 @@
     sectorItem.classList.add('active');
   }
 
-  // Экспортируем функции в window.Sidebar и window для обратной совместимости
-  window.Sidebar = {
+  const Sidebar = {
     updateSidebarLists,
     createTechListForSector,
     updateTechListItems,
     renderSectorTechListFilteredByCurrentFilters
   };
 
-  // Экспортируем также в window для прямого доступа (обратная совместимость)
-  window.updateSidebarLists = updateSidebarLists;
-  window.createTechListForSector = createTechListForSector;
-  window.updateTechListItems = updateTechListItems;
-  window.renderSectorTechListFilteredByCurrentFilters = renderSectorTechListFilteredByCurrentFilters;
+  if (typeof window !== 'undefined') {
+    window.Sidebar = Sidebar;
+    window.updateSidebarLists = updateSidebarLists;
+    window.createTechListForSector = createTechListForSector;
+    window.updateTechListItems = updateTechListItems;
+    window.renderSectorTechListFilteredByCurrentFilters = renderSectorTechListFilteredByCurrentFilters;
+  }
 
-})();
+  export default Sidebar;
+  export { updateSidebarLists, createTechListForSector, updateTechListItems, renderSectorTechListFilteredByCurrentFilters };

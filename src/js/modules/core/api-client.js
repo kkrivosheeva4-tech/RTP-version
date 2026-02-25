@@ -1,12 +1,7 @@
 /**
  * Заглушка API-клиента для будущего подключения бэкенда.
- * Единая точка для запросов к API: подстановка Authorization, обработка 401 (refresh/редирект на auth),
- * таймауты, нормализация ошибок. Пока не вызывается из data-loader — только структура и экспорт.
- * См. BACKEND_READINESS_CRITICAL_CHANGES.md.
+ * ES module (шаг 7.5).
  */
-(function () {
-  'use strict';
-
   function getConfig() {
     if (typeof window !== 'undefined' && window.ApiConfig) {
       return window.ApiConfig;
@@ -94,4 +89,4 @@
   if (typeof window !== 'undefined') {
     window.ApiClient = ApiClient;
   }
-})();
+export {};

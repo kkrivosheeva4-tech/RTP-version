@@ -1,7 +1,10 @@
 /**
  * Мобильная навигация
  * Модуль для управления бургер-меню и выдвижным меню предприятий на мобильных устройствах
+ * ES module
  */
+
+import Logger from '../core/logger.js';
 
 const MobileNav = {
   /**
@@ -14,7 +17,7 @@ const MobileNav = {
       this.createMobileMenu();
       this.attachEventListeners();
     } catch (error) {
-      window.Logger?.warn('Ошибка инициализации MobileNav:', error);
+      Logger.warn('Ошибка инициализации MobileNav:', error);
     }
   },
 
@@ -24,13 +27,13 @@ const MobileNav = {
   createBurgerMenu() {
     const header = document.querySelector('header');
     if (!header) {
-      if (window.Logger) window.Logger.warn('MobileNav: header не найден');
+      Logger.warn('MobileNav: header не найден');
       return;
     }
 
     const controls = header.querySelector('.controls');
     if (!controls) {
-      if (window.Logger) window.Logger.warn('MobileNav: .controls не найден в header');
+      Logger.warn('MobileNav: .controls не найден в header');
       return;
     }
 
@@ -146,7 +149,7 @@ const MobileNav = {
             if (window.OnboardingTour && typeof window.OnboardingTour.startTour === 'function') {
               window.OnboardingTour.startTour();
             } else {
-              if (window.Logger) window.Logger.warn('OnboardingTour модуль не загружен');
+              Logger.warn('OnboardingTour модуль не загружен');
               if (window.Toast) {
                 window.Toast.error('Модуль обучения не загружен. Пожалуйста, обновите страницу.');
               } else {
@@ -170,7 +173,7 @@ const MobileNav = {
         `;
         helpLinkBtn.addEventListener('click', (e) => {
           e.preventDefault();
-          window.location.href = 'help.html';
+          window.location.href = '/src/pages/help.html';
           this.closeMenu();
         });
         helpSub.appendChild(helpLinkBtn);
@@ -550,3 +553,4 @@ const MobileNav = {
 if (typeof window !== 'undefined') {
   window.MobileNav = MobileNav;
 }
+export default MobileNav;

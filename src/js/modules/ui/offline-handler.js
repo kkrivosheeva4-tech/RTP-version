@@ -1,8 +1,7 @@
-// offline-handler.js
-// Модуль для обработки online/offline событий с уведомлениями пользователю
+// offline-handler.js — ES module
+// Обработка online/offline событий с уведомлениями пользователю
 
-(function() {
-  'use strict';
+'use strict';
 
   let offlineNotification = null;
   let onlineNotification = null;
@@ -155,22 +154,23 @@
     hideOnlineNotification();
   }
 
-  // Экспорт в window
-  if (typeof window !== 'undefined') {
-    window.OfflineHandler = {
-      init,
-      destroy,
-      showOfflineNotification,
-      hideOfflineNotification,
-      showOnlineNotification,
-      hideOnlineNotification
-    };
+  // Экспорт в window и автоинициализация
+  const OfflineHandler = {
+    init,
+    destroy,
+    showOfflineNotification,
+    hideOfflineNotification,
+    showOnlineNotification,
+    hideOnlineNotification
+  };
 
-    // Автоматическая инициализация при загрузке DOM
+  if (typeof window !== 'undefined') {
+    window.OfflineHandler = OfflineHandler;
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', init);
     } else {
       init();
     }
   }
-})();
+
+  export default OfflineHandler;

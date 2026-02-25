@@ -1,25 +1,12 @@
-// select-events.js
-// Модуль обработки событий для кастомных селектов (sidebar и модальных)
-// Вынесено из events.js для улучшения читаемости и поддержки
+// select-events.js — ES module
+// Обработка событий для кастомных селектов (sidebar и модальных)
 
-(function () {
-  "use strict";
+import { DOMCache } from '../core/dom-utils.js';
 
-  // Ленивая загрузка зависимостей для совместимости
-  function getDependency(name) {
-    if (typeof window === "undefined" || !window[name]) {
-      throw new Error(
-        `Зависимость ${name} не загружена. Подключите необходимые модули перед select-events.js`
-      );
-    }
-    return window[name];
-  }
+"use strict";
 
   // Инициализация обработчиков событий для селектов
   function initSelectEvents() {
-    // Проверяем, что все зависимости доступны
-    const DOMCache = getDependency("DOMCache");
-
     // ===== КАСТОМНЫЕ СЕЛЕКТЫ (SIDEBAR) =====
     // Используем прямое делегирование для более надежной работы
     // Используем capture phase для раннего перехвата
@@ -1957,12 +1944,11 @@
     }
   }
 
-  // Экспорт функции инициализации для использования в events.js
-  // Инициализация происходит через events.js, который правильно обрабатывает загрузку DOM
+  // Экспорт для использования в events.js и обратной совместимости
   if (typeof window !== "undefined") {
     window.initSelectEvents = initSelectEvents;
-    // Экспорт SelectPositioning для обратной совместимости
     window.SelectPositioning = { positionOptions };
     window.positionOptions = positionOptions;
   }
-})();
+
+  export { initSelectEvents, positionOptions };

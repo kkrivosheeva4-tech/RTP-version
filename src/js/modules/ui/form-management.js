@@ -1,33 +1,24 @@
-// form-management.js
-// Объединенный модуль для управления формами: события и обработчики
-// Объединяет функциональность form-events.js и form-handlers.js
+// form-management.js — ES module
+// Управление формами: события и обработчики
 
-(function () {
-  "use strict";
+import { DOMCache } from '../core/dom-utils.js';
 
-  // Ленивая загрузка зависимостей для совместимости
   function getDependency(name) {
     if (typeof window === "undefined" || !window[name]) {
-      throw new Error(
-        `Зависимость ${name} не загружена. Подключите необходимые модули перед form-management.js`
-      );
+      throw new Error(`Зависимость ${name} не загружена. Подключите необходимые модули перед form-management.js`);
     }
     return window[name];
   }
 
-  // Ленивая загрузка зависимостей
   function getDOMCache() {
-    if (typeof window !== 'undefined' && window.DOMCache) {
-      return window.DOMCache;
-    }
-    throw new Error('DOMCache не загружен');
+    return DOMCache;
   }
 
   function getStateAccessors() {
     if (typeof window !== 'undefined' && window.StateAccessors) {
       return window.StateAccessors;
     }
-    throw new Error('StateAccessors не загружен');
+    return null;
   }
 
   function getDataLoader() {
@@ -2195,6 +2186,15 @@
     const DOMCache = getDOMCache();
     const StateAccessors = getStateAccessors();
     const DataLoader = getDataLoader();
+    if (!StateAccessors) {
+      if (initAddBlockFormHandlerAttempts < MAX_INIT_ATTEMPTS) {
+        initAddBlockFormHandlerAttempts++;
+        setTimeout(initAddBlockFormHandler, 200);
+      } else if (window.Logger) {
+        window.Logger.warn('initAddBlockFormHandler: StateAccessors не загружен после ' + MAX_INIT_ATTEMPTS + ' попыток');
+      }
+      return;
+    }
     if (!DataLoader) {
       // Если DataLoader еще не загружен, отложим инициализацию (но не более MAX_INIT_ATTEMPTS раз)
       if (initAddBlockFormHandlerAttempts < MAX_INIT_ATTEMPTS) {
@@ -2559,13 +2559,12 @@
       initAddBlockFormHandler
     };
 
-    // Инициализация обработчика формы добавления блока при загрузке
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => {
-        setTimeout(initAddBlockFormHandler, 0);
-      });
+      document.addEventListener('DOMContentLoaded', () => setTimeout(initAddBlockFormHandler, 0));
     } else {
       setTimeout(initAddBlockFormHandler, 0);
     }
   }
-})();
+
+  export default FormManagement;
+  export { initFormEvents, getFormFieldValue, handleAddTechFormSubmit, handleEditTechFormSubmit, setButtonLoading };

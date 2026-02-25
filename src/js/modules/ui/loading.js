@@ -1,19 +1,11 @@
-// loading.js
+// loading.js — ES module
 // Модуль для управления индикаторами загрузки и прогресс-барами
 
-window.LoadingManager = (function() {
-  'use strict';
+let activeLoaders = new Map();
+let loaderCounter = 0;
 
-  let activeLoaders = new Map(); // Хранит активные загрузчики по ID
-  let loaderCounter = 0;
-
-  /**
-   * Создает и показывает индикатор загрузки
-   * @param {string} message - Сообщение для отображения
-   * @param {string} id - Уникальный ID загрузчика (опционально)
-   * @returns {string} ID загрузчика
-   */
-  function show(message = 'Загрузка...', id = null) {
+  /** Создает и показывает индикатор загрузки. Возвращает ID загрузчика. */
+  export function show(message = 'Загрузка...', id = null) {
     const loaderId = id || `loader_${Date.now()}_${++loaderCounter}`;
 
     // Если загрузчик с таким ID уже существует, обновляем его
@@ -69,11 +61,8 @@ window.LoadingManager = (function() {
     return loaderId;
   }
 
-  /**
-   * Скрывает индикатор загрузки
-   * @param {string} id - ID загрузчика
-   */
-  function hide(id) {
+  /** Скрывает индикатор загрузки */
+  export function hide(id) {
     if (!id || !activeLoaders.has(id)) {
       // Если ID не указан, скрываем все загрузчики
       if (!id) {
@@ -121,15 +110,8 @@ window.LoadingManager = (function() {
     }, 300);
   }
 
-  /**
-   * Показывает прогресс-бар
-   * @param {number} current - Текущее значение
-   * @param {number} total - Общее значение
-   * @param {string} message - Сообщение (опционально)
-   * @param {string} id - ID загрузчика (опционально)
-   * @returns {string} ID загрузчика
-   */
-  function showProgress(current, total, message = null, id = null) {
+  /** Показывает/обновляет прогресс-бар. Возвращает ID загрузчика. */
+  export function showProgress(current, total, message = null, id = null) {
     const loaderId = id || `progress_${Date.now()}_${++loaderCounter}`;
     const percentage = total > 0 ? Math.round((current / total) * 100) : 0;
 
@@ -196,22 +178,14 @@ window.LoadingManager = (function() {
     return loaderId;
   }
 
-  /**
-   * Обновляет сообщение загрузчика
-   * @param {string} id - ID загрузчика
-   * @param {string} message - Новое сообщение
-   */
-  function updateMessage(id, message) {
+  /** Обновляет сообщение загрузчика */
+  export function updateMessage(id, message) {
     const loader = activeLoaders.get(id);
     if (loader && loader.messageEl) {
       loader.messageEl.textContent = message;
     }
   }
 
-  return {
-    show,
-    hide,
-    showProgress,
-    updateMessage
-  };
-})();
+  const LoadingManager = { show, hide, showProgress, updateMessage };
+  if (typeof window !== 'undefined') window.LoadingManager = LoadingManager;
+  export default LoadingManager;

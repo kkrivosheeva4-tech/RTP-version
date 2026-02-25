@@ -1,9 +1,6 @@
 // core-utils.js
 // Объединенный модуль утилит для работы ядра приложения
-// Объединяет функциональность: error-handler.js, event-manager.js, memoization.js, module-loader.js, render-queue.js
-
-(function() {
-  'use strict';
+// ES module (шаг 7.5): экспорт в window для обратной совместимости.
 
   // ===== ERROR HANDLER =====
   // Единая точка обработки ошибок.
@@ -220,4 +217,5 @@
     window.requireGlobalModule = requireGlobalModule;
     window.RenderQueue = RenderQueue;
   }
-})();
+
+  export { ErrorHandler, EventManager, Memoization, ModuleLoader, RenderQueue };

@@ -1,9 +1,8 @@
 // Модуль работы с приоритетами технологий
-// Экспортирует функции в window.Priorities для использования в RMK2.js
-// Использует глобальные переменные из RMK2.js и функции из других модулей
 
-(function () {
-  'use strict';
+import Logger from '../core/logger.js';
+
+'use strict';
 
   /**
    * Безопасное приведение значения к числу в диапазоне [min, max].
@@ -386,11 +385,15 @@
           showDetailFn(t, 'priority', qId);
         } else {
           if (!detailPanelEl) {
-            if (window.Logger) window.Logger.warn('recomputeQuadrantPriorityList: detailPanel не найден при клике по технологии', { techId: t.id, techName: t.name });
-          }
-          if (!showDetailFn) {
-            if (window.Logger) window.Logger.warn('recomputeQuadrantPriorityList: showDetail не доступна при клике по технологии', { techId: t.id, techName: t.name });
-          }
+        if (Logger && typeof Logger.warn === 'function') {
+          Logger.warn('recomputeQuadrantPriorityList: detailPanel не найден при клике по технологии', { techId: t.id, techName: t.name });
+        }
+      }
+      if (!showDetailFn) {
+        if (Logger && typeof Logger.warn === 'function') {
+          Logger.warn('recomputeQuadrantPriorityList: showDetail не доступна при клике по технологии', { techId: t.id, techName: t.name });
+        }
+      }
         }
         // Скрываем панель приоритета, но НЕ вызываем unzoom(),
         // чтобы зум сектора сохранился.
@@ -435,8 +438,8 @@
     if (qpSearchInput) qpSearchInput.value = '';
   }
 
-  // Экспорт функций в window.Priorities и window для обратной совместимости
-  window.Priorities = {
+  // Экспорт в window для глобального доступа (обратная совместимость)
+  const Priorities = {
     computePriority,
     getPriorityCategory,
     getPriorityWeakLinkComment,
@@ -446,12 +449,24 @@
     closeQuadrantPriorityPanel
   };
 
-  // Экспорт в window для глобального доступа (обратная совместимость)
-  window.computePriority = computePriority;
-  window.getPriorityCategory = getPriorityCategory;
-  window.getPriorityWeakLinkComment = getPriorityWeakLinkComment;
-  window.getNormalizedReadinessAndTrl = getNormalizedReadinessAndTrl;
-  window.recomputeQuadrantPriorityList = recomputeQuadrantPriorityList;
-  window.openQuadrantPriorityPanel = openQuadrantPriorityPanel;
-  window.closeQuadrantPriorityPanel = closeQuadrantPriorityPanel;
-})();
+  if (typeof window !== 'undefined') {
+    window.Priorities = Priorities;
+    window.computePriority = computePriority;
+    window.getPriorityCategory = getPriorityCategory;
+    window.getPriorityWeakLinkComment = getPriorityWeakLinkComment;
+    window.getNormalizedReadinessAndTrl = getNormalizedReadinessAndTrl;
+    window.recomputeQuadrantPriorityList = recomputeQuadrantPriorityList;
+    window.openQuadrantPriorityPanel = openQuadrantPriorityPanel;
+    window.closeQuadrantPriorityPanel = closeQuadrantPriorityPanel;
+  }
+
+  export default Priorities;
+  export {
+    computePriority,
+    getPriorityCategory,
+    getPriorityWeakLinkComment,
+    getNormalizedReadinessAndTrl,
+    recomputeQuadrantPriorityList,
+    openQuadrantPriorityPanel,
+    closeQuadrantPriorityPanel
+  };

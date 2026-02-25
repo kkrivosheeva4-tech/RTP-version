@@ -1,38 +1,26 @@
-// dom-utils.js
-// Объединенный модуль для работы с DOM: кэширование и Proxy-объекты
-// Объединяет функциональность dom-cache.js и dom-proxy.js
+// dom-utils.js — ES module
+// DOM: кэширование и Proxy-объекты
 
-(function() {
-  'use strict';
+const elements = {};
 
-  // ===== DOM CACHE =====
-  // Кэширует селекторы и элементы, чтобы снизить количество DOM-запросов.
-  // API: get(id), query(selector), queryAll(selector, context), find(parent, selector), findAll(parent, selector), clear(key), clearAll(), refresh(id|selector)
-
-  const elements = {};
-
-  // Нормализация ключа для ID
-  function normalizeKey(key) {
+function normalizeKey(key) {
     return key && !key.startsWith('#') ? `#${key}` : key;
-  }
+}
 
-  // Получение ключа для parent элемента
-  function getParentKey(parent) {
+function getParentKey(parent) {
     if (!parent) return 'parent';
     if (parent.id) return parent.id;
     if (parent.dataset) {
       return parent.dataset.filter || parent.dataset.field || parent.dataset.id || null;
     }
-    return parent.className || parent.tagName || 'parent';
-  }
+  return parent.className || parent.tagName || 'parent';
+}
 
-  const DOMCache = {
+const DOMCache = {
     get(id) {
       if (!id) return null;
       const key = normalizeKey(id);
       // Важно: некоторые элементы (например, динамические поля в модалках)
-      // пересоздаются через innerHTML = '' → старые ноды "отваливаются".
-      // DOMCache не должен возвращать устаревшие ссылки.
       if (elements[key] && elements[key].isConnected === false) {
         elements[key] = null;
       }
@@ -89,15 +77,11 @@
         elements[selector] = document.querySelector(selector);
         return elements[selector];
       }
-      return null;
-    }
-  };
+    return null;
+  }
+};
 
-  // ===== DOM PROXY =====
-  // Модуль для создания Proxy-объектов для DOM-элементов
-
-  // Безопасные значения для отсутствующих элементов
-  const safeDefaults = {
+const safeDefaults = {
     querySelector: () => null,
     querySelectorAll: () => [],
     appendChild: () => null,
@@ -110,10 +94,9 @@
     classList: { add: () => {}, remove: () => {}, toggle: () => {} },
     textContent: '',
     innerHTML: ''
-  };
+};
 
-  // Создание Proxy для элемента
-  function createProxy(id, safeProps = []) {
+function createProxy(id, safeProps = []) {
     return new Proxy({}, {
       get(target, prop) {
         const el = DOMCache.get(id);
@@ -131,56 +114,45 @@
         }
         return false;
       }
-    });
-  }
+  });
+}
 
-  // Создаем функции-геттеры, которые возвращают элементы через DOMCache
-  function createDOMGetter(id) {
-    return () => DOMCache.get(id);
-  }
+function createDOMGetter(id) {
+  return () => DOMCache.get(id);
+}
 
-  // Для элементов, которые используются как объекты (svg, detailPanel)
-  function createDOMProxy(id) {
-    return createProxy(id, ['querySelector', 'querySelectorAll', 'appendChild', 'getBoundingClientRect']);
-  }
+function createDOMProxy(id) {
+  return createProxy(id, ['querySelector', 'querySelectorAll', 'appendChild', 'getBoundingClientRect']);
+}
 
-  // Helper для создания Proxy с правильной обработкой отсутствующих элементов
-  function createElementProxy(id) {
-    return createProxy(id, [
-      'addEventListener', 'removeEventListener', 'checked', 'value',
-      'style', 'classList', 'textContent', 'innerHTML'
-    ]);
-  }
+function createElementProxy(id) {
+  return createProxy(id, [
+    'addEventListener', 'removeEventListener', 'checked', 'value',
+    'style', 'classList', 'textContent', 'innerHTML'
+  ]);
+}
 
-  // Экспорт DOMProxy
-  const DOMProxy = {
+const DOMProxy = {
     createDOMGetter,
     createDOMProxy,
-    createElementProxy
-  };
+  createElementProxy
+};
 
-  // ===== HTML ESCAPING =====
-  // Безопасное экранирование HTML для предотвращения XSS
-  // API: escapeHtml(str)
+function escapeHtmlDom(str) {
+  if (str == null) return '';
+  const text = String(str);
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
 
-  function escapeHtml(str) {
-    if (str == null) return '';
-    const text = String(str);
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
+if (typeof window !== 'undefined') {
+  window.DOMCache = DOMCache;
+  window.DOMProxy = DOMProxy;
+  window.createDOMGetter = createDOMGetter;
+  window.createDOMProxy = createDOMProxy;
+  window.createElementProxy = createElementProxy;
+}
 
-  // Экспорт в window для обратной совместимости
-  if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { DOMCache, DOMProxy, escapeHtml };
-  } else if (typeof window !== 'undefined') {
-    window.DOMCache = DOMCache;
-    window.DOMProxy = DOMProxy;
-    window.escapeHtml = escapeHtml;
-    // Глобальные алиасы для обратной совместимости
-    window.createDOMGetter = createDOMGetter;
-    window.createDOMProxy = createDOMProxy;
-    window.createElementProxy = createElementProxy;
-  }
-})();
+export { DOMCache, DOMProxy, createDOMGetter, createDOMProxy, createElementProxy, escapeHtmlDom };
+export default { DOMCache, DOMProxy, escapeHtmlDom };

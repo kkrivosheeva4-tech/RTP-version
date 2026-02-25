@@ -1,9 +1,7 @@
-// filter-init.js
+// filter-init.js — ES module
 // Инициализация sidebar-фильтров и модальных селектов.
-// Опции селектов (TRL, рейтинги, статусы, tooltips) — из config/form-field-options.js (этап 7).
 
-(function () {
-  'use strict';
+import StateManager from '../core/state-manager.js';
 
   function getFormFieldOptions() {
     if (typeof window !== 'undefined' && window.FormFieldOptions) {
@@ -38,10 +36,7 @@
   }
 
   function getState(key) {
-    if (window.StateManager) {
-      return window.StateManager.get(key);
-    }
-    return undefined;
+    return StateManager.get(key);
   }
 
   function getFilters() {
@@ -304,7 +299,7 @@
     return true;
   }
 
-  window.FilterInit = {
+  const FilterInit = {
     initFiltersWithRetry,
     initModalSelectsWithDirections,
     initFilters,
@@ -312,6 +307,11 @@
     RATING_OPTIONS: getRatingOptions()
   };
 
-  window.initFiltersWithRetry = initFiltersWithRetry;
-  window.initFilters = initFilters;
-})();
+  if (typeof window !== 'undefined') {
+    window.FilterInit = FilterInit;
+    window.initFiltersWithRetry = initFiltersWithRetry;
+    window.initFilters = initFilters;
+  }
+
+  export default FilterInit;
+  export { initFiltersWithRetry, initModalSelectsWithDirections, initFilters };

@@ -1,171 +1,188 @@
-// data-source.js
+// data-source.js — ES module
 // Слой работы с данными: VFS (localStorage) и fetch-загрузка JSON.
-// Вынесено из data-loader.js для этапа 2 рефакторинга.
 
-(function () {
-  'use strict';
+import Logger from './logger.js';
 
-  const FETCH_CACHE_TTL_MS = 5 * 60 * 1000; // 5 минут
-  const DEFAULT_FETCH_TIMEOUT_MS = 8000;
-  const fetchCache = new Map();
-  const inflightFetches = new Map();
+const FETCH_CACHE_TTL_MS = 5 * 60 * 1000;
+const DEFAULT_FETCH_TIMEOUT_MS = 8000;
+const fetchCache = new Map();
+const inflightFetches = new Map();
 
-  function vfsKey(filename) {
-    return `vfs:${filename}`;
+function vfsKey(filename) {
+  return `vfs:${filename}`;
+}
+
+function vfsRead(filename) {
+  try {
+    const raw = localStorage.getItem(vfsKey(filename));
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) {
+    Logger.warn('vfsRead parse error', e);
+    return null;
+  }
+}
+
+function vfsWrite(filename, data) {
+  try {
+    localStorage.setItem(vfsKey(filename), JSON.stringify(data));
+    Logger.debug(`vfsWrite: ${filename} saved to localStorage`);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function clearVfsCache() {
+  try {
+    const vfsKeys = Object.keys(localStorage).filter((key) => key.startsWith('vfs:'));
+    vfsKeys.forEach((key) => localStorage.removeItem(key));
+    Logger.debug(`Очищено ${vfsKeys.length} ключей VFS из localStorage`);
+    return vfsKeys.length;
+  } catch (e) {
+    return 0;
+  }
+}
+
+function clearFetchCache() {
+  fetchCache.clear();
+  inflightFetches.clear();
+}
+
+async function fetchJsonWithCache(url, { ttl = FETCH_CACHE_TTL_MS, timeout = DEFAULT_FETCH_TIMEOUT_MS } = {}) {
+  const now = Date.now();
+  const cached = fetchCache.get(url);
+  if (cached && cached.expiresAt > now) {
+    return cached.data;
   }
 
-  function vfsRead(filename) {
-    try {
-      const raw = localStorage.getItem(vfsKey(filename));
-      if (!raw) return null;
-      return JSON.parse(raw);
-    } catch (e) {
-      if (typeof window !== 'undefined' && window.Logger) {
-        window.Logger.warn('vfsRead parse error', e);
+  if (inflightFetches.has(url)) {
+    return inflightFetches.get(url);
+  }
+
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timerId = timeout ? setTimeout(() => controller?.abort(), timeout) : null;
+
+  const promise = fetch(url, controller ? { signal: controller.signal } : undefined)
+    .then(async (r) => {
+      if (!r || !r.ok) {
+        throw new Error(`HTTP ${r ? r.status : 'no response'}`);
       }
-      return null;
-    }
+      return r.json();
+    })
+    .then((json) => {
+      fetchCache.set(url, { data: json, expiresAt: now + ttl });
+      return json;
+    })
+    .finally(() => {
+      inflightFetches.delete(url);
+      if (timerId) clearTimeout(timerId);
+    });
+
+  inflightFetches.set(url, promise);
+  return promise;
+}
+
+// Базовый URL для fetch (учёт base path при деплое в подкаталог)
+function getDataBasePath() {
+  try {
+    const base = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.BASE_URL) || '/';
+    const clean = String(base).endsWith('/') ? base.slice(0, -1) : base;
+    return clean || '';
+  } catch {
+    return '';
+  }
+}
+
+async function loadJsonPreferVfs(filename, forceReload = false) {
+  const basePath = getDataBasePath();
+  const path1 = `${basePath}/src/data/ru/${filename}`.replace(/\/+/g, '/');
+  const path2 = `${basePath}/src/data/${filename}`.replace(/\/+/g, '/');
+
+  if (forceReload) {
+    [path1, path2].forEach((p) => fetchCache.delete(p));
   }
 
-  function vfsWrite(filename, data) {
+  // Относительный путь как fallback (для production при деплое в подкаталог)
+  let relPath = null;
+  if (typeof document !== 'undefined' && document.location && document.location.pathname.includes('/src/pages/')) {
+    relPath = new URL('../data/ru/' + filename, document.location.href).href;
+  }
+
+  const paths = [path1, path2];
+  if (relPath) paths.push(relPath);
+
+  for (const p of paths) {
     try {
-      localStorage.setItem(vfsKey(filename), JSON.stringify(data));
-      if (typeof window !== 'undefined' && window.Logger) {
-        window.Logger.debug(`vfsWrite: ${filename} saved to localStorage`);
-      }
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  function clearVfsCache() {
-    try {
-      const vfsKeys = Object.keys(localStorage).filter(key => key.startsWith('vfs:'));
-      vfsKeys.forEach(key => localStorage.removeItem(key));
-      if (typeof window !== 'undefined' && window.Logger) {
-        window.Logger.debug(`Очищено ${vfsKeys.length} ключей VFS из localStorage`);
-      }
-      return vfsKeys.length;
-    } catch (e) {
-      return 0;
-    }
-  }
-
-  function clearFetchCache() {
-    fetchCache.clear();
-    inflightFetches.clear();
-  }
-
-  async function fetchJsonWithCache(url, { ttl = FETCH_CACHE_TTL_MS, timeout = DEFAULT_FETCH_TIMEOUT_MS } = {}) {
-    const now = Date.now();
-    const cached = fetchCache.get(url);
-    if (cached && cached.expiresAt > now) {
-      return cached.data;
-    }
-
-    if (inflightFetches.has(url)) {
-      return inflightFetches.get(url);
-    }
-
-    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    const timerId = timeout ? setTimeout(() => controller?.abort(), timeout) : null;
-
-    const promise = fetch(url, controller ? { signal: controller.signal } : undefined)
-      .then(async (r) => {
-        if (!r || !r.ok) {
-          throw new Error(`HTTP ${r ? r.status : 'no response'}`);
+      let json;
+      const urlToFetch = p.startsWith('http') ? p : (p.startsWith('/') ? p : '/' + p.replace(/^\/+/, ''));
+      if (forceReload) {
+        const urlWithTimestamp = `${urlToFetch}?t=${Date.now()}`;
+        const response = await fetch(urlWithTimestamp, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        });
+        if (!response || !response.ok) {
+          throw new Error(`HTTP ${response ? response.status : 'no response'}`);
         }
-        return r.json();
-      })
-      .then((json) => {
-        fetchCache.set(url, { data: json, expiresAt: now + ttl });
-        return json;
-      })
-      .finally(() => {
-        inflightFetches.delete(url);
-        if (timerId) clearTimeout(timerId);
-      });
-
-    inflightFetches.set(url, promise);
-    return promise;
-  }
-
-  /**
-   * Загружает JSON: сначала с диска (paths), затем из VFS.
-   * @param {string} filename
-   * @param {boolean} forceReload — при true очищает кэш перед загрузкой
-   * @returns {Promise<{path: string|null, data: any|null}>}
-   */
-  async function loadJsonPreferVfs(filename, forceReload = false) {
-    if (forceReload) {
-      const paths = [`/src/data/ru/${filename}`, `/src/data/${filename}`];
-      paths.forEach(p => fetchCache.delete(p));
-    }
-
-    const paths = [`/src/data/ru/${filename}`, `/src/data/${filename}`];
-    for (const p of paths) {
-      try {
-        let json;
+        json = await response.json();
+      } else {
+        json = await fetchJsonWithCache(p, { ttl: FETCH_CACHE_TTL_MS, timeout: DEFAULT_FETCH_TIMEOUT_MS });
+      }
+      if (json) {
+        Logger.debug(`Загружены данные из файла ${p}:`, json);
         if (forceReload) {
-          const urlWithTimestamp = `${p}?t=${Date.now()}`;
-          const response = await fetch(urlWithTimestamp, {
-            cache: 'no-store',
-            headers: {
-              'Cache-Control': 'no-cache, no-store, must-revalidate',
-              'Pragma': 'no-cache'
-            }
-          });
-          if (!response || !response.ok) {
-            throw new Error(`HTTP ${response ? response.status : 'no response'}`);
-          }
-          json = await response.json();
-        } else {
-          json = await fetchJsonWithCache(p, { ttl: FETCH_CACHE_TTL_MS, timeout: DEFAULT_FETCH_TIMEOUT_MS });
+          fetchCache.set(p, { data: json, expiresAt: Date.now() + FETCH_CACHE_TTL_MS });
         }
-        if (json) {
-          if (typeof window !== 'undefined' && window.Logger) {
-            window.Logger.debug(`Загружены данные из файла ${p}:`, json);
-          }
-          if (forceReload) {
-            fetchCache.set(p, { data: json, expiresAt: Date.now() + FETCH_CACHE_TTL_MS });
-          }
-          return { path: p, data: json };
-        }
-      } catch (err) {
-        if (typeof window !== 'undefined' && window.Logger) {
-          window.Logger.warn(`Ошибка загрузки ${p}:`, err);
-        }
+        return { path: p, data: json };
       }
+    } catch (err) {
+      Logger.warn(`Ошибка загрузки ${p}:`, err);
     }
-
-    const fromVfs = vfsRead(filename);
-    if (fromVfs !== null) {
-      if (typeof window !== 'undefined' && window.Logger) {
-        window.Logger.debug(`Загружены данные из VFS для ${filename}:`, fromVfs);
-      }
-      return { path: `local:${filename}`, data: fromVfs };
-    }
-
-    return { path: null, data: null };
   }
 
-  window.DataSource = {
-    vfsKey,
-    vfsRead,
-    vfsWrite,
-    clearVfsCache,
-    fetchJsonWithCache,
-    clearFetchCache,
-    loadJsonPreferVfs,
-    FETCH_CACHE_TTL_MS,
-    DEFAULT_FETCH_TIMEOUT_MS
-  };
+  const fromVfs = vfsRead(filename);
+  if (fromVfs !== null) {
+    Logger.debug(`Загружены данные из VFS для ${filename}:`, fromVfs);
+    return { path: `local:${filename}`, data: fromVfs };
+  }
 
+  return { path: null, data: null };
+}
+
+const DataSource = {
+  vfsKey,
+  vfsRead,
+  vfsWrite,
+  clearVfsCache,
+  fetchJsonWithCache,
+  clearFetchCache,
+  loadJsonPreferVfs,
+  FETCH_CACHE_TTL_MS,
+  DEFAULT_FETCH_TIMEOUT_MS
+};
+
+if (typeof window !== 'undefined') {
+  window.DataSource = DataSource;
   window.vfsRead = vfsRead;
   window.vfsWrite = vfsWrite;
   window.clearVfsCache = clearVfsCache;
   window.fetchJsonWithCache = fetchJsonWithCache;
   window.clearFetchCache = clearFetchCache;
   window.loadJsonPreferVfs = loadJsonPreferVfs;
-})();
+}
+
+export default DataSource;
+export {
+  vfsRead,
+  vfsWrite,
+  clearVfsCache,
+  fetchJsonWithCache,
+  clearFetchCache,
+  loadJsonPreferVfs,
+  FETCH_CACHE_TTL_MS,
+  DEFAULT_FETCH_TIMEOUT_MS
+};

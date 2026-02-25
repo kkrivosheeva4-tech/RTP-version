@@ -1,8 +1,5 @@
 // app-init.js
-// Инициализация приложения
-
-(function () {
-  'use strict';
+// Инициализация приложения. ES module (шаг 7.5). Инициализация вызывается из main.js bootstrap().
 
   // Ленивая загрузка зависимостей
   function getDOMCache() {
@@ -44,6 +41,16 @@
 
   // Инициализация приложения
   async function initApp() {
+    // Обработчики событий (events.js загружен как ES module; вызываем после загрузки core-utils)
+    if (typeof window.initEventHandlers === 'function') {
+      window.initEventHandlers();
+      setTimeout(() => {
+        if (typeof window.initSearchHandler === 'function') {
+          if (!window.initSearchHandler()) setTimeout(() => window.initSearchHandler(), 500);
+        }
+      }, 100);
+    }
+
     const DOMCache = getDOMCache();
     const StateAccessors = getStateAccessors();
 
@@ -109,9 +116,12 @@
       window.renderAuth();
     }
 
-    // Первый рендер не оборачиваем в requestAnimationFrame, так как он выполняется при загрузке
-    if (typeof window.renderRadar === 'function') {
+    // Рендер радара: полный радар с технологиями только на radar.html; на главной — только фон
+    const isRadarPage = window.location.pathname.includes('radar.html') || window.location.href.includes('radar.html');
+    if (isRadarPage && typeof window.renderRadar === 'function') {
       window.renderRadar();
+    } else if (!isRadarPage && typeof window.renderRadarBackground === 'function') {
+      window.renderRadarBackground();
     }
 
     // Функция positionOptions находится в модуле select-events.js
@@ -214,7 +224,7 @@
       `;
     }
     menuHTML += `
-      <a href="help.html" class="help-menu-item" role="menuitem">
+      <a href="/src/pages/help.html" class="help-menu-item" role="menuitem">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
           <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
@@ -485,7 +495,7 @@
     window.performPdfExport = performPdfExport;
   }
 
-  // Экспорт модуля
+  // Экспорт модуля (инициализация вызывается из main.js)
   const AppInit = {
     initApp,
     initDeleteHandlers,
@@ -496,14 +506,7 @@
 
   if (typeof window !== 'undefined') {
     window.AppInit = AppInit;
-
-    // Автоматическая инициализация при загрузке DOM
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => {
-        setTimeout(() => initApp(), 0);
-      });
-    } else {
-      setTimeout(() => initApp(), 0);
-    }
   }
-})();
+
+  export { initApp };
+  export default AppInit;

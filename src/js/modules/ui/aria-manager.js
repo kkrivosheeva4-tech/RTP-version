@@ -1,9 +1,7 @@
 // Модуль управления ARIA атрибутами
-// Улучшает поддержку screen readers через правильные ARIA атрибуты и роли
-// Экспортирует функции в window.AriaManager для использования в других модулях
+// ES module — поддержка screen readers через ARIA атрибуты и роли
 
-(function() {
-  'use strict';
+'use strict';
 
   // Инициализация ARIA атрибутов для существующих элементов
   function init() {
@@ -306,7 +304,7 @@
   }
 
   // Экспорт функций (базовые функции)
-  window.AriaManager = window.AriaManager || {
+  const AriaManager = {
     init,
     updateAriaAttributes,
     updateAriaExpanded,
@@ -315,7 +313,9 @@
     announceToScreenReader
   };
 
-  // Инициализация при загрузке DOM
+  if (typeof window !== 'undefined') {
+    window.AriaManager = AriaManager;
+  }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
@@ -443,9 +443,7 @@
     });
 
     // Отслеживание загрузки модального окна экспорта
-    // Экспортируем функцию для установки флага загрузки
-    window.AriaManager = window.AriaManager || {};
-    window.AriaManager.setExportModalLoading = (loading) => {
+    AriaManager.setExportModalLoading = (loading) => {
       isExportModalLoading = loading;
       if (loading) {
         // Автоматически сбрасываем флаг через 2 секунды (достаточно для загрузки)
@@ -467,4 +465,5 @@
       }
     };
   }
-})();
+
+export default AriaManager;

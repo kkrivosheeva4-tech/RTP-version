@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             // Если пользователь уже авторизован, перенаправляем его на нужную страницу в зависимости от роли
             // Директоры и РП теперь идут на index.html, а затем выбирают предприятие для перехода на радар
-            window.location.href = 'index.html';
+            window.location.href = '/src/pages/index.html';
             return; // Прерываем выполнение
         } else {
             // Если пользователь сохранен, но не найден в списке, очищаем localStorage
@@ -188,7 +188,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // После успешной авторизации перенаправляем на нужную страницу в зависимости от роли
                 // Директоры и РП теперь идут на index.html, а затем выбирают предприятие для перехода на радар
-                window.location.href = 'index.html';
+                window.location.href = '/src/pages/index.html';
             } else {
                 if (submitBtn) {
                     submitBtn.classList.remove('loading');

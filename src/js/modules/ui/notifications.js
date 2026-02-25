@@ -1,14 +1,9 @@
-// notifications.js
-// Модуль системы уведомлений для отслеживания изменений в технологиях
+// notifications.js — ES module
+// Система уведомлений для отслеживания изменений в технологиях
 
-(function () {
-  "use strict";
+import { escapeHtml as escapeHtmlUtil } from '../core/escape-utils.js';
+import Logger from '../core/logger.js';
 
-  // Защита от повторной инициализации
-  if (window.Notifications && window.Notifications._initialized) {
-    // Модуль уведомлений уже инициализирован
-    return;
-  }
 
   const STORAGE_KEY = 'tech_notifications';
   const MAX_NOTIFICATIONS = 100; // Максимальное количество уведомлений
@@ -30,7 +25,7 @@
         return JSON.parse(stored);
       }
     } catch (e) {
-      if (window.Logger) window.Logger.warn('Ошибка при чтении уведомлений из localStorage', e);
+      Logger.warn('Ошибка при чтении уведомлений из localStorage', e);
     }
     return [];
   }
@@ -45,7 +40,7 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(limited));
       return limited;
     } catch (e) {
-      if (window.Logger) window.Logger.warn('Ошибка при сохранении уведомлений в localStorage', e);
+      Logger.warn('Ошибка при сохранении уведомлений в localStorage', e);
       return notifications;
     }
   }
@@ -119,9 +114,7 @@
 
       // Логируем для отладки
       // Уведомление добавлено в localStorage
-      if (window.Logger) {
-        window.Logger.info('Уведомление добавлено:', notification);
-      }
+      Logger.info('Уведомление добавлено:', notification);
 
       // Обновляем UI немедленно и с задержкой для надежности
       updateNotificationUI();
@@ -134,9 +127,7 @@
 
       return notification;
     } catch (error) {
-      if (window.Logger) {
-        window.Logger.error('Ошибка при добавлении уведомления:', error);
-      }
+      Logger.error('Ошибка при добавлении уведомления:', error);
       // Ошибка при добавлении уведомления
       return null;
     }
@@ -566,16 +557,8 @@
     return String(value);
   }
 
-  /**
-   * Экранирование HTML — используем единую утилиту из escape-utils.js
-   */
   function escapeHtml(text) {
-    if (window.escapeHtml) return window.escapeHtml(text);
-    if (text == null) return '';
-    const s = String(text);
-    return s.replace(/[&<>"']/g, function (m) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m] || m;
-    });
+    return escapeHtmlUtil(text);
   }
 
   /**
@@ -709,9 +692,7 @@
       }
     } catch (error) {
       // Ошибка при обновлении UI уведомлений
-      if (window.Logger) {
-        window.Logger.error('Ошибка при обновлении UI уведомлений:', error);
-      }
+      Logger.error('Ошибка при обновлении UI уведомлений:', error);
     }
   }
 
@@ -916,14 +897,10 @@
     // Обновляем UI при загрузке
     updateNotificationUI();
 
-    // Отмечаем модуль как инициализированный
-    if (window.Notifications) {
-      window.Notifications._initialized = true;
-    }
+    Notifications._initialized = true;
   }
 
-  // Публичный API - создаем сразу, чтобы был доступен до инициализации
-  window.Notifications = {
+  const Notifications = {
     add: addNotification,
     markAsRead: markAsRead,
     markAllAsRead: markAllAsRead,
@@ -937,8 +914,8 @@
     _initialized: false
   };
 
-  // Инициализация при загрузке DOM
-  // Используем отложенную инициализацию, чтобы убедиться, что все модули загружены
+  if (typeof window !== 'undefined') window.Notifications = Notifications;
+
   function delayedInit() {
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', () => {
@@ -952,15 +929,11 @@
   // Инициализируем сразу, если DOM готов, иначе ждем
   delayedInit();
 
-  // Также инициализируем при полной загрузке страницы
-  if (window.addEventListener) {
+  if (typeof window !== 'undefined' && window.addEventListener) {
     window.addEventListener('load', () => {
-      if (!document.getElementById('notificationsPanel')) {
-        initNotifications();
-      }
-      // Обновляем UI после загрузки
+      if (!document.getElementById('notificationsPanel')) initNotifications();
       updateNotificationUI();
     });
   }
 
-})();
+  export default Notifications;

@@ -20,7 +20,7 @@
         window.AdminCommon.showNotification('Ошибка доступа', 'У вас нет прав для доступа к админ панели', 'error');
       }
       setTimeout(function () {
-        window.location.href = 'index.html';
+        window.location.href = '/src/pages/index.html';
       }, 2000);
       return false;
     }

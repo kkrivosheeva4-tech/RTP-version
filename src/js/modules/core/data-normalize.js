@@ -1,16 +1,10 @@
-// data-normalize.js
+// data-normalize.js — ES module
 // Нормализация технологий и справочников из сырых JSON.
-// Вынесено из data-loader.js для этапа 2 рефакторинга.
 
-(function () {
-  'use strict';
-
-  /**
-   * Строит blockIdToName и nameToBlockId из массива блоков.
-   * @param {Array} blocks
-   * @returns {{ blockIdToName: object, nameToBlockId: object, blocksList: string[] }}
-   */
-  function buildBlockMaps(blocks) {
+/**
+ * Строит blockIdToName и nameToBlockId из массива блоков.
+ */
+export function buildBlockMaps(blocks) {
     const blockIdToName = {};
     const nameToBlockId = {};
     const blocksList = Array.isArray(blocks)
@@ -28,13 +22,13 @@
       });
     }
 
-    return { blockIdToName, nameToBlockId, blocksList };
-  }
+  return { blockIdToName, nameToBlockId, blocksList };
+}
 
-  /**
-   * Нормализует значение готовности из диапазона 1-9 в 0-3.
-   */
-  function normalizeReadiness(value) {
+/**
+ * Нормализует значение готовности из диапазона 1-9 в 0-3.
+ */
+export function normalizeReadiness(value) {
     if (value == null || value === undefined) return null;
     const num = Number(value);
     if (Number.isNaN(num)) return null;
@@ -42,17 +36,13 @@
     if (num >= 1 && num <= 9) {
       return Math.round(((num - 1) / 8) * 3);
     }
-    return Math.max(0, Math.min(3, num));
-  }
+  return Math.max(0, Math.min(3, num));
+}
 
-  /**
-   * Преобразует технологию из формата JSON в формат приложения.
-   * @param {object} tech
-   * @param {object} blockIdToName
-   * @param {Array} enterprisesData
-   * @returns {object}
-   */
-  function normalizeTechnologyFromNewFormat(tech, blockIdToName, enterprisesData) {
+/**
+ * Преобразует технологию из формата JSON в формат приложения.
+ */
+export function normalizeTechnologyFromNewFormat(tech, blockIdToName, enterprisesData) {
     let blockId = null;
     let blockIds = [];
 
@@ -202,10 +192,10 @@
     return normalized;
   }
 
-  /**
-   * Строит enterpriseData (map company -> technologies[]) из массива технологий.
-   */
-  function buildEnterpriseDataFromTechnologies(allTechnologies) {
+/**
+ * Строит enterpriseData (map company -> technologies[]) из массива технологий.
+ */
+export function buildEnterpriseDataFromTechnologies(allTechnologies) {
     const enterpriseData = {};
     allTechnologies.forEach(tech => {
       const companies = Array.isArray(tech.company) ? tech.company : (tech.company ? [tech.company] : []);
@@ -217,13 +207,13 @@
     return enterpriseData;
   }
 
+if (typeof window !== 'undefined') {
   window.DataNormalize = {
     buildBlockMaps,
     normalizeTechnologyFromNewFormat,
     buildEnterpriseDataFromTechnologies,
     normalizeReadiness
   };
-
   window.normalizeTechnologyFromNewFormat = normalizeTechnologyFromNewFormat;
   window.buildBlockMaps = buildBlockMaps;
-})();
+}

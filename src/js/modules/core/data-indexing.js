@@ -1,9 +1,6 @@
 // data-indexing.js
 // Объединенный модуль для индексации данных и технологий
-// Объединяет функциональность data-index.js и tech-index.js
-
-(function() {
-  'use strict';
+// ES module (шаг 7.5).
 
   // ===== DATA INDEX =====
   // Быстрый доступ к технологиям по ключам.
@@ -161,8 +158,8 @@
   } else if (typeof window !== 'undefined') {
     window.DataIndex = DataIndex;
     window.TechIndex = TechIndex;
-    // Глобальные алиасы для обратной совместимости
     window.rebuildTechnologiesIndex = rebuildTechnologiesIndex;
     window.getTechById = getTechById;
   }
-})();
+
+  export { DataIndex, TechIndex };

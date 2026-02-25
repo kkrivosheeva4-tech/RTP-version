@@ -1,9 +1,7 @@
-// common-ui.js
-// Общий модуль для UI-функций, используемых на всех страницах
-// Включает: auth-ui, theme, tooltips, help menu
+// common-ui.js — ES module
+// Общий UI: auth-ui, theme, tooltips, help menu
 
-(function() {
-  'use strict';
+import Logger from '../core/logger.js';
 
   // ===== АУТЕНТИФИКАЦИЯ =====
   // Основано на modules/business/auth.js; единый выход — AuthModule.safeLogout / clearAuthFromStorage
@@ -30,7 +28,7 @@
   function renderAuth() {
     // Guard: предотвращаем бесконечную рекурсию
     if (renderAuth._calling) {
-      if (window.Logger) window.Logger.warn('renderAuth: предотвращена рекурсия');
+      Logger.warn('renderAuth: предотвращена рекурсия');
       return;
     }
     renderAuth._calling = true;
@@ -82,7 +80,7 @@
       setButtonsVisibility(true);
       logoutContainer.querySelector(".logout").onclick = () => {
         safeLogout();
-        window.location.href = 'auth.html';
+        window.location.href = '/src/pages/auth.html';
       };
     } else if (role === "admin") {
       authInfo.innerHTML = `<div class="user-role admin-role" data-tooltip="Перейти в админ-панель" style="cursor: pointer;">Администратор</div>`;
@@ -96,7 +94,7 @@
       setButtonsVisibility(true);
       const adminRoleElement = authInfo.querySelector('.admin-role');
       if (adminRoleElement) {
-        adminRoleElement.onclick = () => window.location.href = 'admin.html';
+        adminRoleElement.onclick = () => window.location.href = '/src/pages/admin.html';
       }
       logoutContainer.querySelector(".logout").onclick = () => {
         safeLogout();
@@ -129,7 +127,7 @@
       setButtonsVisibility(false);
       document.body.classList.add('not-authorized');
       logoutContainer.querySelector(".login").onclick = () => {
-        window.location.href = "auth.html";
+        window.location.href = "/src/pages/auth.html";
       };
     }
     } finally {
@@ -143,7 +141,7 @@
   function initTheme() {
     // Guard: предотвращаем повторную инициализацию
     if (window.__themeInitialized) {
-      if (window.Logger) window.Logger.debug('Theme уже инициализирован, пропускаем повторную инициализацию');
+      Logger.debug('Theme уже инициализирован, пропускаем повторную инициализацию');
       return;
     }
     window.__themeInitialized = true;
@@ -156,13 +154,13 @@
     let savedTheme = null;
     try {
       savedTheme = localStorage.getItem("theme");
-    } catch (e) { window.Logger?.warn('common-ui: theme localStorage getItem', e); }
+    } catch (e) { Logger.warn('common-ui: theme localStorage getItem', e); }
 
     if (!savedTheme) {
       savedTheme = document.body.classList.contains("dark") ? "dark" : "light";
       try {
         localStorage.setItem("theme", savedTheme);
-      } catch (e) { window.Logger?.warn('common-ui: theme localStorage setItem', e); }
+      } catch (e) { Logger.warn('common-ui: theme localStorage setItem', e); }
     }
 
     const isDark = savedTheme === "dark";
@@ -247,7 +245,7 @@
         if (window.OnboardingTour && typeof window.OnboardingTour.startTour === 'function') {
           window.OnboardingTour.startTour();
         } else {
-          if (window.Logger) window.Logger.warn('OnboardingTour модуль не загружен');
+          Logger.warn('OnboardingTour модуль не загружен');
           if (window.Toast) {
             window.Toast.error('Модуль обучения не загружен. Пожалуйста, обновите страницу.');
           } else {
@@ -310,7 +308,7 @@
   function initHelpButton() {
     // Guard: предотвращаем повторную инициализацию
     if (window.__helpButtonInitialized) {
-      if (window.Logger) window.Logger.debug('Help button уже инициализирован, пропускаем повторную инициализацию');
+      Logger.debug('Help button уже инициализирован, пропускаем повторную инициализацию');
       return;
     }
     window.__helpButtonInitialized = true;
@@ -331,29 +329,28 @@
     renderAuth();
   }
 
-  // Экспорт в window для обратной совместимости
-  if (typeof window !== 'undefined') {
-    window.CommonUI = {
-      renderAuth,
-      checkArchitectRole,
-      safeLogout,
-      initTheme,
-      showHelpMenu,
-      initHelpButton,
-      initCommonUI
-    };
+  const CommonUI = {
+    renderAuth,
+    checkArchitectRole,
+    safeLogout,
+    initTheme,
+    showHelpMenu,
+    initHelpButton,
+    initCommonUI
+  };
 
-    // Экспорт отдельных функций для обратной совместимости
+  if (typeof window !== 'undefined') {
+    window.CommonUI = CommonUI;
     window.renderAuth = renderAuth;
     window.checkArchitectRole = checkArchitectRole;
     window.safeLogout = safeLogout;
     window.showHelpMenu = showHelpMenu;
-
-    // Автоматическая инициализация при загрузке DOM
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', initCommonUI);
     } else {
       initCommonUI();
     }
   }
-})();
+
+  export default CommonUI;
+  export { renderAuth, checkArchitectRole, safeLogout, initTheme, showHelpMenu, initHelpButton, initCommonUI };

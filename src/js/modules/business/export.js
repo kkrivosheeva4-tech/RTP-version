@@ -1,9 +1,12 @@
 // export.js
 // Модуль экспорта PDF отчетов
 
-// Экспорт функций в window для использования в RMK2.js и других модулях
-window.ExportModule = (function() {
-  'use strict';
+import Logger from '../core/logger.js';
+import ExportFieldsConfig from './export-fields-config.js';
+import { applyFiltersToTechnologies as applyExportFilters } from './export-filters.js';
+import { generatePdf } from './export-pdf.js';
+
+'use strict';
 
   // ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
 
@@ -62,12 +65,8 @@ window.ExportModule = (function() {
     }
   }
 
-  // Делегирование в export-filters.js (этап 3 рефакторинга)
   function applyFiltersToTechnologies(sourceList, filters) {
-    if (window.ExportFilters && typeof window.ExportFilters.applyFiltersToTechnologies === 'function') {
-      return window.ExportFilters.applyFiltersToTechnologies(sourceList, filters);
-    }
-    return sourceList || [];
+    return applyExportFilters(sourceList || [], filters || {});
   }
 
   // ===== ФУНКЦИИ РАБОТЫ С MULTI-SELECT =====
@@ -346,7 +345,7 @@ window.ExportModule = (function() {
       fieldItem.classList.add('has-error');
     }
 
-    const multiSelectFields = (window.ExportFieldsConfig && window.ExportFieldsConfig.MULTI_SELECT_FIELDS) || ['company', 'blocks', 'functions', 'status', 'costProm', 'techRead', 'organRead', 'trlStage', 'priority', 'vendors', 'integrators'];
+    const multiSelectFields = (ExportFieldsConfig && ExportFieldsConfig.MULTI_SELECT_FIELDS) || ['company', 'blocks', 'functions', 'status', 'costProm', 'techRead', 'organRead', 'trlStage', 'priority', 'vendors', 'integrators'];
     if (multiSelectFields.includes(fieldName)) {
       const container = document.getElementById(`filter_${fieldName}_container`);
       if (container) {
@@ -431,11 +430,7 @@ window.ExportModule = (function() {
         ? filters.company
         : null;
 
-      if (!window.ExportPdf || typeof window.ExportPdf.generatePdf !== 'function') {
-        throw new Error('Модуль генерации PDF не загружен');
-      }
-
-      const { enterpriseName: name, fieldsCount } = await window.ExportPdf.generatePdf(sourceList, enterpriseName, selectedFields, companyFilterForDisplay);
+      const { enterpriseName: name, fieldsCount } = await generatePdf(sourceList, enterpriseName, selectedFields, companyFilterForDisplay);
 
       if (typeof window !== 'undefined' && typeof window.showReportSuccess === 'function') {
         window.showReportSuccess();
@@ -468,7 +463,7 @@ window.ExportModule = (function() {
           localStorage.setItem(key, JSON.stringify(arr));
         }
       } catch (err) {
-        if (window.Logger) window.Logger.warn('Ошибка при логировании экспорта:', err);
+        if (Logger && typeof Logger.warn === 'function') Logger.warn('Ошибка при логировании экспорта:', err);
       }
     } catch (error) {
       if (typeof window !== 'undefined' && typeof window.showReportError === 'function') {
@@ -513,7 +508,7 @@ window.ExportModule = (function() {
     },
     {
       field: 'status',
-      source: () => (window.ExportFieldsConfig && window.ExportFieldsConfig.STATUS_OPTIONS) || ['Внедренные', 'Невнедренные'],
+      source: () => (ExportFieldsConfig && ExportFieldsConfig.STATUS_OPTIONS) || ['Внедренные', 'Невнедренные'],
       placeholder: 'Все статусы'
     },
     {
@@ -548,7 +543,7 @@ window.ExportModule = (function() {
               });
             }
           } catch (e) {
-            if (window.Logger) window.Logger.warn('Ошибка при загрузке вендоров из JSON', e);
+            if (Logger && typeof Logger.warn === 'function') Logger.warn('Ошибка при загрузке вендоров из JSON', e);
           }
         }
 
@@ -608,7 +603,7 @@ window.ExportModule = (function() {
               });
             }
           } catch (e) {
-            if (window.Logger) window.Logger.warn('Ошибка при загрузке интеграторов из JSON', e);
+            if (Logger && typeof Logger.warn === 'function') Logger.warn('Ошибка при загрузке интеграторов из JSON', e);
           }
         }
 
@@ -649,24 +644,24 @@ window.ExportModule = (function() {
       });
     }
 
-    const costPromOptions = (window.ExportFieldsConfig && window.ExportFieldsConfig.COST_PROM_OPTIONS) || ['0 - 1 000 000', '1 000 000 - 5 000 000', '5 000 000 - 10 000 000', 'Более 10 000 000'];
+    const costPromOptions = (ExportFieldsConfig && ExportFieldsConfig.COST_PROM_OPTIONS) || ['0 - 1 000 000', '1 000 000 - 5 000 000', '5 000 000 - 10 000 000', 'Более 10 000 000'];
     tasks.push(() => {
       populateMultiSelect('filter_costProm_container', costPromOptions, 'Все значения');
     });
 
-    const ratingOptions = (window.ExportFieldsConfig && window.ExportFieldsConfig.RATING_OPTIONS) || ['0', '1', '2', '3'];
+    const ratingOptions = (ExportFieldsConfig && ExportFieldsConfig.RATING_OPTIONS) || ['0', '1', '2', '3'];
     ['techRead', 'organRead'].forEach(fieldName => {
       tasks.push(() => {
         populateMultiSelect(`filter_${fieldName}_container`, ratingOptions, 'Все значения');
       });
     });
 
-    const trlOptions = (window.ExportFieldsConfig && window.ExportFieldsConfig.TRL_OPTIONS) || ['1', '2', '3'];
+    const trlOptions = (ExportFieldsConfig && ExportFieldsConfig.TRL_OPTIONS) || ['1', '2', '3'];
     tasks.push(() => {
       populateMultiSelect('filter_trlStage_container', trlOptions, 'Все значения');
     });
 
-    const priorityOptions = (window.ExportFieldsConfig && window.ExportFieldsConfig.PRIORITY_OPTIONS) || ['Высокий (60-100%)', 'Средний (30-60%)', 'Низкий (0-30%)'];
+    const priorityOptions = (ExportFieldsConfig && ExportFieldsConfig.PRIORITY_OPTIONS) || ['Высокий (60-100%)', 'Средний (30-60%)', 'Низкий (0-30%)'];
     tasks.push(() => {
       populateMultiSelect('filter_priority_container', priorityOptions, 'Все приоритеты');
     });
@@ -687,9 +682,9 @@ window.ExportModule = (function() {
   }
 
   function setupExportFilterToggles() {
-    const multiSelectFields = (window.ExportFieldsConfig && window.ExportFieldsConfig.MULTI_SELECT_FIELDS) || ['company', 'blocks', 'functions', 'status', 'costProm', 'techRead', 'organRead', 'trlStage', 'priority', 'vendors', 'integrators'];
+    const multiSelectFields = (ExportFieldsConfig && ExportFieldsConfig.MULTI_SELECT_FIELDS) || ['company', 'blocks', 'functions', 'status', 'costProm', 'techRead', 'organRead', 'trlStage', 'priority', 'vendors', 'integrators'];
     const singleSelectFields = [];
-    const textFields = (window.ExportFieldsConfig && window.ExportFieldsConfig.TEXT_FIELDS) || ['description', 'exampleDesc'];
+    const textFields = (ExportFieldsConfig && ExportFieldsConfig.TEXT_FIELDS) || ['description', 'exampleDesc'];
 
     // Множественный выбор
     multiSelectFields.forEach(field => {
@@ -831,7 +826,7 @@ window.ExportModule = (function() {
     // Очищаем все ошибки при открытии модального окна
     clearAllErrors();
 
-    const defaultFields = (window.ExportFieldsConfig && window.ExportFieldsConfig.DEFAULT_EXPORT_FIELDS) || {
+    const defaultFields = (ExportFieldsConfig && ExportFieldsConfig.DEFAULT_EXPORT_FIELDS) || {
       name: true, company: true, blocks: true, functions: false, techTypes: false, status: true,
       costProm: false, description: false, exampleDesc: false, techRead: false, organRead: false,
       trlStage: false, priority: false, vendors: false, integrators: false
@@ -959,8 +954,8 @@ window.ExportModule = (function() {
       return false;
     }
 
-    const allMultiSelectFields = (window.ExportFieldsConfig && window.ExportFieldsConfig.MULTI_SELECT_FIELDS) || ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'trlStage', 'priority', 'vendors', 'integrators'];
-    const fieldLabels = (window.ExportFieldsConfig && window.ExportFieldsConfig.EXPORT_FIELD_LABELS) || { company: 'Предприятия', blocks: 'Функциональный блок', functions: 'Функции', techTypes: 'Тип технологии', status: 'Статус', costProm: 'Стоимость внедрения', techRead: 'Технологическая готовность', organRead: 'Организационная готовность', trlStage: 'TRL-стадия', priority: 'Приоритет', vendors: 'Вендору', integrators: 'Интеграторы' };
+    const allMultiSelectFields = (ExportFieldsConfig && ExportFieldsConfig.MULTI_SELECT_FIELDS) || ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'trlStage', 'priority', 'vendors', 'integrators'];
+    const fieldLabels = (ExportFieldsConfig && ExportFieldsConfig.EXPORT_FIELD_LABELS) || { company: 'Предприятия', blocks: 'Функциональный блок', functions: 'Функции', techTypes: 'Тип технологии', status: 'Статус', costProm: 'Стоимость внедрения', techRead: 'Технологическая готовность', organRead: 'Организационная готовность', trlStage: 'TRL-стадия', priority: 'Приоритет', vendors: 'Вендору', integrators: 'Интеграторы' };
 
     allMultiSelectFields.forEach(field => {
       const checkbox = document.getElementById(`field_${field}`);
@@ -1039,7 +1034,7 @@ window.ExportModule = (function() {
         const allSelected = areAllFieldsSelected();
         const shouldSelectAll = !allSelected;
 
-        const allMultiSelectFields = (window.ExportFieldsConfig && window.ExportFieldsConfig.MULTI_SELECT_FIELDS) || ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'trlStage', 'priority', 'vendors', 'integrators'];
+        const allMultiSelectFields = (ExportFieldsConfig && ExportFieldsConfig.MULTI_SELECT_FIELDS) || ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'trlStage', 'priority', 'vendors', 'integrators'];
         document.querySelectorAll('#exportPdfModal .export-field-item > label input[type="checkbox"], #exportPdfModal .export-field-row > label input[type="checkbox"]').forEach(cb => {
           cb.checked = shouldSelectAll;
           const field = cb.getAttribute('data-field');
@@ -1148,8 +1143,8 @@ window.ExportModule = (function() {
           }
         });
 
-        const multiSelectFields = (window.ExportFieldsConfig && window.ExportFieldsConfig.MULTI_SELECT_FIELDS) || ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'trlStage', 'priority', 'vendors', 'integrators'];
-        const textFields = (window.ExportFieldsConfig && window.ExportFieldsConfig.TEXT_FIELDS) || ['description', 'exampleDesc'];
+        const multiSelectFields = (ExportFieldsConfig && ExportFieldsConfig.MULTI_SELECT_FIELDS) || ['company', 'blocks', 'functions', 'techTypes', 'status', 'costProm', 'techRead', 'organRead', 'trlStage', 'priority', 'vendors', 'integrators'];
+        const textFields = (ExportFieldsConfig && ExportFieldsConfig.TEXT_FIELDS) || ['description', 'exampleDesc'];
 
         // Множественный выбор
         multiSelectFields.forEach(field => {
@@ -1235,7 +1230,7 @@ window.ExportModule = (function() {
   window.setupExportFilterToggles = setupExportFilterToggles;
   window.validateExportFields = validateExportFields;
 
-  return {
+  const ExportModule = {
     performPdfExport,
     populateMultiSelect,
     initMultiSelect,
@@ -1249,4 +1244,21 @@ window.ExportModule = (function() {
     showExportPdfModal,
     validateExportFields
   };
-})();
+
+  window.ExportModule = ExportModule;
+
+  export default ExportModule;
+  export {
+    performPdfExport,
+    populateMultiSelect,
+    initMultiSelect,
+    updateMultiSelectValue,
+    getMultiSelectValues,
+    clearAllErrors,
+    showFieldError,
+    applyFiltersToTechnologies,
+    populateExportFilters,
+    setupExportFilterToggles,
+    showExportPdfModal,
+    validateExportFields,
+  };

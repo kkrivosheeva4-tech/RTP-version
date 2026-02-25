@@ -2,10 +2,8 @@
  * Модуль учета временной динамики готовности технологий
  * Хранит исторические данные, рассчитывает тренды и визуализирует изменения
  */
-(function(window) {
-  'use strict';
 
-  // Модуль TemporalDynamics инициализирован
+'use strict';
 
   const STORAGE_KEY = 'rtp_tech_history';
   const STORAGE_VERSION = '1.0';
@@ -243,8 +241,7 @@
     }
   }
 
-  // Публичный API
-  window.TemporalDynamics = {
+  const TemporalDynamics = {
     saveHistory: saveHistory,
     getHistory: getHistory,
     calculateTrend: calculateTrend,
@@ -253,6 +250,16 @@
     getGlobalStatistics: getGlobalStatistics
   };
 
-  // Модуль TemporalDynamics загружен
+  if (typeof window !== 'undefined') {
+    window.TemporalDynamics = TemporalDynamics;
+  }
 
-})(window);
+  export default TemporalDynamics;
+  export {
+    saveHistory,
+    getHistory,
+    calculateTrend,
+    predictFuture,
+    saveBatchHistory,
+    getGlobalStatistics
+  };

@@ -1,11 +1,8 @@
 /**
- * Модуль для автоматического расчета покрытия функций
- * на основе выбранных функций и блоков
+ * Модуль для автоматического расчета покрытия функций на основе выбранных функций и блоков
+ * ES module
  */
-(function (window) {
-  'use strict';
-
-  // Модуль AutoFuncCover инициализирован
+'use strict';
 
   /**
    * Получение текстового представления покрытия функций
@@ -275,7 +272,7 @@
   }
 
   // Публичный API
-  window.AutoFuncCover = {
+  const AutoFuncCover = {
     init: init,
     initForAddForm: initForAddForm,
     initForEditForm: initForEditForm,
@@ -284,14 +281,13 @@
     updateFuncCoverField: updateFuncCoverField
   };
 
-  // Модуль AutoFuncCover загружен
-
-  // Автоматическая инициализация при загрузке модуля
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    // DOM уже загружен
-    setTimeout(init, 200);
+  if (typeof window !== 'undefined') {
+    window.AutoFuncCover = AutoFuncCover;
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      setTimeout(init, 200);
+    }
   }
 
-})(window);
+  export default AutoFuncCover;

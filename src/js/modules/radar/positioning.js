@@ -4,10 +4,11 @@
 // POSITION_PAD, POSITION_ANGLE_PAD, MIN_BLIP_DISTANCE, QUADRANTS, RINGS, levelToRing
 // Использует функции из radar-utils.js: polarToCartesian, cartesianToPolar
 
-(function () {
-  'use strict';
+import Logger from '../core/logger.js';
 
-  // ОБНОВЛЕНО (2026-01-29): Кеш для расчетов позиций технологий
+'use strict';
+
+// ОБНОВЛЕНО (2026-01-29): Кеш для расчетов позиций технологий
   // Кеширует результаты расчета позиций для улучшения производительности
   const positionCache = new Map();
   const CACHE_VERSION = '2.3'; // Версия кеша (обновлено: веса techRead/organRead 0.35, trlStage 0.10)
@@ -88,13 +89,13 @@
       const cacheData = Array.from(positionCache.entries());
       localStorage.setItem(CACHE_STORAGE_KEY, JSON.stringify(cacheData));
       localStorage.setItem(CACHE_STORAGE_VERSION_KEY, CACHE_VERSION);
-      if (window.Logger && typeof window.Logger.debug === 'function') {
-        window.Logger.debug(`[Positioning] Кеш позиций сохранен (${cacheData.length} записей)`);
+      if (Logger && typeof Logger.debug === 'function') {
+        Logger.debug(`[Positioning] Кеш позиций сохранен (${cacheData.length} записей)`);
       }
     } catch (e) {
       // Ошибка при сохранении кеша в localStorage (может быть из-за ограничений размера)
-      if (window.Logger && typeof window.Logger.warn === 'function') {
-        window.Logger.warn('[Positioning] Не удалось сохранить кеш позиций в localStorage', e);
+      if (Logger && typeof Logger.warn === 'function') {
+        Logger.warn('[Positioning] Не удалось сохранить кеш позиций в localStorage', e);
       }
     }
   }
@@ -111,8 +112,8 @@
         if (savedVersion) {
           localStorage.removeItem(CACHE_STORAGE_KEY);
           localStorage.removeItem(CACHE_STORAGE_VERSION_KEY);
-          if (window.Logger && typeof window.Logger.debug === 'function') {
-            window.Logger.debug('[Positioning] Старый кеш позиций очищен (изменилась версия)');
+          if (Logger && typeof Logger.debug === 'function') {
+            Logger.debug('[Positioning] Старый кеш позиций очищен (изменилась версия)');
           }
         }
         return;
@@ -128,15 +129,15 @@
               positionCache.set(key, value);
             }
           });
-          if (window.Logger && typeof window.Logger.debug === 'function') {
-            window.Logger.debug(`[Positioning] Кеш позиций загружен из localStorage (${positionCache.size} записей)`);
+          if (Logger && typeof Logger.debug === 'function') {
+            Logger.debug(`[Positioning] Кеш позиций загружен из localStorage (${positionCache.size} записей)`);
           }
         }
       }
     } catch (e) {
       // Ошибка при загрузке кеша из localStorage
-      if (window.Logger && typeof window.Logger.warn === 'function') {
-        window.Logger.warn('[Positioning] Не удалось загрузить кеш позиций из localStorage', e);
+      if (Logger && typeof Logger.warn === 'function') {
+        Logger.warn('[Positioning] Не удалось загрузить кеш позиций из localStorage', e);
       }
     }
   }
@@ -153,8 +154,8 @@
     } catch (e) {
       // Игнорируем ошибки при удалении из localStorage
     }
-    if (window.Logger && typeof window.Logger.debug === 'function') {
-      window.Logger.debug('[Positioning] Кеш позиций очищен');
+    if (Logger && typeof Logger.debug === 'function') {
+      Logger.debug('[Positioning] Кеш позиций очищен');
     }
   }
 
@@ -170,8 +171,8 @@
       }
     });
     keysToDelete.forEach(key => positionCache.delete(key));
-    if (window.Logger && typeof window.Logger.debug === 'function') {
-      window.Logger.debug(`[Positioning] Кеш финальных позиций очищен (${keysToDelete.length} записей)`);
+    if (Logger && typeof Logger.debug === 'function') {
+      Logger.debug(`[Positioning] Кеш финальных позиций очищен (${keysToDelete.length} записей)`);
     }
   }
 
@@ -287,9 +288,9 @@
         const directionQuadrants = getQuadrantsForDirection(directionName);
         if (directionQuadrants.length === 0) {
           // Если квадрант не найден, логируем для отладки
-          if (window.Logger && typeof window.Logger.warn === 'function') {
+          if (Logger && typeof Logger.warn === 'function') {
             const directionNameStr = getDirectionNameById(directionName) || directionName;
-            window.Logger.warn(`[Positioning] Не найден квадрант для направления "${directionNameStr}" (ID: ${directionName}) в технологии ${tech.id || tech.name || 'unknown'}. Проверьте directionToQuadrant.`);
+            Logger.warn(`[Positioning] Не найден квадрант для направления "${directionNameStr}" (ID: ${directionName}) в технологии ${tech.id || tech.name || 'unknown'}. Проверьте directionToQuadrant.`);
           }
         }
         directionQuadrants.forEach(q => quadrantsSet.add(q));
@@ -300,8 +301,8 @@
     // Блоки больше не используются для определения квадранта, так как они являются
     // отдельными критериями технологии и могут быть в любом квадранте
     if (quadrantsSet.size === 0) {
-      if (window.Logger && typeof window.Logger.warn === 'function') {
-        window.Logger.warn(`[Positioning] Технология ${tech.id || tech.name || 'unknown'} не имеет направлений или квадранты не найдены, размещаем в квадранте 1 (по умолчанию)`);
+      if (Logger && typeof Logger.warn === 'function') {
+        Logger.warn(`[Positioning] Технология ${tech.id || tech.name || 'unknown'} не имеет направлений или квадранты не найдены, размещаем в квадранте 1 (по умолчанию)`);
       }
       quadrantsSet.add(1); // Квадрант 1 по умолчанию
     }
@@ -471,8 +472,8 @@
 
     // Проверяем на NaN
     if (isNaN(numValue)) {
-      if (window.Logger && typeof window.Logger.warn === 'function') {
-        window.Logger.warn(`[Positioning] Некорректное значение ${factorName}: ${value}. Используется значение по умолчанию.`);
+      if (Logger && typeof Logger.warn === 'function') {
+        Logger.warn(`[Positioning] Некорректное значение ${factorName}: ${value}. Используется значение по умолчанию.`);
       } else {
         // Некорректное значение, используется значение по умолчанию
       }
@@ -481,8 +482,8 @@
 
     // Проверяем диапазон
     if (numValue < min || numValue > max) {
-      if (window.Logger && typeof window.Logger.warn === 'function') {
-        window.Logger.warn(`[Positioning] Значение ${factorName} (${numValue}) выходит за допустимый диапазон [${min}, ${max}]. Ограничено до границ диапазона.`);
+      if (Logger && typeof Logger.warn === 'function') {
+        Logger.warn(`[Positioning] Значение ${factorName} (${numValue}) выходит за допустимый диапазон [${min}, ${max}]. Ограничено до границ диапазона.`);
       } else {
         // Значение выходит за допустимый диапазон, ограничено до границ
       }
@@ -522,8 +523,8 @@
    */
   function calculateRadarPosition(tech) {
     if (!tech) {
-      if (window.Logger && typeof window.Logger.warn === 'function') {
-        window.Logger.warn('[Positioning] calculateRadarPosition вызвана с null/undefined технологией');
+      if (Logger && typeof Logger.warn === 'function') {
+        Logger.warn('[Positioning] calculateRadarPosition вызвана с null/undefined технологией');
       }
       return { theta: 0, radius: 50 };
     }
@@ -586,8 +587,8 @@
       // Нормализуем веса, чтобы их сумма была равна 1.0
       const sum = weights.techRead + weights.organRead + weights.funcCover + weights.trlStage;
       if (Math.abs(sum - 1.0) > 0.001) {
-        if (window.Logger && typeof window.Logger.warn === 'function') {
-          window.Logger.warn(`[Positioning] Сумма весов факторов (${sum.toFixed(3)}) не равна 1.0. Выполняется нормализация.`);
+        if (Logger && typeof Logger.warn === 'function') {
+          Logger.warn(`[Positioning] Сумма весов факторов (${sum.toFixed(3)}) не равна 1.0. Выполняется нормализация.`);
         } else {
           // Сумма весов факторов не равна 1.0, выполняется нормализация
         }
@@ -742,8 +743,8 @@
       if (countTechRead > 0) techRead = sumTechRead / countTechRead;
       if (countOrganRead > 0) organRead = sumOrganRead / countOrganRead;
 
-      if (window.Logger && typeof window.Logger.debug === 'function') {
-        window.Logger.debug(`[Positioning] Технология ${tech.id || 'unknown'} полностью внедрена, оценки для позиции взяты по ${filteredEnterprises.length} предприятиям`);
+      if (Logger && typeof Logger.debug === 'function') {
+        Logger.debug(`[Positioning] Технология ${tech.id || 'unknown'} полностью внедрена, оценки для позиции взяты по ${filteredEnterprises.length} предприятиям`);
       }
     } else if (nonImplementedEnterprises.length > 0) {
       // Вычисляем среднее значение technologicalReadiness и organizationalReadiness
@@ -793,8 +794,8 @@
         organRead = sumOrganRead / countOrganRead;
       }
 
-      if (window.Logger && typeof window.Logger.debug === 'function') {
-        window.Logger.debug(`[Positioning] Технология ${tech.id || 'unknown'}: учтено ${nonImplementedEnterprises.length} невнедренных из ${filteredEnterprises.length} предприятий`);
+      if (Logger && typeof Logger.debug === 'function') {
+        Logger.debug(`[Positioning] Технология ${tech.id || 'unknown'}: учтено ${nonImplementedEnterprises.length} невнедренных из ${filteredEnterprises.length} предприятий`);
       }
     } else if (enterprises.length === 0) {
       // Если у технологии нет enterprises, но есть общие techRead и organRead (для обратной совместимости)
@@ -927,8 +928,8 @@
 
     // Если отсутствует более 2 факторов, позиционируем в зоне "недостаточно данных"
     if (missingFactors.length >= 2) {
-      if (window.Logger && typeof window.Logger.debug === 'function') {
-        window.Logger.debug(`[Positioning] Технология ${tech.id || 'unknown'} имеет недостаточно данных (${missingFactors.join(', ')}), позиционируется в зоне недостаточных данных`);
+      if (Logger && typeof Logger.debug === 'function') {
+        Logger.debug(`[Positioning] Технология ${tech.id || 'unknown'} имеет недостаточно данных (${missingFactors.join(', ')}), позиционируется в зоне недостаточных данных`);
       }
       // Позиционируем в зоне "недостаточно данных" (близко к краю, радиус ~85%)
       return {
@@ -1975,8 +1976,8 @@
 
         // Проверка сходимости: если максимальное смещение меньше порога, останавливаемся
         if (!moved || maxMovement < CONVERGENCE_THRESHOLD) {
-          if (window.Logger && typeof window.Logger.debug === 'function') {
-            window.Logger.debug(`[Positioning] Алгоритм разведения сошелся за ${iter + 1} итераций (maxMovement: ${maxMovement.toFixed(3)})`);
+          if (Logger && typeof Logger.debug === 'function') {
+            Logger.debug(`[Positioning] Алгоритм разведения сошелся за ${iter + 1} итераций (maxMovement: ${maxMovement.toFixed(3)})`);
           }
           break;
         }
@@ -2079,13 +2080,12 @@
     // Тестирование завершено
   }
 
-  // Экспорт в window.Positioning
-  window.Positioning = {
+  // Экспорт в window.Positioning (обратная совместимость)
+  const Positioning = {
     frac,
     getQuadrantIdForDirection,
     getQuadrantsForDirection,
     getAllQuadrantsForTech,
-    // Функции для фильтрации и обработки событий
     getQuadrantIdForBlock,
     getQuadrantsForBlock,
     assignFixedPosition,
@@ -2095,28 +2095,25 @@
     calculateReadinessScore,
     calculateRadiusFromReadiness,
     calculateRadarPosition,
-    // Новые функции для учета размеров элементов
     calculateElementSize,
     calculateAngularSize,
-    // ОБНОВЛЕНО (2026-01-29): Функция для расчета максимального количества технологий в квадранте
     calculateMaxTechnologiesInQuadrant,
-    // ОБНОВЛЕНО (2026-01-29): Функция для определения отсутствующих данных
     getMissingDataInfo,
-    // ОБНОВЛЕНО (2026-01-29): Функции для управления кешем
     clearPositionCache,
     clearFinalPositionsCache,
     getCacheKey,
     savePositionCache,
     loadPositionCache,
-    // ОБНОВЛЕНО: Экспортируем кеш для использования в других модулях
     positionCache,
-    // Утилиты для тестирования
     testCalibration,
     testAllScenarios
   };
 
-  // ОБНОВЛЕНО: Загружаем кеш из localStorage при инициализации модуля
-  // Это обеспечивает стабильность позиций при перезагрузке страницы
+  if (typeof window !== 'undefined') {
+    window.Positioning = Positioning;
+  }
+
   loadPositionCache();
 
-})();
+  export default Positioning;
+  export { Positioning };

@@ -1,33 +1,16 @@
-// Модуль загрузки данных (оркестрация)
-// VFS и fetch — в data-source.js; нормализация — в data-normalize.js; инициализация фильтров — в filter-init.js
+// data-loader.js — ES module
+// Оркестрация загрузки данных. VFS и fetch — в data-source.js; нормализация — в data-normalize.js.
 
-(function () {
-  'use strict';
+import StateManager from './state-manager.js';
+import { vfsRead, vfsWrite, loadJsonPreferVfs, clearFetchCache, clearVfsCache, fetchJsonWithCache } from './data-source.js';
+import { buildBlockMaps, normalizeTechnologyFromNewFormat } from './data-normalize.js';
+import { reportError } from './error-handler.js';
+import { escapeHtml } from './escape-utils.js';
+import { normalizeForComparison } from './validators.js';
+import Logger from './logger.js';
 
-  // VFS и fetch — из data-source.js (загружается до data-loader)
-  const vfsRead = (filename) => (typeof window.vfsRead === 'function' ? window.vfsRead(filename) : null);
-  const vfsWrite = (filename, data) => (typeof window.vfsWrite === 'function' ? window.vfsWrite(filename, data) : false);
-  const loadJsonPreferVfs = (filename, forceReload) => (typeof window.loadJsonPreferVfs === 'function' ? window.loadJsonPreferVfs(filename, forceReload) : Promise.resolve({ path: null, data: null }));
-  const clearFetchCache = () => { if (typeof window.clearFetchCache === 'function') window.clearFetchCache(); };
-
-  // Получаем зависимости из других модулей и глобальных переменных (ленивая загрузка)
-  const getStateManager = () => {
-    if (window.StateManager) {
-      return window.StateManager;
-    }
-    throw new Error('StateManager не загружен');
-  };
-
-  const getState = (key) => {
-    const sm = getStateManager();
-    return sm.get(key);
-  };
-
-  const setState = (key, value) => {
-    const sm = getStateManager();
-    sm.set(key, value);
-    // Синхронизация с window.* убрана: все потребители переведены на StateManager / StateAccessors (П.6).
-  };
+const getState = (key) => StateManager.get(key);
+const setState = (key, value) => StateManager.set(key, value);
 
   const getDOMCache = () => {
     if (window.DOMCache) {
@@ -47,7 +30,7 @@
     if (window.Filters) {
       return window.Filters;
     }
-    if (window.Logger) window.Logger.warn('Filters не загружен, попытка повторной инициализации фильтров будет пропущена');
+    Logger.warn('Filters не загружен, попытка повторной инициализации фильтров будет пропущена');
     return null;
   };
 
@@ -55,7 +38,7 @@
     if (window.Positioning) {
       return window.Positioning;
     }
-    if (window.Logger) window.Logger.warn('Positioning не загружен, вычисление координат будет пропущено');
+    Logger.warn('Positioning не загружен, вычисление координат будет пропущено');
     return null;
   };
 
@@ -63,7 +46,7 @@
     if (window.DataIndex) {
       return window.DataIndex;
     }
-    if (window.Logger) window.Logger.warn('DataIndex не загружен, индексация будет пропущена');
+    Logger.warn('DataIndex не загружен, индексация будет пропущена');
     return null;
   };
 
@@ -92,7 +75,7 @@
     }
     const notification = document.createElement('div');
     notification.className = `notification ${isSuccess ? 'success' : 'info'}`;
-    const escapedMessage = window.escapeHtml ? window.escapeHtml(message) : String(message).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
+    const escapedMessage = escapeHtml(message);
     notification.innerHTML = `
       <div class="notification-title">${isSuccess ? 'Успешно' : 'Уведомление'}</div>
       <div class="notification-message">${escapedMessage}</div>
@@ -115,9 +98,10 @@
 
   // ===== ОСНОВНАЯ ФУНКЦИЯ ЗАГРУЗКИ ДАННЫХ =====
   async function loadData() {
-    // Показываем индикатор загрузки
+    // Показываем индикатор загрузки только на странице radar.html (на главной не показываем)
+    const isRadarPage = typeof window !== 'undefined' && (window.location.pathname.includes('radar.html') || window.location.href.includes('radar.html'));
     let loaderId = null;
-    if (typeof window !== 'undefined' && window.LoadingManager) {
+    if (isRadarPage && typeof window !== 'undefined' && window.LoadingManager) {
       loaderId = window.LoadingManager.show('Загрузка данных...');
     }
 
@@ -127,9 +111,7 @@
       // Загрузка blocks (из data-source.js)
       const b1 = await loadJsonPreferVfs('blocks.json', true);
       const blocks = b1.data;
-      const { blockIdToName, nameToBlockId, blocksList } = window.DataNormalize && typeof window.DataNormalize.buildBlockMaps === 'function'
-        ? window.DataNormalize.buildBlockMaps(blocks)
-        : { blockIdToName: {}, nameToBlockId: {}, blocksList: [] };
+      const { blockIdToName, nameToBlockId, blocksList } = buildBlockMaps(blocks);
       setState('nameToBlockId', nameToBlockId);
       setState('blocksList', blocksList);
 
@@ -199,7 +181,7 @@
       // sector.json больше не используется - квадранты генерируются из направлений
       setState('functionToBlockMap', ensureObject('functionToBlock.json', fetched['functionToBlock.json'].data));
       if (validationErrors.length) {
-        if (window.Logger) window.Logger.warn('Валидация данных: обнаружены проблемы', validationErrors);
+        Logger.warn('Валидация данных: обнаружены проблемы', validationErrors);
         showNotification(`Проверка данных: ${validationErrors.join('; ')}`, false);
       }
       // УДАЛЕНО (2026-01-29): blockToQuadrant больше не загружается
@@ -274,9 +256,7 @@
       setState('enterprisesList', enterprisesData);
 
       // Нормализация технологий — из data-normalize.js
-      const normalizeTechnologyFromNewFormat = typeof window.normalizeTechnologyFromNewFormat === 'function'
-        ? window.normalizeTechnologyFromNewFormat
-        : (tech, blockIdToName, enterprisesData) => tech;
+      const normalizeTech = normalizeTechnologyFromNewFormat;
 
       // Загружаем технологии из technologies.json
       // ВАЖНО: Сначала загружаем из файла, чтобы видеть изменения в JSON файлах
@@ -286,9 +266,9 @@
 
       // Сначала пытаемся загрузить из файла (приоритет файлу, чтобы видеть изменения)
       if (fetched['technologies.json'] && Array.isArray(fetched['technologies.json'].data)) {
-        if (window.Logger) window.Logger.debug('loadData: Загружаем технологии из файла technologies.json');
+        Logger.debug('loadData: Загружаем технологии из файла technologies.json');
         fetched['technologies.json'].data.forEach(tech => {
-          const normalized = normalizeTechnologyFromNewFormat(tech, blockIdToName, enterprisesData);
+          const normalized = normalizeTech(tech, blockIdToName, enterprisesData);
           allTechnologies.push(normalized);
 
           // Добавляем в структуру по предприятиям для обратной совместимости
@@ -305,7 +285,7 @@
         try {
           const technologiesFromVfs = vfsRead('technologies.json');
           if (technologiesFromVfs && Array.isArray(technologiesFromVfs) && technologiesFromVfs.length > 0) {
-            if (window.Logger) window.Logger.debug('loadData: Загружены технологии из VFS (localStorage) как fallback', technologiesFromVfs.length);
+            Logger.debug('loadData: Загружены технологии из VFS (localStorage) как fallback', technologiesFromVfs.length);
             // Используем технологии из VFS напрямую (они уже в нормализованном формате)
             allTechnologies = technologiesFromVfs;
 
@@ -325,16 +305,15 @@
             }
           }
         } catch (e) {
-          if (window.Logger) window.Logger.warn('Ошибка при загрузке технологий из VFS', e);
+          Logger.warn('Ошибка при загрузке технологий из VFS', e);
         }
       }
 
-      // Сохраняем объединенный массив технологий
-      if (allTechnologies.length > 0) {
-        setState('technologies', allTechnologies);
-        // Сохраняем структуру по предприятиям для обратной совместимости
-        setState('enterpriseData', enterpriseData);
+      // Сохраняем объединенный массив технологий (всегда, включая пустой — для корректной работы getTechnologies)
+      setState('technologies', allTechnologies);
+      setState('enterpriseData', enterpriseData);
 
+      if (allTechnologies.length > 0) {
         // Извлекаем список предприятий из загруженных технологий
         const enterpriseSet = new Set();
         allTechnologies.forEach(tech => {
@@ -347,15 +326,18 @@
           ? enterprisesList
           : Array.from(enterpriseSet).sort();
         setState('enterpriseList', enterpriseList);
+      } else {
+        const emptyEnterpriseList = (getState('enterprisesList') || []).map(ent => typeof ent === 'string' ? ent : (ent?.name || ent)).filter(Boolean);
+        setState('enterpriseList', emptyEnterpriseList);
+      }
 
-        // Инициализируем индекс с загруженными данными
-        const DataIndex = getDataIndex();
-        if (DataIndex) {
-          try {
-            DataIndex.build(allTechnologies);
-          } catch (e) {
-            if (window.Logger) window.Logger.warn('DataIndex.build failed after loading technologies.json', e);
-          }
+      // Инициализируем индекс с загруженными данными
+      const DataIndex = getDataIndex();
+      if (DataIndex) {
+        try {
+          DataIndex.build(allTechnologies);
+        } catch (e) {
+          Logger.warn('DataIndex.build failed after loading technologies.json', e);
         }
       }
 
@@ -445,7 +427,7 @@
           // Пересобираем индекс
           const DataIndex = getDataIndex();
           if (DataIndex) {
-            try { DataIndex.build(getState('technologies')); } catch (e) { if (window.Logger) window.Logger.warn('DataIndex.build failed', e); }
+            try { DataIndex.build(getState('technologies')); } catch (e) { Logger.warn('DataIndex.build failed', e); }
           }
           // Обновляем enterpriseData для обратной совместимости
           const enterpriseData = getState('enterpriseData');
@@ -530,7 +512,7 @@
             // Пересобираем индекс
             const DataIndex = getDataIndex();
             if (DataIndex) {
-              try { DataIndex.build(getState('technologies')); } catch (e) { if (window.Logger) window.Logger.warn('DataIndex.build failed', e); }
+              try { DataIndex.build(getState('technologies')); } catch (e) { Logger.warn('DataIndex.build failed', e); }
             }
             // Обновляем enterpriseData для обратной совместимости
             const enterpriseData = getState('enterpriseData');
@@ -589,11 +571,15 @@
           });
         }
       } catch (e) {
-        if (window.Logger) window.Logger.warn('Ошибка при обновлении заголовков секторов:', e);
+        Logger.warn('Ошибка при обновлении заголовков секторов:', e);
       }
 
       if (typeof window.initFiltersWithRetry === 'function') {
-        window.initFiltersWithRetry(0);
+        // Инициализируем фильтры только на странице радара, где есть сайдбар с селектами
+        const hasFilterSidebar = document.querySelector('.custom-select[data-filter="enterprise"]');
+        if (hasFilterSidebar) {
+          window.initFiltersWithRetry(0);
+        }
       }
 
       // Пересчитываем funcCover для всех технологий с использованием нового алгоритма
@@ -623,7 +609,7 @@
           try {
             DataIndex.build(technologiesForRecalc);
           } catch (e) {
-            if (window.Logger) window.Logger.warn('DataIndex.build failed after recalculating funcCover', e);
+            Logger.warn('DataIndex.build failed after recalculating funcCover', e);
           }
         }
       }
@@ -637,14 +623,7 @@
       if (loaderId && typeof window !== 'undefined' && window.LoadingManager) {
         window.LoadingManager.hide(loaderId);
       }
-      if (typeof window.reportError === 'function') {
-        window.reportError(error, 'Загрузка данных', { retryCallback: loadData });
-      } else if (window.ErrorDisplay && typeof window.ErrorDisplay.show === 'function') {
-        window.ErrorDisplay.show(error, 'Загрузка данных', function () { DataLoader.loadData(); });
-      } else {
-        const msg = error?.message || String(error) || 'Неизвестная ошибка';
-        alert('Не удалось загрузить данные. ' + msg);
-      }
+      reportError(error, 'Загрузка данных', { retryCallback: loadData });
     }
   }
 
@@ -686,12 +665,12 @@
             const li = document.createElement('li');
             li.classList.add('select-option-item');
             li.setAttribute('data-value', bk);
-            const escapedBk = window.escapeHtml ? window.escapeHtml(bk) : String(bk).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
+            const escapedBk = escapeHtml(bk);
             li.innerHTML = `<label class="option-label"><input type="checkbox" class="option-checkbox" /><span>${escapedBk}</span></label>`;
             opts.appendChild(li);
           }
         });
-        try { vfsWrite('blocks.json', getState('blocksList')); } catch (e) { if (window.Logger) window.Logger.warn('vfs write failed', e); }
+        try { vfsWrite('blocks.json', getState('blocksList')); } catch (e) { Logger.warn('vfs write failed', e); }
       }
       // Ensure level mapping exists
       const levelToRing = window.levelToRing || {};
@@ -702,11 +681,11 @@
       }
 
       // Compute coordinates taking into account existing technologies (technologies may include newTech)
-      if (window.Logger) window.Logger.debug('ensureAndPersistNewTech: computing coordinates for', { id: newTech.id, block: newTech.block, level: newTech.level });
+      Logger.debug('ensureAndPersistNewTech: computing coordinates for', { id: newTech.id, block: newTech.block, level: newTech.level });
       const Positioning = getPositioning();
       if (Positioning) {
         Positioning.computeCoordinates(newTech);
-        if (window.Logger) window.Logger.debug('ensureAndPersistNewTech: coords computed', { id: newTech.id, x: newTech.x, y: newTech.y });
+        Logger.debug('ensureAndPersistNewTech: coords computed', { id: newTech.id, x: newTech.x, y: newTech.y });
       }
 
       // Ensure technologies array contains the tech (if not, add it)
@@ -722,9 +701,9 @@
       // Сохраняем technologies в VFS (localStorage) для сохранения между перезагрузками
       try {
         vfsWrite('technologies.json', technologies);
-        if (window.Logger) window.Logger.debug('ensureAndPersistNewTech: technologies saved to VFS', technologies.length);
+        Logger.debug('ensureAndPersistNewTech: technologies saved to VFS', technologies.length);
       } catch (e) {
-        if (window.Logger) window.Logger.warn('vfs write technologies.json failed', e);
+        Logger.warn('vfs write technologies.json failed', e);
       }
 
       // Обновляем enterpriseData для обратной совместимости
@@ -736,15 +715,12 @@
           setState('enterpriseData', { ...enterpriseData });
           // Сохраняем enterpriseData в VFS
           vfsWrite('enterpriseData.json', enterpriseData);
-          if (window.Logger) window.Logger.debug('ensureAndPersistNewTech: enterpriseData updated for', currentEnterprise, 'total techs:', getState('technologies').length);
+          Logger.debug('ensureAndPersistNewTech: enterpriseData updated for', currentEnterprise, 'total techs:', getState('technologies').length);
         }
-      } catch (e) { if (window.Logger) window.Logger.warn('update enterpriseData failed', e); }
+      } catch (e) { Logger.warn('update enterpriseData failed', e); }
     } catch (err) {
-      if (typeof window.reportError === 'function') {
-        window.reportError(err, 'Сохранение технологии');
-      } else if (window.Logger) {
-        window.Logger.warn('ensureAndPersistNewTech error', err);
-      }
+      reportError(err, 'Сохранение технологии');
+      Logger.warn('ensureAndPersistNewTech error', err);
     }
   }
 
@@ -765,11 +741,8 @@
           }
         }
       } catch (e) {
-        if (typeof window.reportError === 'function') {
-          window.reportError(e, 'Сохранение данных при переключении предприятия');
-        } else if (window.Logger) {
-          window.Logger.warn('Не удалось сохранить technologies при переключении предприятия', e);
-        }
+        reportError(e, 'Сохранение данных при переключении предприятия');
+        Logger.warn('Не удалось сохранить technologies при переключении предприятия', e);
       }
 
       // Обновляем фильтр предприятий
@@ -792,9 +765,7 @@
         window.updateRadar();
       }
     } catch (error) {
-      if (typeof window.reportError === 'function') {
-        window.reportError(error, 'Переключение предприятия');
-      }
+      reportError(error, 'Переключение предприятия');
     }
   }
 
@@ -884,12 +855,12 @@
     try {
       localStorage.setItem(VENDORS_STORAGE_KEY, JSON.stringify(list));
     } catch (e) {
-      if (window.Logger) window.Logger.warn('Ошибка сохранения вендоров в localStorage', e);
+      Logger.warn('Ошибка сохранения вендоров в localStorage', e);
     }
   }
 
   function isVendorUsedInTechnologies(vendorName) {
-    const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+    const nf = normalizeForComparison;
     const norm = nf(vendorName);
     if (!norm) return false;
     const technologies = getState('technologies') || [];
@@ -903,7 +874,7 @@
   }
 
   function renameVendorInTechnologies(oldName, newName) {
-    const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+    const nf = normalizeForComparison;
     const normOld = nf(oldName);
     if (!normOld) return;
     const technologies = getState('technologies') || [];
@@ -923,13 +894,13 @@
       try {
         vfsWrite('technologies.json', technologies);
       } catch (e) {
-        if (window.Logger) window.Logger.warn('Ошибка записи technologies.json', e);
+        Logger.warn('Ошибка записи technologies.json', e);
       }
     }
   }
 
   function removeVendorFromTechnologies(vendorName) {
-    const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+    const nf = normalizeForComparison;
     const norm = nf(vendorName);
     if (!norm) return;
     const technologies = getState('technologies') || [];
@@ -948,7 +919,7 @@
       try {
         vfsWrite('technologies.json', technologies);
       } catch (e) {
-        if (window.Logger) window.Logger.warn('Ошибка записи technologies.json', e);
+        Logger.warn('Ошибка записи technologies.json', e);
       }
     }
   }
@@ -974,7 +945,7 @@
 
   function renameVendor(oldName, newName) {
     const list = getVendorsList();
-    const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+    const nf = normalizeForComparison;
     const normOld = nf(oldName);
     const normNew = nf(newName);
     if (!normOld || !normNew) return false;
@@ -992,7 +963,7 @@
 
   function deleteVendor(vendorName) {
     const list = getVendorsList();
-    const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+    const nf = normalizeForComparison;
     const norm = nf(vendorName);
     if (!norm) return false;
     const newList = list.filter(v => nf(v) !== norm);
@@ -1053,7 +1024,7 @@
           optionsList.appendChild(li);
         }
       });
-      const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+      const nf = normalizeForComparison;
       const listNorm = new Set(list.map(v => nf(v)));
       vendorOpts.forEach(li => {
         const val = li.getAttribute('data-value');
@@ -1106,7 +1077,7 @@
       
       // Фильтруем список: оставляем только те интеграторы, которых нет в JSON
       // Это пользовательские интеграторы, которые нужно сохранить в localStorage
-      const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+      const nf = normalizeForComparison;
       const jsonNormSet = new Set(jsonIntegrators.map(i => nf(String(i))));
       const userIntegrators = list.filter(i => !jsonNormSet.has(nf(String(i))));
       
@@ -1118,12 +1089,12 @@
         window.VendorsFiles.clearIntegratorsCache();
       }
     } catch (e) {
-      if (window.Logger) window.Logger.warn('Ошибка сохранения интеграторов в localStorage', e);
+      Logger.warn('Ошибка сохранения интеграторов в localStorage', e);
     }
   }
 
   function isIntegratorUsedInTechnologies(integratorName) {
-    const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+    const nf = normalizeForComparison;
     const norm = nf(integratorName);
     if (!norm) return false;
     const technologies = getState('technologies') || [];
@@ -1140,7 +1111,7 @@
   }
 
   function renameIntegratorInTechnologies(oldName, newName) {
-    const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+    const nf = normalizeForComparison;
     const normOld = nf(oldName);
     if (!normOld) return;
     const technologies = getState('technologies') || [];
@@ -1167,13 +1138,13 @@
       try {
         vfsWrite('technologies.json', technologies);
       } catch (e) {
-        if (window.Logger) window.Logger.warn('Ошибка записи technologies.json', e);
+        Logger.warn('Ошибка записи technologies.json', e);
       }
     }
   }
 
   function removeIntegratorFromTechnologies(integratorName) {
-    const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+    const nf = normalizeForComparison;
     const norm = nf(integratorName);
     if (!norm) return;
     const technologies = getState('technologies') || [];
@@ -1195,7 +1166,7 @@
       try {
         vfsWrite('technologies.json', technologies);
       } catch (e) {
-        if (window.Logger) window.Logger.warn('Ошибка записи technologies.json', e);
+        Logger.warn('Ошибка записи technologies.json', e);
       }
     }
   }
@@ -1264,7 +1235,7 @@
       window.VendorsFiles.clearIntegratorsCache();
     }
     const list = await getIntegratorsList();
-    const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+    const nf = normalizeForComparison;
     const normOld = nf(oldName);
     const normNew = nf(newName);
     if (!normOld || !normNew) return false;
@@ -1297,7 +1268,7 @@
           }
         }
       } catch (e) {
-        if (window.Logger) window.Logger.warn('Ошибка при переименовании интегратора в localStorage', e);
+        Logger.warn('Ошибка при переименовании интегратора в localStorage', e);
       }
       return false;
     }
@@ -1317,7 +1288,7 @@
       window.VendorsFiles.clearIntegratorsCache();
     }
     const list = await getIntegratorsList();
-    const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+    const nf = normalizeForComparison;
     const norm = nf(integratorName);
     if (!norm) return false;
     const newList = list.filter(i => nf(i) !== norm);
@@ -1345,7 +1316,7 @@
           }
         }
       } catch (e) {
-        if (window.Logger) window.Logger.warn('Ошибка при удалении интегратора из localStorage', e);
+        Logger.warn('Ошибка при удалении интегратора из localStorage', e);
       }
       return false;
     }
@@ -1428,7 +1399,7 @@
       if (!optionsList) return;
       const addOpt = optionsList.querySelector('.add-new-integrator-option, .add-new-option[data-add-new="integrator"]');
       const list = integratorsListOverride || getState('integratorsList') || [];
-      const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+      const nf = normalizeForComparison;
       let integratorOpts = Array.from(optionsList.querySelectorAll('li.select-option-item[data-value]:not(.add-new-integrator-option):not(.add-new-option)'));
       
       // СНАЧАЛА обновляем названия в существующих опциях при переименовании
@@ -1475,7 +1446,7 @@
         const li = document.createElement('li');
         li.className = 'select-option-item';
         li.setAttribute('data-value', i);
-        const escaped = (window.escapeHtml ? window.escapeHtml(i) : String(i).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]));
+        const escaped = escapeHtml(i);
         li.innerHTML = `
           <label class="option-label">
             <input type="checkbox" class="option-checkbox" />
@@ -1554,12 +1525,12 @@
     }
   }
 
-  window.DataLoader = {
+  const DataLoader = {
     vfsRead,
     vfsWrite,
-    fetchJsonWithCache: typeof window.fetchJsonWithCache === 'function' ? window.fetchJsonWithCache : () => {},
+    fetchJsonWithCache,
     clearFetchCache,
-    clearVfsCache: typeof window.clearVfsCache === 'function' ? window.clearVfsCache : () => 0,
+    clearVfsCache,
     loadJsonPreferVfs,
     loadData,
     ensureAndPersistNewTech,
@@ -1602,13 +1573,13 @@
 
     const optionsList = customSelect.querySelector('.select-options');
     if (!optionsList) {
-      if (window.Logger) window.Logger.warn('initVendorsSelect: optionsList не найден');
+      Logger.warn('initVendorsSelect: optionsList не найден');
       return;
     }
 
     const hiddenInput = document.getElementById('techVendors');
     if (!hiddenInput) {
-      if (window.Logger) window.Logger.warn('initVendorsSelect: hiddenInput не найден');
+      Logger.warn('initVendorsSelect: hiddenInput не найден');
       return;
     }
 
@@ -1626,7 +1597,7 @@
         }
       }
     } catch (e) {
-      if (window.Logger) window.Logger.warn('Ошибка при чтении вендоров из localStorage', e);
+      Logger.warn('Ошибка при чтении вендоров из localStorage', e);
     }
 
     // Заполняем селект опциями
@@ -1649,7 +1620,7 @@
 
     // Проверка дубликата вендора по нормализованному имени (с учётом омоглифов, регистра)
     function isVendorDuplicate(name, list) {
-      const nf = typeof window.normalizeForComparison === 'function' ? window.normalizeForComparison : (s) => String(s || '').trim().toLowerCase();
+      const nf = normalizeForComparison;
       const normalized = nf(name);
       if (!normalized) return false;
       return (list || []).some(v => nf(v) === normalized);
@@ -1728,12 +1699,10 @@
           if (!localVendors.includes(newVendorName)) {
             localVendors.push(newVendorName);
             localStorage.setItem('rmk_vendors_list', JSON.stringify(localVendors));
-            if (window.Logger) {
-              window.Logger.debug('Сохранен новый вендор в localStorage:', newVendorName);
-            }
+            Logger.debug('Сохранен новый вендор в localStorage:', newVendorName);
           }
         } catch (e) {
-          if (window.Logger) window.Logger.warn('Ошибка при сохранении вендора в localStorage', e);
+          Logger.warn('Ошибка при сохранении вендора в localStorage', e);
         }
 
         // Обновляем state
@@ -1833,11 +1802,27 @@
     }
   }
 
-  // clearFetchCache, clearVfsCache, loadJsonPreferVfs — экспортируются из data-source.js, не перезаписываем
-  window.loadData = loadData;
-  window.ensureAndPersistNewTech = ensureAndPersistNewTech;
-  window.switchEnterprise = switchEnterprise;
-  window.showNotification = showNotification;
-  window.initVendorsSelect = initVendorsSelect;
+  if (typeof window !== 'undefined') {
+    window.DataLoader = DataLoader;
+    window.loadData = loadData;
+    window.ensureAndPersistNewTech = ensureAndPersistNewTech;
+    window.switchEnterprise = switchEnterprise;
+    window.showNotification = showNotification;
+    window.initVendorsSelect = initVendorsSelect;
+  }
 
-})();
+  export default DataLoader;
+  export {
+    loadData,
+    ensureAndPersistNewTech,
+    switchEnterprise,
+    showNotification,
+    initVendorsSelect,
+    recalculateFuncCoverForAllTechnologies,
+    isVendorUsedInTechnologies,
+    renameVendor,
+    deleteVendor,
+    isIntegratorUsedInTechnologies,
+    renameIntegrator,
+    deleteIntegrator
+  };

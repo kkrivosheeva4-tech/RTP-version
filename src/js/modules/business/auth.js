@@ -1,11 +1,9 @@
 // auth.js
 // Модуль аутентификации и управления ролями пользователей
 
-// Экспорт функций в window для использования в RMK2.js и других модулях
-window.AuthModule = (function() {
-  'use strict';
+'use strict';
 
-  function safeLogout() {
+function safeLogout() {
     // Важно: не делаем localStorage.clear(), чтобы не стирать данные админ-панели/настройки.
     try {
       const role = localStorage.getItem('role') || '';
@@ -83,7 +81,7 @@ window.AuthModule = (function() {
       setButtonsVisibility(true);
       logoutContainer.querySelector(".logout").onclick = () => {
         safeLogout();
-        window.location.href = 'auth.html';
+        window.location.href = '/src/pages/auth.html';
       };
     } else if (role === "admin") {
       authInfo.innerHTML = `<div class="user-role admin-role" data-tooltip="Перейти в админ-панель" style="cursor: pointer;">Администратор</div>`;
@@ -98,7 +96,7 @@ window.AuthModule = (function() {
       setButtonsVisibility(true);
       const adminRoleElement = authInfo.querySelector('.admin-role');
       if (adminRoleElement) {
-        adminRoleElement.onclick = () => window.location.href = 'admin.html';
+        adminRoleElement.onclick = () => window.location.href = '/src/pages/admin.html';
       }
       logoutContainer.querySelector(".logout").onclick = () => {
         safeLogout();
@@ -134,33 +132,35 @@ window.AuthModule = (function() {
       // Добавляем класс для неавторизованных пользователей
       document.body.classList.add('not-authorized');
       logoutContainer.querySelector(".login").onclick = () => {
-        window.location.href = "auth.html";
+        window.location.href = "/src/pages/auth.html";
       };
       // Редирект на страницу авторизации, если пользователь не авторизован
-      // Только авторизованные пользователи могут использовать приложение
       const isAuthPage = window.location.pathname.includes("auth.html");
       if (!isAuthPage) {
-        window.location.href = "auth.html";
-      }
+        window.location.href = "/src/pages/auth.html";
     }
   }
+}
 
-  // Экспорт функций в window для обратной совместимости
+const AuthModule = {
+  checkArchitectRole,
+  checkDirectorRole,
+  renderAuth,
+  safeLogout
+};
+
+if (typeof window !== 'undefined') {
+  window.AuthModule = AuthModule;
   window.checkArchitectRole = checkArchitectRole;
   window.checkDirectorRole = checkDirectorRole;
   window.renderAuth = renderAuth;
-
-  // Возвращаем объект модуля
-  return {
-    checkArchitectRole,
-    checkDirectorRole,
-    renderAuth,
-    safeLogout
-  };
-})();
-
-// Единая точка выхода: алиас для вызова из любых страниц (auth.html, common-ui, admin)
-if (typeof window.AuthModule !== 'undefined' && typeof window.AuthModule.safeLogout === 'function') {
-  window.clearAuthFromStorage = window.AuthModule.safeLogout;
-  window.safeLogout = window.AuthModule.safeLogout;
 }
+
+// Единая точка выхода: алиас для вызова из любых страниц
+if (typeof window !== 'undefined' && typeof AuthModule.safeLogout === 'function') {
+  window.clearAuthFromStorage = AuthModule.safeLogout;
+  window.safeLogout = AuthModule.safeLogout;
+}
+
+export default AuthModule;
+export { checkArchitectRole, checkDirectorRole, renderAuth, safeLogout };

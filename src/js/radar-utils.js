@@ -67,3 +67,4 @@ if (typeof window !== 'undefined') {
   window.describeWedge = describeWedge;
   window.starPath = starPath;
 }
+export {};

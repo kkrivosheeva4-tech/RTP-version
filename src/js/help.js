@@ -33,7 +33,7 @@
           sessionStorage.setItem('silentEnterpriseNav', '1');
         } catch (err) { window.Logger?.warn('help: sessionStorage setItem', err); }
 
-        window.location.href = 'radar.html';
+        window.location.href = '/src/pages/radar.html';
       });
     });
 

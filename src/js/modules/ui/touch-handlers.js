@@ -1,6 +1,7 @@
 /**
  * Touch жесты
  * Модуль для обработки touch жестов: swipe, pinch-to-zoom, long press
+ * ES module
  */
 
 const TouchHandlers = {
@@ -348,3 +349,4 @@ const TouchHandlers = {
 if (typeof window !== 'undefined') {
   window.TouchHandlers = TouchHandlers;
 }
+export default TouchHandlers;

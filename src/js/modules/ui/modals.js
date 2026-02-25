@@ -1,12 +1,8 @@
+// modals.js — ES module
 // Модуль модальных окон
-// Экспортирует функции в window.Modals для использования в RMK2.js
-// Использует глобальные переменные из RMK2.js и функции из других модулей
-
-(function () {
-  'use strict';
 
   // Показать модальное окно
-  function showModal(panelId) {
+  export function showModal(panelId) {
     const panel = typeof panelId === 'string' ? (window.DOMCache ? window.DOMCache.get(panelId) : document.getElementById(panelId)) : panelId;
     if (!panel) return;
     panel.style.display = 'block';
@@ -295,14 +291,10 @@
     });
   }
 
-  // Экспорт функций
-  window.Modals = {
-    showModal,
-    hideModal,
-    showInternalConfirm
-  };
-
-  // Экспорт функций в window для обратной совместимости
-  window.showModal = showModal;
-  window.hideModal = hideModal;
-})();
+  const Modals = { showModal, hideModal, showInternalConfirm };
+  if (typeof window !== 'undefined') {
+    window.Modals = Modals;
+    window.showModal = showModal;
+    window.hideModal = hideModal;
+  }
+  export default Modals;

@@ -1,10 +1,10 @@
 /**
  * Модуль управления вкладками в форме добавления/редактирования технологии
  * Отвечает за создание динамических вкладок предприятий и переключение между ними
+ * ES module
  */
 
-(function (window) {
-  'use strict';
+'use strict';
 
   // Хранилище данных вкладок предприятий
   let enterpriseTabs = new Map();
@@ -750,7 +750,7 @@
   }
 
   // Публичный API
-  window.TechTabsManager = {
+  const TechTabsManager = {
     init: initTabs,
     switchTab: switchTab,
     getAllEnterpriseData: getAllEnterpriseData,
@@ -765,6 +765,8 @@
     getActiveTab: () => activeTab
   };
 
-  // Модуль TechTabsManager загружен
+  if (typeof window !== 'undefined') {
+    window.TechTabsManager = TechTabsManager;
+  }
 
-})(window);
+  export default TechTabsManager;

@@ -1,8 +1,7 @@
-// skeleton.js
-// Модуль для skeleton screens (заглушек загрузки)
+// skeleton.js — ES module
+// Skeleton screens (заглушки загрузки)
 
-window.Skeleton = (function() {
-  'use strict';
+import Logger from '../core/logger.js';
 
   /**
    * Создает skeleton элемент для списка технологий
@@ -146,7 +145,7 @@ window.Skeleton = (function() {
       : contentEl;
 
     if (!element) {
-      if (window.Logger) window.Logger.warn('[Skeleton] Element not found:', contentEl);
+      Logger.warn('[Skeleton] Element not found:', contentEl);
       return null;
     }
 
@@ -157,7 +156,7 @@ window.Skeleton = (function() {
     // Создаем skeleton
     const skeleton = skeletonFactory();
     if (!skeleton) {
-      if (window.Logger) window.Logger.warn('[Skeleton] Skeleton factory returned null');
+      Logger.warn('[Skeleton] Skeleton factory returned null');
       return null;
     }
 
@@ -180,14 +179,13 @@ window.Skeleton = (function() {
       : contentEl;
 
     if (!element) {
-      if (window.Logger) window.Logger.warn('[Skeleton] Element not found:', contentEl);
+      Logger.warn('[Skeleton] Element not found:', contentEl);
       return;
     }
 
     element.classList.remove('skeleton-active');
     element.classList.add('skeleton-hiding');
 
-    // Плавный переход
     setTimeout(() => {
       if (useOriginal && element.dataset.originalContent) {
         element.innerHTML = element.dataset.originalContent;
@@ -217,7 +215,7 @@ window.Skeleton = (function() {
       : contentEl;
 
     if (!element) {
-      if (window.Logger) window.Logger.warn('[Skeleton] Element not found:', contentEl);
+      Logger.warn('[Skeleton] Element not found:', contentEl);
       return;
     }
 
@@ -236,7 +234,7 @@ window.Skeleton = (function() {
     }, 200);
   }
 
-  return {
+  const Skeleton = {
     createTechListSkeleton,
     createDetailPanelSkeleton,
     createChartSkeleton,
@@ -245,4 +243,6 @@ window.Skeleton = (function() {
     hide,
     replace
   };
-})();
+  if (typeof window !== 'undefined') window.Skeleton = Skeleton;
+  export default Skeleton;
+  export { createTechListSkeleton, createDetailPanelSkeleton, createChartSkeleton, createTableSkeleton, show, hide, replace };

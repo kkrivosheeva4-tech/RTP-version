@@ -2,10 +2,8 @@
  * Модуль адаптивной калибровки параметров модели
  * Автоматически адаптирует параметры (α, bias) под распределение данных
  */
-(function(window) {
-  'use strict';
 
-  // Модуль AdaptiveCalibration инициализирован
+'use strict';
 
   /**
    * Анализ распределения факторов готовности
@@ -204,8 +202,7 @@
     // Параметры применены к модели
   }
 
-  // Публичный API
-  window.AdaptiveCalibration = {
+  const AdaptiveCalibration = {
     calibrateModel: calibrateModel,
     applyCalibration: applyCalibration,
     analyzeDistribution: analyzeDistribution,
@@ -213,6 +210,15 @@
     calibrateBias: calibrateBias
   };
 
-  // Модуль AdaptiveCalibration загружен
+  if (typeof window !== 'undefined') {
+    window.AdaptiveCalibration = AdaptiveCalibration;
+  }
 
-})(window);
+  export default AdaptiveCalibration;
+  export {
+    calibrateModel,
+    applyCalibration,
+    analyzeDistribution,
+    calibrateAlpha,
+    calibrateBias
+  };

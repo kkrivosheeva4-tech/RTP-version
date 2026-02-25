@@ -1,4 +1,3 @@
-(function () {
   // Класс для управления подсказками
   class Tooltip {
     constructor() {
@@ -197,7 +196,7 @@
     const loginBtn = e.target.closest && e.target.closest('.login');
     if (loginBtn) {
       e.preventDefault();
-      window.location.href = 'auth.html';
+      window.location.href = '/src/pages/auth.html';
       return;
     }
     const logoutBtn = e.target.closest && e.target.closest('.logout');
@@ -212,7 +211,7 @@
     const adminRole = e.target.closest && e.target.closest('.admin-role');
     if (adminRole) {
       e.preventDefault();
-      window.location.href = 'admin.html';
+      window.location.href = '/src/pages/admin.html';
       return;
     }
   });
@@ -750,4 +749,4 @@
   } else {
     initDetailViewLinkVisibility();
   }
-})();
+export {};

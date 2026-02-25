@@ -1,11 +1,9 @@
 // audit-logger.js
 // Централизованное логирование важных действий в журнал аудита (localStorage: adminAuditLogs).
 // Должен быть подключен на ВСЕХ страницах (auth / RMK / admin).
+// ES module (шаг 7.5): side-effect only, экспорт в window для обратной совместимости.
 
-(function () {
-  'use strict';
-
-  const STORAGE_KEY = 'adminAuditLogs';
+const STORAGE_KEY = 'adminAuditLogs';
 
   function safeJsonParse(raw, fallback) {
     try {
@@ -162,21 +160,20 @@
     }
   }
 
-  // Экспорт API
-  window.AuditLogger = {
-    STORAGE_KEY,
-    getTimestampLocal,
-    migrateLogsIfNeeded,
-    readLogs,
-    append
-  };
-
-  // Backward-compatible alias used across the codebase
-  window.getAuditTimestamp = getTimestampLocal;
-  window.appendAdminAudit = function (action, details) {
-    return append(action, details);
-  };
-
-  // Миграцию делаем сразу при загрузке скрипта
+  // Экспорт API и миграция при загрузке
+  if (typeof window !== 'undefined') {
+    window.AuditLogger = {
+      STORAGE_KEY,
+      getTimestampLocal,
+      migrateLogsIfNeeded,
+      readLogs,
+      append
+    };
+    window.getAuditTimestamp = getTimestampLocal;
+    window.appendAdminAudit = function (action, details) {
+      return append(action, details);
+    };
+  }
   migrateLogsIfNeeded();
-})();
+
+export {};
