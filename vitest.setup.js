@@ -1,7 +1,8 @@
 // vitest.setup.js
 // Настройка окружения для тестов
 
-import { vi } from 'vitest';
+import { vi, beforeAll, afterEach, afterAll } from 'vitest';
+import { server } from './src/test/mocks/server.js';
 
 // Мокаем window объект
 global.window = global.window || {};
@@ -15,5 +16,7 @@ const localStorageMock = {
 };
 global.localStorage = localStorageMock;
 
-// Мокаем fetch
-global.fetch = vi.fn();
+// MSW: перехват запросов в тестах (шаг 10.3)
+beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
