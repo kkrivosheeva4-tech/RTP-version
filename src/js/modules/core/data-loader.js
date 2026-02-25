@@ -606,7 +606,11 @@ const setState = (key, value) => StateManager.set(key, value);
             opts.appendChild(li);
           }
         });
-        try { vfsWrite('blocks.json', getState('blocksList')); } catch (e) { Logger.warn('vfs write failed', e); }
+        try {
+          const list = getState('blocksList') || [];
+          const blocks = list.map((b, i) => typeof b === 'object' ? b : { id: i + 1, name: b });
+          await DataService.saveReference('blocks', blocks);
+        } catch (e) { Logger.warn('DataService.saveReference blocks failed', e); }
       }
       // Ensure level mapping exists
       const levelToRing = window.levelToRing || {};
