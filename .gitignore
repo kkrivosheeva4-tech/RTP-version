@@ -24,6 +24,9 @@ Desktop.ini
 .classpath
 .settings/
 
+# Local API config (шаг 10.1) — не коммитить секреты и локальные URL
+src/js/config/api-config.local.js
+
 # Environment variables
 .env
 .env.local

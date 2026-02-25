@@ -77,7 +77,7 @@ import './js/modules/integration/events.js';
 import './js/audit-logger.js';
 import './js/script.js';
 import './js/radar-utils.js';
-import './js/config/api-config.js';
+import './js/config/api-config-loader.js'; // шаг 10.1: api-config.local.js (опц.) → api-config.js
 import './js/modules/core/api-client.js';
 import './js/modules/core/data-indexing.js';
 import './js/modules/utils/func-cover-utils.js';
