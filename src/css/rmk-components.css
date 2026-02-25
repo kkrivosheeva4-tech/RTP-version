@@ -1422,7 +1422,7 @@ body.dark .loading-error-message {
 
   /* Убираем padding из sidebar-content на мобильных для экономии места */
   .sidebar .search-container,
-  .sidebar .filter-panel {
+  .sidebar .filter-panel-sidebar {
     padding: 0;
     margin-bottom: 10px;
   }
@@ -3133,6 +3133,17 @@ body.dark .file-add-btn:hover {
 .file-add-btn .btn-icon {
   width: 16px;
   height: 16px;
+}
+
+/* Подсказка под полем (например, ограничения по размеру файлов) */
+.form-field-hint {
+  margin: 0 0 8px;
+  font-size: 0.8125rem;
+  color: var(--text-muted, #666);
+  line-height: 1.35;
+}
+body.dark .form-field-hint {
+  color: var(--text-muted, rgba(255, 255, 255, 0.6));
 }
 
 /* ===== СТИЛИ ДЛЯ КНОПКИ "ВЫБРАТЬ ФАЙЛЫ" (label для input[type=file]) ===== */

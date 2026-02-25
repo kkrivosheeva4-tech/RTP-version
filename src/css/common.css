@@ -522,6 +522,7 @@ body.light {
   --header-bg-color: var(--bg-light);
   --input-bg: #fff;
   --input-border: #ccc;
+  --input-color: #333;
   --modal-bg: var(--bg-light);
 }
 
@@ -529,8 +530,9 @@ body.dark {
   --bg: var(--bg-dark);
   --text: var(--text-dark);
   --header-bg-color: var(--bg-dark);
-  --input-bg: #333;
-  --input-border: #2a2a2a;
+  --input-bg: rgb(0, 0, 0);
+  --input-border: #555;
+  --input-color: #fff;
   --modal-bg: var(--bg-dark);
 }
 
