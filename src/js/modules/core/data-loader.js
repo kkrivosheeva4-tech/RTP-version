@@ -670,15 +670,13 @@ const setState = (key, value) => StateManager.set(key, value);
     try {
       setState('currentEnterprise', enterpriseName);
 
-      // Сохраняем технологии в VFS при переключении предприятий для надежности
       try {
         const technologies = getState('technologies');
         if (technologies && Array.isArray(technologies)) {
-          vfsWrite('technologies.json', technologies);
-          const enterpriseData = getState('enterpriseData');
-          if (enterpriseData) {
-            vfsWrite('enterpriseData.json', enterpriseData);
-          }
+          DataService.saveTechnologies(technologies).catch(e => {
+            reportError(e, 'Сохранение данных при переключении предприятия');
+            Logger.warn('Не удалось сохранить technologies при переключении предприятия', e);
+          });
         }
       } catch (e) {
         reportError(e, 'Сохранение данных при переключении предприятия');
@@ -831,11 +829,7 @@ const setState = (key, value) => StateManager.set(key, value);
     });
     if (changed) {
       setState('technologies', [...technologies]);
-      try {
-        vfsWrite('technologies.json', technologies);
-      } catch (e) {
-        Logger.warn('Ошибка записи technologies.json', e);
-      }
+      DataService.saveTechnologies(technologies).catch(e => Logger.warn('Ошибка записи technologies.json', e));
     }
   }
 
@@ -856,11 +850,7 @@ const setState = (key, value) => StateManager.set(key, value);
     });
     if (changed) {
       setState('technologies', [...technologies]);
-      try {
-        vfsWrite('technologies.json', technologies);
-      } catch (e) {
-        Logger.warn('Ошибка записи technologies.json', e);
-      }
+      DataService.saveTechnologies(technologies).catch(e => Logger.warn('Ошибка записи technologies.json', e));
     }
   }
 
@@ -1073,11 +1063,7 @@ const setState = (key, value) => StateManager.set(key, value);
     });
     if (changed) {
       setState('technologies', [...technologies]);
-      try {
-        vfsWrite('technologies.json', technologies);
-      } catch (e) {
-        Logger.warn('Ошибка записи technologies.json', e);
-      }
+      DataService.saveTechnologies(technologies).catch(e => Logger.warn('Ошибка записи technologies.json', e));
     }
   }
 
@@ -1101,11 +1087,7 @@ const setState = (key, value) => StateManager.set(key, value);
     });
     if (changed) {
       setState('technologies', [...technologies]);
-      try {
-        vfsWrite('technologies.json', technologies);
-      } catch (e) {
-        Logger.warn('Ошибка записи technologies.json', e);
-      }
+      DataService.saveTechnologies(technologies).catch(e => Logger.warn('Ошибка записи technologies.json', e));
     }
   }
 

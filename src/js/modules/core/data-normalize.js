@@ -40,7 +40,13 @@ export function normalizeReadiness(value) {
 }
 
 /**
- * Преобразует технологию из формата JSON в формат приложения.
+ * Преобразует технологию из формата JSON/API в формат приложения.
+ * Маппинг полей: см. docs/API_FORMAT_MAPPING.md
+ *
+ * @param {Object} tech — сырая технология (API или JSON)
+ * @param {Object} blockIdToName — маппинг id блока → имя
+ * @param {Array} enterprisesData — справочник предприятий
+ * @returns {Object} технология в формате приложения
  */
 export function normalizeTechnologyFromNewFormat(tech, blockIdToName, enterprisesData) {
     let blockId = null;

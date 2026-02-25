@@ -1,7 +1,7 @@
 # Единый план доработки frontend до перехода к backend
 
 **Дата создания:** 20.02.2026  
-**Обновлено:** 25.02.2026 (шаги 9.4–9.5: data-loader, form-management, app-init через DataService)  
+**Обновлено:** 25.02.2026 (шаг 9.6: маппинг форматов, saveTechnologies, API_FORMAT_MAPPING.md)  
 **Версия:** 1.2  
 **Назначение:** Объединённый план выполнения оставшихся задач по frontend перед переходом к разработке backend API.
 
@@ -415,6 +415,8 @@
 - Документировать маппинг полей API → клиентский формат
 
 **Критерий приёмки:** Данные из API нормализуются корректно, формат совместим с текущим кодом.
+
+**Статус:** ✅ Выполнено (25.02.2026). DataService использует normalizeTechnologyFromNewFormat в apiLoadTechnologies, apiCreateTech, apiUpdateTech. Создан docs/API_FORMAT_MAPPING.md. JSDoc в data-normalize.js. Добавлен saveTechnologies, все vfsWrite(technologies) в data-loader заменены на DataService.saveTechnologies.
 
 ---
 

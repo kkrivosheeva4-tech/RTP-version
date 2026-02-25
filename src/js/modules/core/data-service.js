@@ -181,6 +181,16 @@ async function mockSaveReference(name, data) {
   Logger.debug('DataService.mockSaveReference:', filename);
 }
 
+async function mockSaveTechnologies(technologies) {
+  if (!Array.isArray(technologies)) {
+    throw new Error('saveTechnologies: ожидается массив технологий');
+  }
+  if (!vfsWrite('technologies.json', technologies)) {
+    throw new Error('Не удалось сохранить технологии в VFS');
+  }
+  Logger.debug('DataService.mockSaveTechnologies: сохранено', technologies.length, 'технологий');
+}
+
 // ========== API-РЕЖИМ (USE_API === true) ==========
 
 async function apiLoadReference(name) {
@@ -281,6 +291,18 @@ async function apiDeleteTech(id) {
   if (!res || res.ok === false) {
     wrapApiError(res || { error: 'Ошибка удаления технологии' });
   }
+}
+
+async function apiSaveTechnologies(technologies) {
+  const client = getApiClient();
+  if (!client || typeof client.put !== 'function') {
+    throw new Error('ApiClient недоступен');
+  }
+  const res = await client.put('/api/v1/technologies/bulk', technologies);
+  if (!res || res.ok === false) {
+    wrapApiError(res || { error: 'Ошибка массового сохранения технологий' });
+  }
+  Logger.debug('DataService.apiSaveTechnologies: сохранено', technologies?.length, 'технологий');
 }
 
 // ========== DataService ==========
@@ -388,6 +410,18 @@ const DataService = {
    * @param {Array|Object} data — данные для сохранения
    * @returns {Promise<void>}
    */
+  /**
+   * Сохраняет весь массив технологий (для массовых операций: переименование вендора и т.д.).
+   * @param {Array} technologies — массив технологий в формате приложения
+   * @returns {Promise<void>}
+   */
+  async saveTechnologies(technologies) {
+    if (getUseApi()) {
+      return apiSaveTechnologies(technologies);
+    }
+    return mockSaveTechnologies(technologies);
+  },
+
   async saveReference(name, data) {
     if (!REFERENCE_NAMES.includes(name)) {
       return Promise.reject(new Error(`DataService.saveReference: неизвестный справочник "${name}"`));
