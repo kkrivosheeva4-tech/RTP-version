@@ -25,8 +25,14 @@ import { DOMCache } from '../core/dom-utils.js';
     if (typeof window !== 'undefined' && window.DataLoader) {
       return window.DataLoader;
     }
-    // Если DataLoader еще не загружен, возвращаем null и обрабатываем это в вызывающем коде
     if (window.Logger) window.Logger.warn('DataLoader не загружен, попробуйте позже');
+    return null;
+  }
+
+  function getDataService() {
+    if (typeof window !== 'undefined' && window.DataService) {
+      return window.DataService;
+    }
     return null;
   }
 
@@ -376,7 +382,7 @@ import { DOMCache } from '../core/dom-utils.js';
     // Обработчики для модального окна подтверждения удаления
     const confirmDeleteBtn = document.getElementById("confirmDeleteBtn");
     if (confirmDeleteBtn) {
-      confirmDeleteBtn.onclick = () => {
+      confirmDeleteBtn.onclick = async () => {
         if (
           typeof window.getCurrentTech === "function" &&
           typeof window.getTechnologies === "function" &&
@@ -384,20 +390,18 @@ import { DOMCache } from '../core/dom-utils.js';
         ) {
           const currentTech = window.getCurrentTech();
           if (!currentTech) return;
+          const DataService = getDataService();
+          try {
+            if (DataService && typeof DataService.deleteTech === 'function') {
+              await DataService.deleteTech(currentTech.id);
+            }
+          } catch (err) {
+            if (window.Logger) window.Logger.warn('Не удалось удалить технологию', err);
+            return;
+          }
           const technologies = window.getTechnologies();
           const updatedTechnologies = technologies.filter((t) => t.id !== currentTech.id);
           window.setTechnologies(updatedTechnologies);
-
-          // Сохраняем обновленные технологии в VFS
-          try {
-            if (typeof window.vfsWrite === 'function') {
-              window.vfsWrite('technologies.json', updatedTechnologies);
-            } else if (DataLoader && typeof DataLoader.vfsWrite === 'function') {
-              DataLoader.vfsWrite('technologies.json', updatedTechnologies);
-            }
-          } catch (err) {
-            if (window.Logger) window.Logger.warn('Не удалось сохранить technologies в VFS при удалении', err);
-          }
 
           if (
             typeof window.getQuadrantsCache === "function" &&
@@ -454,19 +458,17 @@ import { DOMCache } from '../core/dom-utils.js';
               typeof window.getEnterpriseData === "function" &&
               typeof window.getCurrentEnterprise === "function" &&
               typeof window.getTechnologies === "function" &&
-              typeof window.setEnterpriseData === "function" &&
-              typeof window.vfsWrite === "function"
+              typeof window.setEnterpriseData === "function"
             ) {
               const enterpriseData = window.getEnterpriseData();
               const currentEnterprise = window.getCurrentEnterprise();
               const technologies = window.getTechnologies();
               enterpriseData[currentEnterprise] = [...technologies];
               window.setEnterpriseData({ ...enterpriseData });
-              window.vfsWrite("enterpriseData.json", enterpriseData);
             }
           } catch (err) {
             if (window.Logger) window.Logger.warn(
-              "Не удалось сохранить enterpriseData после удаления",
+              "Не удалось обновить enterpriseData после удаления",
               err
             );
           }
@@ -1338,8 +1340,15 @@ import { DOMCache } from '../core/dom-utils.js';
         }
       });
       try {
-        DataLoader.vfsWrite('blocks.json', StateAccessors.getBlocksList());
-      } catch (err) { if (window.Logger) window.Logger.warn('Не удалось сохранить новый блок в VFS', err); }
+        const DataService = getDataService();
+        if (DataService && typeof DataService.saveReference === 'function') {
+          const list = StateAccessors.getBlocksList() || [];
+          const blocks = list.map((b, i) => typeof b === 'object' ? b : { id: i + 1, name: b });
+          await DataService.saveReference('blocks', blocks);
+        } else if (DataLoader && typeof DataLoader.vfsWrite === 'function') {
+          DataLoader.vfsWrite('blocks.json', StateAccessors.getBlocksList());
+        }
+      } catch (err) { if (window.Logger) window.Logger.warn('Не удалось сохранить новый блок', err); }
     }
 
     if (!levelToRing || !Object.prototype.hasOwnProperty.call(levelToRing, t.level)) {
@@ -1396,7 +1405,7 @@ import { DOMCache } from '../core/dom-utils.js';
       window.rebuildTechnologiesIndex();
     }
 
-    DataLoader.ensureAndPersistNewTech(t);
+    await DataLoader.ensureAndPersistNewTech(t);
 
     setButtonLoading(submitAddBtn, false);
 
@@ -1469,10 +1478,7 @@ import { DOMCache } from '../core/dom-utils.js';
 
       enterpriseData[currentEnterprise] = [...technologies];
       StateAccessors.setEnterpriseData({ ...enterpriseData });
-      DataLoader.vfsWrite('enterpriseData.json', enterpriseData);
-      // Сохраняем также technologies в VFS для сохранения между перезагрузками
-      DataLoader.vfsWrite('technologies.json', technologies);
-    } catch (err) { if (window.Logger) window.Logger.warn('Не удалось сохранить enterpriseData в VFS', err); }
+    } catch (err) { if (window.Logger) window.Logger.warn('Не удалось обновить enterpriseData', err); }
 
     DataLoader.showNotification('Технология добавлена!', true);
 
@@ -1947,38 +1953,8 @@ import { DOMCache } from '../core/dom-utils.js';
       window.rebuildTechnologiesIndex();
     }
 
-    // Сохраняем в VFS через ensureAndPersistNewTech (сохраняет и technologies, и enterpriseData)
-    DataLoader.ensureAndPersistNewTech(technologies[idx]);
-
-    // Дополнительно сохраняем весь массив technologies в VFS для надежности
-    // Это гарантирует, что все изменения сохранятся даже если ensureAndPersistNewTech не сработает
-    try {
-      DataLoader.vfsWrite('technologies.json', technologies);
-      if (window.Logger) window.Logger.debug('handleEditTechFormSubmit: technologies saved to VFS immediately after edit');
-    } catch (err) {
-      if (window.Logger) window.Logger.warn('Не удалось сохранить technologies в VFS при редактировании', err);
-    }
-
-    // Финальное сохранение всех данных перед закрытием модального окна
-    // Это гарантирует, что все изменения будут сохранены в localStorage
-    try {
-      const finalTechnologies = StateAccessors.getTechnologies();
-      const finalEnterpriseData = StateAccessors.getEnterpriseData();
-
-      // Сохраняем technologies
-      if (finalTechnologies && Array.isArray(finalTechnologies)) {
-        DataLoader.vfsWrite('technologies.json', finalTechnologies);
-      }
-
-      // Сохраняем enterpriseData
-      if (finalEnterpriseData && typeof finalEnterpriseData === 'object') {
-        DataLoader.vfsWrite('enterpriseData.json', finalEnterpriseData);
-      }
-
-      if (window.Logger) window.Logger.debug('handleEditTechFormSubmit: Final save to VFS completed before closing modal');
-    } catch (err) {
-      if (window.Logger) window.Logger.warn('Не удалось выполнить финальное сохранение в VFS перед закрытием модального окна', err);
-    }
+    // Сохраняем через DataService (ensureAndPersistNewTech вызывает DataService.updateTech)
+    await DataLoader.ensureAndPersistNewTech(technologies[idx]);
 
     setButtonLoading(editSubmitBtn, false);
 
@@ -2046,24 +2022,7 @@ import { DOMCache } from '../core/dom-utils.js';
       }
 
       StateAccessors.setEnterpriseData({ ...enterpriseData });
-
-      // Сохраняем enterpriseData в VFS
-      try {
-        DataLoader.vfsWrite('enterpriseData.json', enterpriseData);
-        if (window.Logger) window.Logger.debug('handleEditTechFormSubmit: enterpriseData saved to VFS');
-      } catch (err) {
-        if (window.Logger) window.Logger.warn('Не удалось сохранить enterpriseData в VFS после редактирования', err);
-      }
-
-      // Дополнительно сохраняем обновленные technologies в VFS после всех изменений enterpriseData
-      try {
-        const updatedTechnologies = StateAccessors.getTechnologies();
-        DataLoader.vfsWrite('technologies.json', updatedTechnologies);
-        if (window.Logger) window.Logger.debug('handleEditTechFormSubmit: technologies saved to VFS after enterpriseData update');
-      } catch (err) {
-        if (window.Logger) window.Logger.warn('Не удалось сохранить technologies в VFS после обновления enterpriseData', err);
-      }
-    } catch (err) { if (window.Logger) window.Logger.warn('Не удалось сохранить enterpriseData после редактирования', err); }
+    } catch (err) { if (window.Logger) window.Logger.warn('Не удалось обновить enterpriseData после редактирования', err); }
 
     // Проверяем, открыта ли панель подробной информации для этой технологии
     // Если да, обновляем данные в панели
@@ -2300,16 +2259,22 @@ import { DOMCache } from '../core/dom-utils.js';
           });
         }
 
-        // Загружаем текущие данные блоков для получения/создания ID
-        let blocksData = DataLoader.vfsRead('blocks.json');
-        if (!blocksData) {
-          // Если нет в VFS, загружаем из исходного файла
-          try {
-            const loaded = await DataLoader.loadJsonPreferVfs('blocks.json');
-            blocksData = loaded.data || [];
-          } catch (err) {
-            blocksData = [];
+        let blocksData = [];
+        try {
+          const DataService = getDataService();
+          if (DataService && typeof DataService.loadReference === 'function') {
+            blocksData = await DataService.loadReference('blocks') || [];
+          } else if (DataLoader) {
+            const vfs = DataLoader.vfsRead ? DataLoader.vfsRead('blocks.json') : null;
+            if (!vfs && DataLoader.loadJsonPreferVfs) {
+              const loaded = await DataLoader.loadJsonPreferVfs('blocks.json');
+              blocksData = loaded?.data || [];
+            } else {
+              blocksData = vfs || [];
+            }
           }
+        } catch (err) {
+          blocksData = [];
         }
         // Если блоки хранятся как массив строк, конвертируем их в объекты
         if (Array.isArray(blocksData) && blocksData.length > 0 && typeof blocksData[0] === 'string') {
@@ -2356,15 +2321,17 @@ import { DOMCache } from '../core/dom-utils.js';
         // Обновляем функции и связи
         if (functionNames.length > 0) {
           try {
-            // Загружаем текущие функции
-            let functionsData = DataLoader.vfsRead('functions.json');
-            if (!functionsData) {
-              try {
-                const loaded = await DataLoader.loadJsonPreferVfs('functions.json');
-                functionsData = loaded.data || [];
-              } catch (err) {
-                functionsData = [];
+            let functionsData = [];
+            try {
+              const DataService = getDataService();
+              if (DataService && typeof DataService.loadReference === 'function') {
+                functionsData = await DataService.loadReference('functions') || [];
+              } else if (DataLoader) {
+                const vfs = DataLoader.vfsRead ? DataLoader.vfsRead('functions.json') : null;
+                functionsData = vfs || (DataLoader.loadJsonPreferVfs ? (await DataLoader.loadJsonPreferVfs('functions.json'))?.data : null) || [];
               }
+            } catch (err) {
+              functionsData = [];
             }
             if (!Array.isArray(functionsData)) {
               functionsData = [];
@@ -2379,14 +2346,20 @@ import { DOMCache } from '../core/dom-utils.js';
               }
             });
             StateAccessors.setFunctions([...functionsList]);
-            DataLoader.vfsWrite('functions.json', functionsList);
+            try {
+              const DataService = getDataService();
+              if (DataService && typeof DataService.saveReference === 'function') {
+                await DataService.saveReference('functions', functionsList);
+              } else if (DataLoader?.vfsWrite) {
+                DataLoader.vfsWrite('functions.json', functionsList);
+              }
+            } catch (err) { if (window.Logger) window.Logger.warn('Не удалось сохранить functions', err); }
 
-            // Загружаем текущие связи функций и блоков
             let functionToBlockMap = StateAccessors.getFunctionToBlockMap ? StateAccessors.getFunctionToBlockMap() : {};
             if (!functionToBlockMap || typeof functionToBlockMap !== 'object') {
               try {
-                const loaded = await DataLoader.loadJsonPreferVfs('functionToBlock.json');
-                functionToBlockMap = loaded.data || {};
+                const DataService = getDataService();
+                functionToBlockMap = (DataService && await DataService.loadReference('functionToBlock')) || (DataLoader?.loadJsonPreferVfs && (await DataLoader.loadJsonPreferVfs('functionToBlock.json'))?.data) || {};
               } catch (err) {
                 functionToBlockMap = {};
               }
@@ -2409,16 +2382,27 @@ import { DOMCache } from '../core/dom-utils.js';
             });
 
             StateAccessors.setFunctionToBlockMap({ ...functionToBlockMap });
-            DataLoader.vfsWrite('functionToBlock.json', functionToBlockMap);
+            try {
+              const DataService = getDataService();
+              if (DataService && typeof DataService.saveReference === 'function') {
+                await DataService.saveReference('functionToBlock', functionToBlockMap);
+              } else if (DataLoader?.vfsWrite) {
+                DataLoader.vfsWrite('functionToBlock.json', functionToBlockMap);
+              }
+            } catch (err) { if (window.Logger) window.Logger.warn('Не удалось сохранить functionToBlock', err); }
           } catch (err) {
             if (window.Logger) window.Logger.warn('Не удалось сохранить функции и связи', err);
           }
         }
 
-        // Сохраняем блоки
-        // УДАЛЕНО (2026-01-29): blockToQuadrant.json больше не сохраняется
-        // Блоки не привязаны к квадрантам, они являются отдельными критериями технологии
-        DataLoader.vfsWrite('blocks.json', blocksData);
+        try {
+          const DataService = getDataService();
+          if (DataService && typeof DataService.saveReference === 'function') {
+            await DataService.saveReference('blocks', blocksData);
+          } else if (DataLoader?.vfsWrite) {
+            DataLoader.vfsWrite('blocks.json', blocksData);
+          }
+        } catch (err) { if (window.Logger) window.Logger.warn('Не удалось сохранить блоки', err); }
 
         // Обновляем фильтры и модальные формы с актуальными данными
         const blocksListUpdated = StateAccessors.getBlocksList();

@@ -283,9 +283,18 @@
 
     const confirmDeleteBtn = DOMCache.get("confirmDeleteBtn");
     if (confirmDeleteBtn) {
-      confirmDeleteBtn.onclick = () => {
+      confirmDeleteBtn.onclick = async () => {
         const currentTech = StateAccessors.getCurrentTech();
         if (!currentTech) return;
+        const DataService = typeof window !== 'undefined' && window.DataService ? window.DataService : null;
+        try {
+          if (DataService && typeof DataService.deleteTech === 'function') {
+            await DataService.deleteTech(currentTech.id);
+          }
+        } catch (err) {
+          if (window.Logger) window.Logger.warn('Не удалось удалить технологию', err);
+          return;
+        }
         const technologies = StateAccessors.getTechnologies();
         StateAccessors.setTechnologies(technologies.filter(t => t.id !== currentTech.id));
 
@@ -346,8 +355,7 @@
           const technologies = StateAccessors.getTechnologies();
           enterpriseData[currentEnterprise] = [...technologies];
           StateAccessors.setEnterpriseData({ ...enterpriseData });
-          DataLoader.vfsWrite('enterpriseData.json', enterpriseData);
-        } catch (err) { if (window.Logger) window.Logger.warn('Не удалось сохранить enterpriseData после удаления', err); }
+        } catch (err) { if (window.Logger) window.Logger.warn('Не удалось обновить enterpriseData после удаления', err); }
 
         DataLoader.showNotification('Технология удалена!', true);
 

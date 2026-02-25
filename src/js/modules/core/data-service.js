@@ -173,6 +173,14 @@ async function mockDeleteTech(id) {
   Logger.debug('DataService.mockDeleteTech: удалена технология', id);
 }
 
+async function mockSaveReference(name, data) {
+  const filename = REFERENCE_TO_FILE[name] || `${name}.json`;
+  if (!vfsWrite(filename, data)) {
+    throw new Error(`Не удалось сохранить ${filename} в VFS`);
+  }
+  Logger.debug('DataService.mockSaveReference:', filename);
+}
+
 // ========== API-РЕЖИМ (USE_API === true) ==========
 
 async function apiLoadReference(name) {
@@ -372,6 +380,30 @@ const DataService = {
    */
   clearFetchCache() {
     clearDataSourceCache();
+  },
+
+  /**
+   * Сохраняет справочник (mock: vfsWrite; API: PUT).
+   * @param {string} name — blocks, functions, functionToBlock и т.д.
+   * @param {Array|Object} data — данные для сохранения
+   * @returns {Promise<void>}
+   */
+  async saveReference(name, data) {
+    if (!REFERENCE_NAMES.includes(name)) {
+      return Promise.reject(new Error(`DataService.saveReference: неизвестный справочник "${name}"`));
+    }
+    if (getUseApi()) {
+      const client = getApiClient();
+      if (!client || typeof client.put !== 'function') {
+        throw new Error('ApiClient недоступен');
+      }
+      const res = await client.put(`/api/v1/references/${name}`, data);
+      if (!res || res.ok === false) {
+        wrapApiError(res || { error: `Ошибка сохранения справочника ${name}` });
+      }
+      return;
+    }
+    return mockSaveReference(name, data);
   }
 };
 

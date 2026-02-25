@@ -1,7 +1,7 @@
 # Единый план доработки frontend до перехода к backend
 
 **Дата создания:** 20.02.2026  
-**Обновлено:** 25.02.2026 (шаг 9.3: переключение mock/API в DataService)  
+**Обновлено:** 25.02.2026 (шаги 9.4–9.5: data-loader, form-management, app-init через DataService)  
 **Версия:** 1.2  
 **Назначение:** Объединённый план выполнения оставшихся задач по frontend перед переходом к разработке backend API.
 
@@ -386,6 +386,8 @@
 
 **Критерий приёмки:** data-loader использует DataService, функциональность не нарушена.
 
+**Статус:** ✅ Выполнено (25.02.2026). loadData переведён на DataService.loadReference (blocks + refs) и DataService.loadTechnologies; getIntegratorsList — на loadReference; ensureAndPersistNewTech — на DataService.createTech/updateTech.
+
 ---
 
 #### Шаг 9.5 — Заменить мутации в form-management и app-init
@@ -398,6 +400,8 @@
 - Обработать ошибки через единый слой
 
 **Критерий приёмки:** Формы используют DataService, CRUD операции работают через абстракцию.
+
+**Статус:** ✅ Выполнено (25.02.2026). form-management: удаление через DataService.deleteTech; добавление/редактирование — через ensureAndPersistNewTech (DataService.createTech/updateTech); blocks/functions — DataService.loadReference и saveReference. app-init: удаление через DataService.deleteTech. Добавлен DataService.saveReference для blocks, functions, functionToBlock.
 
 ---
 

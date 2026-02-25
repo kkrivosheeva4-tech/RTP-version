@@ -1,9 +1,10 @@
 // data-loader.js — ES module
-// Оркестрация загрузки данных. VFS и fetch — в data-source.js; нормализация — в data-normalize.js.
+// Оркестрация загрузки данных. Шаг 9.4: загрузка через DataService.
 
 import StateManager from './state-manager.js';
+import DataService from './data-service.js';
 import { vfsRead, vfsWrite, loadJsonPreferVfs, clearFetchCache, clearVfsCache, fetchJsonWithCache } from './data-source.js';
-import { buildBlockMaps, normalizeTechnologyFromNewFormat } from './data-normalize.js';
+import { buildBlockMaps, normalizeTechnologyFromNewFormat, buildEnterpriseDataFromTechnologies } from './data-normalize.js';
 import { reportError } from './error-handler.js';
 import { escapeHtml } from './escape-utils.js';
 import { normalizeForComparison } from './validators.js';
@@ -106,52 +107,38 @@ const setState = (key, value) => StateManager.set(key, value);
     }
 
     try {
-      clearFetchCache();
+      DataService.clearFetchCache();
 
-      // Загрузка blocks (из data-source.js)
-      const b1 = await loadJsonPreferVfs('blocks.json', true);
-      const blocks = b1.data;
+      // Загрузка через DataService (шаг 9.4)
+      const refNames = ['functions', 'functionToBlock', 'digitalDirections', 'directionToQuadrant', 'vendors', 'integrators', 'enterprises'];
+      const fileNames = ['functions.json', 'functionToBlock.json', 'digitalDirections.json', 'directionToQuadrant.json', 'vendors.json', 'integrators.json', 'enterprises.json'];
+
+      const [blocksData, ...refResults] = await Promise.all([
+        DataService.loadReference('blocks'),
+        ...refNames.map(n => DataService.loadReference(n))
+      ]);
+
+      const blocks = Array.isArray(blocksData) ? blocksData : [];
+      const fetched = {};
+      fetched['blocks.json'] = { data: blocks };
+      refNames.forEach((name, i) => {
+        fetched[fileNames[i]] = { data: refResults[i] };
+      });
+
+      const missing = [];
+      if (!blocks) missing.push('blocks.json');
+      refNames.forEach((name, i) => {
+        const val = refResults[i];
+        if (val === null || val === undefined) missing.push(fileNames[i]);
+        else if (['functionToBlock', 'directionToQuadrant'].includes(name) && (typeof val !== 'object' || val === null)) missing.push(fileNames[i]);
+      });
+      if (missing.length) {
+        throw new Error(`Не удалось загрузить файлы: ${missing.join(', ')}`);
+      }
+
       const { blockIdToName, nameToBlockId, blocksList } = buildBlockMaps(blocks);
       setState('nameToBlockId', nameToBlockId);
       setState('blocksList', blocksList);
-
-      const fileNames = [
-        'functions.json',
-        'functionToBlock.json',
-        'technologies.json',
-        // УДАЛЕНО (2026-01-29): blockToQuadrant.json больше не используется
-        // Блоки не привязаны к квадрантам, они являются отдельными критериями технологии
-        'digitalDirections.json',
-        'directionToQuadrant.json',
-        'vendors.json',
-        'integrators.json',
-        'enterprises.json',
-      ];
-
-      // Принудительно перезагружаем данные с диска, игнорируя кэш.
-      // Независимые файлы загружаются параллельно (Promise.all) для ускорения.
-      const results = await Promise.all(fileNames.map(fn => loadJsonPreferVfs(fn, true)));
-      const fetched = {};
-      fileNames.forEach((fn, i) => {
-        fetched[fn] = results[i];
-      });
-
-      // Соберём список отсутствующих/непреобразованных файлов
-      const missing = [];
-      if (!blocks) missing.push('blocks.json');
-      // technologies.json - опциональный файл, не добавляем в missing если его нет
-      const optionalFiles = ['technologies.json'];
-      for (const fn of fileNames) {
-        // Пропускаем опциональные файлы
-        if (optionalFiles.includes(fn)) continue;
-        if (!fetched[fn].data) missing.push(fn);
-      }
-
-      if (missing.length) {
-        // Ошибка загрузки данных
-        const hint = missing.join(', ');
-        throw new Error(`Не удалось загрузить файлы: ${hint}`);
-      }
 
       // Базовая валидация полученных данных
       const validationErrors = [];
@@ -255,61 +242,10 @@ const setState = (key, value) => StateManager.set(key, value);
       }
       setState('enterprisesList', enterprisesData);
 
-      // Нормализация технологий — из data-normalize.js
-      const normalizeTech = normalizeTechnologyFromNewFormat;
+      // Загрузка технологий через DataService (шаг 9.4)
+      const allTechnologies = await DataService.loadTechnologies();
+      const enterpriseData = buildEnterpriseDataFromTechnologies(allTechnologies);
 
-      // Загружаем технологии из technologies.json
-      // ВАЖНО: Сначала загружаем из файла, чтобы видеть изменения в JSON файлах
-      // VFS используется только как fallback, если файл недоступен
-      let allTechnologies = [];
-      const enterpriseData = {};
-
-      // Сначала пытаемся загрузить из файла (приоритет файлу, чтобы видеть изменения)
-      if (fetched['technologies.json'] && Array.isArray(fetched['technologies.json'].data)) {
-        Logger.debug('loadData: Загружаем технологии из файла technologies.json');
-        fetched['technologies.json'].data.forEach(tech => {
-          const normalized = normalizeTech(tech, blockIdToName, enterprisesData);
-          allTechnologies.push(normalized);
-
-          // Добавляем в структуру по предприятиям для обратной совместимости
-          const companies = Array.isArray(normalized.company) ? normalized.company : (normalized.company ? [normalized.company] : []);
-          companies.forEach(company => {
-            if (!enterpriseData[company]) enterpriseData[company] = [];
-            enterpriseData[company].push(normalized);
-          });
-        });
-      }
-
-      // Если не удалось загрузить из файла, используем VFS как fallback
-      if (allTechnologies.length === 0) {
-        try {
-          const technologiesFromVfs = vfsRead('technologies.json');
-          if (technologiesFromVfs && Array.isArray(technologiesFromVfs) && technologiesFromVfs.length > 0) {
-            Logger.debug('loadData: Загружены технологии из VFS (localStorage) как fallback', technologiesFromVfs.length);
-            // Используем технологии из VFS напрямую (они уже в нормализованном формате)
-            allTechnologies = technologiesFromVfs;
-
-            // Восстанавливаем структуру enterpriseData из VFS или создаем заново
-            const enterpriseDataFromVfs = vfsRead('enterpriseData.json');
-            if (enterpriseDataFromVfs && typeof enterpriseDataFromVfs === 'object') {
-              Object.assign(enterpriseData, enterpriseDataFromVfs);
-            } else {
-              // Если enterpriseData нет в VFS, создаем из технологий
-              allTechnologies.forEach(tech => {
-                const companies = Array.isArray(tech.company) ? tech.company : (tech.company ? [tech.company] : []);
-                companies.forEach(company => {
-                  if (!enterpriseData[company]) enterpriseData[company] = [];
-                  enterpriseData[company].push(tech);
-                });
-              });
-            }
-          }
-        } catch (e) {
-          Logger.warn('Ошибка при загрузке технологий из VFS', e);
-        }
-      }
-
-      // Сохраняем объединенный массив технологий (всегда, включая пустой — для корректной работы getTechnologies)
       setState('technologies', allTechnologies);
       setState('enterpriseData', enterpriseData);
 
@@ -628,7 +564,7 @@ const setState = (key, value) => StateManager.set(key, value);
   }
 
   // ===== ФУНКЦИЯ ДОБАВЛЕНИЯ НОВОЙ ТЕХНОЛОГИИ =====
-  function ensureAndPersistNewTech(newTech) {
+  async function ensureAndPersistNewTech(newTech) {
     try {
       if (!newTech) return;
       // Trim block and level
@@ -698,24 +634,24 @@ const setState = (key, value) => StateManager.set(key, value);
       }
       setState('technologies', [...technologies]);
 
-      // Сохраняем technologies в VFS (localStorage) для сохранения между перезагрузками
       try {
-        vfsWrite('technologies.json', technologies);
-        Logger.debug('ensureAndPersistNewTech: technologies saved to VFS', technologies.length);
+        if (existsIdx === -1) {
+          await DataService.createTech(newTech);
+        } else {
+          await DataService.updateTech(newTech.id, newTech);
+        }
+        Logger.debug('ensureAndPersistNewTech: technology saved via DataService', newTech.id);
       } catch (e) {
-        Logger.warn('vfs write technologies.json failed', e);
+        Logger.warn('ensureAndPersistNewTech: DataService persist failed', e);
+        throw e;
       }
 
-      // Обновляем enterpriseData для обратной совместимости
       try {
         const enterpriseData = getState('enterpriseData');
         const currentEnterprise = getState('currentEnterprise');
         if (enterpriseData && currentEnterprise) {
           enterpriseData[currentEnterprise] = [...getState('technologies')];
           setState('enterpriseData', { ...enterpriseData });
-          // Сохраняем enterpriseData в VFS
-          vfsWrite('enterpriseData.json', enterpriseData);
-          Logger.debug('ensureAndPersistNewTech: enterpriseData updated for', currentEnterprise, 'total techs:', getState('technologies').length);
         }
       } catch (e) { Logger.warn('update enterpriseData failed', e); }
     } catch (err) {
@@ -1045,8 +981,7 @@ const setState = (key, value) => StateManager.set(key, value);
   async function getIntegratorsList() {
     let list = getState('integratorsList') || [];
     try {
-      // Загружаем из JSON
-      const jsonData = await loadJsonPreferVfs('integrators.json');
+      const jsonData = await DataService.loadReference('integrators');
       if (Array.isArray(jsonData)) {
         list = [...new Set([...list, ...jsonData])];
       }
@@ -1066,10 +1001,9 @@ const setState = (key, value) => StateManager.set(key, value);
   async function saveIntegratorsList(list) {
     setState('integratorsList', list);
     try {
-      // Получаем список интеграторов из JSON, чтобы сохранить в localStorage только пользовательские
       let jsonIntegrators = [];
       try {
-        const jsonData = await loadJsonPreferVfs('integrators.json');
+        const jsonData = await DataService.loadReference('integrators');
         if (Array.isArray(jsonData)) {
           jsonIntegrators = jsonData;
         }
