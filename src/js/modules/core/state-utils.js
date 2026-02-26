@@ -48,7 +48,9 @@ import { DOMCache } from './dom-utils.js';
     blockToQuadrant: createAccessor('blockToQuadrant', 'blockToQuadrant', true),
     technologiesById: createAccessor('technologiesById', null, false),
     quadrantsCache: createAccessor('quadrantsCache', null, false),
-    quadrantsCacheVersion: createAccessor('quadrantsCacheVersion', null, false)
+    quadrantsCacheVersion: createAccessor('quadrantsCacheVersion', null, false),
+    enterpriseIdToBlockIds: createAccessor('enterpriseIdToBlockIds', null, false),
+    blockIdToEnterpriseIds: createAccessor('blockIdToEnterpriseIds', null, false)
   };
 
   // Создание StateAccessors объекта с правильными именами функций
@@ -82,7 +84,9 @@ import { DOMCache } from './dom-utils.js';
     getTechnologiesById: accessors.technologiesById.get,
     getQuadrantsCache: accessors.quadrantsCache.get,
     getQuadrantsCacheVersion: accessors.quadrantsCacheVersion.get,
-    setQuadrantsCacheVersion: accessors.quadrantsCacheVersion.set
+    setQuadrantsCacheVersion: accessors.quadrantsCacheVersion.set,
+    getEnterpriseIdToBlockIds: accessors.enterpriseIdToBlockIds.get,
+    getBlockIdToEnterpriseIds: accessors.blockIdToEnterpriseIds.get
   };
 
   // ===== STATE SUBSCRIPTIONS =====
@@ -150,17 +154,15 @@ import { DOMCache } from './dom-utils.js';
         window.Positioning.clearPositionCache();
       }
 
-      // Автоматически сохраняем технологии в VFS (localStorage) при любом изменении
+      // Автоматически сохраняем технологии при изменении (шаг 9.6: через DataService для mock и API)
       try {
-        if (newTechnologies && Array.isArray(newTechnologies)) {
-          if (typeof window.vfsWrite === 'function') {
-            window.vfsWrite('technologies.json', newTechnologies);
-          } else if (window.DataLoader && typeof window.DataLoader.vfsWrite === 'function') {
-            window.DataLoader.vfsWrite('technologies.json', newTechnologies);
-          }
+        if (newTechnologies && Array.isArray(newTechnologies) && window.DataService && typeof window.DataService.saveTechnologies === 'function') {
+          window.DataService.saveTechnologies(newTechnologies).catch(e => {
+            if (window.Logger) window.Logger.warn('Не удалось сохранить технологии при изменении', e);
+          });
         }
       } catch (e) {
-        if (window.Logger) window.Logger.warn('Не удалось сохранить technologies в VFS при изменении', e);
+        if (window.Logger) window.Logger.warn('Не удалось сохранить технологии при изменении', e);
       }
 
       if (!isModalOpen(DOMCacheRef)) {

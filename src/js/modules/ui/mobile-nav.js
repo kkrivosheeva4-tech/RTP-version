@@ -218,39 +218,6 @@ const MobileNav = {
       mobileMenu.appendChild(quickSection);
     }
 
-    // Секция предприятий
-    const enterpriseNav = header.querySelector('.enterprise-nav');
-    if (enterpriseNav) {
-      const enterpriseSection = document.createElement('div');
-      enterpriseSection.className = 'mobile-menu-section';
-
-      const enterpriseTitle = document.createElement('h3');
-      enterpriseTitle.className = 'mobile-menu-title';
-      enterpriseTitle.textContent = 'Предприятия';
-      enterpriseSection.appendChild(enterpriseTitle);
-
-      const buttons = enterpriseNav.querySelectorAll('button');
-      buttons.forEach((btn) => {
-        const newBtn = btn.cloneNode(true);
-        newBtn.className = 'mobile-menu-btn';
-        // Сохраняем активное состояние
-        if (btn.classList.contains('active')) {
-          newBtn.classList.add('active');
-        }
-        newBtn.addEventListener('click', (e) => {
-          e.preventDefault();
-          btn.click(); // Вызываем оригинальный обработчик
-          // Обновляем активное состояние в меню
-          enterpriseSection.querySelectorAll('.mobile-menu-btn').forEach(b => b.classList.remove('active'));
-          newBtn.classList.add('active');
-          this.closeMenu();
-        });
-        enterpriseSection.appendChild(newBtn);
-      });
-
-      mobileMenu.appendChild(enterpriseSection);
-    }
-
     // Секция пользователя
     const userSection = document.createElement('div');
     userSection.className = 'mobile-menu-section mobile-menu-user-section';
@@ -345,11 +312,23 @@ const MobileNav = {
     const burgerBtn = document.getElementById('burgerMenuBtn');
     const mobileMenu = document.getElementById('mobileEnterpriseMenu');
 
-    if (burgerBtn) {
-      burgerBtn.addEventListener('click', () => {
-        this.toggleMenu();
-      });
-    }
+    let lastTouchTime = 0;
+    const handleBurgerActivate = (e) => {
+      const btn = e.target?.closest?.('#burgerMenuBtn');
+      if (!btn) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.type === 'touchend') {
+        lastTouchTime = Date.now();
+      } else if (e.type === 'click' && Date.now() - lastTouchTime < 400) {
+        return; // Игнорируем click после touch (дубликат)
+      }
+      e.stopImmediatePropagation?.();
+      this.toggleMenu();
+    };
+
+    document.addEventListener('click', handleBurgerActivate, true);
+    document.addEventListener('touchend', handleBurgerActivate, { passive: false, capture: true });
 
     // Закрытие меню при клике вне его области
     document.addEventListener('click', (e) => {
@@ -430,9 +409,6 @@ const MobileNav = {
 
     if (!mobileMenu) return;
 
-    // Обновляем активное состояние перед открытием
-    this.updateActiveEnterprise();
-
     burgerBtn.classList.add('active');
     burgerBtn.setAttribute('aria-expanded', 'true');
     burgerBtn.setAttribute('aria-label', 'Закрыть меню');
@@ -493,33 +469,6 @@ const MobileNav = {
     if (isMenuOpen) {
       this.openMenu();
     }
-  },
-
-  /**
-   * Обновление активного состояния кнопок предприятий в меню
-   */
-  updateActiveEnterprise() {
-    const mobileMenu = document.getElementById('mobileEnterpriseMenu');
-    if (!mobileMenu) return;
-
-    const header = document.querySelector('header');
-    if (!header) return;
-
-    const enterpriseNav = header.querySelector('.enterprise-nav');
-    if (!enterpriseNav) return;
-
-    const activeBtn = enterpriseNav.querySelector('button.active');
-    if (!activeBtn) return;
-
-    const activeText = (activeBtn.textContent || '').trim();
-    const menuButtons = mobileMenu.querySelectorAll('.mobile-menu-section:first-child .mobile-menu-btn');
-
-    menuButtons.forEach(btn => {
-      btn.classList.remove('active');
-      if ((btn.textContent || '').trim() === activeText) {
-        btn.classList.add('active');
-      }
-    });
   },
 
   /**

@@ -319,6 +319,23 @@ body.dark .modal-header {
   color: var(--text);
 }
 
+.form-hint {
+  font-size: 0.9em;
+  color: var(--text-muted, #666);
+  margin: 0 0 8px 0;
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.form-group--half {
+  flex: 1;
+  min-width: 180px;
+}
+
 /* Переопределение для модальных окон добавления и редактирования технологии на мобильных устройствах */
 @media (max-width: 1024px) {
   #addTechPanel .modal-body .form-group label,

@@ -871,15 +871,20 @@ body.dark .slider::after {
   /* По умолчанию скрыто, показывается только на мобильных */
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
   background: transparent;
   border: 1px solid var(--accent);
   border-radius: 6px;
   cursor: pointer;
   padding: 0;
   position: relative;
-  z-index: 1001;
+  z-index: 1101;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
 .burger-menu-btn:hover {
@@ -1586,7 +1591,7 @@ body.dark .slider::after {
     max-width: calc(100% - 40px);
   }
 
-  /* Хедер - логотип и кнопка меню слева */
+  /* Хедер - логотип и кнопка меню слева. z-index выше сайдбара (999), чтобы бургер был кликабелен */
   header {
     flex-direction: row;
     flex-wrap: wrap;
@@ -1594,6 +1599,8 @@ body.dark .slider::after {
     height: auto;
     min-height: var(--header-height);
     justify-content: flex-start;
+    position: relative;
+    z-index: 1100;
   }
 
   .logo span {
@@ -1610,6 +1617,9 @@ body.dark .slider::after {
     flex: none;
     justify-content: flex-start;
     margin-left: 0;
+    position: relative;
+    z-index: 1101;
+    pointer-events: auto;
   }
 
   /* Скрываем элементы controls на мобильных (кроме бургер-меню) */
@@ -1638,7 +1648,7 @@ body.dark .slider::after {
     display: flex !important;
   }
 
-  /* Выдвижное меню со всеми элементами */
+  /* Выдвижное меню со всеми элементами (z-index выше сайдбара 999, ниже хедера 1100) */
   .mobile-enterprise-menu {
     position: fixed;
     top: var(--header-height);
@@ -1646,7 +1656,7 @@ body.dark .slider::after {
     right: 0;
     background: var(--bg);
     border-bottom: 1px solid var(--accent);
-    z-index: 1000;
+    z-index: 1050;
     transform: translateY(-100%);
     opacity: 0;
     visibility: hidden;

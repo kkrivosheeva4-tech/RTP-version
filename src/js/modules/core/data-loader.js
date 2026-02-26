@@ -115,7 +115,8 @@ const setState = (key, value) => StateManager.set(key, value);
 
       const [blocksData, ...refResults] = await Promise.all([
         DataService.loadReference('blocks'),
-        ...refNames.map(n => DataService.loadReference(n))
+        ...refNames.map(n => DataService.loadReference(n)),
+        DataService.loadReference('enterprisesBlocksMapping').catch(() => null)
       ]);
 
       const blocks = Array.isArray(blocksData) ? blocksData : [];
@@ -139,6 +140,30 @@ const setState = (key, value) => StateManager.set(key, value);
       const { blockIdToName, nameToBlockId, blocksList } = buildBlockMaps(blocks);
       setState('nameToBlockId', nameToBlockId);
       setState('blocksList', blocksList);
+      window.blockIdToName = blockIdToName;
+
+      // Привязка предприятий к функциональным блокам (шаг 9.5)
+      const enterprisesBlocksMappingData = refResults[refNames.length];
+      const enterpriseIdToBlockIds = {};
+      const blockIdToEnterpriseIds = {};
+      if (enterprisesBlocksMappingData && typeof enterprisesBlocksMappingData === 'object') {
+        const mappingArray = enterprisesBlocksMappingData.enterprises_blocks_mapping;
+        if (Array.isArray(mappingArray)) {
+          mappingArray.forEach(item => {
+            const eid = item && (item.enterprise_id ?? item.enterpriseId);
+            const blockIds = Array.isArray(item?.functional_blocks) ? item.functional_blocks : (Array.isArray(item?.blockIds) ? item.blockIds : []);
+            if (eid != null && blockIds.length > 0) {
+              enterpriseIdToBlockIds[eid] = blockIds;
+              blockIds.forEach(bid => {
+                if (!blockIdToEnterpriseIds[bid]) blockIdToEnterpriseIds[bid] = [];
+                if (!blockIdToEnterpriseIds[bid].includes(eid)) blockIdToEnterpriseIds[bid].push(eid);
+              });
+            }
+          });
+        }
+      }
+      setState('enterpriseIdToBlockIds', enterpriseIdToBlockIds);
+      setState('blockIdToEnterpriseIds', blockIdToEnterpriseIds);
 
       // Базовая валидация полученных данных
       const validationErrors = [];
@@ -563,6 +588,82 @@ const setState = (key, value) => StateManager.set(key, value);
     }
   }
 
+  /**
+   * Добавляет блок в привязку предприятия, если его там ещё нет (шаг 9.5).
+   * При нескольких предприятиях — добавляет блок только в те, у кого его нет.
+   * @param {Object} tech — технология с company/companies и block/blocks
+   */
+  async function ensureEnterpriseBlockMapping(tech) {
+    if (!tech) return;
+    const companies = Array.isArray(tech.company) ? tech.company : (tech.company ? [tech.company] : []);
+    const blocks = Array.isArray(tech.blocks) ? tech.blocks : (tech.block ? [tech.block] : []);
+    if (companies.length === 0 || blocks.length === 0) return;
+
+    const enterprisesList = getState('enterprisesList') || [];
+    const nameToBlockId = getState('nameToBlockId') || {};
+    let enterpriseIdToBlockIds = { ...(getState('enterpriseIdToBlockIds') || {}) };
+
+    const enterpriseNameToId = {};
+    enterprisesList.forEach(e => {
+      if (e && (e.name || e.enterprise_name)) {
+        const name = (e.name || e.enterprise_name).trim();
+        const id = e.id ?? e.enterprise_id;
+        if (id != null) enterpriseNameToId[name] = id;
+      }
+    });
+
+    let changed = false;
+    companies.forEach(companyName => {
+      const cName = typeof companyName === 'string' ? companyName.trim() : String(companyName || '').trim();
+      if (!cName) return;
+      const eid = enterpriseNameToId[cName];
+      if (eid == null) return;
+
+      blocks.forEach(blockVal => {
+        const blockName = typeof blockVal === 'string' ? blockVal.trim() : String(blockVal || '').trim();
+        if (!blockName) return;
+        const bid = nameToBlockId[blockName];
+        if (bid == null) return;
+
+        const list = enterpriseIdToBlockIds[eid] || [];
+        if (!list.includes(bid)) {
+          enterpriseIdToBlockIds[eid] = [...list, bid];
+          changed = true;
+        }
+      });
+    });
+
+    if (!changed) return;
+
+    const blockIdToEnterpriseIds = {};
+    Object.entries(enterpriseIdToBlockIds).forEach(([eidStr, blockIds]) => {
+      (blockIds || []).forEach(bid => {
+        if (!blockIdToEnterpriseIds[bid]) blockIdToEnterpriseIds[bid] = [];
+        const eid = Number(eidStr);
+        if (!blockIdToEnterpriseIds[bid].includes(eid)) blockIdToEnterpriseIds[bid].push(eid);
+      });
+    });
+
+    const mappingArray = enterprisesList.map(e => {
+      const id = e.id ?? e.enterprise_id;
+      const name = e.name || e.enterprise_name;
+      return {
+        enterprise_id: id,
+        enterprise_name: name,
+        functional_blocks: enterpriseIdToBlockIds[id] || []
+      };
+    });
+
+    try {
+      await DataService.saveReference('enterprisesBlocksMapping', { enterprises_blocks_mapping: mappingArray });
+      setState('enterpriseIdToBlockIds', enterpriseIdToBlockIds);
+      setState('blockIdToEnterpriseIds', blockIdToEnterpriseIds);
+      Logger.debug('ensureEnterpriseBlockMapping: привязка обновлена');
+    } catch (e) {
+      Logger.warn('ensureEnterpriseBlockMapping: не удалось сохранить привязку', e);
+    }
+  }
+
   // ===== ФУНКЦИЯ ДОБАВЛЕНИЯ НОВОЙ ТЕХНОЛОГИИ =====
   async function ensureAndPersistNewTech(newTech) {
     try {
@@ -649,6 +750,8 @@ const setState = (key, value) => StateManager.set(key, value);
         Logger.warn('ensureAndPersistNewTech: DataService persist failed', e);
         throw e;
       }
+
+      await ensureEnterpriseBlockMapping(newTech);
 
       try {
         const enterpriseData = getState('enterpriseData');
@@ -887,6 +990,7 @@ const setState = (key, value) => StateManager.set(key, value);
     saveVendorsList(list);
     renameVendorInTechnologies(oldName, newName);
     renameVendorInFormSelections(oldName, newName, nf);
+    if (typeof window !== 'undefined') window._lastVendorRenameMap = { oldName, newName };
     refreshAllVendorSelects(list, { vendorRenameMap: { oldName, newName } });
     return true;
   }
@@ -1310,16 +1414,16 @@ const setState = (key, value) => StateManager.set(key, value);
   }
 
   function refreshAllIntegratorSelects(integratorsListOverride, options) {
-    // НЕ вызываем updateIntegratorsSelects здесь, так как это приводит к появлению элементов под полем добавления
-    // при редактировании вендора. Селекты интеграторов по вендорам обновляются через renderVendorIntegrators
-    // Обновляем только основные селекты интеграторов (techIntegrators, editIntegrators)
-    // и селекты интеграторов по вендорам, которые уже существуют в DOM
+    const nf = normalizeForComparison;
+    // Обновляем только основные селекты (techIntegrators, editIntegrators).
+    // Селекты по вендорам (editVendorIntegrators__*, techVendorIntegrators__*) обновляются
+    // через renderVendorIntegrators при изменении вендоров — полное обновление здесь
+    // приводило к потере обработчиков редактирования/удаления.
     document.querySelectorAll('.custom-select-modal[data-field="techIntegrators"], .custom-select-modal[data-field="editIntegrators"]').forEach(select => {
       const optionsList = select.querySelector('.select-options');
       if (!optionsList) return;
       const addOpt = optionsList.querySelector('.add-new-integrator-option, .add-new-option[data-add-new="integrator"]');
       const list = integratorsListOverride || getState('integratorsList') || [];
-      const nf = normalizeForComparison;
       let integratorOpts = Array.from(optionsList.querySelectorAll('li.select-option-item[data-value]:not(.add-new-integrator-option):not(.add-new-option)'));
       
       // СНАЧАЛА обновляем названия в существующих опциях при переименовании
@@ -1440,6 +1544,29 @@ const setState = (key, value) => StateManager.set(key, value);
         }
       });
     });
+
+    // При переименовании интегратора — обновляем селекты интеграторов по вендорам
+    if (options && options.integratorRenameMap) {
+      const { oldName, newName } = options.integratorRenameMap;
+      document.querySelectorAll('.custom-select-modal[data-field^="techVendorIntegrators__"], .custom-select-modal[data-field^="editVendorIntegrators__"]').forEach(customSelect => {
+        const optionsList = customSelect.querySelector('.select-options');
+        if (!optionsList) return;
+        const fieldId = customSelect.getAttribute('data-field');
+        const integratorOpts = optionsList.querySelectorAll('li.integrator-option-item[data-value], li.select-option-item[data-value]');
+        integratorOpts.forEach(li => {
+          const val = li.getAttribute('data-value');
+          if (val && nf(val) === nf(oldName)) {
+            li.setAttribute('data-value', newName);
+            const textSpan = li.querySelector('.integrator-option-text, span');
+            if (textSpan) textSpan.textContent = newName;
+          }
+        });
+        if (fieldId && typeof window.renderMultiSelectTags === 'function') {
+          requestAnimationFrame(() => window.renderMultiSelectTags(customSelect));
+        }
+      });
+    }
+
     if (typeof window.updateRadar === 'function') {
       window.updateRadar();
     }
@@ -1454,6 +1581,7 @@ const setState = (key, value) => StateManager.set(key, value);
     loadJsonPreferVfs,
     loadData,
     ensureAndPersistNewTech,
+    ensureEnterpriseBlockMapping,
     switchEnterprise,
     showNotification,
     initFilters,

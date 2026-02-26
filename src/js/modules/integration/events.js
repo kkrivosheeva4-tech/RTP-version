@@ -164,46 +164,6 @@ import { DOMCache } from '../core/dom-utils.js';
       }
     }
 
-    // ===== ПРЕДПРИЯТИЯ =====
-    const enterpriseButtons = document.querySelectorAll(
-      ".enterprise-nav button"
-    );
-    enterpriseButtons.forEach((button) => {
-      button.addEventListener("click", () => {
-        const selectedEnterprise = button.textContent.trim();
-        const currentEnterprise = (window.StateAccessors && typeof window.StateAccessors.getCurrentEnterprise === 'function')
-          ? window.StateAccessors.getCurrentEnterprise()
-          : (window.StateManager && window.StateManager.get ? window.StateManager.get('currentEnterprise') : undefined);
-        if (currentEnterprise !== undefined && selectedEnterprise === currentEnterprise)
-          return;
-
-        // Обновляем UI кнопок
-        document
-          .querySelectorAll(".enterprise-nav button")
-          .forEach((b) => b.classList.remove("active"));
-        button.classList.add("active");
-        localStorage.setItem("selectedEnterprise", selectedEnterprise);
-
-        // Предприятия теперь управляются через фильтр в левой панели
-        // Обновляем фильтр предприятий
-        const Filters = window.Filters;
-        if (Filters && selectedEnterprise) {
-          const enterpriseSelect = document.querySelector('.custom-select[data-filter="enterprise"]');
-          if (enterpriseSelect) {
-            const hiddenInput = document.getElementById('filter_enterprise');
-            if (hiddenInput) {
-              hiddenInput.value = JSON.stringify([selectedEnterprise]);
-              Filters.renderMultiSelectTags(enterpriseSelect);
-              // Обновляем радар
-              if (typeof window.updateRadar === 'function') {
-                window.updateRadar();
-              }
-            }
-          }
-        }
-      });
-    });
-
     // ===== СБРОС ФИЛЬТРОВ =====
     const resetFiltersAndSelection = () => {
       document
@@ -239,9 +199,6 @@ import { DOMCache } from '../core/dom-utils.js';
       try {
         localStorage.removeItem("selectedEnterprise");
       } catch (_) {}
-      document
-        .querySelectorAll(".enterprise-nav button")
-        .forEach((b) => b.classList.remove("active"));
       // Перестроить списки блоков и функций под «все предприятия» (без фильтра)
       if (typeof window.Filters?.updateFiltersForEnterprises === "function") {
         window.Filters.updateFiltersForEnterprises();

@@ -153,6 +153,33 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const user = getUsers().find(u => u.username === username && u.password === password);
             if (user) {
+                // Заглушка: имитация ответа сервера с флагом 2FA (для всех ролей)
+                const mockResponse = { requires_2fa: true };
+                if (mockResponse.requires_2fa) {
+                    try {
+                        sessionStorage.setItem('auth2faPending', JSON.stringify({
+                            username: username,
+                            role: user.role,
+                            token: 'mock-' + Date.now()
+                        }));
+                    } catch (e) {
+                        if (window.Logger) window.Logger.warn('auth: не удалось сохранить auth2faPending', e);
+                    }
+                    // Если 2FA уже настроена (QR сканировался) — сразу страница ввода кода
+                    const setupDone = (function () {
+                        try {
+                            const raw = localStorage.getItem('2fa_setup_usernames');
+                            if (!raw) return false;
+                            const list = JSON.parse(raw);
+                            return Array.isArray(list) && list.includes(username);
+                        } catch { return false; }
+                    })();
+                    window.location.href = setupDone
+                        ? '/src/pages/auth-2fa-verify.html'
+                        : '/src/pages/auth-2fa-setup.html';
+                    return;
+                }
+
                 localStorage.setItem('isLoggedIn', 'true');
                 localStorage.setItem('username', username);
                 localStorage.setItem('role', user.role);

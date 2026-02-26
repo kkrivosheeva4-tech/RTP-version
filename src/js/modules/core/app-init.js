@@ -54,6 +54,16 @@
     const DOMCache = getDOMCache();
     const StateAccessors = getStateAccessors();
 
+    // Мобильная навигация — инициализируем до loadData, чтобы бургер работал даже при ошибках загрузки
+    if (window.MobileNav && typeof window.MobileNav.init === 'function') {
+      window.MobileNav.init();
+      window.addEventListener('resize', () => {
+        if (window.MobileNav && typeof window.MobileNav.handleResize === 'function') {
+          window.MobileNav.handleResize();
+        }
+      });
+    }
+
     // Ждем загрузки DataLoader
     let DataLoader = getDataLoader();
     let attempts = 0;
@@ -89,7 +99,8 @@
 
     // Теперь все технологии объединены в один массив, поэтому просто устанавливаем фильтр предприятий
     const selectedEnterprise = localStorage.getItem("selectedEnterprise") || "РМК";
-    const enterpriseList = StateAccessors.getEnterpriseList ? StateAccessors.getEnterpriseList() : Object.keys(StateAccessors.getEnterpriseData() || {});
+    const rawList = StateAccessors.getEnterpriseList ? StateAccessors.getEnterpriseList() : Object.keys(StateAccessors.getEnterpriseData() || {});
+    const enterpriseList = Array.isArray(rawList) ? rawList : [];
     const enterpriseToSwitch = enterpriseList.includes(selectedEnterprise) ? selectedEnterprise : (enterpriseList.length > 0 ? enterpriseList[0] : "РМК");
     StateAccessors.setCurrentEnterprise(enterpriseToSwitch);
 
@@ -141,15 +152,9 @@
     // Инициализация функций управления отчетом
     initReportHandlers();
 
-    // Инициализация мобильной навигации
-    if (window.MobileNav && typeof window.MobileNav.init === 'function') {
-      window.MobileNav.init();
-      // Обновление при изменении размера окна
-      window.addEventListener('resize', () => {
-        if (window.MobileNav && typeof window.MobileNav.handleResize === 'function') {
-          window.MobileNav.handleResize();
-        }
-      });
+    // Обновление меню после загрузки данных (предприятия и т.д.)
+    if (window.MobileNav && typeof window.MobileNav.updateMenu === 'function') {
+      window.MobileNav.updateMenu();
     }
 
     // Инициализация touch жестов

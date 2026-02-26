@@ -153,7 +153,10 @@ import StateManager from '../core/state-manager.js';
       ];
 
       modalSelects.forEach(({ id, items, placeholder }) => {
-        if (Array.isArray(items) && items.length > 0) {
+        // Вендоры и интеграторы всегда инициализируем (даже с пустым списком),
+        // чтобы появилась опция «Добавить нового» в формах добавления и редактирования
+        const isVendorOrIntegrator = ['techVendors', 'editVendors', 'techIntegrators', 'editIntegrators'].includes(id);
+        if (Array.isArray(items) && (items.length > 0 || isVendorOrIntegrator)) {
           Filters.populateSelectForModal(id, items, placeholder);
         }
       });
@@ -190,6 +193,7 @@ import StateManager from '../core/state-manager.js';
     Filters.populateSelectForModal('techBlock', blocksList, 'Выберите');
     Filters.populateSelectForModal('techFunc', functions, 'Выберите');
     Filters.populateSelectForModal('techCompany', enterpriseListForModal, 'Выберите');
+    Filters.populateSelectForModal('techVendors', vendorsList || [], 'Выберите');
     Filters.populateSelectForModal('techTrlStage', getTrlOptions(), 'Выберите стадию');
     Filters.populateSelectForModal('techTechRead', getRatingOptions(), 'Выберите оценку');
     Filters.populateSelectForModal('techOrganRead', getRatingOptions(), 'Выберите оценку');
@@ -197,7 +201,7 @@ import StateManager from '../core/state-manager.js';
     Filters.populateSelectForModal('editBlock', blocksList, 'Выберите');
     Filters.populateSelectForModal('editFunc', functions, 'Выберите');
     Filters.populateSelectForModal('editCompany', enterpriseListForModal, 'Выберите');
-    Filters.populateSelectForModal('editVendors', vendorsList, 'Выберите');
+    Filters.populateSelectForModal('editVendors', vendorsList || [], 'Выберите');
     Filters.populateSelectForModal('editTrlStage', getTrlOptions(), 'Выберите стадию');
     Filters.populateSelectForModal('editTechRead', getRatingOptions(), 'Выберите оценку');
     Filters.populateSelectForModal('editOrganRead', getRatingOptions(), 'Выберите оценку');

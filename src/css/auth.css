@@ -318,6 +318,110 @@ body.dark .btn:hover {
 .btn.loading .btn__spinner { display: block; }
 .btn.loading .btn__text { opacity: 0; }
 
+/* Строка кнопок (2FA: Подтвердить + Отмена) */
+.btn-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 14px;
+}
+.btn-row .btn { margin: 0; flex: 1; min-width: 120px; }
+.btn--secondary {
+    text-decoration: none;
+    text-align: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Сообщение об ошибке валидации */
+.error-msg {
+    color: #dc3545;
+    font-size: 13px;
+    margin-top: 6px;
+}
+body.dark .error-msg { color: #ff4757; }
+
+/* Скрытый текст для скринридеров */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Страница настройки 2FA (auth-2fa-setup.html) */
+.card--wide { width: min(480px, 94vw); }
+.setup-2fa { margin-top: 8px; }
+.setup-2fa__intro {
+    font-size: 14px;
+    color: var(--c-muted);
+    line-height: 1.5;
+    margin: 0 0 16px 0;
+}
+.qr-placeholder {
+    width: 200px;
+    height: 200px;
+    margin: 0 auto 20px;
+    border: 2px dashed var(--c-border);
+    border-radius: 12px;
+    background: var(--input-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.qr-placeholder__inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+}
+.qr-placeholder__icon {
+    width: 48px;
+    height: 48px;
+    color: var(--icon);
+    opacity: .5;
+}
+.qr-placeholder__text {
+    font-size: 12px;
+    color: var(--c-muted);
+    text-align: center;
+}
+.setup-2fa__label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--c-text);
+    margin-bottom: 6px;
+}
+.setup-2fa__instructions {
+    margin: 20px 0 16px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: var(--input-bg);
+    border: 1px solid var(--glass-stroke);
+}
+.setup-2fa__instructions-title {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--c-text);
+}
+.setup-2fa__instructions-list {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 13px;
+    color: var(--c-muted);
+    line-height: 1.6;
+}
+
 .foot {
     margin-top: 14px;
     color: var(--c-muted);

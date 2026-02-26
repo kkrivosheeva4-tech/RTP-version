@@ -1,15 +1,17 @@
-# Готовность фронтенда к подключению бэкенда
+# Готовность фронтенда к подключению бэкенда и план разработки Backend
 
 **Дата анализа:** 16.02.2026  
-**Обновлено:** 16.02.2026 (после завершения рефакторинга этапов 0–7)  
+**Обновлено:** 26.02.2026 (подготовка frontend завершена; добавлен полный план разработки backend)  
 **Версия фронтенда:** РТП-3  
-**Статус:** **Фронтенд подготовлен к подключению бэкенда** (рефакторинг завершён; интеграция API — по плану в разд. 7)
+**Статус:** **Подготовка фронтенда завершена.** Фронтенд готов к интеграции. Backend — по плану разработки (разд. 8).
 
 ---
 
 ## 1. Резюме
 
-Фронтенд прошёл полный рефакторинг (этапы 0–7): введены единый контракт ошибок, разбиение data-loader/export/admin, единый источник пользователей и ролей (roles-config), сокращение дублирования state ↔ window, заготовки **api-config.js** и **api-client.js**, централизация опций форм (form-field-options.js). Данные читаются через StateAccessors; конфиг и заглушка API готовы к реализации. Остаётся **реализовать вызовы API** в api-client, перевести загрузку данных и мутации на бэкенд по перечню критических изменений ниже и по **плану разработки и подключения бэкенда** (разд. 7).
+**Подготовка фронтенда завершена.** Выполнены: рефакторинг (этапы 0–7 и 9–12), DataService с переключением mock/API, ApiClient (request, Bearer, 401/refresh, get/post/put/patch/delete), api-config и api-config.local, MSW для тестов, Playwright E2E, docs/API_INTEGRATION.md и API_FORMAT_MAPPING.md. Фронтенд полностью готов к подключению backend API.
+
+**Дальнейшие шаги:** разработка backend по детальному плану (разд. 8) и поэтапная интеграция по фазам 2–6 (разд. 7).
 
 ---
 
@@ -38,7 +40,7 @@
 - **Модуль прав:** `src/js/modules/business/auth.js` только читает `localStorage.getItem("role")`, не взаимодействует с сервером.
 - **По ТЗ:** JWT (Simple JWT), возможна 2FA. Нужны: вызов API входа, хранение/обновление токена, передача токена в заголовках запросов, обработка 401 и refresh.
 
-**На текущий момент:** Конфигурация API (`config/api-config.js`) и заглушка api-client (`core/api-client.js`) добавлены (этап 6 рефакторинга). Реализация запросов, JWT и 401 — по плану в разд. 7.
+**На текущий момент:** ApiClient полностью реализован (request, Bearer, 401/refresh, get/post/put/patch/delete). Интеграция auth.js с backend — по плану разд. 7 (фазы 4–5).
 
 ### 2.3. Сохранение изменений (мутации)
 
@@ -54,7 +56,7 @@
 ### 2.4. Сетевой слой
 
 - Единственные вызовы `fetch` — к статическим путям (`/src/data/ru/...`). Таймауты и кэш реализованы в `data-loader.js` только для этих URL.
-- **Добавлено (этап 6):** `config/api-config.js` (API_BASE_URL, таймауты, ключи токенов), `core/api-client.js` (заглушка: request/get/post/put/patch/delete). Реализация fetch, JWT, 401 и централизованной обработки ошибок — в рамках плана разд. 7.
+- **Реализовано:** `config/api-config.js` (API_BASE_URL, таймауты, ключи токенов), `core/api-client.js` (request, fetch с таймаутом, Bearer token, 401 + refresh, нормализация ошибок, get/post/put/patch/delete). Подключение к backend — по плану разд. 7–8.
 
 ---
 
@@ -181,15 +183,16 @@
 
 ## 5. Чек-лист готовности к разработке бэкенда
 
-- [x] В проекте есть конфиг с `API_BASE_URL` и модуль api-client (заглушка); реализация JWT и 401 — по плану разд. 7.
-- [ ] Вход выполняется через `POST /api/v1/auth/login/`, токены сохраняются и подставляются в запросы.
-- [ ] Технологии и справочники загружаются с API, а не только из статических JSON и VFS.
-- [ ] Создание/обновление/удаление технологий выполняется через REST API и обновляет state по ответу сервера.
-- [ ] Админ-панель (пользователи, аудит, предприятия, бэкапы) работает с соответствующими API endpoints.
-- [x] Ошибки на фронте: единая точка `reportError` (error-handler.js); обработка ответов API — при реализации api-client.
-- [ ] Уточнены и зафиксированы контракты API (форматы запросов/ответов) в соответствии с ТЗ и OpenAPI-спецификацией.
+- [x] В проекте есть конфиг с `API_BASE_URL` и модуль api-client; JWT и 401/refresh реализованы.
+- [x] ApiClient: request, Bearer token, 401 + refresh, get/post/put/patch/delete, нормализация ошибок.
+- [x] DataService переключается mock/API по `USE_API` и `API_BASE_URL`; форматы запросов/ответов задокументированы.
+- [ ] Вход выполняется через `POST /api/v1/auth/login/`, токены сохраняются и подставляются в запросы (ожидает backend).
+- [ ] Технологии и справочники загружаются с API (ожидает backend).
+- [ ] Создание/обновление/удаление технологий выполняется через REST API (ожидает backend).
+- [ ] Админ-панель (пользователи, аудит, предприятия, бэкапы) работает с API (ожидает backend).
+- [x] Контракты API зафиксированы в docs/API_INTEGRATION.md, API_FORMAT_MAPPING.md, BACKEND_API_REQUIREMENTS.md.
 
-После выполнения всех пунктов фронтенд можно считать полностью интегрированным с бэкендом. Текущее состояние: рефакторинг завершён, заготовки на месте; далее — реализация API и подключение по плану в разд. 7.
+**Текущее состояние:** Подготовка фронтенда завершена. Backend — по детальному плану в разд. 8.
 
 ---
 
@@ -197,16 +200,16 @@
 
 Подробный разбор текущего кода, перечень проблем и **пошаговый план рефакторинга** вынесены в отдельный документ:
 
-**→ [docs/FRONTEND_CODE_STATE_AND_REFACTORING_PLAN.md](FRONTEND_CODE_STATE_AND_REFACTORING_PLAN.md)**
+**→ [docs/FRONTEND_FINAL_PLAN.md](FRONTEND_FINAL_PLAN.md)**, [docs/FRONTEND_COMPLETION_SUMMARY.md](FRONTEND_COMPLETION_SUMMARY.md)
 
-В нём: структура и объём кода, сильные стороны, детальные проблемы с указанием файлов, семь этапов рефакторинга (подготовка, единый контракт ошибок, разбиение data-loader, export, admin, единый источник пользователей/ролей, сокращение дублирования в window и заготовка API, константы форм) и чек-лист для отметки выполнения. После выполнения плана можно приступать к внедрению API по разделам 3–4 настоящего документа.
+Рефакторинг завершён (этапы 0–12). Детальный план разработки backend — в разд. 8 настоящего документа. Интеграция frontend с backend — по фазам 2–6 разд. 7.
 
 <details>
 <summary>Краткая сводка (раскрыть)</summary>
 
 **Что сделано хорошо:** структура по папкам (core/ui/radar/business/integration/analytics), документация модулей, StateManager как единый источник состояния, модули доступности (ARIA, фокус, клавиатура, офлайн), escapeHtml для вывода, централизованный логгер и аудит.
 
-**После рефакторинга (этапы 0–7):** data-loader, export, admin разбиты; введены error-handler, data-source, data-normalize, filter-init, export-fields-config, export-filters, export-pdf, модули админки (admin-common, admin-users, admin-audit и др.), roles-config, api-config, api-client (заглушки), form-field-options; чтение данных переведено на StateAccessors; опции форм централизованы. Остаются глобалы (window.\*) и отсутствие тестов; подключение API — по плану разд. 7.
+**После рефакторинга (этапы 0–12):** data-loader, export, admin разбиты; DataService (mock/API), ApiClient (полная реализация), api-config, form-field-options; чтение данных через StateAccessors; E2E (Playwright), MSW для unit-тестов. Подключение к backend API — по плану разд. 7–8.
 
 </details>
 
@@ -279,3 +282,218 @@
 - **Фаза 6** — после стабилизации основных сценариев.
 
 После выполнения плана все пункты чек-листа разд. 5 будут отмечены, фронтенд будет полностью работать с бэкендом.
+
+---
+
+## 8. План разработки Backend (полный и подробный)
+
+Ниже — детальный план разработки backend API с нуля. Стек: **Django 5.x + Django REST Framework 3.x + djangorestframework-simplejwt**. Frontend ожидает форматы из [API_INTEGRATION.md](API_INTEGRATION.md), [API_FORMAT_MAPPING.md](API_FORMAT_MAPPING.md) и [BACKEND_API_REQUIREMENTS.md](BACKEND_API_REQUIREMENTS.md).
+
+### 8.1. Этап 0. Подготовка проекта и окружения
+
+| Шаг | Действие | Результат / Файлы |
+|-----|----------|-------------------|
+| 0.1 | Создать отдельный репозиторий/папку backend (или `backend/` в корне РТП-3) | Структура проекта |
+| 0.2 | Инициализировать виртуальное окружение: `python -m venv venv` | `venv/` |
+| 0.3 | Установить зависимости: `Django`, `djangorestframework`, `djangorestframework-simplejwt`, `django-cors-headers`, `PyJWT`, `python-dotenv`, `gunicorn`, `psycopg2-binary` (или `sqlite3` для dev) | `requirements.txt` |
+| 0.4 | Создать Django-проект: `django-admin startproject rtp_api .` | `manage.py`, `rtp_api/settings.py`, `rtp_api/urls.py` |
+| 0.5 | Создать приложения: `python manage.py startapp core`, `startapp technologies`, `startapp references`, `startapp auth_custom`, `startapp admin_panel` | `core/`, `technologies/`, `references/`, `auth_custom/`, `admin_panel/` |
+| 0.6 | Настроить `.env`: `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `DATABASE_URL`, `CORS_ALLOWED_ORIGINS` | `.env.example`, `.env` (в .gitignore) |
+| 0.7 | Подключить `corsheaders` в `settings.py`, добавить `CORS_ALLOWED_ORIGINS = ["http://localhost:5173"]`, `ALLOWED_HOSTS` | Готовность к запросам с frontend |
+
+**Критерий приёмки:** `python manage.py runserver` запускается, CORS настроен.
+
+---
+
+### 8.2. Этап 1. Модели данных
+
+#### 8.2.1. Справочники (references)
+
+| Модель | Поля | Примечание |
+|--------|------|------------|
+| `Block` | `id`, `name` | Блоки радара |
+| `Function` | `id`, `name` | Функции |
+| `DigitalDirection` | `id`, `name` | Направления цифровизации |
+| `Vendor` | `id`, `name` | Вендоры |
+| `Integrator` | `id`, `name` | Интеграторы |
+| `Enterprise` | `id`, `name`, `code`, `description` | Предприятия |
+| `FunctionToBlock` | `function_name`, `block_id` (FK) | Маппинг функция → блок |
+| `DirectionToQuadrant` | `direction_id`, `quadrant` | Маппинг направление → квадрант |
+| `EnterpriseBlockMapping` | `enterprise_id`, `block_id` | Привязка предприятий к блокам |
+
+**Файлы:** `references/models.py`, миграции.
+
+#### 8.2.2. Технологии
+
+| Модель | Поля | Примечание |
+|--------|------|------------|
+| `Technology` | `id`, `name`, `description`, `block_id` (FK), `trl_stage`, `market_examples` (JSONArray), `documentation_files` (JSONArray), `created_at`, `updated_at` | Основная модель |
+| `TechnologyBlock` | `technology_id`, `block_id` | M2M через промежуточную для blocks[] |
+| `TechnologyFunction` | `technology_id`, `function_name` | Покрытие функций |
+| `TechnologyDirection` | `technology_id`, `direction_id` | Связь с направлениями |
+| `TechnologyEnterprise` | `technology_id`, `enterprise_id`, `technological_readiness`, `organizational_readiness`, `status` | Рейтинги по предприятиям |
+| `TechnologyVendor` | `technology_id`, `vendor_id`, `integrators` (JSONArray) | Вендоры и интеграторы |
+
+Альтернатива: хранение `blocks`, `functionCoverage`, `enterprises`, `vendors` в JSONField на `Technology` для простоты — формат совпадает с JSON frontend. Выбор: JSONField vs нормализованные таблицы — по требованиям масштабирования.
+
+**Рекомендация для MVP:** JSONField для `blocks`, `functionCoverage`, `directions`, `enterprises`, `vendors` на модели `Technology`; справочники — отдельные модели.
+
+#### 8.2.3. Пользователи и аудит
+
+| Модель | Поля | Примечание |
+|--------|------|------------|
+| `User` | расширение AbstractUser: `role` (choices: admin, architect, analyst, viewer), `enterprise_id` (FK, nullable) | Роли из roles-config |
+| `AuditLog` | `id`, `user_id`, `action`, `model`, `object_id`, `details` (JSON), `created_at` | Журнал аудита |
+| `Backup` | `id`, `name`, `data` (JSON/FileField), `created_at`, `created_by_id` | Резервные копии |
+
+**Файлы:** `auth_custom/models.py`, `admin_panel/models.py`, миграции.
+
+---
+
+### 8.3. Этап 2. Сидеры и начальные данные
+
+| Шаг | Действие | Результат |
+|-----|----------|-----------|
+| 2.1 | Создать management command `load_references`: загрузка из `src/data/ru/*.json` (blocks, functions, enterprises, vendors, integrators, functionToBlock, digitalDirections, directionToQuadrant, enterprises-blocks-mapping) | `references/management/commands/load_references.py` |
+| 2.2 | Создать command `load_technologies`: импорт из `technologies.json` в модель `Technology` | `technologies/management/commands/load_technologies.py` |
+| 2.3 | Создать суперпользователя и тестовых пользователей (admin, architect, analyst, viewer) | Фикстуры или команда |
+| 2.4 | Документировать порядок первичной настройки: миграции → load_references → load_technologies → createsuperuser | README backend |
+
+---
+
+### 8.4. Этап 3. Аутентификация (JWT + 2FA)
+
+| Шаг | Действие | Файлы / Endpoints |
+|-----|----------|-------------------|
+| 3.1 | Установить `djangorestframework-simplejwt`, настроить в `settings.py`: `REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES']` = `JWTAuthentication` | `rtp_api/settings.py` |
+| 3.2 | Реализовать `POST /api/v1/auth/login/`: проверка username/password, возврат `{ access_token, refresh_token }` или `{ requires_2fa: true, session_id }` при включённой 2FA | `auth_custom/views.py`, `auth_custom/urls.py` |
+| 3.3 | Реализовать `POST /api/v1/auth/refresh`: приём refresh_token в body и/или Authorization, выдача новой пары токенов | Использовать Simple JWT `TokenRefreshView` или кастомный view |
+| 3.4 | Реализовать `POST /api/v1/auth/logout/`: добавление refresh в blacklist (если используется Simple JWT blacklist) | `auth_custom/views.py` |
+| 3.5 | Реализовать 2FA (pyotp): `POST /api/v1/auth/2fa/setup/` — генерация secret и QR; `POST /api/v1/auth/2fa/verify/` — проверка кода, выдача токенов | `auth_custom/views_2fa.py` |
+| 3.6 | Модель `User2FA`: `user_id`, `secret`, `enabled` | `auth_custom/models.py` |
+| 3.7 | Endpoint `GET /api/v1/users/me/`: текущий пользователь + роль для frontend | `auth_custom/views.py` |
+
+**Формат ответа login (успех):**
+```json
+{ "access_token": "...", "refresh_token": "...", "token_type": "bearer", "role": "architect" }
+```
+
+**Формат при 2FA:**
+```json
+{ "requires_2fa": true, "session_id": "..." }
+```
+
+---
+
+### 8.5. Этап 4. API технологий
+
+| Шаг | Действие | Endpoint / Сериализатор |
+|-----|----------|-------------------------|
+| 4.1 | Сериализатор `TechnologySerializer`: вход/выход в формате API (см. API_FORMAT_MAPPING.md) | `technologies/serializers.py` |
+| 4.2 | `GET /api/v1/technologies/`: список технологий, фильтр `?enterpriseId=<id>` | `technologies/views.py` |
+| 4.3 | `POST /api/v1/technologies/`: создание, возврат 201 + объект | `technologies/views.py` |
+| 4.4 | `GET /api/v1/technologies/<id>/`: детали | `technologies/views.py` |
+| 4.5 | `PATCH /api/v1/technologies/<id>/`, `PUT /api/v1/technologies/<id>/`: обновление | `technologies/views.py` |
+| 4.6 | `DELETE /api/v1/technologies/<id>/`: удаление, 204 | `technologies/views.py` |
+| 4.7 | `PUT /api/v1/technologies/bulk`: массовое сохранение массива технологий | `technologies/views.py` |
+| 4.8 | Permissions: IsAuthenticated; при необходимости фильтр по enterprise для analyst/viewer | `technologies/permissions.py` |
+
+**Маппинг полей:** см. docs/API_FORMAT_MAPPING.md (API ↔ клиент).
+
+---
+
+### 8.6. Этап 5. API справочников (references)
+
+| Шаг | Действие | Endpoint |
+|-----|----------|----------|
+| 5.1 | `GET /api/v1/references/<name>`: возврат данных справочника по имени (`blocks`, `functions`, `functionToBlock`, `digitalDirections`, `directionToQuadrant`, `vendors`, `integrators`, `enterprises`, `enterprisesBlocksMapping`) | `references/views.py` |
+| 5.2 | `PUT /api/v1/references/<name>`: сохранение справочника (для admin) | `references/views.py` |
+| 5.3 | Формат ответа — как в `src/data/ru/*.json`: массив или объект | Сериализаторы под каждый тип |
+| 5.4 | Permissions: GET — IsAuthenticated; PUT — IsAdminUser | `references/permissions.py` |
+
+---
+
+### 8.7. Этап 6. Админ-панель API
+
+| Шаг | Действие | Endpoint |
+|-----|----------|----------|
+| 6.1 | `GET /api/v1/users/`, `POST /api/v1/users/`, `PATCH /api/v1/users/<id>/`, `DELETE /api/v1/users/<id>/` | `admin_panel/views_users.py` |
+| 6.2 | `GET /api/v1/audit/`: журнал аудита с пагинацией; `DELETE /api/v1/audit/clear/` (опционально) | `admin_panel/views_audit.py` |
+| 6.3 | `GET /api/v1/backups/`, `POST /api/v1/backups/`, `GET /api/v1/backups/<id>/download/`, `DELETE /api/v1/backups/<id>/` | `admin_panel/views_backups.py` |
+| 6.4 | Предприятия: CRUD через `/api/v1/references/enterprises` или отдельные `/api/v1/enterprises/` — по согласованию с frontend | `admin_panel/` или `references/` |
+| 6.5 | Permissions: IsAdminUser для всех admin endpoints | `admin_panel/permissions.py` |
+
+---
+
+### 8.8. Этап 7. Аудит и логирование
+
+| Шаг | Действие | Результат |
+|-----|----------|-----------|
+| 7.1 | Middleware или signal: при создании/обновлении/удалении Technology, User, Backup — запись в AuditLog | `admin_panel/signals.py` или middleware |
+| 7.2 | Поля: user, action (create/update/delete), model, object_id, details (JSON с изменениями), created_at | Модель `AuditLog` |
+| 7.3 | Логин/логаут — запись в AuditLog | В views аутентификации |
+
+---
+
+### 8.9. Этап 8. Обработка ошибок и валидация
+
+| Шаг | Действие | Результат |
+|-----|----------|-----------|
+| 8.1 | Единый формат ошибок: `{ "detail": "..." }` или `{ "detail": [{"msg": "..."}] }` — DRF по умолчанию; при необходимости кастомный exception handler | `rtp_api/exceptions.py` |
+| 8.2 | Валидация в сериализаторах: обязательные поля, уникальность имён технологий, допустимые значения (status, trlStage и т.д.) | `technologies/serializers.py`, `validators.py` |
+| 8.3 | 400 — ошибки валидации; 401 — не авторизован; 403 — нет прав; 404 — не найдено; 500 — логирование и общее сообщение | Стандартное поведение DRF |
+
+---
+
+### 8.10. Этап 9. Безопасность и CORS
+
+| Шаг | Действие | Результат |
+|-----|----------|-----------|
+| 9.1 | CORS: `django-cors-headers`, `CORS_ALLOWED_ORIGINS = ["http://localhost:5173", "https://<prod-domain>"]` | `settings.py` |
+| 9.2 | CSRF: для SPA с JWT в заголовке — отключить CSRF для API или настроить `SessionAuthentication` только для админки Django | `settings.py` |
+| 9.3 | Rate limiting (опционально): `django-ratelimit` или DRF throttling для login/refresh | По необходимости |
+| 9.4 | Секреты в .env, не в коде | `.env.example` |
+
+---
+
+### 8.11. Этап 10. Тестирование и документация
+
+| Шаг | Действие | Результат |
+|-----|----------|-----------|
+| 10.1 | Unit-тесты: модели, сериализаторы, permissions | `pytest` или `TestCase` |
+| 10.2 | API-тесты: аутентификация, CRUD технологий, справочники | `rest_framework.test.APIClient` |
+| 10.3 | OpenAPI/Swagger: `drf-spectacular` или `drf-yasg` | `GET /api/schema/` |
+| 10.4 | README: установка, миграции, load_references, load_technologies, запуск, переменные окружения | `backend/README.md` |
+
+---
+
+### 8.12. Этап 11. Развёртывание (опционально)
+
+| Шаг | Действие | Результат |
+|-----|----------|-----------|
+| 11.1 | Dockerfile: Python, gunicorn, статика | `Dockerfile` |
+| 11.2 | docker-compose: backend + PostgreSQL + nginx (опционально) | `docker-compose.yml` |
+| 11.3 | CI: линтер, тесты, сборка образа | `.github/workflows/backend.yml` |
+
+---
+
+### 8.13. Порядок выполнения и зависимости
+
+```
+Этап 0 (окружение) → Этап 1 (модели) → Этап 2 (сидеры) → Этап 3 (auth) 
+    → Этап 4 (technologies) → Этап 5 (references) → Этап 6 (admin) 
+    → Этап 7 (аудит) → Этап 8 (ошибки) → Этап 9 (безопасность) → Этап 10 (тесты)
+```
+
+**Минимальный MVP для интеграции с frontend:**
+- Этапы 0, 1, 2, 3, 4, 5, 8, 9 — позволяют загружать радар, CRUD технологий, логин, справочники.
+- Этапы 6, 7 — админка и аудит.
+- Этапы 10, 11 — качество и развёртывание.
+
+**Оценка трудозатрат (ориентировочно):**
+- Этапы 0–2: 2–3 дня  
+- Этап 3: 2–3 дня  
+- Этапы 4–5: 3–4 дня  
+- Этапы 6–7: 2–3 дня  
+- Этапы 8–10: 2–3 дня  
+- **Итого MVP:** ~12–16 дней (1 разработчик).

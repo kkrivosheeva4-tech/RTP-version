@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; worker-src 'self' blob:; base-uri 'self';" />
+    content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' http://localhost:8000 http://localhost:5173 ws://localhost:5173; worker-src 'self' blob:; base-uri 'self';" />
   <meta name="description"
     content="Радар технологий для директоров и РП - интерактивная визуализация технологических решений с расширенным функционалом для принятия решений" />
   <meta name="keywords" content="радар технологий, визуализация, технологии, фильтры, экспорт, приоритеты" />
@@ -1156,8 +1156,49 @@
     <div class="modal-body">
       <form id="addBlockForm">
         <div class="form-group">
+          <label>Привязка к предприятиям</label>
+          <p class="form-hint">Выберите предприятие и блок из списка — блок будет привязан к предприятию. Либо введите название нового блока и выберите направление.</p>
+          <div class="form-row">
+            <div class="form-group form-group--half">
+              <label>Предприятия</label>
+              <div class="custom-select-modal" data-field="blockEnterprises" tabindex="0" data-multi="true">
+                <div class="select-trigger">
+                  <span class="selected-text">Выберите</span>
+                  <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 5L6 8L9 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                      stroke-linejoin="round" />
+                  </svg>
+                </div>
+                <ul class="select-options"></ul>
+              </div>
+              <input type="hidden" id="blockEnterprises" name="blockEnterprises" />
+            </div>
+            <div class="form-group form-group--half">
+              <label>Функциональные блоки (из списка)</label>
+              <div class="custom-select-modal" data-field="blockBlocks" tabindex="0" data-multi="true">
+                <div class="select-trigger">
+                  <span class="selected-text">Выберите</span>
+                  <svg class="arrow" width="12" height="12" viewBox="0 0 12 12" fill="none"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 5L6 8L9 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                      stroke-linejoin="round" />
+                  </svg>
+                </div>
+                <ul class="select-options"></ul>
+              </div>
+              <input type="hidden" id="blockBlocks" name="blockBlocks" />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Или создайте новый блок</label>
+          <p class="form-hint">Название и направление нужны только при добавлении нового блока.</p>
+        </div>
+        <div class="form-group">
           <label>Название блока</label>
-          <input type="text" id="blockName" required />
+          <input type="text" id="blockName" placeholder="Только для нового блока" />
         </div>
         <div class="form-group">
           <label>Направления</label>
@@ -1174,7 +1215,7 @@
               <!-- Направления подгружаются из directionToQuadrant.json при открытии модального окна -->
             </ul>
           </div>
-          <input type="hidden" id="blockSector" name="blockSector" required />
+          <input type="hidden" id="blockSector" name="blockSector" />
         </div>
 
         <div class="form-group">

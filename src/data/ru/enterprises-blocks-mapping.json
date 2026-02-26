@@ -1,0 +1,34 @@
+{
+  "enterprises_blocks_mapping": [
+    {
+      "enterprise_id": 1,
+      "enterprise_name": "РМК",
+      "functional_blocks": [1, 2, 3, 8, 9, 24]
+    },
+    {
+      "enterprise_id": 2,
+      "enterprise_name": "ТГОК",
+      "functional_blocks": [1, 2, 5, 10]
+    },
+    {
+      "enterprise_id": 3,
+      "enterprise_name": "МГОК",
+      "functional_blocks": [1, 2, 5, 10]
+    },
+    {
+      "enterprise_id": 4,
+      "enterprise_name": "КБМ",
+      "functional_blocks": [3, 5]
+    },
+    {
+      "enterprise_id": 5,
+      "enterprise_name": "КМЭЗ",
+      "functional_blocks": [1, 2, 3, 5, 10, 24]
+    },
+    {
+      "enterprise_id": 6,
+      "enterprise_name": "АМК",
+      "functional_blocks": [1, 2]
+    }
+  ]
+}

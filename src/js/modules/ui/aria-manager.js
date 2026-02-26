@@ -28,30 +28,13 @@
   // Улучшение навигации
   function enhanceNavigation() {
     // Основная навигация
-    const navElements = document.querySelectorAll('nav, .enterprise-nav');
+    const navElements = document.querySelectorAll('nav');
     navElements.forEach(nav => {
       if (!nav.getAttribute('role')) {
         nav.setAttribute('role', 'navigation');
       }
       if (!nav.getAttribute('aria-label')) {
         nav.setAttribute('aria-label', 'Основная навигация');
-      }
-    });
-
-    // Кнопки навигации предприятий
-    const enterpriseButtons = document.querySelectorAll('.enterprise-nav button');
-    enterpriseButtons.forEach((btn, index) => {
-      if (!btn.getAttribute('aria-label')) {
-        const text = btn.textContent.trim();
-        btn.setAttribute('aria-label', `Переключить на предприятие ${text}`);
-      }
-      if (!btn.getAttribute('role')) {
-        btn.setAttribute('role', 'tab');
-      }
-      if (btn.classList.contains('active')) {
-        btn.setAttribute('aria-selected', 'true');
-      } else {
-        btn.setAttribute('aria-selected', 'false');
       }
     });
 
@@ -264,7 +247,7 @@
       enhanceForms.call({}, [element]);
     } else if (element.matches('.modal-panel, .detail-panel')) {
       enhanceModals.call({}, [element]);
-    } else if (element.matches('nav, .enterprise-nav')) {
+    } else if (element.matches('nav')) {
       enhanceNavigation.call({}, [element]);
     }
   }

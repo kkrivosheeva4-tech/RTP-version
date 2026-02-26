@@ -21,14 +21,6 @@ import Logger from '../core/logger.js';
       showSkip: true
     },
     {
-      id: 'navigation',
-      title: 'Навигация по предприятиям',
-      description: 'Используйте кнопки в верхней части экрана для переключения между предприятиями холдинга.',
-      target: '.enterprise-nav',
-      position: 'bottom',
-      showSkip: true
-    },
-    {
       id: 'sidebar',
       title: 'Боковая панель',
       description: 'Здесь вы можете найти поиск, фильтры и другие инструменты для работы с радаром.',

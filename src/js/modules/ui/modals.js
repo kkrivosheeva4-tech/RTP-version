@@ -101,9 +101,10 @@
         }
       }
 
-      // Заполнение списка направлений в модальном окне «Добавить функциональный блок» из directionToQuadrant.json
+      // Заполнение списка направлений и привязки в модальном окне «Добавить функциональный блок»
       if (panel.id === 'addBlockPanel') {
         populateBlockSectorDirections(panel);
+        populateBlockEnterprisesAndBlocks(panel);
       }
     });
   }
@@ -134,6 +135,27 @@
       li.textContent = name;
       optionsList.appendChild(li);
     });
+  }
+
+  /**
+   * Заполняет селекты «Предприятия» и «Функциональные блоки» в форме добавления блока.
+   * @param {HTMLElement} panel — модальная панель addBlockPanel
+   */
+  function populateBlockEnterprisesAndBlocks(panel) {
+    if (!window.Filters || typeof window.Filters.populateSelectForModal !== 'function') return;
+    const enterprisesList = (window.StateAccessors && window.StateAccessors.getEnterprisesList)
+      ? window.StateAccessors.getEnterprisesList() : (window.StateManager && window.StateManager.get('enterprisesList')) || [];
+    const blocksList = (window.StateAccessors && window.StateAccessors.getBlocksList)
+      ? window.StateAccessors.getBlocksList() : (window.StateManager && window.StateManager.get('blocksList')) || [];
+    const enterpriseNames = Array.isArray(enterprisesList)
+      ? enterprisesList.map(e => typeof e === 'object' ? (e.name || e.enterprise_name || '') : String(e)).filter(Boolean)
+      : [];
+    if (enterpriseNames.length > 0) {
+      window.Filters.populateSelectForModal('blockEnterprises', enterpriseNames, 'Выберите');
+    }
+    if (Array.isArray(blocksList) && blocksList.length > 0) {
+      window.Filters.populateSelectForModal('blockBlocks', blocksList, 'Выберите');
+    }
   }
 
   // Скрыть модальное окно
@@ -218,16 +240,21 @@
           if (addBlockForm) addBlockForm.reset();
           const functionsContainer = DOMCache.get('functionsContainer');
           if (functionsContainer) functionsContainer.innerHTML = '';
-          // Сброс кастомных выпадающих списков
-          const sectorSelect = DOMCache.find('.custom-select-modal[data-field="blockSector"]');
-          if (sectorSelect) {
-            const hiddenInput = DOMCache.get('blockSector');
-            if (hiddenInput) hiddenInput.value = '';
-            const selectedTextEl = sectorSelect.querySelector('.selected-text');
-            if (selectedTextEl) selectedTextEl.textContent = 'Выберите';
-            sectorSelect.classList.remove('open');
-            sectorSelect.querySelectorAll('.select-options li').forEach(li => li.classList.remove('selected'));
-          }
+          ['blockSector', 'blockEnterprises', 'blockBlocks'].forEach(fieldId => {
+            const select = DOMCache.find(`.custom-select-modal[data-field="${fieldId}"]`);
+            if (select) {
+              const hiddenInput = DOMCache.get(fieldId);
+              if (hiddenInput) hiddenInput.value = '';
+              const selectedTextEl = select.querySelector('.selected-text');
+              if (selectedTextEl) selectedTextEl.textContent = 'Выберите';
+              select.classList.remove('open');
+              select.querySelectorAll('.select-options li').forEach(li => li.classList.remove('selected'));
+              select.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = false; });
+              if (typeof window.renderMultiSelectTags === 'function') {
+                window.renderMultiSelectTags(select);
+              }
+            }
+          });
         }
       }
     };

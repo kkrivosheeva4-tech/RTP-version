@@ -18,7 +18,8 @@ export const REFERENCE_NAMES = [
   'directionToQuadrant',
   'vendors',
   'integrators',
-  'enterprises'
+  'enterprises',
+  'enterprisesBlocksMapping'
 ];
 
 /** Маппинг имён справочников на имена файлов */
@@ -30,7 +31,8 @@ const REFERENCE_TO_FILE = {
   directionToQuadrant: 'directionToQuadrant.json',
   vendors: 'vendors.json',
   integrators: 'integrators.json',
-  enterprises: 'enterprises.json'
+  enterprises: 'enterprises.json',
+  enterprisesBlocksMapping: 'enterprises-blocks-mapping.json'
 };
 
 function getUseApi() {
@@ -66,6 +68,12 @@ function wrapApiError(err) {
 
 async function mockLoadReference(name) {
   const filename = REFERENCE_TO_FILE[name] || `${name}.json`;
+  if (name === 'enterprisesBlocksMapping') {
+    const fromVfs = vfsRead(filename);
+    if (fromVfs !== null && fromVfs !== undefined && typeof fromVfs === 'object') {
+      return fromVfs;
+    }
+  }
   const result = await loadJsonPreferVfs(filename, true);
   if (result && result.data !== null && result.data !== undefined) {
     return result.data;

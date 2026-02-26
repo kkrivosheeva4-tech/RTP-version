@@ -13,45 +13,6 @@
   }
 
   /**
-   * Инициализация навигации по предприятиям (для шапки на странице справки)
-   * На странице справки нет радара, поэтому по клику просто сохраняем выбор и переходим на radar.html.
-   */
-  function initEnterpriseNav() {
-    const nav = document.querySelector('.enterprise-nav');
-    if (!nav) return;
-
-    const buttons = nav.querySelectorAll('button');
-    if (!buttons.length) return;
-
-    buttons.forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const text = (btn.textContent || '').trim();
-        if (!text) return;
-        localStorage.setItem('selectedEnterprise', text);
-
-        try {
-          sessionStorage.setItem('silentEnterpriseNav', '1');
-        } catch (err) { window.Logger?.warn('help: sessionStorage setItem', err); }
-
-        window.location.href = '/src/pages/radar.html';
-      });
-    });
-
-    function markActive() {
-      const selected = localStorage.getItem('selectedEnterprise');
-      buttons.forEach((b) => b.classList.remove('active'));
-      if (!selected) return;
-      const activeBtn = Array.from(buttons).find(
-        (b) => (b.textContent || '').trim() === selected
-      );
-      if (activeBtn) activeBtn.classList.add('active');
-    }
-
-    markActive();
-    window.addEventListener('popstate', markActive);
-  }
-
-  /**
    * Инициализация поиска по справке
    */
   function initSearch() {
@@ -340,7 +301,6 @@
    */
   function init() {
     initTheme();
-    initEnterpriseNav();
     initSearch();
     initNavigation();
     initAuth();

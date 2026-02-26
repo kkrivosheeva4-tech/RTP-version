@@ -59,17 +59,27 @@ import { DOMCache } from '../core/dom-utils.js';
     function parseSelectedVendors(raw) {
       const s = String(raw || "").trim();
       if (!s) return [];
+      let arr = [];
       if (s.startsWith("[")) {
         try {
           const parsed = JSON.parse(s);
-          return Array.isArray(parsed)
+          arr = Array.isArray(parsed)
             ? parsed.map(x => String(x || "").trim()).filter(Boolean)
             : [];
         } catch (e) {
           return [];
         }
+      } else {
+        arr = [s].map(x => String(x || "").trim()).filter(Boolean);
       }
-      return [s].map(x => String(x || "").trim()).filter(Boolean);
+      // Дедупликация по нормализованному имени (избегаем дублирования строк вендоров)
+      const seen = new Set();
+      return arr.filter((v) => {
+        const norm = v.trim().toLowerCase();
+        if (seen.has(norm)) return false;
+        seen.add(norm);
+        return true;
+      });
     }
 
     function vendorKeyFromName(name) {
@@ -86,13 +96,34 @@ import { DOMCache } from '../core/dom-utils.js';
       return [];
     }
 
+    // Получить полный список интеграторов (JSON + localStorage) для селектов по вендорам
+    async function getIntegratorsListForModal() {
+      if (window.VendorsFiles && typeof window.VendorsFiles.loadIntegratorsList === "function") {
+        try {
+          const list = await window.VendorsFiles.loadIntegratorsList();
+          return Array.isArray(list) ? list : [];
+        } catch (e) { /* ignore */ }
+      }
+      return getIntegratorsListFromState();
+    }
+
     function setGroupVisible(groupId, visible) {
       const el = document.getElementById(groupId);
       if (!el) return;
       el.style.display = visible ? "" : "none";
     }
 
-    function renderVendorIntegrators(prefix, existingVendors) {
+    let _renderVendorIntegratorsBusy = false;
+    async function renderVendorIntegrators(prefix, existingVendors) {
+      if (_renderVendorIntegratorsBusy) return;
+      _renderVendorIntegratorsBusy = true;
+      try {
+        return await _renderVendorIntegratorsImpl(prefix, existingVendors);
+      } finally {
+        _renderVendorIntegratorsBusy = false;
+      }
+    }
+    async function _renderVendorIntegratorsImpl(prefix, existingVendors) {
       const vendorsFieldId = prefix === "edit" ? "editVendors" : "techVendors";
       const groupId = prefix === "edit" ? "editVendorIntegratorsGroup" : "techVendorIntegratorsGroup";
       const containerId = prefix === "edit" ? "editVendorIntegratorsByVendor" : "techVendorIntegratorsByVendor";
@@ -114,15 +145,20 @@ import { DOMCache } from '../core/dom-utils.js';
         const fieldId = input.id;
         const value = input.value || '';
         if (value) {
-          // Извлекаем имя вендора из fieldId для сопоставления
           const vendorKey = fieldId.replace(prefix + 'VendorIntegrators__', '');
           savedIntegratorsValues.set(vendorKey.toLowerCase(), value);
+          savedIntegratorsValues.set(vendorKey, value); // сохраняем и без lowerCase для совместимости
         }
       });
 
+      // При переименовании вендора — переносим интеграторы со старого ключа на новый
+      const renameMap = window._lastVendorRenameMap || null;
+      if (window._lastVendorRenameMap) window._lastVendorRenameMap = null;
+
       container.innerHTML = "";
 
-      const integratorsList = getIntegratorsListFromState();
+      // Используем полный список интеграторов (JSON + localStorage) для корректного отображения
+      const integratorsList = await getIntegratorsListForModal();
       const existingMap = new Map();
       (Array.isArray(existingVendors) ? existingVendors : []).forEach(v => {
         const vn = (v && typeof v === "object") ? String(v.name || "").trim() : String(v || "").trim();
@@ -180,8 +216,16 @@ import { DOMCache } from '../core/dom-utils.js';
         const vendorKey = vendorKeyFromName(vendorName);
         let pre = existingMap.get(vendorName.toLowerCase()) || [];
 
-        // Если есть сохраненное значение из текущей формы, используем его
-        const savedValue = savedIntegratorsValues.get(vendorKey.toLowerCase());
+        // При переименовании вендора — берём интеграторы со старого ключа
+        let savedValue = savedIntegratorsValues.get(vendorKey.toLowerCase()) || savedIntegratorsValues.get(vendorKey);
+        if (renameMap && renameMap.oldName && renameMap.newName) {
+          const norm = (s) => String(s || '').trim().toLowerCase();
+          if (norm(vendorName) === norm(renameMap.newName)) {
+            const oldKey = vendorKeyFromName(renameMap.oldName);
+            savedValue = savedValue || savedIntegratorsValues.get(oldKey.toLowerCase()) || savedIntegratorsValues.get(oldKey);
+          }
+        }
+
         if (savedValue) {
           try {
             // Пытаемся распарсить сохраненное значение
@@ -209,14 +253,22 @@ import { DOMCache } from '../core/dom-utils.js';
       });
     }
 
-    // Hook vendors changes to re-render vendor->integrators rows
+    // Hook vendors changes to re-render vendor->integrators rows (debounce для предотвращения дублирования)
+    let renderVendorIntegratorsTimer = null;
+    const scheduleRenderVendorIntegrators = (p) => {
+      if (renderVendorIntegratorsTimer) clearTimeout(renderVendorIntegratorsTimer);
+      renderVendorIntegratorsTimer = setTimeout(() => {
+        renderVendorIntegratorsTimer = null;
+        renderVendorIntegrators(p);
+      }, 50);
+    };
     ["tech", "edit"].forEach((p) => {
       const vendorsFieldId = p === "edit" ? "editVendors" : "techVendors";
       const el = document.getElementById(vendorsFieldId);
       if (el && el.dataset.vendorIntegratorsHooked !== "true") {
         el.dataset.vendorIntegratorsHooked = "true";
-        el.addEventListener("change", () => renderVendorIntegrators(p), false);
-        el.addEventListener("input", () => renderVendorIntegrators(p), false);
+        el.addEventListener("change", () => scheduleRenderVendorIntegrators(p), false);
+        el.addEventListener("input", () => scheduleRenderVendorIntegrators(p), false);
       }
       setTimeout(() => renderVendorIntegrators(p), 0);
     });
@@ -833,14 +885,28 @@ import { DOMCache } from '../core/dom-utils.js';
         if (exampleDescEl) exampleDescEl.value = currentTech.exampleDesc || "";
         // Вендоры + интеграторы по каждому вендору
         try {
-          const vendorNames = Array.isArray(currentTech.vendors)
+          let vendorNames = Array.isArray(currentTech.vendors)
             ? currentTech.vendors.map(v => normalizeVendorName(v)).filter(Boolean)
             : [];
+          // Дедупликация вендоров (избегаем дублирования блоков при открытии модалки редактирования)
+          const seen = new Set();
+          vendorNames = vendorNames.filter((v) => {
+            const norm = v.trim().toLowerCase();
+            if (seen.has(norm)) return false;
+            seen.add(norm);
+            return true;
+          });
+          // Обновляем селекты актуальным списком (включая вендоров/интеграторов из модалки добавления)
+          const hiddenVendors = document.getElementById("editVendors");
+          if (hiddenVendors) hiddenVendors.value = vendorNames.length ? JSON.stringify(vendorNames) : "";
+          if (window.VendorsFiles && typeof window.VendorsFiles.updateVendorsSelects === "function") {
+            window.VendorsFiles.updateVendorsSelects();
+          }
+          if (window.VendorsFiles && typeof window.VendorsFiles.updateIntegratorsSelects === "function") {
+            window.VendorsFiles.updateIntegratorsSelects();
+          }
           if (typeof window.setCustomSelectValue === "function") {
             window.setCustomSelectValue("editVendors", vendorNames);
-          } else {
-            const hidden = document.getElementById("editVendors");
-            if (hidden) hidden.value = vendorNames.length ? JSON.stringify(vendorNames) : "";
           }
           // После установки вендоров — отрисуем блоки интеграторов и префиллим из currentTech.vendors
           setTimeout(() => {
@@ -969,6 +1035,14 @@ import { DOMCache } from '../core/dom-utils.js';
     } else {
       vendorNames = [s].map(x => String(x || '').trim()).filter(Boolean);
     }
+    // Дедупликация вендоров (сохраняем порядок, оставляем первое вхождение)
+    const seen = new Set();
+    vendorNames = vendorNames.filter((v) => {
+      const norm = v.trim().toLowerCase();
+      if (seen.has(norm)) return false;
+      seen.add(norm);
+      return true;
+    });
 
     const prefix = fieldId.startsWith('edit') ? 'edit' : 'tech';
     const vendorKeyFromName = (name) => encodeURIComponent(String(name || '').trim()).replace(/%/g, '_');
@@ -2166,41 +2240,73 @@ import { DOMCache } from '../core/dom-utils.js';
     }
     initAddBlockFormHandlerAttempts = 0; // Сбрасываем счетчик при успешной загрузке
 
+    const blockEnterprisesInput = document.getElementById('blockEnterprises');
+    if (blockEnterprisesInput && !blockEnterprisesInput.dataset.blockBlocksListener) {
+      blockEnterprisesInput.dataset.blockBlocksListener = '1';
+      blockEnterprisesInput.addEventListener('input', () => {
+        if (typeof window.updateBlockBlocksForEnterprises === 'function') {
+          window.updateBlockBlocksForEnterprises();
+        }
+      });
+      blockEnterprisesInput.addEventListener('change', () => {
+        if (typeof window.updateBlockBlocksForEnterprises === 'function') {
+          window.updateBlockBlocksForEnterprises();
+        }
+      });
+    }
+
     const addBlockForm = DOMCache.get('addBlockForm');
     if (addBlockForm) {
       addBlockForm.onsubmit = async (e) => {
         e.preventDefault();
         const nameInput = DOMCache.get('blockName');
         const sectorInput = DOMCache.get('blockSector');
+        const blockEnterprisesInput = document.getElementById('blockEnterprises');
+        const blockBlocksInput = document.getElementById('blockBlocks');
         if (!nameInput) { DataLoader.showNotification('Не найдено поле имени блока (blockName)', false); return; }
-        if (!sectorInput) { DataLoader.showNotification('Не найдено поле выбора направления (blockSector)', false); return; }
+
         const blockName = (nameInput.value || '').trim();
 
-        // Получаем значение направления из кастомного селекта
-        let sectorName = (sectorInput.value || '').trim();
+        // Читаем выбранные предприятия и блоки из списка
+        let selectedEnterprises = [];
+        let selectedBlocks = [];
+        if (blockEnterprisesInput && blockEnterprisesInput.value) {
+          try {
+            const p = JSON.parse(blockEnterprisesInput.value);
+            selectedEnterprises = Array.isArray(p) ? p : (p ? [p] : []);
+          } catch {
+            selectedEnterprises = blockEnterprisesInput.value.split(',').map(s => s.trim()).filter(Boolean);
+          }
+        }
+        if (blockBlocksInput && blockBlocksInput.value) {
+          try {
+            const p = JSON.parse(blockBlocksInput.value);
+            selectedBlocks = Array.isArray(p) ? p : (p ? [p] : []);
+          } catch {
+            selectedBlocks = blockBlocksInput.value.split(',').map(s => s.trim()).filter(Boolean);
+          }
+        }
 
-        // Если значение пустое, пробуем получить из атрибута data-value селекта
+        // Получаем значение направления из кастомного селекта
+        let sectorName = (sectorInput && sectorInput.value) ? (sectorInput.value || '').trim() : '';
         if (!sectorName) {
           const sectorSelect = DOMCache.query('.custom-select-modal[data-field="blockSector"]');
           if (sectorSelect) {
             const sectorValue = sectorSelect.getAttribute('data-value') || '';
             if (sectorValue) {
               try {
-                // Если это JSON, парсим
                 const parsed = JSON.parse(sectorValue);
                 sectorName = Array.isArray(parsed) ? parsed[0] : parsed;
               } catch (e) {
                 sectorName = sectorValue;
               }
             }
-            // Также пробуем получить из текста выбранного элемента
             if (!sectorName) {
               const selectedTextEl = sectorSelect.querySelector('.selected-text');
               if (selectedTextEl && selectedTextEl.textContent && selectedTextEl.textContent !== 'Выберите') {
                 sectorName = selectedTextEl.textContent.trim();
               }
             }
-            // Или из выбранного li элемента
             if (!sectorName) {
               const selectedLi = sectorSelect.querySelector('.select-options li.selected');
               if (selectedLi) {
@@ -2210,8 +2316,39 @@ import { DOMCache } from '../core/dom-utils.js';
           }
         }
 
-        if (!blockName) { DataLoader.showNotification('Введите имя блока', false); return; }
-        if (!sectorName || sectorName === 'Выберите') { DataLoader.showNotification('Выберите направление', false); return; }
+        const hasEnterprise = selectedEnterprises.length > 0;
+        const hasBlockFromList = selectedBlocks.length > 0;
+        const hasBlockName = blockName.length > 0;
+        const hasDirection = !!(sectorName && sectorName !== 'Выберите');
+
+        // Валидация: если выбрано предприятие ИЛИ направление — нужен либо блок из списка, либо название
+        if ((hasEnterprise || hasDirection) && !hasBlockFromList && !hasBlockName) {
+          DataLoader.showNotification('Выберите блок из списка или введите название нового блока', false);
+          return;
+        }
+        // Для нового блока (есть название) нужно направление
+        if (hasBlockName && !hasDirection) {
+          DataLoader.showNotification('Для нового блока выберите направление', false);
+          return;
+        }
+
+        // Режим «только привязка»: предприятие + блок из списка, без создания нового блока
+        if (hasEnterprise && hasBlockFromList && !hasBlockName) {
+          if (DataLoader.ensureEnterpriseBlockMapping) {
+            await DataLoader.ensureEnterpriseBlockMapping({ company: selectedEnterprises, blocks: selectedBlocks });
+          }
+          if (typeof window.hideModal === 'function') {
+            window.hideModal('addBlockPanel');
+          }
+          DataLoader.showNotification('Блоки привязаны к предприятиям', true);
+          return;
+        }
+
+        // Нет ни привязки, ни нового блока — нечего сохранять
+        if (!hasBlockName) {
+          DataLoader.showNotification('Выберите предприятие и блок для привязки или введите название нового блока', false);
+          return;
+        }
 
         // Получаем QUADRANTS из window или создаем дефолтные значения
         let QUADRANTS_LOCAL = window.QUADRANTS || [];
@@ -2501,6 +2638,16 @@ import { DOMCache } from '../core/dom-utils.js';
             document.querySelectorAll('.sector-item').forEach(i => i.classList.remove('active'));
             sidebarItem.classList.add('active');
           }
+        }
+
+        // Привязка блоков к предприятиям (если выбраны)
+        let mappingEnterprises = selectedEnterprises;
+        let mappingBlocks = [...selectedBlocks];
+        if (existingBlockIndex === -1 && blockName) {
+          mappingBlocks = [...new Set([...mappingBlocks, blockName])];
+        }
+        if (mappingEnterprises.length > 0 && mappingBlocks.length > 0 && DataLoader.ensureEnterpriseBlockMapping) {
+          await DataLoader.ensureEnterpriseBlockMapping({ company: mappingEnterprises, blocks: mappingBlocks });
         }
 
         if (typeof window.hideModal === 'function') {

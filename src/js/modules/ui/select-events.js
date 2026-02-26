@@ -1041,6 +1041,14 @@ import { DOMCache } from '../core/dom-utils.js';
         return;
       }
 
+      // Не закрываем при клике на кнопки редактирования/удаления и при inline-редактировании
+      if (e.target.closest(".edit-vendor-btn") || e.target.closest(".edit-integrator-btn") ||
+          e.target.closest(".delete-vendor-btn") || e.target.closest(".delete-integrator-btn") ||
+          e.target.closest(".vendor-edit-input") || e.target.closest(".integrator-edit-input") ||
+          e.target.closest(".vendor-edit-error") || e.target.closest(".integrator-edit-error")) {
+        return;
+      }
+
       // Закрываем все модальные селекты, кроме недавно открытых
       document.querySelectorAll(".custom-select-modal.open").forEach((select) => {
         // Проверяем, не был ли селект только что открыт
@@ -1151,8 +1159,8 @@ import { DOMCache } from '../core/dom-utils.js';
         return;
       }
 
-      // ВАЖНО: Пропускаем клики по кнопкам добавления вендоров и интеграторов
-      // Эти клики должны обрабатываться обработчиками в vendors-files.js и filters.js
+      // ВАЖНО: Пропускаем клики по кнопкам добавления, редактирования и удаления вендоров и интеграторов
+      // Эти клики обрабатываются в vendors-files.js и filters.js
       if (e.target.closest(".add-new-vendor-btn") ||
           e.target.closest(".add-new-integrator-btn") ||
           e.target.closest(".add-new-vendor-option") ||
@@ -1160,6 +1168,10 @@ import { DOMCache } from '../core/dom-utils.js';
           e.target.closest(".add-new-btn") ||
           e.target.closest(".add-new-input") ||
           e.target.closest(".add-new-integrator-option") ||
+          e.target.closest(".edit-vendor-btn") ||
+          e.target.closest(".edit-integrator-btn") ||
+          e.target.closest(".delete-vendor-btn") ||
+          e.target.closest(".delete-integrator-btn") ||
           e.target.classList.contains("new-vendor-input") ||
           e.target.classList.contains("new-integrator-input")) {
         return;
@@ -1475,6 +1487,9 @@ import { DOMCache } from '../core/dom-utils.js';
             window.updateTechRatingsVisibility();
           }, 50);
         }
+        if (hiddenInputId === "techCompany" && typeof window.updateModalBlocksForEnterprises === "function") {
+          setTimeout(() => window.updateModalBlocksForEnterprises("techCompany"), 50);
+        }
         // Если это поле editCompany, обновляем видимость полей оценок в форме редактирования
         if (
           hiddenInputId === "editCompany" &&
@@ -1483,6 +1498,12 @@ import { DOMCache } from '../core/dom-utils.js';
           setTimeout(() => {
             window.updateEditTechRatingsVisibility();
           }, 50);
+        }
+        if (hiddenInputId === "editCompany" && typeof window.updateModalBlocksForEnterprises === "function") {
+          setTimeout(() => window.updateModalBlocksForEnterprises("editCompany"), 50);
+        }
+        if (hiddenInputId === "blockEnterprises" && typeof window.updateBlockBlocksForEnterprises === "function") {
+          setTimeout(() => window.updateBlockBlocksForEnterprises(), 50);
         }
 
         // Динамическая фильтрация блоков и функций в модалке добавления технологии
@@ -1633,6 +1654,9 @@ import { DOMCache } from '../core/dom-utils.js';
           window.updateTechRatingsVisibility();
         }, 50);
       }
+      if (hiddenInputId === "techCompany" && typeof window.updateModalBlocksForEnterprises === "function") {
+        setTimeout(() => window.updateModalBlocksForEnterprises("techCompany"), 50);
+      }
       // Обновляем видимость полей оценок для editCompany
       if (
         hiddenInputId === "editCompany" &&
@@ -1641,6 +1665,12 @@ import { DOMCache } from '../core/dom-utils.js';
         setTimeout(() => {
           window.updateEditTechRatingsVisibility();
         }, 50);
+      }
+      if (hiddenInputId === "editCompany" && typeof window.updateModalBlocksForEnterprises === "function") {
+        setTimeout(() => window.updateModalBlocksForEnterprises("editCompany"), 50);
+      }
+      if (hiddenInputId === "blockEnterprises" && typeof window.updateBlockBlocksForEnterprises === "function") {
+        setTimeout(() => window.updateBlockBlocksForEnterprises(), 50);
       }
 
       // Динамическая фильтрация для techSector (single-select)
@@ -1821,6 +1851,9 @@ import { DOMCache } from '../core/dom-utils.js';
             window.updateTechRatingsVisibility();
           }, 50);
         }
+        if (hiddenInputId === "techCompany" && typeof window.updateModalBlocksForEnterprises === "function") {
+          setTimeout(() => window.updateModalBlocksForEnterprises("techCompany"), 50);
+        }
         // Если это поле editCompany, обновляем видимость полей оценок в форме редактирования
         if (
           hiddenInputId === "editCompany" &&
@@ -1829,6 +1862,12 @@ import { DOMCache } from '../core/dom-utils.js';
           setTimeout(() => {
             window.updateEditTechRatingsVisibility();
           }, 50);
+        }
+        if (hiddenInputId === "editCompany" && typeof window.updateModalBlocksForEnterprises === "function") {
+          setTimeout(() => window.updateModalBlocksForEnterprises("editCompany"), 50);
+        }
+        if (hiddenInputId === "blockEnterprises" && typeof window.updateBlockBlocksForEnterprises === "function") {
+          setTimeout(() => window.updateBlockBlocksForEnterprises(), 50);
         }
 
         // Динамическая фильтрация блоков и функций в модалке добавления технологии

@@ -264,11 +264,13 @@ import Logger from '../core/logger.js';
       existingVendors.push(vendorStr);
       localStorage.setItem(VENDORS_STORAGE_KEY, JSON.stringify(existingVendors));
 
-      // Обновляем кэш - перезагружаем список
+      // Обновляем кэш и state для синхронизации с DataLoader
       vendorsListCache = null;
-      // НЕ вызываем updateVendorsSelects здесь, так как новая опция уже добавлена в DOM в filters.js
-      // updateVendorsSelects будет вызван только если модальное окно будет закрыто и открыто заново
-      // Это предотвращает сброс выбранных значений при добавлении нового вендора
+      if (window.StateManager && typeof window.StateManager.get === 'function') {
+        const fromState = window.StateManager.get('vendorsList') || [];
+        const merged = [...new Set([...fromState, ...existingVendors])];
+        window.StateManager.set('vendorsList', merged);
+      }
 
       if (Logger) {
         Logger.debug('Добавлен новый вендор в localStorage', vendorStr);
@@ -313,11 +315,13 @@ import Logger from '../core/logger.js';
       existingIntegrators.push(integratorStr);
       localStorage.setItem(INTEGRATORS_STORAGE_KEY, JSON.stringify(existingIntegrators));
 
-      // Обновляем кэш - перезагружаем список
+      // Обновляем кэш и state для синхронизации с DataLoader
       integratorsListCache = null;
-      // НЕ вызываем updateIntegratorsSelects здесь, так как новая опция уже добавлена в DOM в filters.js
-      // updateIntegratorsSelects будет вызван только если модальное окно будет закрыто и открыто заново
-      // Это предотвращает сброс выбранных значений при добавлении нового интегратора
+      if (window.StateManager && typeof window.StateManager.get === 'function') {
+        const fromState = window.StateManager.get('integratorsList') || [];
+        const merged = [...new Set([...fromState, ...existingIntegrators])];
+        window.StateManager.set('integratorsList', merged);
+      }
 
       if (Logger) {
         Logger.debug('Добавлен новый интегратор в localStorage', integratorStr);
@@ -373,37 +377,36 @@ import Logger from '../core/logger.js';
 
         loadList.then(vendorsList => {
           const list = Array.isArray(vendorsList) ? vendorsList : [];
-          if (list.length > 0) {
-            window.Filters.populateSelectForModal(fieldId, list, 'Выберите');
+          // Всегда заполняем селект (даже при пустом списке) — для отображения опции «Добавить нового»
+          window.Filters.populateSelectForModal(fieldId, list, 'Выберите');
 
-            // Восстанавливаем выбранные значения вендоров
-            if (savedValue && typeof window.setCustomSelectValue === 'function') {
-              requestAnimationFrame(() => {
-                window.setCustomSelectValue(fieldId, savedValue);
-                if (hiddenInput) {
-                  hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
-                  hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
-                }
+          // Восстанавливаем выбранные значения вендоров
+          if (savedValue && typeof window.setCustomSelectValue === 'function') {
+            requestAnimationFrame(() => {
+              window.setCustomSelectValue(fieldId, savedValue);
+              if (hiddenInput) {
+                hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+                hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
+              }
 
-                // Восстанавливаем значения интеграторов по вендорам
-                setTimeout(() => {
-                  savedIntegratorsByVendor.forEach((value, fieldIdForIntegrators) => {
-                    let targetFieldId = fieldIdForIntegrators;
-                    if (vendorRenameMap && vendorRenameMap.oldName && vendorRenameMap.newName) {
-                      const oldKey = vendorKeyFromName(vendorRenameMap.oldName);
-                      const newKey = vendorKeyFromName(vendorRenameMap.newName);
-                      if (fieldIdForIntegrators.includes(oldKey)) {
-                        targetFieldId = fieldIdForIntegrators.replace(oldKey, newKey);
-                      }
+              // Восстанавливаем значения интеграторов по вендорам
+              setTimeout(() => {
+                savedIntegratorsByVendor.forEach((value, fieldIdForIntegrators) => {
+                  let targetFieldId = fieldIdForIntegrators;
+                  if (vendorRenameMap && vendorRenameMap.oldName && vendorRenameMap.newName) {
+                    const oldKey = vendorKeyFromName(vendorRenameMap.oldName);
+                    const newKey = vendorKeyFromName(vendorRenameMap.newName);
+                    if (fieldIdForIntegrators.includes(oldKey)) {
+                      targetFieldId = fieldIdForIntegrators.replace(oldKey, newKey);
                     }
-                    const integratorInput = document.getElementById(targetFieldId);
-                    if (integratorInput && typeof window.setCustomSelectValue === 'function') {
-                      window.setCustomSelectValue(targetFieldId, value);
-                    }
-                  });
-                }, 300);
-              });
-            }
+                  }
+                  const integratorInput = document.getElementById(targetFieldId);
+                  if (integratorInput && typeof window.setCustomSelectValue === 'function') {
+                    window.setCustomSelectValue(targetFieldId, value);
+                  }
+                });
+              }, 300);
+            });
           }
         });
       }
@@ -437,16 +440,16 @@ import Logger from '../core/logger.js';
       const customSelect = document.querySelector(`.custom-select-modal[data-field="${fieldId}"]`);
       if (customSelect && window.Filters && typeof window.Filters.populateSelectForModal === 'function') {
         loadIntegratorsList().then(integratorsList => {
-          if (Array.isArray(integratorsList) && integratorsList.length > 0) {
-            window.Filters.populateSelectForModal(fieldId, integratorsList, 'Выберите');
+          const list = Array.isArray(integratorsList) ? integratorsList : [];
+          // Всегда заполняем селект (даже при пустом списке) — для отображения опции «Добавить нового»
+          window.Filters.populateSelectForModal(fieldId, list, 'Выберите');
 
-            // Восстанавливаем выбранные значения
-            const savedValue = savedIntegratorValues.get(fieldId);
-            if (savedValue && typeof window.setCustomSelectValue === 'function') {
-              requestAnimationFrame(() => {
-                window.setCustomSelectValue(fieldId, savedValue);
-              });
-            }
+          // Восстанавливаем выбранные значения
+          const savedValue = savedIntegratorValues.get(fieldId);
+          if (savedValue && typeof window.setCustomSelectValue === 'function') {
+            requestAnimationFrame(() => {
+              window.setCustomSelectValue(fieldId, savedValue);
+            });
           }
         });
       }

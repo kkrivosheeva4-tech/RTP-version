@@ -5,7 +5,7 @@
   "main": "rmk.js",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/ensure-api-config-local.js && vite build",
+    "build": "node scripts/ensure-api-config-local.mjs && vite build",
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run",

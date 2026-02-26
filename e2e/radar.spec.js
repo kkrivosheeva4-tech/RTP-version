@@ -25,8 +25,7 @@ test.describe('Загрузка радара', () => {
 
     await page.waitForSelector('#techRadar', { state: 'visible', timeout: 15000 });
 
-    const addBtn = page.locator('#addTechBtn');
-    await expect(addBtn).toBeVisible({ timeout: 5000 });
-    await expect(addBtn).toHaveAttribute('data-tooltip', /Добавить технологию/i);
+    const addIconBtn = page.getByRole('button', { name: 'Добавить' });
+    await expect(addIconBtn).toBeVisible({ timeout: 15000 });
   });
 });

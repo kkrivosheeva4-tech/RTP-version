@@ -143,6 +143,56 @@ import StateManager from '../core/state-manager.js';
     return Array.from(blocksSet).sort();
   }
 
+  // Получить блоки для выбранных предприятий из привязки (шаг 9.5).
+  // При нескольких предприятиях возвращает объединение блоков всех выбранных.
+  function getBlocksForEnterprisesFromMapping(selectedEnterpriseNames) {
+    if (!selectedEnterpriseNames || selectedEnterpriseNames.length === 0) return null;
+    const enterpriseIdToBlockIds = (window.StateAccessors && window.StateAccessors.getEnterpriseIdToBlockIds)
+      ? window.StateAccessors.getEnterpriseIdToBlockIds() : null;
+    if (!enterpriseIdToBlockIds || typeof enterpriseIdToBlockIds !== 'object' || Object.keys(enterpriseIdToBlockIds).length === 0) {
+      return null;
+    }
+    const enterprisesList = (window.StateAccessors && window.StateAccessors.getEnterprisesList)
+      ? window.StateAccessors.getEnterprisesList() : StateManager.get('enterprisesList') || [];
+    const enterpriseNameToId = {};
+    const norm = (s) => String(s || '').trim();
+    enterprisesList.forEach(e => {
+      if (e && (e.name || e.enterprise_name)) {
+        const name = e.name || e.enterprise_name;
+        const id = e.id ?? e.enterprise_id;
+        if (id != null) {
+          enterpriseNameToId[norm(name)] = id;
+          enterpriseNameToId[name] = id;
+        }
+      }
+    });
+    const blockIdToName = window.blockIdToName || {};
+    const blocksList = getBlocksListFromState();
+    const blocksSet = new Set();
+    selectedEnterpriseNames.forEach(name => {
+      const eid = enterpriseNameToId[norm(name)] ?? enterpriseNameToId[name];
+      if (eid != null && enterpriseIdToBlockIds[eid]) {
+        (enterpriseIdToBlockIds[eid] || []).forEach(bid => {
+          const blockName = blockIdToName[bid];
+          if (blockName && blocksList.includes(blockName)) blocksSet.add(blockName);
+        });
+      }
+    });
+    if (blocksSet.size === 0) return null;
+    return Array.from(blocksSet).sort();
+  }
+
+  // Блоки, которых НЕТ у выбранных предприятий (для добавления в привязку)
+  function getBlocksNotInEnterprisesFromMapping(selectedEnterpriseNames) {
+    const blocksList = getBlocksListFromState();
+    if (!blocksList || blocksList.length === 0) return blocksList || [];
+    if (!selectedEnterpriseNames || selectedEnterpriseNames.length === 0) return blocksList;
+    const blocksInEnterprises = getBlocksForEnterprisesFromMapping(selectedEnterpriseNames);
+    if (!blocksInEnterprises || blocksInEnterprises.length === 0) return blocksList;
+    const inSet = new Set(blocksInEnterprises);
+    return blocksList.filter(b => !inSet.has(b)).sort();
+  }
+
   // Получить блоки для выбранных предприятий
   function getBlocksForEnterprises(selectedEnterprises, allTechnologies) {
     if (!selectedEnterprises || selectedEnterprises.length === 0) {
@@ -281,9 +331,12 @@ import StateManager from '../core/state-manager.js';
     // Если это фильтр блоков, фильтруем по предприятиям и квадранту
     let filteredItems = items;
     if (filterKey === 'block') {
-      // Сначала фильтруем по предприятиям
+      // Сначала фильтруем по предприятиям (шаг 9.5: привязка предприятий к блокам)
       if (selectedEnterprises.length > 0) {
-        filteredItems = getBlocksForEnterprises(selectedEnterprises, allTechnologies);
+        const fromMapping = getBlocksForEnterprisesFromMapping(selectedEnterprises);
+        filteredItems = (fromMapping && fromMapping.length > 0)
+          ? fromMapping
+          : getBlocksForEnterprises(selectedEnterprises, allTechnologies);
       } else {
         // Если предприятия не выбраны, показываем все блоки
         filteredItems = getAllUniqueBlocks(allTechnologies);
@@ -671,12 +724,18 @@ import StateManager from '../core/state-manager.js';
 
       // Восстанавливаем выбранные блоки, если они все еще доступны
       if (currentSelectedBlocks.length > 0) {
-        // Получаем доступные блоки после фильтрации
+        // Получаем доступные блоки после фильтрации (шаг 9.5: учёт привязки)
         const selectedEnterprises = getFilterValues('enterprise');
         const allTechnologies = getAllTechnologies();
-        const availableBlocks = selectedEnterprises.length > 0
-          ? getBlocksForEnterprises(selectedEnterprises, allTechnologies)
-          : getAllUniqueBlocks(allTechnologies);
+        let availableBlocks;
+        if (selectedEnterprises.length > 0) {
+          const fromMapping = getBlocksForEnterprisesFromMapping(selectedEnterprises);
+          availableBlocks = (fromMapping && fromMapping.length > 0)
+            ? fromMapping
+            : getBlocksForEnterprises(selectedEnterprises, allTechnologies);
+        } else {
+          availableBlocks = getAllUniqueBlocks(allTechnologies);
+        }
 
         // Применяем дополнительную фильтрацию по квадранту, если есть
         let filteredBlocks = availableBlocks;
@@ -785,6 +844,107 @@ import StateManager from '../core/state-manager.js';
     // Обновляем радар после изменения фильтров
     if (typeof window.updateRadar === 'function') {
       window.updateRadar();
+    }
+  }
+
+  /**
+   * Обновить список блоков в форме добавления функционального блока: показать только те,
+   * которых нет у выбранных предприятий (блоки для добавления в привязку).
+   */
+  function updateBlockBlocksForEnterprises() {
+    const blockEnterprisesInput = document.getElementById('blockEnterprises');
+    if (!blockEnterprisesInput) return;
+    let selectedEnterprises = [];
+    if (blockEnterprisesInput.value) {
+      try {
+        const p = JSON.parse(blockEnterprisesInput.value);
+        selectedEnterprises = Array.isArray(p) ? p : (p ? [p] : []);
+      } catch {
+        selectedEnterprises = blockEnterprisesInput.value.split(',').map(s => s.trim()).filter(Boolean);
+      }
+    }
+    const blocksList = getBlocksListFromState();
+    const blocksToShow = selectedEnterprises.length > 0
+      ? getBlocksNotInEnterprisesFromMapping(selectedEnterprises)
+      : blocksList;
+    if (blocksToShow.length >= 0) {
+      populateSelectForModal('blockBlocks', blocksToShow, 'Выберите');
+      const blockBlocksInput = document.getElementById('blockBlocks');
+      if (blockBlocksInput && blockBlocksInput.value) {
+        let currentBlocks = [];
+        try {
+          const p = JSON.parse(blockBlocksInput.value);
+          currentBlocks = Array.isArray(p) ? p : (p ? [p] : []);
+        } catch {
+          currentBlocks = blockBlocksInput.value ? [blockBlocksInput.value] : [];
+        }
+        const validBlocks = currentBlocks.filter(b => blocksToShow.includes(b));
+        if (validBlocks.length !== currentBlocks.length && window.setCustomSelectValue) {
+          window.setCustomSelectValue('blockBlocks', validBlocks);
+        }
+      }
+      if (typeof window.renderMultiSelectTags === 'function') {
+        const addBlockPanel = document.getElementById('addBlockPanel');
+        const select = addBlockPanel
+          ? addBlockPanel.querySelector('.custom-select-modal[data-field="blockBlocks"]')
+          : document.querySelector('.custom-select-modal[data-field="blockBlocks"]');
+        if (select) window.renderMultiSelectTags(select);
+      }
+    }
+  }
+
+  /**
+   * Обновить список блоков в модальной форме (шаг 9.5).
+   * При выборе предприятий ограничиваем блоки по привязке (если есть);
+   * при отсутствии привязки показываем все блоки. При сохранении
+   * недостающие связи блок–предприятие добавляются через ensureEnterpriseBlockMapping.
+   * @param {string} companyFieldId — techCompany или editCompany
+   */
+  function updateModalBlocksForEnterprises(companyFieldId) {
+    const blockFieldId = companyFieldId === 'techCompany' ? 'techBlock' : 'editBlock';
+    const blockInput = document.getElementById(blockFieldId);
+    const companyInput = document.getElementById(companyFieldId);
+    let currentSelected = [];
+    if (blockInput && blockInput.value) {
+      try {
+        const p = JSON.parse(blockInput.value);
+        currentSelected = Array.isArray(p) ? p : (p ? [p] : []);
+      } catch {
+        currentSelected = blockInput.value.split(',').map(s => s.trim()).filter(Boolean);
+      }
+    }
+    const blocksListFull = getBlocksListFromState();
+    let blocksList = blocksListFull;
+    if (companyInput && companyInput.value && blocksListFull.length > 0) {
+      let selectedCompanies = [];
+      try {
+        const p = JSON.parse(companyInput.value);
+        selectedCompanies = Array.isArray(p) ? p : (p ? [p] : []);
+      } catch {
+        selectedCompanies = companyInput.value.split(',').map(s => s.trim()).filter(Boolean);
+      }
+      if (selectedCompanies.length > 0) {
+        const fromMapping = getBlocksForEnterprisesFromMapping(selectedCompanies);
+        if (fromMapping && fromMapping.length > 0) {
+          blocksList = fromMapping;
+        }
+      }
+    }
+    if (blocksList.length > 0) {
+      populateSelectForModal(blockFieldId, blocksList, 'Выберите');
+      // Восстанавливаем выбор блоков (только те, что остались в списке)
+      const validSelected = currentSelected.filter(b => blocksList.includes(b));
+      if (validSelected.length > 0 && typeof window.setCustomSelectValue === 'function') {
+        window.setCustomSelectValue(blockFieldId, validSelected);
+      }
+      if (blockFieldId === 'techBlock' && typeof window.updateModalFunctionsForBlocks === 'function') {
+        const sel = validSelected.length > 0 ? validSelected : (blockInput && blockInput.value ? (() => { try { const p = JSON.parse(blockInput.value); return Array.isArray(p) ? p : [p]; } catch { return []; } })() : []);
+        window.updateModalFunctionsForBlocks(sel, 'techFunc');
+      }
+      if (blockFieldId === 'editBlock' && typeof window.updateModalFunctionsForBlocks === 'function') {
+        const sel = validSelected.length > 0 ? validSelected : (blockInput && blockInput.value ? (() => { try { const p = JSON.parse(blockInput.value); return Array.isArray(p) ? p : [p]; } catch { return []; } })() : []);
+        window.updateModalFunctionsForBlocks(sel, 'editFunc');
+      }
     }
   }
 
@@ -1007,7 +1167,7 @@ import StateManager from '../core/state-manager.js';
     // Определяем, нужны ли чекбоксы для данного селекта (мультиселекты в модалках)
     const isVendorIntegratorsByVendor = typeof selectId === 'string'
       && (selectId.startsWith('techVendorIntegrators__') || selectId.startsWith('editVendorIntegrators__'));
-    const needsCheckboxes = ['techDirections', 'editDirections', 'techBlock', 'techFunc', 'editBlock', 'editFunc', 'techVendors', 'editVendors', 'techIntegrators', 'editIntegrators'].includes(selectId)
+    const needsCheckboxes = ['techDirections', 'editDirections', 'techBlock', 'techFunc', 'editBlock', 'editFunc', 'techVendors', 'editVendors', 'techIntegrators', 'editIntegrators', 'blockEnterprises', 'blockBlocks'].includes(selectId)
       || isVendorIntegratorsByVendor;
     if (needsCheckboxes) {
       // Если есть select-dropdown, поиск уже есть в HTML, не добавляем
@@ -1029,7 +1189,7 @@ import StateManager from '../core/state-manager.js';
       optionsList.appendChild(selectAllLi);
     }
     // Для блоков, функций, процессов и предприятий в модалке разрешим множественный выбор
-    const isMulti = ['techSector', 'techDirections', 'editDirections', 'techBlock', 'editBlock', 'techFunc', 'editFunc', 'techLevel', 'editLevel', 'techCompany', 'editCompany', 'techVendors', 'editVendors', 'techIntegrators', 'editIntegrators'].includes(selectId)
+    const isMulti = ['techSector', 'techDirections', 'editDirections', 'techBlock', 'editBlock', 'techFunc', 'editFunc', 'techLevel', 'editLevel', 'techCompany', 'editCompany', 'techVendors', 'editVendors', 'techIntegrators', 'editIntegrators', 'blockEnterprises', 'blockBlocks'].includes(selectId)
       || isVendorIntegratorsByVendor;
     if (isMulti) {
       customSelect.setAttribute('data-multi', 'true');
@@ -1322,7 +1482,6 @@ import StateManager from '../core/state-manager.js';
           const savedCurrentValues = [...currentValues];
 
           // Сохраняем в localStorage через модуль vendors-files
-          // Это НЕ должно влиять на текущие значения, так как мы убрали вызовы updateVendorsSelects/updateIntegratorsSelects
           if (isVendorField && window.VendorsFiles && typeof window.VendorsFiles.addVendor === 'function') {
             window.VendorsFiles.addVendor(newValue);
           } else if (isIntegratorField && window.VendorsFiles && typeof window.VendorsFiles.addIntegrator === 'function') {
@@ -1520,25 +1679,12 @@ import StateManager from '../core/state-manager.js';
                 }
               }, 100);
 
-              // Если это поле вендоров, вызываем обновление полей интеграторов
+              // Если это поле вендоров, вызываем обновление полей интеграторов по вендорам
               if (isVendorField && hiddenInput) {
-                // Триггерим событие change, чтобы сработал обработчик renderVendorIntegrators
-                // Используем setTimeout для гарантии, что все обновления DOM завершены
+                // Триггерим событие change, чтобы сработал обработчик renderVendorIntegrators в form-management.js
                 setTimeout(() => {
-                  // Триггерим события change и input на hidden input
-                  // Обработчики в form-management.js слушают эти события и вызывают renderVendorIntegrators
-                  // Используем более надежный способ: сначала изменяем значение, затем триггерим события
-                  const currentValue = hiddenInput.value;
-
-                  // Временно изменяем значение, чтобы гарантировать срабатывание событий
-                  if (currentValue) {
-                    // Триггерим события с текущим значением
-                    const changeEvent = new Event('change', { bubbles: true, cancelable: true });
-                    hiddenInput.dispatchEvent(changeEvent);
-
-                    const inputEvent = new Event('input', { bubbles: true, cancelable: true });
-                    hiddenInput.dispatchEvent(inputEvent);
-                  }
+                  hiddenInput.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+                  hiddenInput.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
                 }, 200);
               }
             });
@@ -1577,6 +1723,15 @@ import StateManager from '../core/state-manager.js';
           if (window.showNotification) {
             window.showNotification(`${isVendorField ? 'Вендор' : 'Интегратор'} "${newValue}" добавлен и выбран`, true);
           }
+
+          // Обновляем селекты для синхронизации с localStorage (значения уже установлены)
+          setTimeout(() => {
+            if (isVendorField && window.VendorsFiles && typeof window.VendorsFiles.updateVendorsSelects === 'function') {
+              window.VendorsFiles.updateVendorsSelects();
+            } else if (isIntegratorField && window.VendorsFiles && typeof window.VendorsFiles.updateIntegratorsSelects === 'function') {
+              window.VendorsFiles.updateIntegratorsSelects();
+            }
+          }, 50);
         };
 
         addNewBtn.addEventListener('click', (e) => {
@@ -1754,6 +1909,8 @@ import StateManager from '../core/state-manager.js';
     updateFunctionFilterForBlock,
     updateBlockFilterForZoomedQuadrant,
     updateFiltersForEnterprises,
+    updateModalBlocksForEnterprises,
+    updateBlockBlocksForEnterprises,
     getBlocksForEnterprises,
     getFunctionsForEnterprises,
     getAllTechnologies,
@@ -1768,6 +1925,8 @@ import StateManager from '../core/state-manager.js';
     window.Filters = Filters;
     window.renderMultiSelectTags = renderMultiSelectTags;
     window.updateFunctionFilterForBlock = updateFunctionFilterForBlock;
+    window.updateModalBlocksForEnterprises = updateModalBlocksForEnterprises;
+    window.updateBlockBlocksForEnterprises = updateBlockBlocksForEnterprises;
     window.setCustomSelectValue = setCustomSelectValue;
     window.resetCustomSelects = resetCustomSelects;
   }
