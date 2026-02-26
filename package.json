@@ -8,7 +8,9 @@
     "build": "node scripts/ensure-api-config-local.js && vite build",
     "preview": "vite preview",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "author": "",
   "license": "ISC",
@@ -19,6 +21,7 @@
     "qrcode": "^1.5.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.49.0",
     "jsdom": "^28.1.0",
     "msw": "^2.12.10",
     "vite": "^7.3.1",
