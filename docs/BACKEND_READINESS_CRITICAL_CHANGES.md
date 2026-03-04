@@ -16,7 +16,7 @@
 | 6 | Подключены и настроены CORS и базовые security-настройки | [x] | 04.03.2026 | Ксения / Codex | `backend/config/settings.py` |
 | 7 | Согласован контракт API для frontend (эндпоинты, поля, ошибки, коды) | [x] | 04.03.2026 | Ксения / Codex | `docs/BACKEND_API_SPEC.md` |
 | 8 | Согласован формат JWT (login/refresh/logout/me) и роли доступа | [x] | 04.03.2026 | Ксения / Codex | `docs/BACKEND_API_SPEC.md`, `docs/ARCHITECTURE_BRIEF.md` |
-| 9 | Подготовлен план миграции данных из текущих JSON в БД | [ ] |  |  |  |
+| 9 | Подготовлен план миграции данных из текущих JSON в БД | [x] | 04.03.2026 | Ксения / Codex | `backend/references/management/commands/seed_references.py`, `backend/technologies/management/commands/seed_technologies.py` |
 | 10 | Определены критерии готовности MVP и DoD по этапам | [x] | 04.03.2026 | Ксения / Codex | `docs/BACKEND_READINESS_CRITICAL_CHANGES.md` |
 | 11 | Настроены линтеры/форматтеры/базовые pre-commit хуки | [ ] |  |  |  |
 | 12 | Настроен базовый CI (lint + tests) | [ ] |  |  |  |
@@ -72,19 +72,19 @@
 **Цель:** заполнить БД стартовыми справочниками и технологиями.
 
 **Задачи:**
-- [ ] Реализовать команду загрузки справочников из JSON.
-- [ ] Реализовать команду загрузки `technologies.json`.
-- [ ] Добавить создание тестовых пользователей по ролям.
-- [ ] Описать в README порядок первичной инициализации.
+- [x] Реализовать команду загрузки справочников из JSON.
+- [x] Реализовать команду загрузки `technologies.json`.
+- [x] Добавить создание тестовых пользователей по ролям.
+- [x] Описать в README порядок первичной инициализации.
 
 **Критерий приемки:** БД воспроизводимо наполняется с нуля.
 
 **Фиксация выполнения:**
-- Статус: [ ] Не начато  [ ] В работе  [ ] Готово
-- Дата завершения:
-- Ответственный:
-- Артефакт (PR/commit):
-- Примечание:
+- Статус: [ ] Не начато  [ ] В работе  [x] Готово
+- Дата завершения: 04.03.2026
+- Ответственный: Ксения / Codex
+- Артефакт (PR/commit): `backend/references/management/commands/seed_references.py`, `backend/technologies/management/commands/seed_technologies.py`, `backend/auth_custom/management/commands/seed_users.py`, `backend/README.md`
+- Примечание: проверены повторные прогоны команд (`Created: 0`, `Updated > 0`) и фактическое наполнение БД (references + technologies + users).
 
 ### Этап 3. Аутентификация и авторизация (JWT)
 
