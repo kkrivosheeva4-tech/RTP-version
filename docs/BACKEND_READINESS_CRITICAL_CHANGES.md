@@ -112,22 +112,22 @@
 **Цель:** дать frontend полный API для работы с технологиями.
 
 **Задачи:**
-- [ ] Реализовать `GET /api/v1/technologies/` (со списком и фильтрами).
-- [ ] Реализовать `POST /api/v1/technologies/`.
-- [ ] Реализовать `GET /api/v1/technologies/{id}/`.
-- [ ] Реализовать `PATCH/PUT /api/v1/technologies/{id}/`.
-- [ ] Реализовать `DELETE /api/v1/technologies/{id}/`.
-- [ ] Реализовать `PUT /api/v1/technologies/bulk`.
-- [ ] Проверить соответствие `docs/BACKEND_API_SPEC.md`.
+- [x] Реализовать `GET /api/v1/technologies/` (со списком и фильтрами).
+- [x] Реализовать `POST /api/v1/technologies/`.
+- [x] Реализовать `GET /api/v1/technologies/{id}/`.
+- [x] Реализовать `PATCH/PUT /api/v1/technologies/{id}/`.
+- [x] Реализовать `DELETE /api/v1/technologies/{id}/`.
+- [x] Реализовать `PUT /api/v1/technologies/bulk`.
+- [x] Проверить соответствие `docs/BACKEND_API_SPEC.md`.
 
 **Критерий приемки:** frontend может читать/создавать/обновлять/удалять технологии через API.
 
 **Фиксация выполнения:**
-- Статус: [ ] Не начато  [ ] В работе  [ ] Готово
-- Дата завершения:
-- Ответственный:
-- Артефакт (PR/commit):
-- Примечание:
+- Статус: [ ] Не начато  [ ] В работе  [x] Готово
+- Дата завершения: 04.03.2026
+- Ответственный: Ксения / Codex
+- Артефакт (PR/commit): `backend/technologies/views.py`, `backend/technologies/serializers.py`, `backend/technologies/urls.py`, `backend/config/api_urls.py`, `backend/technologies/tests.py`
+- Примечание: покрыто API-тестами `python backend/manage.py test technologies` (CRUD + bulk + enterpriseId filter).
 
 ### Этап 5. API справочников
 
