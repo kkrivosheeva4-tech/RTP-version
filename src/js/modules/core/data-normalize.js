@@ -1,4 +1,4 @@
-// data-normalize.js — ES module
+﻿// data-normalize.js — ES module
 // Нормализация технологий и справочников из сырых JSON.
 
 /**
@@ -41,7 +41,7 @@ export function normalizeReadiness(value) {
 
 /**
  * Преобразует технологию из формата JSON/API в формат приложения.
- * Маппинг полей: см. docs/API_FORMAT_MAPPING.md
+ * Маппинг полей: см. docs/BACKEND_API_SPEC.md
  *
  * @param {Object} tech — сырая технология (API или JSON)
  * @param {Object} blockIdToName — маппинг id блока → имя
@@ -223,3 +223,4 @@ if (typeof window !== 'undefined') {
   window.normalizeTechnologyFromNewFormat = normalizeTechnologyFromNewFormat;
   window.buildBlockMaps = buildBlockMaps;
 }
+

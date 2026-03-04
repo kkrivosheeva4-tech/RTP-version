@@ -16,7 +16,6 @@
   "license": "ISC",
   "dependencies": {
     "@otplib/plugin-crypto-web": "^13.3.0",
-    "d3": "^7.9.0",
     "otplib": "^13.3.0",
     "qrcode": "^1.5.4"
   },

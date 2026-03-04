@@ -1,4 +1,4 @@
-# Радар технологий - Интерактивная визуализация цифровой зрелости
+﻿# Радар технологий - Интерактивная визуализация цифровой зрелости
 
 Веб-приложение для визуализации и анализа технологических решений и цифровой зрелости предприятий холдинга РМК.
 
@@ -164,7 +164,7 @@ npm run test:e2e
 
 Папка `dist/` после `npm run build` готова к развёртыванию на любом статическом хостинге.
 
-**Подключение API:** при необходимости работы с backend создайте `src/js/config/api-config.local.js` по образцу `api-config.local.example.js` и задайте `API_BASE_URL`, `USE_API`. Подробнее — **[docs/API_INTEGRATION.md](docs/API_INTEGRATION.md)**.
+**Подключение API:** при необходимости работы с backend создайте `src/js/config/api-config.local.js` по образцу `api-config.local.example.js` и задайте `API_BASE_URL`, `USE_API`. Подробнее — **[docs/BACKEND_API_SPEC.md](docs/BACKEND_API_SPEC.md)**.
 
 ### Вариант 2: Запуск без Node.js (только готовый build)
 
@@ -427,3 +427,4 @@ cd dist && python -m http.server 8000
 **Версия package.json**: 1.0.0
 **Дата обновления документации**: 26.02.2026
 **Разработчик**: РМК‑Диджитал
+

@@ -1,8 +1,8 @@
-# План выполнения задач РТП-3
+﻿# План выполнения задач РТП-3
 
 **Дата:** 18.02.2026  
-**Обновлено:** 26.02.2026  
-**Версия:** 1.2 (задачи 1, 2, 4, 5, 6 выполнены; этап 12.2 — обновление документации)
+**Обновлено:** 04.03.2026  
+**Версия:** 1.3 (документация синхронизирована с текущей кодовой базой)
 
 ---
 
@@ -15,7 +15,7 @@
 | 3 | ⏸ Ожидает согласования | Отрицательные факторы |
 | 4 | ✅ Выполнено | Заглушки экранов 2FA; 2FA для всех ролей (26.02) |
 | 5 | ✅ Выполнено | Рефакторинг для API (DataService, api-config) |
-| 6 | ✅ Выполнено | ApiClient, MSW, Playwright, docs/API_INTEGRATION.md |
+| 6 | ✅ Выполнено | ApiClient, MSW, Playwright, docs/BACKEND_API_SPEC.md |
 
 Детали — в [FRONTEND_FINAL_PLAN.md](FRONTEND_FINAL_PLAN.md) и [FRONTEND_COMPLETION_SUMMARY.md](FRONTEND_COMPLETION_SUMMARY.md).
 
@@ -447,7 +447,7 @@ function validateDuplicateTechnology(name, excludeId) {
 
 ### Шаг 6.6 — Документация
 
-**Файл:** `docs/API_INTEGRATION.md` или раздел в README
+**Файл:** `docs/BACKEND_API_SPEC.md` или раздел в README
 
 **Действия:**
 
@@ -466,4 +466,9 @@ function validateDuplicateTechnology(name, excludeId) {
 | 3      | —                                                            | `technologies.json`, `data-normalize.js`, `form-management.js`, `priorities.js`, `detail-panel.js` |
 | 4      | `auth-2fa-verify.html`, `auth-2fa-setup.html`, `auth-2fa.js` | `auth.js`, `auth.css`                                                                              |
 | 5      | `data-service.js`                                            | `api-config.js`, `data-loader.js`, `form-management.js`, `app-init.js`                             |
-| 6      | `api-config.local.example.js`, `API_INTEGRATION.md`          | `api-client.js`, `.gitignore`                                                                      |
+| 6      | `api-config.local.example.js`, `BACKEND_API_SPEC.md`          | `api-client.js`, `.gitignore`                                                                      |
+
+
+
+
+
