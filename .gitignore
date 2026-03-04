@@ -33,6 +33,7 @@ src/js/config/api-config.local.js
 .env.development.local
 .env.test.local
 .env.production.local
+backend/.venv/
 
 # Logs
 logs/
@@ -47,3 +48,8 @@ logs/
 dist/
 build/
 out/
+
+# Python / Django
+__pycache__/
+*.py[cod]
+backend/db.sqlite3
