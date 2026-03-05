@@ -48,6 +48,88 @@ function clearLegacyAuthState() {
     try { localStorage.removeItem('role'); } catch (_) {}
 }
 
+function getApiConfig() {
+    if (typeof window !== 'undefined' && window.ApiConfig) return window.ApiConfig;
+    return null;
+}
+
+function isApiAuthEnabled() {
+    const cfg = getApiConfig();
+    if (!cfg || typeof cfg.getUseApi !== 'function') return false;
+    return cfg.getUseApi() === true;
+}
+
+function getApiBaseUrl() {
+    const cfg = getApiConfig();
+    if (cfg && typeof cfg.getBaseUrl === 'function') {
+        const url = String(cfg.getBaseUrl() || '').trim();
+        if (url) return url.replace(/\/$/, '');
+    }
+    return '';
+}
+
+function getTokenKey() {
+    const cfg = getApiConfig();
+    if (cfg && typeof cfg.getTokenStorageKey === 'function') return cfg.getTokenStorageKey();
+    return 'rmk_access_token';
+}
+
+function getRefreshTokenKey() {
+    const cfg = getApiConfig();
+    if (cfg && typeof cfg.getRefreshTokenStorageKey === 'function') return cfg.getRefreshTokenStorageKey();
+    return 'rmk_refresh_token';
+}
+
+async function apiLogin(username, password) {
+    const baseUrl = getApiBaseUrl();
+    if (!baseUrl) return { ok: false, error: 'API_BASE_URL не задан' };
+
+    try {
+        const response = await fetch(`${baseUrl}/api/v1/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            return { ok: false, status: response.status, error: data.error || data.detail || 'Ошибка авторизации' };
+        }
+        return { ok: true, status: response.status, data };
+    } catch (e) {
+        return { ok: false, status: 0, error: 'Сервер недоступен' };
+    }
+}
+
+function storeApiTokens(accessToken, refreshToken, remember) {
+    const tokenKey = getTokenKey();
+    const refreshKey = getRefreshTokenKey();
+    const primary = remember ? localStorage : sessionStorage;
+    const secondary = remember ? sessionStorage : localStorage;
+    try {
+        primary.setItem(tokenKey, accessToken);
+        primary.setItem(refreshKey, refreshToken);
+    } catch (_) {}
+    try {
+        secondary.removeItem(tokenKey);
+        secondary.removeItem(refreshKey);
+    } catch (_) {}
+}
+
+async function apiLoadMe(accessToken) {
+    const baseUrl = getApiBaseUrl();
+    if (!baseUrl || !accessToken) return null;
+    try {
+        const response = await fetch(`${baseUrl}/api/v1/users/me`, {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${accessToken}` }
+        });
+        if (!response.ok) return null;
+        return await response.json().catch(() => null);
+    } catch (_) {
+        return null;
+    }
+}
+
 // Проверка состояния авторизации при загрузке
 document.addEventListener('DOMContentLoaded', function() {
     // Проверяем, не авторизован ли пользователь уже
@@ -164,7 +246,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Обработка формы входа
     const form = document.getElementById('loginForm');
     if (form) {
-        form.addEventListener('submit', function(e) {
+        form.addEventListener('submit', async function(e) {
             e.preventDefault();
             if (!form.checkValidity()) {
                 form.reportValidity();
@@ -179,6 +261,38 @@ document.addEventListener('DOMContentLoaded', function() {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             const remember = document.getElementById('remember') ? document.getElementById('remember').checked : false;
+
+            if (isApiAuthEnabled()) {
+                const loginResult = await apiLogin(username, password);
+
+                if (loginResult.ok && loginResult.data && loginResult.data.access_token && loginResult.data.refresh_token) {
+                    storeApiTokens(loginResult.data.access_token, loginResult.data.refresh_token, remember);
+
+                    const me = await apiLoadMe(loginResult.data.access_token);
+                    const userRole = (me && me.role) || (getUsers().find(u => u.username === username) || {}).role || 'user';
+                    const userName = (me && me.username) || username;
+
+                    localStorage.setItem('isLoggedIn', 'true');
+                    localStorage.setItem('username', userName);
+                    localStorage.setItem('role', userRole);
+
+                    window.location.href = '/src/pages/index.html';
+                    return;
+                }
+
+                if (submitBtn) {
+                    submitBtn.classList.remove('loading');
+                    submitBtn.removeAttribute('disabled');
+                }
+
+                if (loginResult.ok && loginResult.data && loginResult.data.requires_2fa) {
+                    showNotification('Для backend 2FA требуется отдельная интеграция verify endpoint', 'error');
+                    return;
+                }
+
+                showNotification(loginResult.error || 'Ошибка авторизации', 'error');
+                return;
+            }
 
             const user = getUsers().find(u => u.username === username && u.password === password);
             if (user) {
