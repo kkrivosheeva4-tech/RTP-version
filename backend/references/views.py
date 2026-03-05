@@ -1,9 +1,10 @@
 from django.db import transaction
 from rest_framework import status
-from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from auth_custom.models import UserProfile
+from auth_custom.permissions import READ_ROLES, RolePermission
 from references.models import (
     DigitalDirection,
     Enterprise,
@@ -29,8 +30,9 @@ SUPPORTED_REFERENCE_NAMES = {
 
 
 class ReferenceAPIView(APIView):
-    # Temporary open access until JWT/role permissions are implemented.
-    permission_classes = [AllowAny]
+    permission_classes = [RolePermission]
+    read_roles = READ_ROLES
+    write_roles = {UserProfile.ROLE_ADMIN}
 
     def get(self, request, name: str):
         if name not in SUPPORTED_REFERENCE_NAMES:

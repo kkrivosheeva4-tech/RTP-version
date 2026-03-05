@@ -1,8 +1,12 @@
+from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from auth_custom.models import UserProfile
 from references.models import DigitalDirection, Enterprise, FunctionalBlock, FunctionReference
 from technologies.models import Technology
+
+User = get_user_model()
 
 
 class TestTechnologiesApi(APITestCase):
@@ -15,6 +19,28 @@ class TestTechnologiesApi(APITestCase):
         Enterprise.objects.create(id=2, name="Enterprise 2", code="E2")
         FunctionReference.objects.create(name="Function A", block_id=1)
         FunctionReference.objects.create(name="Function B", block_id=2)
+
+        self.architect = User.objects.create_user(username="architect", password="architect123")
+        architect_profile, _ = UserProfile.objects.get_or_create(user=self.architect)
+        architect_profile.role = UserProfile.ROLE_ARCHITECT
+        architect_profile.save(update_fields=["role", "updated_at"])
+
+        self.analyst = User.objects.create_user(username="analyst", password="analyst123")
+        analyst_profile, _ = UserProfile.objects.get_or_create(user=self.analyst)
+        analyst_profile.role = UserProfile.ROLE_ANALYST
+        analyst_profile.save(update_fields=["role", "updated_at"])
+
+        self.architect_token = self._login("architect", "architect123")
+        self.analyst_token = self._login("analyst", "analyst123")
+
+    def _login(self, username, password):
+        response = self.client.post(
+            "/api/v1/auth/login",
+            data={"username": username, "password": password},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        return response.data["access_token"]
 
     @staticmethod
     def payload(name="Tech 1", enterprise_id=1):
@@ -44,6 +70,7 @@ class TestTechnologiesApi(APITestCase):
         }
 
     def test_create_and_get_technology(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.architect_token}")
         response = self.client.post("/api/v1/technologies", data=self.payload(), format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         tech_id = response.data["id"]
@@ -55,6 +82,7 @@ class TestTechnologiesApi(APITestCase):
         self.assertEqual(get_response.data["trlStage"], 5)
 
     def test_list_filter_by_enterprise_id(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.architect_token}")
         self.client.post("/api/v1/technologies", data=self.payload(name="Tech E1", enterprise_id=1), format="json")
         self.client.post("/api/v1/technologies", data=self.payload(name="Tech E2", enterprise_id=2), format="json")
 
@@ -64,6 +92,7 @@ class TestTechnologiesApi(APITestCase):
         self.assertEqual(response.data[0]["name"], "Tech E1")
 
     def test_update_and_delete_technology(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.architect_token}")
         create_response = self.client.post("/api/v1/technologies", data=self.payload(), format="json")
         tech_id = create_response.data["id"]
 
@@ -81,6 +110,7 @@ class TestTechnologiesApi(APITestCase):
         self.assertFalse(Technology.objects.filter(id=tech_id).exists())
 
     def test_bulk_upsert(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.architect_token}")
         created = self.client.post("/api/v1/technologies", data=self.payload(name="Bulk Base"), format="json")
         tech_id = created.data["id"]
 
@@ -98,5 +128,15 @@ class TestTechnologiesApi(APITestCase):
         self.assertEqual(Technology.objects.get(id=tech_id).name, "Bulk Updated")
 
     def test_invalid_enterprise_filter_returns_400(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.architect_token}")
         response = self.client.get("/api/v1/technologies?enterpriseId=bad")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_requires_authentication(self):
+        response = self.client.get("/api/v1/technologies")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_analyst_cannot_write(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.analyst_token}")
+        response = self.client.post("/api/v1/technologies", data=self.payload(name="Analyst Tech"), format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

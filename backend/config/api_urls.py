@@ -1,5 +1,6 @@
 from django.urls import include, path
 
+from auth_custom.views import MeAPIView
 from config.views import health_check
 from technologies.views import (
     TechnologyBulkAPIView,
@@ -16,5 +17,7 @@ urlpatterns = [
     path("technologies/", include("technologies.urls")),
     path("references/", include("references.urls")),
     path("auth/", include("auth_custom.urls")),
+    path("users/me", MeAPIView.as_view(), name="users-me-noslash"),
+    path("users/me/", MeAPIView.as_view(), name="users-me"),
     path("admin-panel/", include("admin_panel.urls")),
 ]

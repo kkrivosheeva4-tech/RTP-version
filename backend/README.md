@@ -21,6 +21,16 @@
 
 - `GET /api/v1/health`
 
+## Auth endpoints
+
+- `POST /api/v1/auth/login/` -> `{ access_token, refresh_token }`
+- `POST /api/v1/auth/refresh` -> rotate refresh token and issue new tokens
+- `POST /api/v1/auth/logout/` -> revoke refresh token
+- `GET /api/v1/users/me/` -> current user profile and role
+
+Use header:
+- `Authorization: Bearer <access_token>`
+
 ## Seed commands
 
 - `python backend/manage.py seed_references`

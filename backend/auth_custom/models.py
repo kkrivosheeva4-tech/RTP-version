@@ -3,6 +3,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils import timezone
 
 User = get_user_model()
 
@@ -37,6 +38,30 @@ class UserProfile(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user.username} ({self.role})"
+
+
+class RefreshToken(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="refresh_tokens",
+    )
+    jti = models.CharField(max_length=64, unique=True)
+    expires_at = models.DateTimeField()
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    @property
+    def is_active(self) -> bool:
+        return self.revoked_at is None and self.expires_at > timezone.now()
+
+    def revoke(self):
+        if self.revoked_at is None:
+            self.revoked_at = timezone.now()
+            self.save(update_fields=["revoked_at"])
 
 
 @receiver(post_save, sender=User)

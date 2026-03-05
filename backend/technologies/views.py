@@ -1,17 +1,18 @@
 from django.db import transaction
 from django.http import Http404
 from rest_framework import status
-from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from auth_custom.permissions import READ_ROLES, RolePermission, WRITE_ROLES
 from technologies.models import Technology
 from technologies.serializers import TechnologySerializer
 
 
 class TechnologyListCreateAPIView(APIView):
-    # Temporary open access until JWT/role permissions are implemented in stage 3.
-    permission_classes = [AllowAny]
+    permission_classes = [RolePermission]
+    read_roles = READ_ROLES
+    write_roles = WRITE_ROLES
 
     def get(self, request):
         queryset = Technology.objects.all().order_by("id")
@@ -33,8 +34,9 @@ class TechnologyListCreateAPIView(APIView):
 
 
 class TechnologyDetailAPIView(APIView):
-    # Temporary open access until JWT/role permissions are implemented in stage 3.
-    permission_classes = [AllowAny]
+    permission_classes = [RolePermission]
+    read_roles = READ_ROLES
+    write_roles = WRITE_ROLES
 
     def get_object(self, pk: int) -> Technology:
         try:
@@ -67,8 +69,9 @@ class TechnologyDetailAPIView(APIView):
 
 
 class TechnologyBulkAPIView(APIView):
-    # Temporary open access until JWT/role permissions are implemented in stage 3.
-    permission_classes = [AllowAny]
+    permission_classes = [RolePermission]
+    read_roles = READ_ROLES
+    write_roles = WRITE_ROLES
 
     @transaction.atomic
     def put(self, request):

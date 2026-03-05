@@ -1,6 +1,6 @@
 ﻿# Чек-лист подготовки к разработке бэкенда и подробный план
 
-**Проверено:** 04.03.2026
+**Проверено:** 05.03.2026
 
 ## 1. Чек-лист подготовки к разработке бэкенда
 
@@ -91,21 +91,21 @@
 **Цель:** реализовать безопасный вход и контроль ролей.
 
 **Задачи:**
-- [ ] Реализовать `POST /api/v1/auth/login/`.
-- [ ] Реализовать `POST /api/v1/auth/refresh/`.
-- [ ] Реализовать `POST /api/v1/auth/logout/`.
-- [ ] Реализовать `GET /api/v1/users/me/`.
-- [ ] Настроить permissions по ролям (`admin`, `architect`, `analyst`, `viewer`).
+- [x] Реализовать `POST /api/v1/auth/login/`.
+- [x] Реализовать `POST /api/v1/auth/refresh/`.
+- [x] Реализовать `POST /api/v1/auth/logout/`.
+- [x] Реализовать `GET /api/v1/users/me/`.
+- [x] Настроить permissions по ролям (`admin`, `architect`, `analyst`, `viewer`).
 - [ ] (Опционально) Подготовить 2FA flow.
 
 **Критерий приемки:** login/refresh/logout/me работают, доступ ограничивается ролями.
 
 **Фиксация выполнения:**
-- Статус: [ ] Не начато  [ ] В работе  [ ] Готово
-- Дата завершения:
-- Ответственный:
-- Артефакт (PR/commit):
-- Примечание:
+- Статус: [ ] Не начато  [ ] В работе  [x] Готово
+- Дата завершения: 05.03.2026
+- Ответственный: Ксения / Codex
+- Артефакт (PR/commit): `backend/auth_custom/views.py`, `backend/auth_custom/urls.py`, `backend/auth_custom/jwt_utils.py`, `backend/auth_custom/authentication.py`, `backend/auth_custom/permissions.py`, `backend/config/api_urls.py`
+- Примечание: протестированы сценарии login/refresh/logout/me и ролевой доступ (`python backend/manage.py test auth_custom references technologies`).
 
 ### Этап 4. API технологий (CRUD + bulk)
 
@@ -127,7 +127,7 @@
 - Дата завершения: 04.03.2026
 - Ответственный: Ксения / Codex
 - Артефакт (PR/commit): `backend/technologies/views.py`, `backend/technologies/serializers.py`, `backend/technologies/urls.py`, `backend/config/api_urls.py`, `backend/technologies/tests.py`
-- Примечание: покрыто API-тестами `python backend/manage.py test technologies` (CRUD + bulk + enterpriseId filter).
+- Примечание: покрыто API-тестами `python backend/manage.py test technologies` (CRUD + bulk + enterpriseId filter); после этапа 3 повторно проверено в JWT-режиме с role permissions.
 
 ### Этап 5. API справочников
 
@@ -142,11 +142,11 @@
 **Критерий приемки:** frontend получает все справочники из API, редактирование ограничено.
 
 **Фиксация выполнения:**
-- Статус: [ ] Не начато  [ ] В работе  [ ] Готово
+- Статус: [ ] Не начато  [x] В работе  [ ] Готово
 - Дата завершения:
-- Ответственный:
-- Артефакт (PR/commit):
-- Примечание:
+- Ответственный: Ксения / Codex
+- Артефакт (PR/commit): `backend/references/views.py`, `backend/references/urls.py`
+- Примечание: старт этапа 5 зафиксирован; реализованы базовые `GET/PUT /api/v1/references/{name}` и начальные ролевые ограничения (чтение по ролям, запись для `admin`).
 
 ### Этап 6. API админ-панели
 
