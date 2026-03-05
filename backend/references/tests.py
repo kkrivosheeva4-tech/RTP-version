@@ -79,3 +79,62 @@ class TestReferencesApi(APITestCase):
         payload = ["Vendor A"]
         response = self.client.put("/api/v1/references/vendors", data=payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_requires_authentication_for_read(self):
+        self.client.credentials()
+        response = self.client.get("/api/v1/references/vendors")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_invalid_payload_type_returns_400(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_token}")
+        response = self.client.put("/api/v1/references/vendors", data={"bad": "payload"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_function_to_block_unknown_block_returns_400(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_token}")
+        payload = {"Function 1": 999}
+        response = self.client.put("/api/v1/references/functionToBlock", data=payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_direction_to_quadrant_invalid_value_returns_400(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_token}")
+        payload = {"Direction 1": [9]}
+        response = self.client.put("/api/v1/references/directionToQuadrant", data=payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_enterprises_blocks_mapping_unknown_enterprise_returns_400(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_token}")
+        payload = {
+            "enterprises_blocks_mapping": [
+                {
+                    "enterprise_id": 999,
+                    "enterprise_name": "Unknown",
+                    "functional_blocks": [1],
+                }
+            ]
+        }
+        response = self.client.put("/api/v1/references/enterprisesBlocksMapping", data=payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_admin_can_update_enterprises_blocks_mapping(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_token}")
+        payload = {
+            "enterprises_blocks_mapping": [
+                {
+                    "enterprise_id": 1,
+                    "enterprise_name": "Enterprise 1",
+                    "functional_blocks": [1, 2],
+                }
+            ]
+        }
+        put_response = self.client.put(
+            "/api/v1/references/enterprisesBlocksMapping",
+            data=payload,
+            format="json",
+        )
+        self.assertEqual(put_response.status_code, status.HTTP_204_NO_CONTENT)
+
+        get_response = self.client.get("/api/v1/references/enterprisesBlocksMapping")
+        self.assertEqual(get_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(get_response.data["enterprises_blocks_mapping"][0]["enterprise_id"], 1)
+        self.assertEqual(get_response.data["enterprises_blocks_mapping"][0]["functional_blocks"], [1, 2])

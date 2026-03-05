@@ -105,58 +105,37 @@ class ReferenceAPIView(APIView):
 
     def _save_reference(self, name: str, payload):
         if name == "blocks":
-            if not isinstance(payload, list):
-                raise ValueError("blocks payload must be a list")
-            keep_ids = []
-            for item in payload:
-                block_id = item.get("id")
-                block_name = str(item.get("name", "")).strip()
-                if block_id is None or not block_name:
-                    continue
-                FunctionalBlock.objects.update_or_create(id=block_id, defaults={"name": block_name})
-                keep_ids.append(block_id)
-            if keep_ids:
-                FunctionalBlock.objects.exclude(id__in=keep_ids).delete()
+            normalized = self._validate_blocks_payload(payload)
+            keep_ids = [item["id"] for item in normalized]
+            for item in normalized:
+                FunctionalBlock.objects.update_or_create(id=item["id"], defaults={"name": item["name"]})
+            FunctionalBlock.objects.exclude(id__in=keep_ids).delete()
             return
 
         if name == "functions":
-            if not isinstance(payload, list):
-                raise ValueError("functions payload must be a list")
+            normalized = self._validate_functions_payload(payload)
             keep_names = []
-            for item in payload:
-                function_name = str(item).strip()
-                if not function_name:
-                    continue
+            for function_name in normalized:
                 FunctionReference.objects.get_or_create(name=function_name)
                 keep_names.append(function_name)
-            if keep_names:
-                FunctionReference.objects.exclude(name__in=keep_names).delete()
+            FunctionReference.objects.exclude(name__in=keep_names).delete()
             return
 
         if name == "functionToBlock":
-            if not isinstance(payload, dict):
-                raise ValueError("functionToBlock payload must be an object")
-            for function_name, block_value in payload.items():
-                block_id = block_value[0] if isinstance(block_value, list) and block_value else block_value
-                block = FunctionalBlock.objects.filter(id=block_id).first()
-                function, _ = FunctionReference.objects.get_or_create(name=str(function_name).strip())
+            normalized = self._validate_function_to_block_payload(payload)
+            for function_name, block_id in normalized.items():
+                block = FunctionalBlock.objects.get(id=block_id)
+                function, _ = FunctionReference.objects.get_or_create(name=function_name)
                 function.block = block
                 function.save(update_fields=["block"])
             return
 
         if name == "digitalDirections":
-            if not isinstance(payload, list):
-                raise ValueError("digitalDirections payload must be a list")
+            normalized = self._validate_digital_directions_payload(payload)
             keep_ids = []
-            for item in payload:
-                if isinstance(item, dict):
-                    direction_id = item.get("id")
-                    direction_name = str(item.get("name", "")).strip()
-                else:
-                    direction_id = None
-                    direction_name = str(item).strip()
-                if not direction_name:
-                    continue
+            for item in normalized:
+                direction_id = item.get("id")
+                direction_name = item["name"]
                 if direction_id is None:
                     direction, _ = DigitalDirection.objects.get_or_create(name=direction_name)
                     keep_ids.append(direction.id)
@@ -166,57 +145,41 @@ class ReferenceAPIView(APIView):
                         defaults={"name": direction_name},
                     )
                     keep_ids.append(direction_id)
-            if keep_ids:
-                DigitalDirection.objects.exclude(id__in=keep_ids).delete()
+            DigitalDirection.objects.exclude(id__in=keep_ids).delete()
             return
 
         if name == "directionToQuadrant":
-            if not isinstance(payload, dict):
-                raise ValueError("directionToQuadrant payload must be an object")
-            for direction_name, value in payload.items():
-                quadrant = value[0] if isinstance(value, list) and value else value
-                direction, _ = DigitalDirection.objects.get_or_create(name=str(direction_name).strip())
-                direction.quadrant = quadrant if isinstance(quadrant, int) else None
+            normalized = self._validate_direction_to_quadrant_payload(payload)
+            for direction_name, quadrant in normalized.items():
+                direction, _ = DigitalDirection.objects.get_or_create(name=direction_name)
+                direction.quadrant = quadrant
                 direction.save(update_fields=["quadrant"])
             return
 
         if name == "vendors":
-            if not isinstance(payload, list):
-                raise ValueError("vendors payload must be a list")
+            normalized = self._validate_string_list_payload(payload, "vendors")
             keep_names = []
-            for item in payload:
-                vendor_name = str(item).strip()
-                if not vendor_name:
-                    continue
+            for vendor_name in normalized:
                 Vendor.objects.get_or_create(name=vendor_name)
                 keep_names.append(vendor_name)
-            if keep_names:
-                Vendor.objects.exclude(name__in=keep_names).delete()
+            Vendor.objects.exclude(name__in=keep_names).delete()
             return
 
         if name == "integrators":
-            if not isinstance(payload, list):
-                raise ValueError("integrators payload must be a list")
+            normalized = self._validate_string_list_payload(payload, "integrators")
             keep_names = []
-            for item in payload:
-                integrator_name = str(item).strip()
-                if not integrator_name:
-                    continue
+            for integrator_name in normalized:
                 Integrator.objects.get_or_create(name=integrator_name)
                 keep_names.append(integrator_name)
-            if keep_names:
-                Integrator.objects.exclude(name__in=keep_names).delete()
+            Integrator.objects.exclude(name__in=keep_names).delete()
             return
 
         if name == "enterprises":
-            if not isinstance(payload, list):
-                raise ValueError("enterprises payload must be a list")
+            normalized = self._validate_enterprises_payload(payload)
             keep_ids = []
-            for item in payload:
-                enterprise_id = item.get("id")
-                enterprise_name = str(item.get("name", "")).strip()
-                if enterprise_id is None or not enterprise_name:
-                    continue
+            for item in normalized:
+                enterprise_id = item["id"]
+                enterprise_name = item["name"]
                 Enterprise.objects.update_or_create(
                     id=enterprise_id,
                     defaults={
@@ -226,24 +189,247 @@ class ReferenceAPIView(APIView):
                     },
                 )
                 keep_ids.append(enterprise_id)
-            if keep_ids:
-                Enterprise.objects.exclude(id__in=keep_ids).delete()
+            Enterprise.objects.exclude(id__in=keep_ids).delete()
             return
 
         if name == "enterprisesBlocksMapping":
-            if not isinstance(payload, dict):
-                raise ValueError("enterprisesBlocksMapping payload must be an object")
-            rows = payload.get("enterprises_blocks_mapping", [])
+            rows = self._validate_enterprises_blocks_mapping_payload(payload)
             EnterpriseBlockMapping.objects.all().delete()
             for row in rows:
-                enterprise_id = row.get("enterprise_id")
-                block_ids = row.get("functional_blocks", []) or []
-                if enterprise_id is None:
-                    continue
-                enterprise = Enterprise.objects.filter(id=enterprise_id).first()
-                if not enterprise:
-                    continue
+                enterprise_id = row["enterprise_id"]
+                block_ids = row["functional_blocks"]
+                enterprise = Enterprise.objects.get(id=enterprise_id)
                 for block_id in block_ids:
-                    if not FunctionalBlock.objects.filter(id=block_id).exists():
-                        continue
+                    FunctionalBlock.objects.get(id=block_id)
                     EnterpriseBlockMapping.objects.get_or_create(enterprise=enterprise, block_id=block_id)
+            return
+
+        raise ValueError(f"Unsupported reference: {name}")
+
+    @staticmethod
+    def _validate_string_list_payload(payload, name: str):
+        if not isinstance(payload, list):
+            raise ValueError(f"{name} payload must be a list")
+
+        values = []
+        seen = set()
+        for idx, item in enumerate(payload):
+            value = str(item).strip()
+            if not value:
+                raise ValueError(f"{name}[{idx}] must be a non-empty string")
+            key = value.lower()
+            if key in seen:
+                raise ValueError(f"{name} contains duplicate value: {value}")
+            seen.add(key)
+            values.append(value)
+        return values
+
+    @staticmethod
+    def _validate_blocks_payload(payload):
+        if not isinstance(payload, list):
+            raise ValueError("blocks payload must be a list")
+
+        normalized = []
+        seen_ids = set()
+        for idx, item in enumerate(payload):
+            if not isinstance(item, dict):
+                raise ValueError(f"blocks[{idx}] must be an object")
+            block_id = item.get("id")
+            block_name = str(item.get("name", "")).strip()
+            if not isinstance(block_id, int):
+                raise ValueError(f"blocks[{idx}].id must be integer")
+            if not block_name:
+                raise ValueError(f"blocks[{idx}].name is required")
+            if block_id in seen_ids:
+                raise ValueError(f"blocks contains duplicate id: {block_id}")
+            seen_ids.add(block_id)
+            normalized.append({"id": block_id, "name": block_name})
+        return normalized
+
+    @staticmethod
+    def _validate_functions_payload(payload):
+        if not isinstance(payload, list):
+            raise ValueError("functions payload must be a list")
+
+        normalized = []
+        seen = set()
+        for idx, item in enumerate(payload):
+            value = str(item).strip()
+            if not value:
+                raise ValueError(f"functions[{idx}] must be non-empty string")
+            key = value.lower()
+            if key in seen:
+                raise ValueError(f"functions contains duplicate value: {value}")
+            seen.add(key)
+            normalized.append(value)
+        return normalized
+
+    @staticmethod
+    def _validate_function_to_block_payload(payload):
+        if not isinstance(payload, dict):
+            raise ValueError("functionToBlock payload must be an object")
+
+        normalized = {}
+        known_block_ids = set(FunctionalBlock.objects.values_list("id", flat=True))
+        for function_name, block_value in payload.items():
+            func = str(function_name).strip()
+            if not func:
+                raise ValueError("functionToBlock key must be non-empty")
+
+            if isinstance(block_value, list):
+                if not block_value:
+                    raise ValueError(f"functionToBlock[{func}] list cannot be empty")
+                block_id = block_value[0]
+            else:
+                block_id = block_value
+
+            if not isinstance(block_id, int):
+                raise ValueError(f"functionToBlock[{func}] must map to integer block id")
+            if block_id not in known_block_ids:
+                raise ValueError(f"functionToBlock[{func}] references unknown block id {block_id}")
+            normalized[func] = block_id
+        return normalized
+
+    @staticmethod
+    def _validate_digital_directions_payload(payload):
+        if not isinstance(payload, list):
+            raise ValueError("digitalDirections payload must be a list")
+
+        normalized = []
+        seen_ids = set()
+        seen_names = set()
+        for idx, item in enumerate(payload):
+            if isinstance(item, dict):
+                direction_id = item.get("id")
+                direction_name = str(item.get("name", "")).strip()
+            else:
+                direction_id = None
+                direction_name = str(item).strip()
+
+            if not direction_name:
+                raise ValueError(f"digitalDirections[{idx}].name is required")
+            if direction_id is not None and not isinstance(direction_id, int):
+                raise ValueError(f"digitalDirections[{idx}].id must be integer or null")
+            if direction_id in seen_ids and direction_id is not None:
+                raise ValueError(f"digitalDirections contains duplicate id {direction_id}")
+            if direction_name.lower() in seen_names:
+                raise ValueError(f"digitalDirections contains duplicate name {direction_name}")
+
+            if direction_id is not None:
+                seen_ids.add(direction_id)
+            seen_names.add(direction_name.lower())
+            normalized.append({"id": direction_id, "name": direction_name})
+        return normalized
+
+    @staticmethod
+    def _validate_direction_to_quadrant_payload(payload):
+        if not isinstance(payload, dict):
+            raise ValueError("directionToQuadrant payload must be an object")
+
+        normalized = {}
+        for direction_name, value in payload.items():
+            key = str(direction_name).strip()
+            if not key:
+                raise ValueError("directionToQuadrant key must be non-empty")
+            if isinstance(value, list):
+                if len(value) != 1:
+                    raise ValueError(f"directionToQuadrant[{key}] list must contain exactly one item")
+                quadrant = value[0]
+            else:
+                quadrant = value
+
+            if not isinstance(quadrant, int):
+                raise ValueError(f"directionToQuadrant[{key}] must be integer")
+            if quadrant < 1 or quadrant > 4:
+                raise ValueError(f"directionToQuadrant[{key}] must be in range 1..4")
+            normalized[key] = quadrant
+        return normalized
+
+    @staticmethod
+    def _validate_enterprises_payload(payload):
+        if not isinstance(payload, list):
+            raise ValueError("enterprises payload must be a list")
+
+        normalized = []
+        seen_ids = set()
+        seen_names = set()
+        for idx, item in enumerate(payload):
+            if not isinstance(item, dict):
+                raise ValueError(f"enterprises[{idx}] must be an object")
+            enterprise_id = item.get("id")
+            enterprise_name = str(item.get("name", "")).strip()
+            code = item.get("code")
+            description = item.get("description", "")
+
+            if not isinstance(enterprise_id, int):
+                raise ValueError(f"enterprises[{idx}].id must be integer")
+            if not enterprise_name:
+                raise ValueError(f"enterprises[{idx}].name is required")
+            if code is not None and not isinstance(code, str):
+                raise ValueError(f"enterprises[{idx}].code must be string or null")
+            if description is not None and not isinstance(description, str):
+                raise ValueError(f"enterprises[{idx}].description must be string")
+
+            if enterprise_id in seen_ids:
+                raise ValueError(f"enterprises contains duplicate id {enterprise_id}")
+            if enterprise_name.lower() in seen_names:
+                raise ValueError(f"enterprises contains duplicate name {enterprise_name}")
+
+            seen_ids.add(enterprise_id)
+            seen_names.add(enterprise_name.lower())
+            normalized.append(
+                {
+                    "id": enterprise_id,
+                    "name": enterprise_name,
+                    "code": code,
+                    "description": description or "",
+                }
+            )
+        return normalized
+
+    @staticmethod
+    def _validate_enterprises_blocks_mapping_payload(payload):
+        if not isinstance(payload, dict):
+            raise ValueError("enterprisesBlocksMapping payload must be an object")
+        rows = payload.get("enterprises_blocks_mapping")
+        if not isinstance(rows, list):
+            raise ValueError("enterprisesBlocksMapping.enterprises_blocks_mapping must be a list")
+
+        known_enterprises = set(Enterprise.objects.values_list("id", flat=True))
+        known_blocks = set(FunctionalBlock.objects.values_list("id", flat=True))
+        normalized = []
+        seen_enterprises = set()
+
+        for idx, row in enumerate(rows):
+            if not isinstance(row, dict):
+                raise ValueError(f"enterprises_blocks_mapping[{idx}] must be an object")
+            enterprise_id = row.get("enterprise_id")
+            block_ids = row.get("functional_blocks")
+            if not isinstance(enterprise_id, int):
+                raise ValueError(f"enterprises_blocks_mapping[{idx}].enterprise_id must be integer")
+            if not isinstance(block_ids, list):
+                raise ValueError(f"enterprises_blocks_mapping[{idx}].functional_blocks must be a list")
+            if enterprise_id not in known_enterprises:
+                raise ValueError(f"Unknown enterprise_id {enterprise_id} in enterprises_blocks_mapping[{idx}]")
+            if enterprise_id in seen_enterprises:
+                raise ValueError(f"Duplicate enterprise_id {enterprise_id} in enterprises_blocks_mapping")
+            seen_enterprises.add(enterprise_id)
+
+            unique_blocks = []
+            seen_blocks = set()
+            for bidx, block_id in enumerate(block_ids):
+                if not isinstance(block_id, int):
+                    raise ValueError(
+                        f"enterprises_blocks_mapping[{idx}].functional_blocks[{bidx}] must be integer"
+                    )
+                if block_id not in known_blocks:
+                    raise ValueError(
+                        f"Unknown block id {block_id} in enterprises_blocks_mapping[{idx}].functional_blocks"
+                    )
+                if block_id in seen_blocks:
+                    continue
+                seen_blocks.add(block_id)
+                unique_blocks.append(block_id)
+
+            normalized.append({"enterprise_id": enterprise_id, "functional_blocks": unique_blocks})
+        return normalized

@@ -134,19 +134,19 @@
 **Цель:** убрать зависимость frontend от статических JSON.
 
 **Задачи:**
-- [ ] Реализовать `GET /api/v1/references/{name}` для всех нужных справочников.
-- [ ] Реализовать `PUT /api/v1/references/{name}` (изменение для admin).
-- [ ] Добавить валидацию структуры данных по типу справочника.
-- [ ] Добавить ролевые ограничения (чтение/изменение).
+- [x] Реализовать `GET /api/v1/references/{name}` для всех нужных справочников.
+- [x] Реализовать `PUT /api/v1/references/{name}` (изменение для admin).
+- [x] Добавить валидацию структуры данных по типу справочника.
+- [x] Добавить ролевые ограничения (чтение/изменение).
 
 **Критерий приемки:** frontend получает все справочники из API, редактирование ограничено.
 
 **Фиксация выполнения:**
-- Статус: [ ] Не начато  [x] В работе  [ ] Готово
-- Дата завершения:
+- Статус: [ ] Не начато  [ ] В работе  [x] Готово
+- Дата завершения: 05.03.2026
 - Ответственный: Ксения / Codex
-- Артефакт (PR/commit): `backend/references/views.py`, `backend/references/urls.py`
-- Примечание: старт этапа 5 зафиксирован; реализованы базовые `GET/PUT /api/v1/references/{name}` и начальные ролевые ограничения (чтение по ролям, запись для `admin`).
+- Артефакт (PR/commit): `backend/references/views.py`, `backend/references/urls.py`, `backend/references/tests.py`, `backend/auth_custom/permissions.py`
+- Примечание: добавлены строгие проверки payload по типам (`blocks`, `functions`, `functionToBlock`, `digitalDirections`, `directionToQuadrant`, `vendors`, `integrators`, `enterprises`, `enterprisesBlocksMapping`) и role-ограничения (`GET` по read-ролям, `PUT` только `admin`).
 
 ### Этап 6. API админ-панели
 
