@@ -1,13 +1,13 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' http://localhost:8000 http://localhost:5173 ws://localhost:5173; worker-src 'self' blob:; base-uri 'self';" />
-  <meta name="description" content="Настройка двухфакторной аутентификации - Радар Технологий" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 http://localhost:5173 http://127.0.0.1:5173 ws://localhost:5173 ws://127.0.0.1:5173; worker-src 'self' blob:; base-uri 'self';" />
+  <meta name="description" content="РќР°СЃС‚СЂРѕР№РєР° РґРІСѓС…С„Р°РєС‚РѕСЂРЅРѕР№ Р°СѓС‚РµРЅС‚РёС„РёРєР°С†РёРё - Р Р°РґР°СЂ РўРµС…РЅРѕР»РѕРіРёР№" />
   <meta name="theme-color" content="#ce9068" />
   <meta name="color-scheme" content="light dark">
-  <title>Настройка 2FA - Радар Технологий</title>
+  <title>РќР°СЃС‚СЂРѕР№РєР° 2FA - Р Р°РґР°СЂ РўРµС…РЅРѕР»РѕРіРёР№</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='55' height='64' viewBox='0 0 55 64' fill='none'><path d='M32.3111 24.2322L45.3017 31.7322M32.3111 24.2322L53.9609 1.73218M32.3111 24.2322L1.99998 31.7322M32.3111 24.2322V39.2329M45.3017 31.7322L53.9609 1.73218M45.3017 31.7322L32.3111 39.2329M45.3017 31.7322L53.9609 61.7322M53.9609 1.73218L1.99998 31.7322M53.9609 1.73218V61.7322M32.3111 39.2329L53.9609 61.7322M32.3111 39.2329L1.99998 31.7322M53.9609 61.7322L1.99998 31.7322' stroke='white' stroke-width='2'/></svg>" type="image/svg+xml" media="(prefers-color-scheme: dark)">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='55' height='64' viewBox='0 0 55 64' fill='none'><path d='M32.3111 24.2322L45.3017 31.7322M32.3111 24.2322L53.9609 1.73218M32.3111 24.2322L1.99998 31.7322M32.3111 24.2322V39.2329M45.3017 31.7322L53.9609 1.73218M45.3017 31.7322L32.3111 39.2329M45.3017 31.7322L53.9609 61.7322M53.9609 1.73218L1.99998 31.7322M53.9609 1.73218V61.7322M32.3111 39.2329L53.9609 61.7322M32.3111 39.2329L1.99998 31.7322M53.9609 61.7322L1.99998 31.7322' stroke='url(%23paint0_linear)' stroke-width='2'/><defs><linearGradient id='paint0_linear' x1='53.9609' y1='1.73218' x2='-5.42356' y2='53.1601' gradientUnits='userSpaceOnUse'><stop stop-color='%23A37151'/><stop offset='1' stop-color='%23C8977F'/></linearGradient></defs></svg>" type="image/svg+xml" media="(prefers-color-scheme: light)">
   <link rel="stylesheet" href="/src/css/auth.css">
@@ -21,10 +21,10 @@
     <main class="card card--wide" role="main" aria-labelledby="brand-title">
       <div class="brand">
         <div>
-          <h1 id="brand-title" class="brand__title">Радар Технологий</h1>
-          <p class="brand__subtitle">Настройка двухфакторной аутентификации</p>
+          <h1 id="brand-title" class="brand__title">Р Р°РґР°СЂ РўРµС…РЅРѕР»РѕРіРёР№</h1>
+          <p class="brand__subtitle">РќР°СЃС‚СЂРѕР№РєР° РґРІСѓС…С„Р°РєС‚РѕСЂРЅРѕР№ Р°СѓС‚РµРЅС‚РёС„РёРєР°С†РёРё</p>
         </div>
-        <button id="themeToggle" class="theme-toggle" type="button" aria-label="Переключить тему">
+        <button id="themeToggle" class="theme-toggle" type="button" aria-label="РџРµСЂРµРєР»СЋС‡РёС‚СЊ С‚РµРјСѓ">
           <svg id="iconSun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <circle cx="12" cy="12" r="4"></circle>
             <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>
@@ -36,10 +36,10 @@
       </div>
 
       <div class="setup-2fa">
-        <p class="setup-2fa__intro">Для настройки 2FA используйте приложение-аутентификатор (Google Authenticator, Authy и т.п.). Отсканируйте QR-код или введите секретный ключ вручную.</p>
+        <p class="setup-2fa__intro">Р”Р»СЏ РЅР°СЃС‚СЂРѕР№РєРё 2FA РёСЃРїРѕР»СЊР·СѓР№С‚Рµ РїСЂРёР»РѕР¶РµРЅРёРµ-Р°СѓС‚РµРЅС‚РёС„РёРєР°С‚РѕСЂ (Google Authenticator, Authy Рё С‚.Рї.). РћС‚СЃРєР°РЅРёСЂСѓР№С‚Рµ QR-РєРѕРґ РёР»Рё РІРІРµРґРёС‚Рµ СЃРµРєСЂРµС‚РЅС‹Р№ РєР»СЋС‡ РІСЂСѓС‡РЅСѓСЋ.</p>
 
-        <!-- Заглушка QR-кода -->
-        <div class="qr-placeholder" id="qrPlaceholder" aria-label="QR-код для сканирования">
+        <!-- Р—Р°РіР»СѓС€РєР° QR-РєРѕРґР° -->
+        <div class="qr-placeholder" id="qrPlaceholder" aria-label="QR-РєРѕРґ РґР»СЏ СЃРєР°РЅРёСЂРѕРІР°РЅРёСЏ">
           <div class="qr-placeholder__inner">
             <svg class="qr-placeholder__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
               <rect x="3" y="3" width="7" height="7"></rect>
@@ -48,49 +48,50 @@
               <rect x="14" y="14" width="3" height="3"></rect>
               <rect x="19" y="14" width="2" height="2"></rect>
             </svg>
-            <span class="qr-placeholder__text">QR-код появится после подключения API</span>
+            <span class="qr-placeholder__text">QR-РєРѕРґ РїРѕСЏРІРёС‚СЃСЏ РїРѕСЃР»Рµ РїРѕРґРєР»СЋС‡РµРЅРёСЏ API</span>
           </div>
         </div>
 
-        <!-- Manual secret (readonly до подключения API) -->
+        <!-- Manual secret (readonly РґРѕ РїРѕРґРєР»СЋС‡РµРЅРёСЏ API) -->
         <div class="group">
-          <label class="setup-2fa__label" for="manualSecret">Секретный ключ (для ручного ввода)</label>
+          <label class="setup-2fa__label" for="manualSecret">РЎРµРєСЂРµС‚РЅС‹Р№ РєР»СЋС‡ (РґР»СЏ СЂСѓС‡РЅРѕРіРѕ РІРІРѕРґР°)</label>
           <input class="input" id="manualSecret" type="text" readonly
-                 placeholder="Секрет будет получен от сервера"
+                 placeholder="РЎРµРєСЂРµС‚ Р±СѓРґРµС‚ РїРѕР»СѓС‡РµРЅ РѕС‚ СЃРµСЂРІРµСЂР°"
                  aria-describedby="manualSecret-hint">
-          <span id="manualSecret-hint" class="sr-only">Секретный ключ для ручного ввода в приложении аутентификатора</span>
+          <span id="manualSecret-hint" class="sr-only">РЎРµРєСЂРµС‚РЅС‹Р№ РєР»СЋС‡ РґР»СЏ СЂСѓС‡РЅРѕРіРѕ РІРІРѕРґР° РІ РїСЂРёР»РѕР¶РµРЅРёРё Р°СѓС‚РµРЅС‚РёС„РёРєР°С‚РѕСЂР°</span>
         </div>
 
         <div class="setup-2fa__instructions">
-          <h3 class="setup-2fa__instructions-title">Инструкция</h3>
+          <h3 class="setup-2fa__instructions-title">РРЅСЃС‚СЂСѓРєС†РёСЏ</h3>
           <ol class="setup-2fa__instructions-list">
-            <li>Установите приложение-аутентификатор на телефон.</li>
-            <li>Отсканируйте QR-код выше или введите секретный ключ вручную.</li>
-            <li>Введите 6-значный код из приложения для подтверждения.</li>
-            <li>Нажмите «Завершить настройку».</li>
+            <li>РЈСЃС‚Р°РЅРѕРІРёС‚Рµ РїСЂРёР»РѕР¶РµРЅРёРµ-Р°СѓС‚РµРЅС‚РёС„РёРєР°С‚РѕСЂ РЅР° С‚РµР»РµС„РѕРЅ.</li>
+            <li>РћС‚СЃРєР°РЅРёСЂСѓР№С‚Рµ QR-РєРѕРґ РІС‹С€Рµ РёР»Рё РІРІРµРґРёС‚Рµ СЃРµРєСЂРµС‚РЅС‹Р№ РєР»СЋС‡ РІСЂСѓС‡РЅСѓСЋ.</li>
+            <li>Р’РІРµРґРёС‚Рµ 6-Р·РЅР°С‡РЅС‹Р№ РєРѕРґ РёР· РїСЂРёР»РѕР¶РµРЅРёСЏ РґР»СЏ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ.</li>
+            <li>РќР°Р¶РјРёС‚Рµ В«Р—Р°РІРµСЂС€РёС‚СЊ РЅР°СЃС‚СЂРѕР№РєСѓВ».</li>
           </ol>
         </div>
 
         <div class="group" id="codeConfirmGroup" style="display:none">
-          <label class="setup-2fa__label" for="setupCode">Код из приложения для подтверждения</label>
+          <label class="setup-2fa__label" for="setupCode">РљРѕРґ РёР· РїСЂРёР»РѕР¶РµРЅРёСЏ РґР»СЏ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ</label>
           <input class="input" id="setupCode" type="text" inputmode="numeric" maxlength="6" pattern="[0-9]{6}"
-                 placeholder="6 цифр" aria-label="Код подтверждения">
+                 placeholder="6 С†РёС„СЂ" aria-label="РљРѕРґ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ">
           <p id="setupCodeError" class="error-msg" role="alert" style="display:none"></p>
         </div>
 
         <div class="btn-row">
           <button id="submitBtn" class="btn" type="button">
-            <span class="btn__text">Завершить настройку</span>
+            <span class="btn__text">Р—Р°РІРµСЂС€РёС‚СЊ РЅР°СЃС‚СЂРѕР№РєСѓ</span>
             <span class="btn__spinner" aria-hidden="true"></span>
           </button>
-          <a href="/src/pages/auth.html" class="btn btn--secondary">Отмена</a>
+          <a href="/src/pages/auth.html" class="btn btn--secondary">РћС‚РјРµРЅР°</a>
         </div>
       </div>
 
-      <div class="foot">© 2025 РМК‑Диджитал</div>
+      <div class="foot">В© 2025 Р РњРљвЂ‘Р”РёРґР¶РёС‚Р°Р»</div>
     </main>
   </div>
 
   <script type="module" src="/src/js/auth-2fa-setup.js"></script>
 </body>
 </html>
+

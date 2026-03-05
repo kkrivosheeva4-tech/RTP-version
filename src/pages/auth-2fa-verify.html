@@ -1,13 +1,13 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' http://localhost:8000 http://localhost:5173 ws://localhost:5173; worker-src 'self' blob:; base-uri 'self';" />
-  <meta name="description" content="Проверка кода двухфакторной аутентификации - Радар Технологий" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 http://localhost:5173 http://127.0.0.1:5173 ws://localhost:5173 ws://127.0.0.1:5173; worker-src 'self' blob:; base-uri 'self';" />
+  <meta name="description" content="РџСЂРѕРІРµСЂРєР° РєРѕРґР° РґРІСѓС…С„Р°РєС‚РѕСЂРЅРѕР№ Р°СѓС‚РµРЅС‚РёС„РёРєР°С†РёРё - Р Р°РґР°СЂ РўРµС…РЅРѕР»РѕРіРёР№" />
   <meta name="theme-color" content="#ce9068" />
   <meta name="color-scheme" content="light dark">
-  <title>Проверка кода 2FA - Радар Технологий</title>
+  <title>РџСЂРѕРІРµСЂРєР° РєРѕРґР° 2FA - Р Р°РґР°СЂ РўРµС…РЅРѕР»РѕРіРёР№</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='55' height='64' viewBox='0 0 55 64' fill='none'><path d='M32.3111 24.2322L45.3017 31.7322M32.3111 24.2322L53.9609 1.73218M32.3111 24.2322L1.99998 31.7322M32.3111 24.2322V39.2329M45.3017 31.7322L53.9609 1.73218M45.3017 31.7322L32.3111 39.2329M45.3017 31.7322L53.9609 61.7322M53.9609 1.73218L1.99998 31.7322M53.9609 1.73218V61.7322M32.3111 39.2329L53.9609 61.7322M32.3111 39.2329L1.99998 31.7322M53.9609 61.7322L1.99998 31.7322' stroke='white' stroke-width='2'/></svg>" type="image/svg+xml" media="(prefers-color-scheme: dark)">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='55' height='64' viewBox='0 0 55 64' fill='none'><path d='M32.3111 24.2322L45.3017 31.7322M32.3111 24.2322L53.9609 1.73218M32.3111 24.2322L1.99998 31.7322M32.3111 24.2322V39.2329M45.3017 31.7322L53.9609 1.73218M45.3017 31.7322L32.3111 39.2329M45.3017 31.7322L53.9609 61.7322M53.9609 1.73218L1.99998 31.7322M53.9609 1.73218V61.7322M32.3111 39.2329L53.9609 61.7322M32.3111 39.2329L1.99998 31.7322M53.9609 61.7322L1.99998 31.7322' stroke='url(%23paint0_linear)' stroke-width='2'/><defs><linearGradient id='paint0_linear' x1='53.9609' y1='1.73218' x2='-5.42356' y2='53.1601' gradientUnits='userSpaceOnUse'><stop stop-color='%23A37151'/><stop offset='1' stop-color='%23C8977F'/></linearGradient></defs></svg>" type="image/svg+xml" media="(prefers-color-scheme: light)">
   <link rel="stylesheet" href="/src/css/auth.css">
@@ -21,10 +21,10 @@
     <main class="card" role="main" aria-labelledby="brand-title">
       <div class="brand">
         <div>
-          <h1 id="brand-title" class="brand__title">Радар Технологий</h1>
-          <p class="brand__subtitle">Введите код двухфакторной аутентификации</p>
+          <h1 id="brand-title" class="brand__title">Р Р°РґР°СЂ РўРµС…РЅРѕР»РѕРіРёР№</h1>
+          <p class="brand__subtitle">Р’РІРµРґРёС‚Рµ РєРѕРґ РґРІСѓС…С„Р°РєС‚РѕСЂРЅРѕР№ Р°СѓС‚РµРЅС‚РёС„РёРєР°С†РёРё</p>
         </div>
-        <button id="themeToggle" class="theme-toggle" type="button" aria-label="Переключить тему">
+        <button id="themeToggle" class="theme-toggle" type="button" aria-label="РџРµСЂРµРєР»СЋС‡РёС‚СЊ С‚РµРјСѓ">
           <svg id="iconSun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <circle cx="12" cy="12" r="4"></circle>
             <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>
@@ -44,25 +44,26 @@
             </svg>
           </span>
           <input class="input" id="code2fa" name="code" type="text" inputmode="numeric" autocomplete="one-time-code"
-                 placeholder="Код из приложения (6 цифр)" maxlength="6" pattern="[0-9]{6}"
-                 required aria-label="Код двухфакторной аутентификации" aria-describedby="code2fa-hint">
-          <span id="code2fa-hint" class="sr-only">Введите 6 цифр из приложения аутентификатора</span>
+                 placeholder="РљРѕРґ РёР· РїСЂРёР»РѕР¶РµРЅРёСЏ (6 С†РёС„СЂ)" maxlength="6" pattern="[0-9]{6}"
+                 required aria-label="РљРѕРґ РґРІСѓС…С„Р°РєС‚РѕСЂРЅРѕР№ Р°СѓС‚РµРЅС‚РёС„РёРєР°С†РёРё" aria-describedby="code2fa-hint">
+          <span id="code2fa-hint" class="sr-only">Р’РІРµРґРёС‚Рµ 6 С†РёС„СЂ РёР· РїСЂРёР»РѕР¶РµРЅРёСЏ Р°СѓС‚РµРЅС‚РёС„РёРєР°С‚РѕСЂР°</span>
         </div>
         <p id="code2faError" class="error-msg" role="alert" aria-live="polite" style="display:none"></p>
 
         <div class="btn-row">
           <button id="submitBtn" class="btn" type="submit">
-            <span class="btn__text">Подтвердить</span>
+            <span class="btn__text">РџРѕРґС‚РІРµСЂРґРёС‚СЊ</span>
             <span class="btn__spinner" aria-hidden="true"></span>
           </button>
-          <a href="/src/pages/auth.html" class="btn btn--secondary" id="cancelBtn">Отмена</a>
+          <a href="/src/pages/auth.html" class="btn btn--secondary" id="cancelBtn">РћС‚РјРµРЅР°</a>
         </div>
       </form>
 
-      <div class="foot">© 2025 РМК‑Диджитал</div>
+      <div class="foot">В© 2025 Р РњРљвЂ‘Р”РёРґР¶РёС‚Р°Р»</div>
     </main>
   </div>
 
   <script type="module" src="/src/js/auth-2fa-verify.js"></script>
 </body>
 </html>
+
