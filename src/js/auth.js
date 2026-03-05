@@ -23,13 +23,38 @@ function getAuditTimestampLocal() {
     return `${y}-${m}-${day} ${hh}:${mm}:${ss}`;
 }
 
+function getTokenStorageKey() {
+    if (typeof window !== 'undefined' && window.ApiConfig && typeof window.ApiConfig.getTokenStorageKey === 'function') {
+        return window.ApiConfig.getTokenStorageKey();
+    }
+    return 'rmk_access_token';
+}
+
+function hasStoredAccessToken() {
+    const key = getTokenStorageKey();
+    try {
+        if (localStorage.getItem(key)) return true;
+    } catch (_) {}
+    try {
+        if (sessionStorage.getItem(key)) return true;
+    } catch (_) {}
+    return false;
+}
+
+function clearLegacyAuthState() {
+    try { localStorage.removeItem('isLoggedIn'); } catch (_) {}
+    try { localStorage.removeItem('username'); } catch (_) {}
+    try { localStorage.removeItem('userName'); } catch (_) {}
+    try { localStorage.removeItem('role'); } catch (_) {}
+}
+
 // Проверка состояния авторизации при загрузке
 document.addEventListener('DOMContentLoaded', function() {
     // Проверяем, не авторизован ли пользователь уже
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
     const savedUsername = localStorage.getItem('username');
-    if (isLoggedIn && savedUsername) {
-        const user = getUsers().find(u => u.username === savedUsername);
+    if (isLoggedIn && savedUsername && hasStoredAccessToken()) {
+        const user = getUsers().find(u => u.username === savedUsername) || { role: localStorage.getItem('role') || 'user' };
         if (user) {
             // Если сессия уже активна — логируем "автовход" (на случай, когда пользователь не вводит пароль повторно)
             try {
@@ -71,6 +96,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 localStorage.removeItem('username');
             }
         }
+    }
+
+    if (isLoggedIn && savedUsername && !hasStoredAccessToken()) {
+        clearLegacyAuthState();
     }
 
     // Если пользователь не авторизован, инициализируем частицы при наличии контейнера

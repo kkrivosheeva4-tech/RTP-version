@@ -32,11 +32,11 @@ function getStorage() {
 }
 
 function getSessionStorage() {
-  if (typeof window === 'undefined') return { getItem: () => null };
+  if (typeof window === 'undefined') return { getItem: () => null, removeItem: () => {} };
   try {
     return sessionStorage;
   } catch (_) {
-    return { getItem: () => null };
+    return { getItem: () => null, removeItem: () => {} };
   }
 }
 
@@ -119,10 +119,26 @@ async function tryRefreshToken() {
  */
 function redirectToAuth() {
   const config = getConfig();
-  const storage = getStorage();
-  storage.removeItem(config.getTokenStorageKey());
-  storage.removeItem(config.getRefreshTokenStorageKey());
+  const local = getStorage();
+  const session = getSessionStorage();
+  const tokenKey = config.getTokenStorageKey();
+  const refreshKey = config.getRefreshTokenStorageKey();
+
+  // Clear auth artifacts from both storages to prevent redirect loops.
+  local.removeItem(tokenKey);
+  local.removeItem(refreshKey);
+  session.removeItem(tokenKey);
+  session.removeItem(refreshKey);
+  local.removeItem('isLoggedIn');
+  local.removeItem('username');
+  local.removeItem('userName');
+  local.removeItem('role');
+
   if (typeof window !== 'undefined' && window.location) {
+    const path = window.location.pathname || '';
+    if (path.includes('/src/pages/auth.html') || path.includes('/src/pages/auth-2fa-setup.html') || path.includes('/src/pages/auth-2fa-verify.html')) {
+      return;
+    }
     const returnTo = window.location.pathname + window.location.search;
     window.location.href = AUTH_PAGE + (returnTo && returnTo !== '/' ? '?return=' + encodeURIComponent(returnTo) : '');
   }
