@@ -1,28 +1,28 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 http://localhost:5173 http://127.0.0.1:5173 ws://localhost:5173 ws://127.0.0.1:5173; worker-src 'self' blob:; base-uri 'self';" />
-  <meta name="description" content="РЎС‚СЂР°РЅРёС†Р° Р°РІС‚РѕСЂРёР·Р°С†РёРё СЂР°РґР°СЂР° С‚РµС…РЅРѕР»РѕРіРёР№ - РІРѕР№РґРёС‚Рµ РІ СЃРёСЃС‚РµРјСѓ РґР»СЏ РґРѕСЃС‚СѓРїР° Рє С„СѓРЅРєС†РёРѕРЅР°Р»Сѓ" />
-  <meta name="keywords" content="Р°РІС‚РѕСЂРёР·Р°С†РёСЏ, РІС…РѕРґ, Р»РѕРіРёРЅ, СЂР°РґР°СЂ С‚РµС…РЅРѕР»РѕРіРёР№" />
+  <meta name="description" content="Страница авторизации радара технологий - войдите в систему для доступа к функционалу" />
+  <meta name="keywords" content="авторизация, вход, логин, радар технологий" />
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="РђРІС‚РѕСЂРёР·Р°С†РёСЏ - Р Р°РґР°СЂ РўРµС…РЅРѕР»РѕРіРёР№" />
-  <meta property="og:description" content="РЎС‚СЂР°РЅРёС†Р° Р°РІС‚РѕСЂРёР·Р°С†РёРё СЂР°РґР°СЂР° С‚РµС…РЅРѕР»РѕРіРёР№ - РІРѕР№РґРёС‚Рµ РІ СЃРёСЃС‚РµРјСѓ РґР»СЏ РґРѕСЃС‚СѓРїР° Рє С„СѓРЅРєС†РёРѕРЅР°Р»Сѓ" />
+  <meta property="og:title" content="Авторизация - Радар Технологий" />
+  <meta property="og:description" content="Страница авторизации радара технологий - войдите в систему для доступа к функционалу" />
   <meta property="og:image" content="/assets/images/icon.png" />
   <!-- Twitter -->
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="РђРІС‚РѕСЂРёР·Р°С†РёСЏ - Р Р°РґР°СЂ РўРµС…РЅРѕР»РѕРіРёР№" />
-  <meta name="twitter:description" content="РЎС‚СЂР°РЅРёС†Р° Р°РІС‚РѕСЂРёР·Р°С†РёРё СЂР°РґР°СЂР° С‚РµС…РЅРѕР»РѕРіРёР№ - РІРѕР№РґРёС‚Рµ РІ СЃРёСЃС‚РµРјСѓ РґР»СЏ РґРѕСЃС‚СѓРїР° Рє С„СѓРЅРєС†РёРѕРЅР°Р»Сѓ" />
+  <meta name="twitter:title" content="Авторизация - Радар Технологий" />
+  <meta name="twitter:description" content="Страница авторизации радара технологий - войдите в систему для доступа к функционалу" />
   <meta name="twitter:image" content="/assets/images/icon.png" />
-  <!-- PWA РјРµС‚Р°-С‚РµРіРё -->
+  <!-- PWA мета-теги -->
   <meta name="theme-color" content="#ce9068" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Р Р°РґР°СЂ С‚РµС…РЅРѕР»РѕРіРёР№" />
+  <meta name="apple-mobile-web-app-title" content="Радар технологий" />
   <meta name="color-scheme" content="light dark">
-  <title>РђРІС‚РѕСЂРёР·Р°С†РёСЏ - Р Р°РґР°СЂ РўРµС…РЅРѕР»РѕРіРёР№</title>
+  <title>Авторизация - Радар Технологий</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='55' height='64' viewBox='0 0 55 64' fill='none'><path d='M32.3111 24.2322L45.3017 31.7322M32.3111 24.2322L53.9609 1.73218M32.3111 24.2322L1.99998 31.7322M32.3111 24.2322V39.2329M45.3017 31.7322L53.9609 1.73218M45.3017 31.7322L32.3111 39.2329M45.3017 31.7322L53.9609 61.7322M53.9609 1.73218L1.99998 31.7322M53.9609 1.73218V61.7322M32.3111 39.2329L53.9609 61.7322M32.3111 39.2329L1.99998 31.7322M53.9609 61.7322L1.99998 31.7322' stroke='white' stroke-width='2'/></svg>" type="image/svg+xml" media="(prefers-color-scheme: dark)">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='55' height='64' viewBox='0 0 55 64' fill='none'><path d='M32.3111 24.2322L45.3017 31.7322M32.3111 24.2322L53.9609 1.73218M32.3111 24.2322L1.99998 31.7322M32.3111 24.2322V39.2329M45.3017 31.7322L53.9609 1.73218M45.3017 31.7322L32.3111 39.2329M45.3017 31.7322L53.9609 61.7322M53.9609 1.73218L1.99998 31.7322M53.9609 1.73218V61.7322M32.3111 39.2329L53.9609 61.7322M32.3111 39.2329L1.99998 31.7322M53.9609 61.7322L1.99998 31.7322' stroke='url(%23paint0_linear)' stroke-width='2'/><defs><linearGradient id='paint0_linear' x1='53.9609' y1='1.73218' x2='-5.42356' y2='53.1601' gradientUnits='userSpaceOnUse'><stop stop-color='%23A37151'/><stop offset='1' stop-color='%23C8977F'/></linearGradient></defs></svg>" type="image/svg+xml" media="(prefers-color-scheme: light)">
   <link rel="stylesheet" href="/src/css/auth.css">
@@ -37,10 +37,10 @@
     <main class="card" role="main" aria-labelledby="brand-title">
       <div class="brand">
         <div>
-          <h1 id="brand-title" class="brand__title">Р Р°РґР°СЂ РўРµС…РЅРѕР»РѕРіРёР№</h1>
-          <p class="brand__subtitle">Р’РѕР№РґРёС‚Рµ РґР»СЏ РґРѕСЃС‚СѓРїР° Рє СЃРёСЃС‚РµРјРµ</p>
+          <h1 id="brand-title" class="brand__title">Радар Технологий</h1>
+          <p class="brand__subtitle">Войдите для доступа к системе</p>
         </div>
-        <button id="themeToggle" class="theme-toggle" type="button" aria-label="РџРµСЂРµРєР»СЋС‡РёС‚СЊ С‚РµРјСѓ">
+        <button id="themeToggle" class="theme-toggle" type="button" aria-label="Переключить тему">
           <svg id="iconSun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <circle cx="12" cy="12" r="4"></circle>
             <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>
@@ -60,7 +60,7 @@
             </svg>
           </span>
           <input class="input" id="username" name="username" type="text" autocomplete="username"
-                 placeholder="РРјСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ" required aria-label="РРјСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ">
+                 placeholder="Имя пользователя" required aria-label="Имя пользователя">
         </div>
 
         <div class="group">
@@ -71,8 +71,8 @@
             </svg>
           </span>
           <input class="input" id="password" name="password" type="password" autocomplete="current-password"
-                 placeholder="РџР°СЂРѕР»СЊ" required minlength="4" aria-label="РџР°СЂРѕР»СЊ">
-          <button class="password-toggle" id="passwordToggle" type="button" aria-label="РџРѕРєР°Р·Р°С‚СЊ РїР°СЂРѕР»СЊ">
+                 placeholder="Пароль" required minlength="4" aria-label="Пароль">
+          <button class="password-toggle" id="passwordToggle" type="button" aria-label="Показать пароль">
             <svg id="eyeOn" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"></path>
               <circle cx="12" cy="12" r="3"></circle>
@@ -86,18 +86,18 @@
 
         <div class="row">
           <label>
-            <input id="remember" type="checkbox"> Р—Р°РїРѕРјРЅРёС‚СЊ РјРµРЅСЏ
+            <input id="remember" type="checkbox"> Запомнить меня
           </label>
-          <a href="#" tabindex="0">Р—Р°Р±С‹Р»Рё РїР°СЂРѕР»СЊ?</a>
+          <a href="#" tabindex="0">Забыли пароль?</a>
         </div>
 
         <button id="submitBtn" class="btn" type="submit">
-          <span class="btn__text">Р’РѕР№С‚Рё</span>
+          <span class="btn__text">Войти</span>
           <span class="btn__spinner" aria-hidden="true"></span>
         </button>
       </form>
 
-      <div class="foot">В© 2025 Р РњРљвЂ‘Р”РёРґР¶РёС‚Р°Р»</div>
+      <div class="foot">© 2025 РМК‑Диджитал</div>
     </main>
   </div>
 
@@ -108,4 +108,3 @@
   <script src="/src/js/auth.js"></script>
 </body>
 </html>
-

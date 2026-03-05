@@ -34,3 +34,6 @@ class JWTAuthentication(BaseAuthentication):
             raise AuthenticationFailed("User not found") from exc
 
         return user, payload
+
+    def authenticate_header(self, request):
+        return "Bearer"

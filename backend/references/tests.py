@@ -83,7 +83,7 @@ class TestReferencesApi(APITestCase):
     def test_requires_authentication_for_read(self):
         self.client.credentials()
         response = self.client.get("/api/v1/references/vendors")
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_invalid_payload_type_returns_400(self):
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_token}")

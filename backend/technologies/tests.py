@@ -134,7 +134,7 @@ class TestTechnologiesApi(APITestCase):
 
     def test_requires_authentication(self):
         response = self.client.get("/api/v1/technologies")
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_analyst_cannot_write(self):
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.analyst_token}")

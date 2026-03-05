@@ -1,6 +1,7 @@
 from django.db import transaction
 from django.http import Http404
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -10,7 +11,7 @@ from technologies.serializers import TechnologySerializer
 
 
 class TechnologyListCreateAPIView(APIView):
-    permission_classes = [RolePermission]
+    permission_classes = [IsAuthenticated, RolePermission]
     read_roles = READ_ROLES
     write_roles = WRITE_ROLES
 
@@ -34,7 +35,7 @@ class TechnologyListCreateAPIView(APIView):
 
 
 class TechnologyDetailAPIView(APIView):
-    permission_classes = [RolePermission]
+    permission_classes = [IsAuthenticated, RolePermission]
     read_roles = READ_ROLES
     write_roles = WRITE_ROLES
 
@@ -69,7 +70,7 @@ class TechnologyDetailAPIView(APIView):
 
 
 class TechnologyBulkAPIView(APIView):
-    permission_classes = [RolePermission]
+    permission_classes = [IsAuthenticated, RolePermission]
     read_roles = READ_ROLES
     write_roles = WRITE_ROLES
 
