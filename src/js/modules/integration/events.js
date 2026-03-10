@@ -186,7 +186,11 @@ import { DOMCache } from '../core/dom-utils.js';
         }
         select
           .querySelectorAll(".select-options li")
-          .forEach((li) => li.classList.remove("selected"));
+          .forEach((li) => {
+            li.classList.remove("selected");
+            const checkbox = li.querySelector('input[type="checkbox"]');
+            if (checkbox) checkbox.checked = false;
+          });
       });
       document
         .querySelectorAll(".custom-select .select-search input")
@@ -199,13 +203,6 @@ import { DOMCache } from '../core/dom-utils.js';
       try {
         localStorage.removeItem("selectedEnterprise");
       } catch (_) {}
-      // Перестроить списки блоков и функций под «все предприятия» (без фильтра)
-      if (typeof window.Filters?.updateFiltersForEnterprises === "function") {
-        window.Filters.updateFiltersForEnterprises();
-      }
-      if (typeof window.updateRadar === "function") {
-        window.updateRadar();
-      }
       if (typeof window.setSelectedBlipId === "function") {
         window.setSelectedBlipId(null);
       }
@@ -232,6 +229,14 @@ import { DOMCache } from '../core/dom-utils.js';
       }
       if (typeof window.unzoom === "function") {
         window.unzoom();
+      }
+      // Перестроить списки блоков и функций уже после снятия зума,
+      // чтобы блоки не фильтровались по старому квадранту.
+      if (typeof window.Filters?.updateFiltersForEnterprises === "function") {
+        window.Filters.updateFiltersForEnterprises();
+      }
+      if (typeof window.updateRadar === "function") {
+        window.updateRadar();
       }
       if (typeof window.showNotification === "function") {
         window.showNotification("Выбор сброшен!", true);

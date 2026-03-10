@@ -37,7 +37,7 @@ import { DOMProxy } from '../core/dom-utils.js';
 
   // Функции рендеринга вынесены в модуль radar-renderer.js
   // Используем обертки для обратной совместимости
-  function renderRadarBackground() {
+  function renderRadarBackground(options = {}) {
     const QuadrantCacheRef = (typeof window !== 'undefined' && window.QuadrantCache) ? window.QuadrantCache : QuadrantCache;
 
     // Получаем константы из window
@@ -62,7 +62,8 @@ import { DOMProxy } from '../core/dom-utils.js';
       clearQuadrantGroupsCache: QuadrantCacheRef.clearQuadrantGroupsCache,
       polarToCartesian: window.polarToCartesian,
       describeArc: window.describeArc,
-      describeWedge: window.describeWedge
+      describeWedge: window.describeWedge,
+      showSectorLabels: options.showSectorLabels !== false
     });
   }
 

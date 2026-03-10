@@ -91,6 +91,23 @@
             // Инициализация управления файлами
             window.VendorsFiles.initFilesManagement('techFilesInput', 'techFilesList', false);
           }, 100);
+          // Принудительно обновляем справочники для add-модалки, чтобы список вендоров/интеграторов
+          // всегда брался из актуальных источников (state + JSON + localStorage/API).
+          setTimeout(async () => {
+            try {
+              if (typeof window.VendorsFiles.updateVendorsSelects === 'function') {
+                const vendors = (typeof window.VendorsFiles.loadVendorsList === 'function')
+                  ? await window.VendorsFiles.loadVendorsList()
+                  : undefined;
+                window.VendorsFiles.updateVendorsSelects(vendors);
+              }
+              if (typeof window.VendorsFiles.updateIntegratorsSelects === 'function') {
+                window.VendorsFiles.updateIntegratorsSelects();
+              }
+            } catch (e) {
+              // ignore
+            }
+          }, 140);
         } else if (panel.id === 'editTechPanel') {
           setTimeout(() => {
             // Инициализация управления файлами

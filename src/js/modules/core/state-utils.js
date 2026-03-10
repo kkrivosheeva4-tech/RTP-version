@@ -96,6 +96,19 @@ import { DOMCache } from './dom-utils.js';
     return DOMCache;
   }
 
+  function isApiModeEnabled() {
+    try {
+      return !!(
+        typeof window !== 'undefined'
+        && window.ApiConfig
+        && typeof window.ApiConfig.getUseApi === 'function'
+        && window.ApiConfig.getUseApi()
+      );
+    } catch (e) {
+      return false;
+    }
+  }
+
   // Проверка, открыто ли модальное окно
   function isModalOpen(DOMCacheRef) {
     const editPanel = DOMCacheRef.get('editTechPanel');
@@ -154,9 +167,11 @@ import { DOMCache } from './dom-utils.js';
         window.Positioning.clearPositionCache();
       }
 
-      // Автоматически сохраняем технологии при изменении (шаг 9.6: через DataService для mock и API)
+      // Автоматически сохраняем технологии только в mock-режиме.
+      // В API-режиме изменения должны идти через create/update/delete/bulk вызовы, иначе возникают гонки запросов.
       try {
-        if (newTechnologies && Array.isArray(newTechnologies) && window.DataService && typeof window.DataService.saveTechnologies === 'function') {
+        const shouldAutoSave = !isApiModeEnabled();
+        if (shouldAutoSave && newTechnologies && Array.isArray(newTechnologies) && window.DataService && typeof window.DataService.saveTechnologies === 'function') {
           window.DataService.saveTechnologies(newTechnologies).catch(e => {
             if (window.Logger) window.Logger.warn('Не удалось сохранить технологии при изменении', e);
           });

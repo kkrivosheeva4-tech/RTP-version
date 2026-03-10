@@ -280,14 +280,31 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
 
+                if (loginResult.ok && loginResult.data && loginResult.data.requires_2fa && loginResult.data.session_id) {
+                    const userRole = loginResult.data.role || (getUsers().find(u => u.username === username) || {}).role || 'user';
+                    const userName = loginResult.data.username || username;
+                    const is2faSetup = loginResult.data.is_2fa_setup === true;
+                    try {
+                        sessionStorage.setItem('auth2faPending', JSON.stringify({
+                            username: userName,
+                            role: userRole,
+                            session_id: loginResult.data.session_id,
+                            api_base_url: getApiBaseUrl(),
+                            remember: remember,
+                            isApi: true
+                        }));
+                    } catch (err) {
+                        if (window.Logger) window.Logger.warn('auth: не удалось сохранить auth2faPending для API', err);
+                    }
+                    window.location.href = is2faSetup
+                        ? '/src/pages/auth-2fa-verify.html'
+                        : '/src/pages/auth-2fa-setup.html';
+                    return;
+                }
+
                 if (submitBtn) {
                     submitBtn.classList.remove('loading');
                     submitBtn.removeAttribute('disabled');
-                }
-
-                if (loginResult.ok && loginResult.data && loginResult.data.requires_2fa) {
-                    showNotification('Для backend 2FA требуется отдельная интеграция verify endpoint', 'error');
-                    return;
                 }
 
                 showNotification(loginResult.error || 'Ошибка авторизации', 'error');

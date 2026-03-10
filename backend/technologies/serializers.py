@@ -22,9 +22,9 @@ from technologies.models import (
 
 class EnterpriseReadinessSerializer(serializers.Serializer):
     enterpriseId = serializers.IntegerField()
-    technologicalReadiness = serializers.IntegerField(min_value=1, max_value=9, required=False, default=1)
-    organizationalReadiness = serializers.IntegerField(min_value=1, max_value=9, required=False, default=1)
-    status = serializers.CharField(required=False, allow_blank=True, default="planned")
+    technologicalReadiness = serializers.IntegerField(min_value=1, max_value=9, required=False, allow_null=True)
+    organizationalReadiness = serializers.IntegerField(min_value=1, max_value=9, required=False, allow_null=True)
+    status = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
 
 class VendorSerializer(serializers.Serializer):
@@ -65,23 +65,73 @@ class TechnologySerializer(serializers.Serializer):
     )
 
     def validate(self, attrs):
+        if "name" in attrs:
+            name = str(attrs.get("name", "")).strip()
+            if not name:
+                raise serializers.ValidationError({"name": "Name is required."})
+            attrs["name"] = name
+
+            name_qs = Technology.objects.filter(name=name)
+            if self.instance is not None:
+                name_qs = name_qs.exclude(id=self.instance.id)
+            if name_qs.exists():
+                raise serializers.ValidationError({"name": "Technology with this name already exists."})
+
         block_ids = self._collect_block_ids(attrs)
+        self._ensure_unique_integers(block_ids, "blocks")
+        if self.instance is None and not block_ids:
+            raise serializers.ValidationError({"blocks": "At least one block is required."})
+
         existing_block_ids = set(FunctionalBlock.objects.filter(id__in=block_ids).values_list("id", flat=True))
         missing_blocks = sorted(set(block_ids) - existing_block_ids)
         if missing_blocks:
             raise serializers.ValidationError({"blocks": f"Unknown block ids: {missing_blocks}"})
 
         direction_ids = attrs.get("directions", []) or []
+        self._ensure_unique_integers(direction_ids, "directions")
         existing_directions = set(DigitalDirection.objects.filter(id__in=direction_ids).values_list("id", flat=True))
         missing_directions = sorted(set(direction_ids) - existing_directions)
         if missing_directions:
             raise serializers.ValidationError({"directions": f"Unknown direction ids: {missing_directions}"})
 
+        function_names = attrs.get("functionCoverage", []) or []
+        cleaned_functions = self._normalize_unique_strings(function_names, "functionCoverage")
+        if "functionCoverage" in attrs:
+            attrs["functionCoverage"] = cleaned_functions
+
         enterprise_ids = [row.get("enterpriseId") for row in attrs.get("enterprises", [])]
+        self._ensure_unique_integers(enterprise_ids, "enterprises.enterpriseId")
         existing_enterprises = set(Enterprise.objects.filter(id__in=enterprise_ids).values_list("id", flat=True))
         missing_enterprises = sorted(set(enterprise_ids) - existing_enterprises)
         if missing_enterprises:
             raise serializers.ValidationError({"enterprises": f"Unknown enterprise ids: {missing_enterprises}"})
+
+        if "marketExamples" in attrs:
+            attrs["marketExamples"] = self._normalize_unique_strings(attrs.get("marketExamples", []), "marketExamples")
+
+        if "documentationFiles" in attrs:
+            attrs["documentationFiles"] = self._normalize_unique_strings(
+                attrs.get("documentationFiles", []),
+                "documentationFiles",
+            )
+
+        vendors = attrs.get("vendors", []) or []
+        seen_vendors = set()
+        normalized_vendors = []
+        for index, vendor in enumerate(vendors):
+            vendor_name = str(vendor.get("name", "")).strip()
+            if not vendor_name:
+                raise serializers.ValidationError({"vendors": f"vendors[{index}].name is required"})
+            vendor_key = vendor_name.lower()
+            if vendor_key in seen_vendors:
+                raise serializers.ValidationError({"vendors": f"Duplicate vendor name: {vendor_name}"})
+            seen_vendors.add(vendor_key)
+
+            integrators = self._normalize_unique_strings(vendor.get("integrators", []), f"vendors[{index}].integrators")
+            normalized_vendors.append({"name": vendor_name, "integrators": integrators})
+
+        if "vendors" in attrs:
+            attrs["vendors"] = normalized_vendors
 
         return attrs
 
@@ -199,6 +249,37 @@ class TechnologySerializer(serializers.Serializer):
             block_ids.append(primary)
         return [block_id for block_id in block_ids if isinstance(block_id, int)]
 
+    @staticmethod
+    def _ensure_unique_integers(values, field_name: str):
+        seen = set()
+        duplicates = set()
+        for value in values:
+            if not isinstance(value, int):
+                continue
+            if value in seen:
+                duplicates.add(value)
+            seen.add(value)
+        if duplicates:
+            sorted_duplicates = sorted(duplicates)
+            raise serializers.ValidationError({field_name: f"Duplicate values are not allowed: {sorted_duplicates}"})
+
+    @staticmethod
+    def _normalize_unique_strings(values, field_name: str):
+        if not isinstance(values, list):
+            raise serializers.ValidationError({field_name: "Must be an array."})
+        seen = set()
+        normalized = []
+        for index, value in enumerate(values):
+            cleaned = str(value).strip()
+            if not cleaned:
+                raise serializers.ValidationError({field_name: f"{field_name}[{index}] must be non-empty string"})
+            key = cleaned.lower()
+            if key in seen:
+                raise serializers.ValidationError({field_name: f"Duplicate value: {cleaned}"})
+            seen.add(key)
+            normalized.append(cleaned)
+        return normalized
+
     @transaction.atomic
     def _sync_relations(self, technology, validated_data):
         block_ids = self._collect_block_ids(validated_data)
@@ -206,6 +287,10 @@ class TechnologySerializer(serializers.Serializer):
         directions = validated_data.get("directions", [])
         enterprises = validated_data.get("enterprises", [])
         vendors = validated_data.get("vendors", [])
+        existing_enterprise_readiness = {
+            row.enterprise_id: row
+            for row in TechnologyEnterpriseReadiness.objects.filter(technology=technology)
+        }
 
         TechnologyBlock.objects.filter(technology=technology).delete()
         TechnologyFunctionCoverage.objects.filter(technology=technology).delete()
@@ -227,12 +312,25 @@ class TechnologySerializer(serializers.Serializer):
             TechnologyDirection.objects.create(technology=technology, direction_id=direction_id)
 
         for enterprise_row in enterprises:
+            enterprise_id = enterprise_row["enterpriseId"]
+            previous_row = existing_enterprise_readiness.get(enterprise_id)
+            technological_readiness = enterprise_row.get("technologicalReadiness")
+            organizational_readiness = enterprise_row.get("organizationalReadiness")
+            status = enterprise_row.get("status")
+
+            if technological_readiness is None and previous_row is not None:
+                technological_readiness = previous_row.technological_readiness
+            if organizational_readiness is None and previous_row is not None:
+                organizational_readiness = previous_row.organizational_readiness
+            if (status is None or status == "") and previous_row is not None:
+                status = previous_row.status
+
             TechnologyEnterpriseReadiness.objects.create(
                 technology=technology,
-                enterprise_id=enterprise_row["enterpriseId"],
-                technological_readiness=enterprise_row.get("technologicalReadiness", 1),
-                organizational_readiness=enterprise_row.get("organizationalReadiness", 1),
-                status=enterprise_row.get("status", "planned") or "planned",
+                enterprise_id=enterprise_id,
+                technological_readiness=technological_readiness,
+                organizational_readiness=organizational_readiness,
+                status=status or "planned",
             )
 
         for vendor_row in vendors:

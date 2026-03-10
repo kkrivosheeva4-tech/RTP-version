@@ -20,7 +20,8 @@ import Logger from '../core/logger.js';
     const {
       SVG_NS, CENTER_X, CENTER_Y, RADIUS_STEP, RINGS, QUADRANTS,
       svg, clearQuadrantGroupsCache,
-      polarToCartesian, describeArc, describeWedge
+      polarToCartesian, describeArc, describeWedge,
+      showSectorLabels = true
     } = config;
 
     if (radarBackgroundRendered) return;
@@ -53,151 +54,153 @@ import Logger from '../core/logger.js';
         g.appendChild(line);
       });
 
-      // Добавляем подпись сектора по диагонали от центра, вне радара
-      const sectorCenterAngle = q.startAngle + 45;
-      const sectorLabelRadius = maxR * 1.25;
-      const sectorLabelPos = polarToCartesian(CENTER_X, CENTER_Y, sectorLabelRadius, sectorCenterAngle);
+      if (showSectorLabels) {
+        // Добавляем подпись сектора по диагонали от центра, вне радара
+        const sectorCenterAngle = q.startAngle + 45;
+        const sectorLabelRadius = maxR * 1.25;
+        const sectorLabelPos = polarToCartesian(CENTER_X, CENTER_Y, sectorLabelRadius, sectorCenterAngle);
 
-      const sectorLabelGroup = document.createElementNS(SVG_NS, "g");
-      sectorLabelGroup.classList.add("sector-label-group");
-      sectorLabelGroup.setAttribute("transform", `translate(${sectorLabelPos.x}, ${sectorLabelPos.y})`);
+        const sectorLabelGroup = document.createElementNS(SVG_NS, "g");
+        sectorLabelGroup.classList.add("sector-label-group");
+        sectorLabelGroup.setAttribute("transform", `translate(${sectorLabelPos.x}, ${sectorLabelPos.y})`);
 
-      const sectorLabelText = document.createElementNS(SVG_NS, "text");
-      sectorLabelText.classList.add("sector-label");
-      sectorLabelText.setAttribute("x", 0);
-      sectorLabelText.setAttribute("y", 0);
-      sectorLabelText.setAttribute("dominant-baseline", "middle");
-      sectorLabelText.setAttribute("text-anchor", "middle");
+        const sectorLabelText = document.createElementNS(SVG_NS, "text");
+        sectorLabelText.classList.add("sector-label");
+        sectorLabelText.setAttribute("x", 0);
+        sectorLabelText.setAttribute("y", 0);
+        sectorLabelText.setAttribute("dominant-baseline", "middle");
+        sectorLabelText.setAttribute("text-anchor", "middle");
 
-      // Разбиваем длинный текст на строки
-      const words = q.name.split(' ');
-      const maxCharsPerLine = 25;
-      let currentLine = '';
-      const lines = [];
+        // Разбиваем длинный текст на строки
+        const words = q.name.split(' ');
+        const maxCharsPerLine = 25;
+        let currentLine = '';
+        const lines = [];
 
-      words.forEach(word => {
-        const testLine = currentLine ? `${currentLine} ${word}` : word;
-        if (testLine.length <= maxCharsPerLine) {
-          currentLine = testLine;
-        } else {
-          if (currentLine) lines.push(currentLine);
-          currentLine = word;
-        }
-      });
-      if (currentLine) lines.push(currentLine);
-
-      if (lines.length === 1) {
-        sectorLabelText.textContent = lines[0];
-      } else {
-        lines.forEach((line, idx) => {
-          const tspan = document.createElementNS(SVG_NS, "tspan");
-          tspan.setAttribute("x", 0);
-          tspan.setAttribute("dy", idx === 0 ? "-0.6em" : "1.2em");
-          tspan.textContent = line;
-          sectorLabelText.appendChild(tspan);
-        });
-      }
-
-      sectorLabelGroup.appendChild(sectorLabelText);
-
-      // Добавляем невидимый прямоугольник для увеличения области клика
-      // Сначала создаем с примерным размером, затем обновим после рендеринга
-      const estimatedWidth = Math.max(250, q.name.length * 14);
-      const estimatedHeight = Math.max(60, lines.length * 32 + 20);
-      const padding = 20;
-      const clickArea = document.createElementNS(SVG_NS, "rect");
-      clickArea.classList.add("sector-label-click-area");
-      clickArea.setAttribute("x", -estimatedWidth / 2 - padding);
-      clickArea.setAttribute("y", -estimatedHeight / 2 - padding);
-      clickArea.setAttribute("width", estimatedWidth + padding * 2);
-      clickArea.setAttribute("height", estimatedHeight + padding * 2);
-      clickArea.setAttribute("fill", "transparent");
-      clickArea.setAttribute("data-quadrant", q.id);
-      clickArea.style.cursor = "pointer";
-      clickArea.style.pointerEvents = "all";
-
-      // Вставляем прямоугольник перед текстом, чтобы он был под ним
-      sectorLabelGroup.insertBefore(clickArea, sectorLabelText);
-
-      // Обновляем размер после рендеринга для более точного размера
-      requestAnimationFrame(() => {
-        try {
-          const bbox = sectorLabelText.getBBox();
-          if (bbox.width > 0 && bbox.height > 0) {
-            clickArea.setAttribute("x", bbox.x - padding);
-            clickArea.setAttribute("y", bbox.y - padding);
-            clickArea.setAttribute("width", bbox.width + padding * 2);
-            clickArea.setAttribute("height", bbox.height + padding * 2);
+        words.forEach(word => {
+          const testLine = currentLine ? `${currentLine} ${word}` : word;
+          if (testLine.length <= maxCharsPerLine) {
+            currentLine = testLine;
+          } else {
+            if (currentLine) lines.push(currentLine);
+            currentLine = word;
           }
-        } catch (err) {
-          // Игнорируем ошибки, используем примерный размер
+        });
+        if (currentLine) lines.push(currentLine);
+
+        if (lines.length === 1) {
+          sectorLabelText.textContent = lines[0];
+        } else {
+          lines.forEach((line, idx) => {
+            const tspan = document.createElementNS(SVG_NS, "tspan");
+            tspan.setAttribute("x", 0);
+            tspan.setAttribute("dy", idx === 0 ? "-0.6em" : "1.2em");
+            tspan.textContent = line;
+            sectorLabelText.appendChild(tspan);
+          });
         }
-      });
 
-      // Добавляем обработчик клика на метку сектора для зума
-      sectorLabelGroup.style.cursor = 'pointer';
-      sectorLabelGroup.style.pointerEvents = 'all';
-      sectorLabelGroup.setAttribute("data-quadrant", q.id);
-      sectorLabelGroup.setAttribute("data-label-type", "sector-label");
+        sectorLabelGroup.appendChild(sectorLabelText);
 
-      const handleLabelClick = (e) => {
-        e.stopPropagation();
-        const qId = +g.dataset.quadrant;
-        if (qId && typeof window.zoomQuadrant === 'function') {
-          // Проверяем наличие технологий в секторе (учитываем технологии с несколькими блоками/квадрантами)
-          if (typeof window.getTechnologies === 'function') {
-            const techs = window.getTechnologies() || [];
-            // Используем функции из window.Positioning, если они доступны
-            const getAllQuadrantsForTech =
-              (window.Positioning && typeof window.Positioning.getAllQuadrantsForTech === 'function')
-                ? window.Positioning.getAllQuadrantsForTech
-                : (typeof window.getAllQuadrantsForTech === 'function' ? window.getAllQuadrantsForTech : null);
-            const getQuadrantIdForBlock =
-              (window.Positioning && typeof window.Positioning.getQuadrantIdForBlock === 'function')
-                ? window.Positioning.getQuadrantIdForBlock
-                : (typeof window.getQuadrantIdForBlock === 'function' ? window.getQuadrantIdForBlock : null);
+        // Добавляем невидимый прямоугольник для увеличения области клика
+        // Сначала создаем с примерным размером, затем обновим после рендеринга
+        const estimatedWidth = Math.max(250, q.name.length * 14);
+        const estimatedHeight = Math.max(60, lines.length * 32 + 20);
+        const padding = 20;
+        const clickArea = document.createElementNS(SVG_NS, "rect");
+        clickArea.classList.add("sector-label-click-area");
+        clickArea.setAttribute("x", -estimatedWidth / 2 - padding);
+        clickArea.setAttribute("y", -estimatedHeight / 2 - padding);
+        clickArea.setAttribute("width", estimatedWidth + padding * 2);
+        clickArea.setAttribute("height", estimatedHeight + padding * 2);
+        clickArea.setAttribute("fill", "transparent");
+        clickArea.setAttribute("data-quadrant", q.id);
+        clickArea.style.cursor = "pointer";
+        clickArea.style.pointerEvents = "all";
 
-            const hasTechs = (Array.isArray(techs) ? techs : []).some(t => {
-              if (!t) return false;
-              if (getAllQuadrantsForTech) {
-                try {
-                  const qs = getAllQuadrantsForTech(t) || [];
-                  return Array.isArray(qs) && qs.includes(qId);
-                } catch (err) { /* fallback below */ }
+        // Вставляем прямоугольник перед текстом, чтобы он был под ним
+        sectorLabelGroup.insertBefore(clickArea, sectorLabelText);
+
+        // Обновляем размер после рендеринга для более точного размера
+        requestAnimationFrame(() => {
+          try {
+            const bbox = sectorLabelText.getBBox();
+            if (bbox.width > 0 && bbox.height > 0) {
+              clickArea.setAttribute("x", bbox.x - padding);
+              clickArea.setAttribute("y", bbox.y - padding);
+              clickArea.setAttribute("width", bbox.width + padding * 2);
+              clickArea.setAttribute("height", bbox.height + padding * 2);
+            }
+          } catch (err) {
+            // Игнорируем ошибки, используем примерный размер
+          }
+        });
+
+        // Добавляем обработчик клика на метку сектора для зума
+        sectorLabelGroup.style.cursor = 'pointer';
+        sectorLabelGroup.style.pointerEvents = 'all';
+        sectorLabelGroup.setAttribute("data-quadrant", q.id);
+        sectorLabelGroup.setAttribute("data-label-type", "sector-label");
+
+        const handleLabelClick = (e) => {
+          e.stopPropagation();
+          const qId = +g.dataset.quadrant;
+          if (qId && typeof window.zoomQuadrant === 'function') {
+            // Проверяем наличие технологий в секторе (учитываем технологии с несколькими блоками/квадрантами)
+            if (typeof window.getTechnologies === 'function') {
+              const techs = window.getTechnologies() || [];
+              // Используем функции из window.Positioning, если они доступны
+              const getAllQuadrantsForTech =
+                (window.Positioning && typeof window.Positioning.getAllQuadrantsForTech === 'function')
+                  ? window.Positioning.getAllQuadrantsForTech
+                  : (typeof window.getAllQuadrantsForTech === 'function' ? window.getAllQuadrantsForTech : null);
+              const getQuadrantIdForBlock =
+                (window.Positioning && typeof window.Positioning.getQuadrantIdForBlock === 'function')
+                  ? window.Positioning.getQuadrantIdForBlock
+                  : (typeof window.getQuadrantIdForBlock === 'function' ? window.getQuadrantIdForBlock : null);
+
+              const hasTechs = (Array.isArray(techs) ? techs : []).some(t => {
+                if (!t) return false;
+                if (getAllQuadrantsForTech) {
+                  try {
+                    const qs = getAllQuadrantsForTech(t) || [];
+                    return Array.isArray(qs) && qs.includes(qId);
+                  } catch (err) { /* fallback below */ }
+                }
+                if (!getQuadrantIdForBlock) return false;
+                const blocks = (t.blocks && Array.isArray(t.blocks) && t.blocks.length) ? t.blocks : (t.block ? [t.block] : []);
+                return blocks.some(b => getQuadrantIdForBlock(b) === qId);
+              });
+
+              if (!hasTechs) {
+                if (typeof window.showNotification === 'function') {
+                  window.showNotification('На данный момент в данном секторе отсутствуют технологии, но мы активно работаем над внедрением новых технологий.', false);
+                }
+                return;
               }
-              if (!getQuadrantIdForBlock) return false;
-              const blocks = (t.blocks && Array.isArray(t.blocks) && t.blocks.length) ? t.blocks : (t.block ? [t.block] : []);
-              return blocks.some(b => getQuadrantIdForBlock(b) === qId);
-            });
+            }
+            // Сбрасываем текущий зум перед новым
+            if (typeof window.unzoom === 'function') {
+              window.unzoom();
+            }
+            setTimeout(() => {
+              window.zoomQuadrant(qId, { source: 'sector' });
+            }, 50);
 
-            if (!hasTechs) {
-              if (typeof window.showNotification === 'function') {
-                window.showNotification('На данный момент в данном секторе отсутствуют технологии, но мы активно работаем над внедрением новых технологий.', false);
-              }
-              return;
+            // Активируем соответствующий элемент в сайдбаре
+            const sidebarItem = document.querySelector(`.sector-item[data-quadrant="${qId}"]`);
+            if (sidebarItem) {
+              sidebarItem.click();
             }
           }
-          // Сбрасываем текущий зум перед новым
-          if (typeof window.unzoom === 'function') {
-            window.unzoom();
-          }
-          setTimeout(() => {
-            window.zoomQuadrant(qId, { source: 'sector' });
-          }, 50);
+        };
 
-          // Активируем соответствующий элемент в сайдбаре
-          const sidebarItem = document.querySelector(`.sector-item[data-quadrant="${qId}"]`);
-          if (sidebarItem) {
-            sidebarItem.click();
-          }
-        }
-      };
+        // Добавляем обработчики на группу и кликабельную область
+        sectorLabelGroup.addEventListener('click', handleLabelClick);
+        clickArea.addEventListener('click', handleLabelClick);
 
-      // Добавляем обработчики на группу и кликабельную область
-      sectorLabelGroup.addEventListener('click', handleLabelClick);
-      clickArea.addEventListener('click', handleLabelClick);
-
-      g.appendChild(sectorLabelGroup);
+        g.appendChild(sectorLabelGroup);
+      }
 
       svg.appendChild(g);
     });
@@ -484,10 +487,10 @@ import Logger from '../core/logger.js';
         });
         isFullyImplemented = !hasNonImplemented;
       } else {
-        // Нет массива enterprises (например, технология из файла или добавленная через модалку)
-        const statusLower = String(t.status || t.level || '').trim().toLowerCase();
-        const techImplemented = t.isImplemented === true || statusLower === 'внедрена' || statusLower === 'внедренна';
-        if (techImplemented) isFullyImplemented = true;
+        // Нет массива enterprises (например, технология из файла или добавленная через модалку).
+        // Не считаем технологию "полностью внедренной" только по строковому status,
+        // т.к. статус может быть производным от уровня и не отражать фактическое внедрение.
+        if (t.isImplemented === true) isFullyImplemented = true;
         else if (t.companyRatings && typeof t.companyRatings === 'object') {
           const allImplemented = Object.values(t.companyRatings).every(r => r && r.isImplemented === true);
           if (allImplemented) isFullyImplemented = true;

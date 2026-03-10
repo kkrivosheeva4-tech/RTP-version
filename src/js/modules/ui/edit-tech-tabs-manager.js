@@ -201,7 +201,8 @@ import { escapeHtml } from '../core/escape-utils.js';
                 organizationalReadiness: null,
                 functionalCoverage: null,
                 trlStage: null,
-                status: null
+                status: null,
+                isImplemented: undefined
             }
         });
 
@@ -214,6 +215,7 @@ import { escapeHtml } from '../core/escape-utils.js';
         setTimeout(() => {
             const techReadInput = document.getElementById(`editTechReadiness_${enterpriseName}`);
             const orgReadInput = document.getElementById(`editOrgReadiness_${enterpriseName}`);
+            const isImplementedCheckbox = document.getElementById(`editIsImplemented_${enterpriseName}`);
             const warningBlock = document.getElementById(`ratingWarning_${enterpriseName}`);
 
             const updateWarning = () => {
@@ -234,6 +236,12 @@ import { escapeHtml } from '../core/escape-utils.js';
             }
             if (orgReadInput) {
                 orgReadInput.addEventListener('change', updateWarning);
+            }
+            if (isImplementedCheckbox) {
+                isImplementedCheckbox.dataset.userTouched = '0';
+                isImplementedCheckbox.addEventListener('change', () => {
+                    isImplementedCheckbox.dataset.userTouched = '1';
+                });
             }
 
             // Показываем предупреждение по умолчанию (данные еще не загружены)
@@ -548,7 +556,13 @@ import { escapeHtml } from '../core/escape-utils.js';
             tabData.data.organizationalReadiness = (val !== '' && val !== null) ? parseInt(val, 10) : null;
         }
         if (isImplementedCheckbox) {
-            tabData.data.isImplemented = isImplementedCheckbox.checked;
+            const hasStoredBoolean = typeof tabData.data.isImplemented === 'boolean';
+            const isTouched = isImplementedCheckbox.dataset.userTouched === '1';
+            if (hasStoredBoolean || isTouched || isImplementedCheckbox.checked === true) {
+                tabData.data.isImplemented = isImplementedCheckbox.checked;
+            } else {
+                delete tabData.data.isImplemented;
+            }
         }
     }
 
@@ -630,6 +644,7 @@ import { escapeHtml } from '../core/escape-utils.js';
                 const isImplementedCheckbox = document.getElementById(`editIsImplemented_${enterpriseName}`);
                 if (isImplementedCheckbox) {
                     isImplementedCheckbox.checked = data.isImplemented;
+                    isImplementedCheckbox.dataset.userTouched = '0';
                 }
             }
 
@@ -647,7 +662,7 @@ import { escapeHtml } from '../core/escape-utils.js';
             tabData.data = {
                 technologicalReadiness: data.techRead !== undefined ? data.techRead : null,
                 organizationalReadiness: data.organRead !== undefined ? data.organRead : null,
-                isImplemented: data.isImplemented !== undefined ? data.isImplemented : false
+                isImplemented: typeof data.isImplemented === 'boolean' ? data.isImplemented : undefined
             };
         });
 

@@ -431,140 +431,7 @@ import { DOMCache } from '../core/dom-utils.js';
       };
     }
 
-    // Обработчики для модального окна подтверждения удаления
-    const confirmDeleteBtn = document.getElementById("confirmDeleteBtn");
-    if (confirmDeleteBtn) {
-      confirmDeleteBtn.onclick = async () => {
-        if (
-          typeof window.getCurrentTech === "function" &&
-          typeof window.getTechnologies === "function" &&
-          typeof window.setTechnologies === "function"
-        ) {
-          const currentTech = window.getCurrentTech();
-          if (!currentTech) return;
-          const DataService = getDataService();
-          try {
-            if (DataService && typeof DataService.deleteTech === 'function') {
-              await DataService.deleteTech(currentTech.id);
-            }
-          } catch (err) {
-            if (window.Logger) window.Logger.warn('Не удалось удалить технологию', err);
-            return;
-          }
-          const technologies = window.getTechnologies();
-          const updatedTechnologies = technologies.filter((t) => t.id !== currentTech.id);
-          window.setTechnologies(updatedTechnologies);
-
-          if (
-            typeof window.getQuadrantsCache === "function" &&
-            typeof window.setQuadrantsCacheVersion === "function"
-          ) {
-            const quadrantsCache = window.getQuadrantsCache();
-            if (quadrantsCache) quadrantsCache.clear();
-            window.setQuadrantsCacheVersion(
-              (window.getQuadrantsCacheVersion() || 0) + 1
-            );
-          }
-
-          // Сначала сбрасываем выбранную технологию, чтобы панель не переоткрылась при обновлении радара
-          if (typeof window.setSelectedBlipId === "function") {
-            window.setSelectedBlipId(null);
-          }
-          if (typeof window.setCurrentTech === "function") {
-            window.setCurrentTech(null);
-          }
-
-          // Полностью закрываем панель подробной информации
-          const detailPanel = DOMCache.get("detailPanel");
-          if (detailPanel) {
-            // Очищаем все inline стили, которые были установлены
-            detailPanel.style.removeProperty("visibility");
-            detailPanel.style.removeProperty("opacity");
-            detailPanel.style.removeProperty("transform");
-            detailPanel.style.removeProperty("position");
-            detailPanel.style.removeProperty("z-index");
-            detailPanel.style.removeProperty("display");
-            // Деактивируем focus trap перед закрытием
-            if (window.FocusTrap && typeof window.FocusTrap.release === 'function') {
-              window.FocusTrap.release();
-            }
-            // Удаляем класс active
-            detailPanel.classList.remove("active");
-            // Снимаем выделение с blip'ов
-            const svg = DOMCache.get("techRadar");
-            if (svg) {
-              svg
-                .querySelectorAll(".blip.selected")
-                .forEach((el) => el.classList.remove("selected"));
-            }
-          }
-          if (typeof window.unzoom === "function") {
-            window.unzoom();
-          }
-          if (typeof window.updateRadar === "function") {
-            window.updateRadar();
-          }
-
-          try {
-            if (
-              typeof window.getEnterpriseData === "function" &&
-              typeof window.getCurrentEnterprise === "function" &&
-              typeof window.getTechnologies === "function" &&
-              typeof window.setEnterpriseData === "function"
-            ) {
-              const enterpriseData = window.getEnterpriseData();
-              const currentEnterprise = window.getCurrentEnterprise();
-              const technologies = window.getTechnologies();
-              enterpriseData[currentEnterprise] = [...technologies];
-              window.setEnterpriseData({ ...enterpriseData });
-            }
-          } catch (err) {
-            if (window.Logger) window.Logger.warn(
-              "Не удалось обновить enterpriseData после удаления",
-              err
-            );
-          }
-
-          if (typeof window.showNotification === "function") {
-            window.showNotification("Технология удалена!", true);
-          }
-
-          // Логируем удаление технологии
-          try {
-            if (typeof window.appendAdminAudit === 'function') {
-              window.appendAdminAudit('delete', `Удалена технология: "${currentTech.name}" (ID: ${currentTech.id})`);
-            } else {
-              // Fallback: прямое логирование в localStorage если функция недоступна
-              const key = 'adminAuditLogs';
-              const raw = localStorage.getItem(key);
-              const list = raw ? (JSON.parse(raw) || []) : [];
-              const arr = Array.isArray(list) ? list : [];
-              const username = (localStorage.getItem('username') || localStorage.getItem('userName') || 'system').trim() || 'system';
-              const now = (typeof window.getAuditTimestamp === 'function')
-                ? window.getAuditTimestamp()
-                : new Date().toISOString().slice(0, 19).replace('T', ' ');
-              const nextId = arr.length > 0 ? (Math.max(...arr.map(x => Number(x && x.id) || 0)) + 1) : 1;
-              arr.unshift({
-                id: nextId,
-                date: now,
-                user: username,
-                action: 'delete',
-                details: `Удалена технология: "${currentTech.name}" (ID: ${currentTech.id})`,
-                tz: 'local',
-                ip: 'local'
-              });
-              localStorage.setItem(key, JSON.stringify(arr));
-            }
-          } catch (err) {
-            if (window.Logger) window.Logger.warn('Ошибка при логировании удаления:', err);
-          }
-
-          if (typeof window.hideModal === "function") {
-            window.hideModal("deleteConfirmModal");
-          }
-        }
-      };
-    }
+    // Обработчик confirmDeleteBtn назначается централизованно в app-init.js (initDeleteHandlers).
 
     const cancelDeleteBtn = document.getElementById("cancelDeleteBtn");
     if (cancelDeleteBtn) {
@@ -1021,19 +888,22 @@ import { DOMCache } from '../core/dom-utils.js';
     // Вендор(ы) выбираются в мультиселекте: JSON-массив строк в hidden input.
     // Интеграторы для каждого вендора хранятся в динамических hidden полях:
     // techVendorIntegrators__{key} / editVendorIntegrators__{key}
-    const raw = getFormFieldValue(fieldId);
-    const s = String(raw || '').trim();
-    let vendorNames = [];
-    if (!s) vendorNames = [];
-    else if (s.startsWith('[')) {
-      try {
-        const parsed = JSON.parse(s);
-        vendorNames = Array.isArray(parsed) ? parsed.map(x => String(x || '').trim()).filter(Boolean) : [];
-      } catch (e) {
-        vendorNames = [];
+    let vendorNames = parseSelectedValuesFromModalSelect(fieldId);
+    if (!Array.isArray(vendorNames)) vendorNames = [];
+    if (vendorNames.length === 0) {
+      const raw = getFormFieldValue(fieldId);
+      const s = String(raw || '').trim();
+      if (!s) vendorNames = [];
+      else if (s.startsWith('[')) {
+        try {
+          const parsed = JSON.parse(s);
+          vendorNames = Array.isArray(parsed) ? parsed.map(x => String(x || '').trim()).filter(Boolean) : [];
+        } catch (e) {
+          vendorNames = [];
+        }
+      } else {
+        vendorNames = [s].map(x => String(x || '').trim()).filter(Boolean);
       }
-    } else {
-      vendorNames = [s].map(x => String(x || '').trim()).filter(Boolean);
     }
     // Дедупликация вендоров (сохраняем порядок, оставляем первое вхождение)
     const seen = new Set();
@@ -1050,7 +920,8 @@ import { DOMCache } from '../core/dom-utils.js';
     const vendors = vendorNames.map((name, idx) => {
       const key = vendorKeyFromName(name);
       const integratorsFieldId = `${prefix}VendorIntegrators__${key}`;
-      const integratorNames = parseStringArrayFromField(integratorsFieldId);
+      // Prefer current UI state in dynamic selects over hidden input snapshot.
+      const integratorNames = parseSelectedValuesFromModalSelect(integratorsFieldId, true);
       return {
         id: Date.now() + idx,
         name,
@@ -1076,6 +947,23 @@ import { DOMCache } from '../core/dom-utils.js';
       }
     }
     return [s].map(x => String(x || '').trim()).filter(Boolean);
+  }
+
+  function parseSelectedValuesFromModalSelect(fieldId, fallbackToHidden = false) {
+    const select = document.querySelector(`.custom-select-modal[data-field="${fieldId}"]`);
+    if (select) {
+      const optionLis = Array.from(select.querySelectorAll('.select-options li.select-option-item'));
+      const selected = optionLis
+        .filter(li => li.classList.contains('selected'))
+        .map(li => li.getAttribute('data-value'))
+        .filter(Boolean)
+        .map(v => String(v).trim())
+        .filter(Boolean);
+      const deduped = [...new Set(selected)];
+      // If the select exists, trust UI state even when the result is an empty array.
+      if (optionLis.length > 0) return deduped;
+    }
+    return fallbackToHidden ? parseStringArrayFromField(fieldId) : [];
   }
 
   function integratorsToObjects(names) {
@@ -1361,7 +1249,7 @@ import { DOMCache } from '../core/dom-utils.js';
           enterpriseId: enterpriseId,
           technologicalReadiness: data.technologicalReadiness !== undefined && data.technologicalReadiness !== null ? Number(data.technologicalReadiness) : null,
           organizationalReadiness: data.organizationalReadiness !== undefined && data.organizationalReadiness !== null ? Number(data.organizationalReadiness) : null,
-          isImplemented: Boolean(data.isImplemented)
+          ...(typeof data.isImplemented === 'boolean' ? { isImplemented: data.isImplemented } : {})
         });
       });
     }
@@ -1377,7 +1265,7 @@ import { DOMCache } from '../core/dom-utils.js';
           t.companyRatings[ent.name] = {
             techRead: ent.technologicalReadiness !== null && ent.technologicalReadiness !== undefined ? ent.technologicalReadiness : null,
             organRead: ent.organizationalReadiness !== null && ent.organizationalReadiness !== undefined ? ent.organizationalReadiness : null,
-            isImplemented: ent.isImplemented || false
+            ...(typeof ent.isImplemented === 'boolean' ? { isImplemented: ent.isImplemented } : {})
           };
         }
       });
@@ -1441,8 +1329,6 @@ import { DOMCache } from '../core/dom-utils.js';
       if (window.Logger) window.Logger.debug('addTech: new tech BEFORE persist', { id: t.id, name: t.name, block: t.block, quadrants: techQuadrants, level: t.level, ring: levelToRing[t.level], x: t.x, y: t.y });
     } catch (e) { /* ignore */ }
 
-    const technologies = StateAccessors.getTechnologies();
-    technologies.push(t);
     StateManager.set('nextId', nextId);
 
     // Получаем или создаем quadrantsCache
@@ -1479,9 +1365,16 @@ import { DOMCache } from '../core/dom-utils.js';
       window.rebuildTechnologiesIndex();
     }
 
-    await DataLoader.ensureAndPersistNewTech(t);
+    try {
+      await DataLoader.ensureAndPersistNewTech(t);
+    } catch (err) {
+      if (window.Logger) window.Logger.warn('Не удалось сохранить новую технологию', err);
+      return;
+    }
 
-    setButtonLoading(submitAddBtn, false);
+    if (typeof window.rebuildTechnologiesIndex === 'function') {
+      window.rebuildTechnologiesIndex();
+    }
 
     // Очищаем состояние формы из localStorage после успешного сохранения
     if (window.TechTabsManager && typeof window.TechTabsManager.clearFormState === 'function') {
@@ -1671,7 +1564,10 @@ import { DOMCache } from '../core/dom-utils.js';
     const id = +getFormFieldValue("editId");
     const technologies = StateAccessors.getTechnologies();
     const idx = technologies.findIndex(t => t.id === id);
-    if (idx === -1) return;
+    if (idx === -1) {
+      setButtonLoading(editSubmitBtn, false);
+      return;
+    }
     const existing = technologies[idx];
     // Сохраняем существующие значения techType и status (не обновляем их из формы)
     const newTechTypeVal = existing.techType || '';
@@ -1839,8 +1735,32 @@ import { DOMCache } from '../core/dom-utils.js';
     // Обрабатываем данные по предприятиям (для всех предприятий, даже одного)
     if (companies.length > 0) {
       const companyRatings = {};
-      let hasAnyRatings = false;
-      const clamp13 = (n) => Math.max(1, Math.min(3, Number(n)));
+      const existingCompanyRatings = (existing.companyRatings && typeof existing.companyRatings === 'object')
+        ? { ...existing.companyRatings }
+        : {};
+
+      // Фолбэк для старого формата (одно предприятие, оценки в общих полях технологии)
+      if (Object.keys(existingCompanyRatings).length === 0 && companies.length === 1) {
+        const fallbackRating = {};
+        if (existing.techRead !== undefined && existing.techRead !== null && existing.techRead !== '') {
+          const techNum = parseInt(existing.techRead, 10);
+          if (!isNaN(techNum) && techNum >= 0 && techNum <= 3) {
+            fallbackRating.techRead = techNum;
+          }
+        }
+        if (existing.organRead !== undefined && existing.organRead !== null && existing.organRead !== '') {
+          const organNum = parseInt(existing.organRead, 10);
+          if (!isNaN(organNum) && organNum >= 0 && organNum <= 3) {
+            fallbackRating.organRead = organNum;
+          }
+        }
+        if (typeof existing.isImplemented === 'boolean') {
+          fallbackRating.isImplemented = existing.isImplemented;
+        }
+        if (Object.keys(fallbackRating).length > 0) {
+          existingCompanyRatings[companies[0]] = fallbackRating;
+        }
+      }
 
       companies.forEach(company => {
         // Получаем данные из вкладок предприятий
@@ -1854,13 +1774,31 @@ import { DOMCache } from '../core/dom-utils.js';
         }
 
         const ratings = {};
+        const existingRatings = existingCompanyRatings[company];
+
+        if (existingRatings && typeof existingRatings === 'object') {
+          if (existingRatings.techRead !== undefined && existingRatings.techRead !== null && existingRatings.techRead !== '') {
+            const trExisting = parseInt(existingRatings.techRead, 10);
+            if (!isNaN(trExisting) && trExisting >= 0 && trExisting <= 3) {
+              ratings.techRead = trExisting;
+            }
+          }
+          if (existingRatings.organRead !== undefined && existingRatings.organRead !== null && existingRatings.organRead !== '') {
+            const orExisting = parseInt(existingRatings.organRead, 10);
+            if (!isNaN(orExisting) && orExisting >= 0 && orExisting <= 3) {
+              ratings.organRead = orExisting;
+            }
+          }
+          if (typeof existingRatings.isImplemented === 'boolean') {
+            ratings.isImplemented = existingRatings.isImplemented;
+          }
+        }
 
         // Технологическая готовность (0-3)
         if (techReadVal !== undefined && techReadVal !== null && techReadVal !== '') {
           const trNum = parseInt(techReadVal, 10);
           if (!isNaN(trNum) && trNum >= 0 && trNum <= 3) {
             ratings.techRead = trNum;
-            hasAnyRatings = true;
           }
         }
 
@@ -1869,14 +1807,12 @@ import { DOMCache } from '../core/dom-utils.js';
           const orNum = parseInt(organReadVal, 10);
           if (!isNaN(orNum) && orNum >= 0 && orNum <= 3) {
             ratings.organRead = orNum;
-            hasAnyRatings = true;
           }
         }
 
         // Внедрена/Не внедрена (boolean)
-        if (isImplementedVal !== undefined) {
-          ratings.isImplemented = isImplementedVal === true;
-          hasAnyRatings = true;
+        if (typeof isImplementedVal === 'boolean') {
+          ratings.isImplemented = isImplementedVal;
         }
 
         if (Object.keys(ratings).length > 0) {
@@ -1884,7 +1820,7 @@ import { DOMCache } from '../core/dom-utils.js';
         }
       });
 
-      if (hasAnyRatings) {
+      if (Object.keys(companyRatings).length > 0) {
         technologies[idx].companyRatings = companyRatings;
       } else {
         if (technologies[idx].companyRatings) {
@@ -1896,29 +1832,27 @@ import { DOMCache } from '../core/dom-utils.js';
       // Это необходимо для правильного расчета techRead и organRead в calculateRadarPosition
       const enterprisesData = [];
       companies.forEach(company => {
-        const ratings = companyRatings[company];
-        if (ratings) {
-          // Получаем enterpriseId из списка предприятий, если доступен
-          let enterpriseId = null;
-          if (window.StateManager && typeof window.StateManager.get === 'function') {
-            const enterprisesList = window.StateManager.get('enterprisesList') || [];
-            const enterprise = enterprisesList.find(e => {
-              const name = (typeof e === 'object' && e.name) ? e.name : (typeof e === 'string' ? e : '');
-              return name === company;
-            });
-            if (enterprise) {
-              enterpriseId = (typeof enterprise === 'object' && enterprise.id !== undefined) ? enterprise.id : null;
-            }
-          }
-
-          enterprisesData.push({
-            name: company,
-            enterpriseId: enterpriseId,
-            technologicalReadiness: ratings.techRead !== undefined && ratings.techRead !== null ? ratings.techRead : null,
-            organizationalReadiness: ratings.organRead !== undefined && ratings.organRead !== null ? ratings.organRead : null,
-            isImplemented: ratings.isImplemented || false
+        const ratings = companyRatings[company] || {};
+        // Получаем enterpriseId из списка предприятий, если доступен
+        let enterpriseId = null;
+        if (window.StateManager && typeof window.StateManager.get === 'function') {
+          const enterprisesList = window.StateManager.get('enterprisesList') || [];
+          const enterprise = enterprisesList.find(e => {
+            const name = (typeof e === 'object' && e.name) ? e.name : (typeof e === 'string' ? e : '');
+            return name === company;
           });
+          if (enterprise) {
+            enterpriseId = (typeof enterprise === 'object' && enterprise.id !== undefined) ? enterprise.id : null;
+          }
         }
+
+        enterprisesData.push({
+          ...(ratings.techRead !== undefined && ratings.techRead !== null ? { technologicalReadiness: ratings.techRead } : {}),
+          ...(ratings.organRead !== undefined && ratings.organRead !== null ? { organizationalReadiness: ratings.organRead } : {}),
+          ...(typeof ratings.isImplemented === 'boolean' ? { isImplemented: ratings.isImplemented } : {}),
+          name: company,
+          enterpriseId: enterpriseId
+        });
       });
 
       // Обновляем массив enterprises в технологии
@@ -2028,9 +1962,14 @@ import { DOMCache } from '../core/dom-utils.js';
     }
 
     // Сохраняем через DataService (ensureAndPersistNewTech вызывает DataService.updateTech)
-    await DataLoader.ensureAndPersistNewTech(technologies[idx]);
-
-    setButtonLoading(editSubmitBtn, false);
+    try {
+      await DataLoader.ensureAndPersistNewTech(technologies[idx]);
+    } catch (err) {
+      if (window.Logger) window.Logger.warn('Не удалось сохранить изменения технологии', err);
+      return;
+    } finally {
+      setButtonLoading(editSubmitBtn, false);
+    }
 
     if (typeof window.hideModal === 'function') {
       window.hideModal('editTechPanel');
@@ -2321,14 +2260,9 @@ import { DOMCache } from '../core/dom-utils.js';
         const hasBlockName = blockName.length > 0;
         const hasDirection = !!(sectorName && sectorName !== 'Выберите');
 
-        // Валидация: если выбрано предприятие ИЛИ направление — нужен либо блок из списка, либо название
-        if ((hasEnterprise || hasDirection) && !hasBlockFromList && !hasBlockName) {
+        // Валидация: если выбрано предприятие — нужен либо блок из списка, либо название
+        if (hasEnterprise && !hasBlockFromList && !hasBlockName) {
           DataLoader.showNotification('Выберите блок из списка или введите название нового блока', false);
-          return;
-        }
-        // Для нового блока (есть название) нужно направление
-        if (hasBlockName && !hasDirection) {
-          DataLoader.showNotification('Для нового блока выберите направление', false);
           return;
         }
 
@@ -2350,33 +2284,35 @@ import { DOMCache } from '../core/dom-utils.js';
           return;
         }
 
-        // Получаем QUADRANTS из window или создаем дефолтные значения
         let QUADRANTS_LOCAL = window.QUADRANTS || [];
+        let quad = null;
+        let qId = null;
+        if (hasDirection) {
+          // Если QUADRANTS не загружены, используем дефолтные значения
+          if (!QUADRANTS_LOCAL || QUADRANTS_LOCAL.length === 0) {
+            QUADRANTS_LOCAL = [
+              { id: 1, name: "Единый центр данных (Data Hub)", startAngle: 0 },
+              { id: 2, name: "Искусственный интеллект во всех процессах", startAngle: 90 },
+              { id: 3, name: "Автономные комплексы на всех предприятиях", startAngle: 180 },
+              { id: 4, name: "Надёжная и безопасная цифровая инфраструктура", startAngle: 270 },
+            ];
+            if (window.Logger) window.Logger.warn('QUADRANTS не загружены, используются дефолтные значения');
+          }
 
-        // Если QUADRANTS не загружены, используем дефолтные значения
-        if (!QUADRANTS_LOCAL || QUADRANTS_LOCAL.length === 0) {
-          QUADRANTS_LOCAL = [
-            { id: 1, name: "Единый центр данных (Data Hub)", startAngle: 0 },
-            { id: 2, name: "Искусственный интеллект во всех процессах", startAngle: 90 },
-            { id: 3, name: "Автономные комплексы на всех предприятиях", startAngle: 180 },
-            { id: 4, name: "Надёжная и безопасная цифровая инфраструктура", startAngle: 270 },
-          ];
-          if (window.Logger) window.Logger.warn('QUADRANTS не загружены, используются дефолтные значения');
+          // Ищем квадрант по имени (точное совпадение, без учета регистра)
+          quad = QUADRANTS_LOCAL.find(q => {
+            const qName = String(q.name || '').trim();
+            const sName = String(sectorName).trim();
+            return qName === sName || qName.toLowerCase() === sName.toLowerCase();
+          });
+
+          if (!quad) {
+            DataLoader.showNotification(`Сектор "${sectorName}" не найден. Использован квадрант по умолчанию`, false);
+            if (window.Logger) window.Logger.warn('Квадрант не найден для сектора:', sectorName, 'Доступные:', QUADRANTS_LOCAL.map(q => q.name));
+          }
+
+          qId = quad ? quad.id : (QUADRANTS_LOCAL[0] ? QUADRANTS_LOCAL[0].id : 1);
         }
-
-        // Ищем квадрант по имени (точное совпадение, без учета регистра)
-        const quad = QUADRANTS_LOCAL.find(q => {
-          const qName = String(q.name || '').trim();
-          const sName = String(sectorName).trim();
-          return qName === sName || qName.toLowerCase() === sName.toLowerCase();
-        });
-
-        if (!quad) {
-          DataLoader.showNotification(`Сектор "${sectorName}" не найден. Использован квадрант по умолчанию`, false);
-          if (window.Logger) window.Logger.warn('Квадрант не найден для сектора:', sectorName, 'Доступные:', QUADRANTS_LOCAL.map(q => q.name));
-        }
-
-        const qId = quad ? quad.id : (QUADRANTS_LOCAL[0] ? QUADRANTS_LOCAL[0].id : 1);
 
         // Логируем для отладки
         if (window.Logger) {
@@ -2656,8 +2592,8 @@ import { DOMCache } from '../core/dom-utils.js';
 
         const funcCount = functionNames.length;
         const message = funcCount > 0
-          ? `Функциональный блок добавлен с ${funcCount} ${funcCount === 1 ? 'функцией' : 'функциями'}. Сектор разблокирован`
-          : 'Функциональный блок добавлен и сектор разблокирован';
+          ? `Функциональный блок добавлен с ${funcCount} ${funcCount === 1 ? 'функцией' : 'функциями'}`
+          : 'Функциональный блок добавлен';
         DataLoader.showNotification(message, true);
       };
     }

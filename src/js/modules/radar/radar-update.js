@@ -55,8 +55,11 @@ import { RenderQueue } from '../core/core-utils.js';
     let filtered = DataIndex.filter((t) => {
       // Проверяем предприятие (может быть в t.company как строка или массив)
       if (e.length > 0) {
-        const techCompanies = Array.isArray(t.company) ? t.company : (t.company ? [t.company] : []);
-        if (techCompanies.length === 0 || !techCompanies.some(company => e.includes(company))) return false;
+        const isHoldingWide = t.holdingWide === true || t.holdingWide === 'true';
+        if (!isHoldingWide) {
+          const techCompanies = Array.isArray(t.company) ? t.company : (t.company ? [t.company] : []);
+          if (techCompanies.length === 0 || !techCompanies.some(company => e.includes(company))) return false;
+        }
       }
       // Проверяем направление (может быть в t.directions или t.direction)
       if (d.length > 0) {

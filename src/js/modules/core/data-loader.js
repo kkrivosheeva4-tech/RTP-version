@@ -13,6 +13,19 @@ import Logger from './logger.js';
 const getState = (key) => StateManager.get(key);
 const setState = (key, value) => StateManager.set(key, value);
 
+  const isApiModeEnabled = () => {
+    try {
+      return !!(
+        typeof window !== 'undefined'
+        && window.ApiConfig
+        && typeof window.ApiConfig.getUseApi === 'function'
+        && window.ApiConfig.getUseApi()
+      );
+    } catch (e) {
+      return false;
+    }
+  };
+
   const getDOMCache = () => {
     if (window.DOMCache) {
       return window.DOMCache;
@@ -52,7 +65,7 @@ const setState = (key, value) => StateManager.set(key, value);
   };
 
   const showNotification = (message, isSuccess = false) => {
-    // Используем Toast, если доступен, иначе fallback на старую реализацию
+    // РСЃРїРѕР»СЊР·СѓРµРј Toast, РµСЃР»Рё РґРѕСЃС‚СѓРїРµРЅ, РёРЅР°С‡Рµ fallback РЅР° СЃС‚Р°СЂСѓСЋ СЂРµР°Р»РёР·Р°С†РёСЋ
     if (typeof window !== 'undefined' && window.Toast) {
       if (isSuccess) {
         window.Toast.success(message);
@@ -97,7 +110,7 @@ const setState = (key, value) => StateManager.set(key, value);
     setTimeout(hide, 4000);
   };
 
-  // ===== ОСНОВНАЯ ФУНКЦИЯ ЗАГРУЗКИ ДАННЫХ =====
+  // ===== РћРЎРќРћР’РќРђРЇ Р¤РЈРќРљР¦РРЇ Р—РђР“Р РЈР—РљР Р”РђРќРќР«РҐ =====
   async function loadData() {
     // Показываем индикатор загрузки только на странице radar.html (на главной не показываем)
     const isRadarPage = typeof window !== 'undefined' && (window.location.pathname.includes('radar.html') || window.location.href.includes('radar.html'));
@@ -214,7 +227,7 @@ const setState = (key, value) => StateManager.set(key, value);
       // Сохраняем список интеграторов
       const integratorsList = ensureArray('integrators.json', fetched['integrators.json'].data);
       setState('integratorsList', integratorsList);
-      // Инвалидируем кэш квадрантов при изменении данных
+      // РРЅРІР°Р»РёРґРёСЂСѓРµРј РєСЌС€ РєРІР°РґСЂР°РЅС‚РѕРІ РїСЂРё РёР·РјРµРЅРµРЅРёРё РґР°РЅРЅС‹С…
       const quadrantsCache = getState('quadrantsCache');
       if (quadrantsCache && typeof quadrantsCache.clear === 'function') {
         quadrantsCache.clear();
@@ -275,7 +288,7 @@ const setState = (key, value) => StateManager.set(key, value);
       setState('enterpriseData', enterpriseData);
 
       if (allTechnologies.length > 0) {
-        // Извлекаем список предприятий из загруженных технологий
+        // РР·РІР»РµРєР°РµРј СЃРїРёСЃРѕРє РїСЂРµРґРїСЂРёСЏС‚РёР№ РёР· Р·Р°РіСЂСѓР¶РµРЅРЅС‹С… С‚РµС…РЅРѕР»РѕРіРёР№
         const enterpriseSet = new Set();
         allTechnologies.forEach(tech => {
           const companies = Array.isArray(tech.company) ? tech.company : (tech.company ? [tech.company] : []);
@@ -292,7 +305,7 @@ const setState = (key, value) => StateManager.set(key, value);
         setState('enterpriseList', emptyEnterpriseList);
       }
 
-      // Инициализируем индекс с загруженными данными
+      // РРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј РёРЅРґРµРєСЃ СЃ Р·Р°РіСЂСѓР¶РµРЅРЅС‹РјРё РґР°РЅРЅС‹РјРё
       const DataIndex = getDataIndex();
       if (DataIndex) {
         try {
@@ -302,7 +315,7 @@ const setState = (key, value) => StateManager.set(key, value);
         }
       }
 
-      // Инициализация фильтров и модальных селектов — из filter-init.js
+      // РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ С„РёР»СЊС‚СЂРѕРІ Рё РјРѕРґР°Р»СЊРЅС‹С… СЃРµР»РµРєС‚РѕРІ вЂ” РёР· filter-init.js
       const directionsList = Array.isArray(digitalDirections) && digitalDirections.length > 0
         ? digitalDirections.map(d => (d && typeof d === 'object' && d.name) ? d.name : String(d || '')).filter(Boolean)
         : [];
@@ -336,7 +349,7 @@ const setState = (key, value) => StateManager.set(key, value);
           const formData = new FormData(this);
 
           // Поля "Тип технологии" и "Статус" удалены из формы добавления
-          // Используем значения по умолчанию
+          // РСЃРїРѕР»СЊР·СѓРµРј Р·РЅР°С‡РµРЅРёСЏ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ
           const selectedStatus = (Array.isArray(RINGS) && RINGS.length ? RINGS[0] : 'Используемые');
 
           const nextId = getState('nextId') || 1;
@@ -378,7 +391,7 @@ const setState = (key, value) => StateManager.set(key, value);
           technologies.push(tech);
           setState('technologies', [...technologies]);
           setState('nextId', nextId + 1);
-          // Инвалидируем кэш квадрантов при добавлении технологии
+          // РРЅРІР°Р»РёРґРёСЂСѓРµРј РєСЌС€ РєРІР°РґСЂР°РЅС‚РѕРІ РїСЂРё РґРѕР±Р°РІР»РµРЅРёРё С‚РµС…РЅРѕР»РѕРіРёРё
           const quadrantsCache = getState('quadrantsCache');
           if (quadrantsCache && typeof quadrantsCache.clear === 'function') {
             quadrantsCache.clear();
@@ -536,7 +549,7 @@ const setState = (key, value) => StateManager.set(key, value);
       }
 
       if (typeof window.initFiltersWithRetry === 'function') {
-        // Инициализируем фильтры только на странице радара, где есть сайдбар с селектами
+        // РРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј С„РёР»СЊС‚СЂС‹ С‚РѕР»СЊРєРѕ РЅР° СЃС‚СЂР°РЅРёС†Рµ СЂР°РґР°СЂР°, РіРґРµ РµСЃС‚СЊ СЃР°Р№РґР±Р°СЂ СЃ СЃРµР»РµРєС‚Р°РјРё
         const hasFilterSidebar = document.querySelector('.custom-select[data-filter="enterprise"]');
         if (hasFilterSidebar) {
           window.initFiltersWithRetry(0);
@@ -664,10 +677,10 @@ const setState = (key, value) => StateManager.set(key, value);
     }
   }
 
-  // ===== ФУНКЦИЯ ДОБАВЛЕНИЯ НОВОЙ ТЕХНОЛОГИИ =====
+  // ===== Р¤РЈРќРљР¦РРЇ Р”РћР‘РђР’Р›Р•РќРРЇ РќРћР’РћР™ РўР•РҐРќРћР›РћР“РР =====
   async function ensureAndPersistNewTech(newTech) {
     try {
-      if (!newTech) return;
+      if (!newTech) return false;
       // Trim block and level
       if (newTech.block && typeof newTech.block === 'string') newTech.block = newTech.block.trim();
       if (newTech.level && typeof newTech.level === 'string') newTech.level = newTech.level.trim();
@@ -731,6 +744,7 @@ const setState = (key, value) => StateManager.set(key, value);
 
       // Ensure technologies array contains the tech (if not, add it)
       const technologies = getState('technologies');
+      const technologiesSnapshot = Array.isArray(technologies) ? [...technologies] : [];
       const existsIdx = technologies.findIndex(t => t.id === newTech.id);
       if (existsIdx === -1) {
         technologies.push(newTech);
@@ -740,14 +754,30 @@ const setState = (key, value) => StateManager.set(key, value);
       setState('technologies', [...technologies]);
 
       try {
+        const localIdBeforePersist = newTech.id;
+        let persistedTech = null;
         if (existsIdx === -1) {
-          await DataService.createTech(newTech);
+          persistedTech = await DataService.createTech(newTech);
         } else {
-          await DataService.updateTech(newTech.id, newTech);
+          persistedTech = await DataService.updateTech(newTech.id, newTech);
+        }
+        if (persistedTech && typeof persistedTech === 'object') {
+          // Синхронизируем локальный объект с данными backend (включая реальный id после create).
+          Object.assign(newTech, persistedTech);
+
+          const techsAfterPersist = getState('technologies') || [];
+          const staleIdx = techsAfterPersist.findIndex(t => t && (t.id === localIdBeforePersist || t.id === newTech.id));
+          if (staleIdx !== -1) {
+            techsAfterPersist[staleIdx] = Object.assign({}, techsAfterPersist[staleIdx], persistedTech);
+          } else {
+            techsAfterPersist.push(persistedTech);
+          }
+          setState('technologies', [...techsAfterPersist]);
         }
         Logger.debug('ensureAndPersistNewTech: technology saved via DataService', newTech.id);
       } catch (e) {
         Logger.warn('ensureAndPersistNewTech: DataService persist failed', e);
+        setState('technologies', technologiesSnapshot);
         throw e;
       }
 
@@ -761,29 +791,33 @@ const setState = (key, value) => StateManager.set(key, value);
           setState('enterpriseData', { ...enterpriseData });
         }
       } catch (e) { Logger.warn('update enterpriseData failed', e); }
+      return true;
     } catch (err) {
       reportError(err, 'Сохранение технологии');
       Logger.warn('ensureAndPersistNewTech error', err);
+      throw err;
     }
   }
 
-  // ===== ФУНКЦИЯ ПЕРЕКЛЮЧЕНИЯ ПРЕДПРИЯТИЯ (упрощенная версия - только обновляет фильтр) =====
+  // ===== Р¤РЈРќРљР¦РРЇ РџР•Р Р•РљР›Р®Р§Р•РќРРЇ РџР Р•Р”РџР РРЇРўРРЇ (СѓРїСЂРѕС‰РµРЅРЅР°СЏ РІРµСЂСЃРёСЏ - С‚РѕР»СЊРєРѕ РѕР±РЅРѕРІР»СЏРµС‚ С„РёР»СЊС‚СЂ) =====
   function switchEnterprise(enterpriseName) {
     // Теперь все технологии объединены в один массив, поэтому просто обновляем фильтр предприятий
     try {
       setState('currentEnterprise', enterpriseName);
 
-      try {
-        const technologies = getState('technologies');
-        if (technologies && Array.isArray(technologies)) {
-          DataService.saveTechnologies(technologies).catch(e => {
-            reportError(e, 'Сохранение данных при переключении предприятия');
-            Logger.warn('Не удалось сохранить technologies при переключении предприятия', e);
-          });
+      if (!isApiModeEnabled()) {
+        try {
+          const technologies = getState('technologies');
+          if (technologies && Array.isArray(technologies)) {
+            DataService.saveTechnologies(technologies).catch(e => {
+              reportError(e, 'Сохранение данных при переключении предприятия');
+              Logger.warn('Не удалось сохранить technologies при переключении предприятия', e);
+            });
+          }
+        } catch (e) {
+          reportError(e, 'Сохранение данных при переключении предприятия');
+          Logger.warn('Не удалось сохранить technologies при переключении предприятия', e);
         }
-      } catch (e) {
-        reportError(e, 'Сохранение данных при переключении предприятия');
-        Logger.warn('Не удалось сохранить technologies при переключении предприятия', e);
       }
 
       // Обновляем фильтр предприятий
@@ -877,14 +911,39 @@ const setState = (key, value) => StateManager.set(key, value);
   // ===== CRUD ВЕНДОРОВ (шаги 2.2, 2.3, 2.4) =====
   const VENDORS_STORAGE_KEY = 'rmk_vendors_list';
 
+  function normalizeReferenceName(item) {
+    if (item == null) return '';
+    if (typeof item === 'string') return item.trim();
+    if (typeof item === 'object') {
+      const name = item.name ?? item.vendor_name ?? item.integrator_name ?? item.title ?? item.id;
+      return String(name ?? '').trim();
+    }
+    return String(item).trim();
+  }
+
+  function normalizeReferenceList(list) {
+    if (!Array.isArray(list)) return [];
+    const nf = normalizeForComparison;
+    const seen = new Set();
+    const out = [];
+    list.forEach((item) => {
+      const name = normalizeReferenceName(item);
+      const key = nf(name);
+      if (!name || !key || seen.has(key)) return;
+      seen.add(key);
+      out.push(name);
+    });
+    return out;
+  }
+
   function getVendorsList() {
-    let list = getState('vendorsList') || [];
+    let list = normalizeReferenceList(getState('vendorsList') || []);
     try {
       const stored = localStorage.getItem(VENDORS_STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
-          list = [...new Set([...list, ...parsed])];
+          list = normalizeReferenceList([...list, ...parsed]);
         }
       }
     } catch (e) { /* ignore */ }
@@ -892,9 +951,10 @@ const setState = (key, value) => StateManager.set(key, value);
   }
 
   function saveVendorsList(list) {
-    setState('vendorsList', list);
+    const normalized = normalizeReferenceList(list);
+    setState('vendorsList', normalized);
     try {
-      localStorage.setItem(VENDORS_STORAGE_KEY, JSON.stringify(list));
+      localStorage.setItem(VENDORS_STORAGE_KEY, JSON.stringify(normalized));
     } catch (e) {
       Logger.warn('Ошибка сохранения вендоров в localStorage', e);
     }
@@ -1073,15 +1133,15 @@ const setState = (key, value) => StateManager.set(key, value);
     }
   }
 
-  // ===== CRUD ИНТЕГРАТОРОВ (шаг 2.6) =====
+  // ===== CRUD РРќРўР•Р“Р РђРўРћР РћР’ (С€Р°Рі 2.6) =====
   const INTEGRATORS_STORAGE_KEY = 'rmk_integrators_list';
 
   async function getIntegratorsList() {
-    let list = getState('integratorsList') || [];
+    let list = normalizeReferenceList(getState('integratorsList') || []);
     try {
       const jsonData = await DataService.loadReference('integrators');
       if (Array.isArray(jsonData)) {
-        list = [...new Set([...list, ...jsonData])];
+        list = normalizeReferenceList([...list, ...jsonData]);
       }
     } catch (e) { /* ignore */ }
     try {
@@ -1089,7 +1149,7 @@ const setState = (key, value) => StateManager.set(key, value);
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
-          list = [...new Set([...list, ...parsed])];
+          list = normalizeReferenceList([...list, ...parsed]);
         }
       }
     } catch (e) { /* ignore */ }
@@ -1097,13 +1157,14 @@ const setState = (key, value) => StateManager.set(key, value);
   }
 
   async function saveIntegratorsList(list) {
-    setState('integratorsList', list);
+    const normalizedList = normalizeReferenceList(list);
+    setState('integratorsList', normalizedList);
     try {
       let jsonIntegrators = [];
       try {
         const jsonData = await DataService.loadReference('integrators');
         if (Array.isArray(jsonData)) {
-          jsonIntegrators = jsonData;
+          jsonIntegrators = normalizeReferenceList(jsonData);
         }
       } catch (e) { /* ignore */ }
       
@@ -1111,7 +1172,7 @@ const setState = (key, value) => StateManager.set(key, value);
       // Это пользовательские интеграторы, которые нужно сохранить в localStorage
       const nf = normalizeForComparison;
       const jsonNormSet = new Set(jsonIntegrators.map(i => nf(String(i))));
-      const userIntegrators = list.filter(i => !jsonNormSet.has(nf(String(i))));
+      const userIntegrators = normalizedList.filter(i => !jsonNormSet.has(nf(String(i))));
       
       // Сохраняем только пользовательские интеграторы в localStorage
       localStorage.setItem(INTEGRATORS_STORAGE_KEY, JSON.stringify(userIntegrators));
@@ -1265,7 +1326,7 @@ const setState = (key, value) => StateManager.set(key, value);
     if (!normOld || !normNew) return false;
     const idx = list.findIndex(i => nf(i) === normOld);
     if (idx === -1) {
-      // Интегратор не найден в основном списке - возможно, он только что добавлен и еще не синхронизирован
+      // РРЅС‚РµРіСЂР°С‚РѕСЂ РЅРµ РЅР°Р№РґРµРЅ РІ РѕСЃРЅРѕРІРЅРѕРј СЃРїРёСЃРєРµ - РІРѕР·РјРѕР¶РЅРѕ, РѕРЅ С‚РѕР»СЊРєРѕ С‡С‚Рѕ РґРѕР±Р°РІР»РµРЅ Рё РµС‰Рµ РЅРµ СЃРёРЅС…СЂРѕРЅРёР·РёСЂРѕРІР°РЅ
       // Попробуем обновить напрямую в localStorage
       try {
         const stored = localStorage.getItem(INTEGRATORS_STORAGE_KEY);
@@ -1317,7 +1378,7 @@ const setState = (key, value) => StateManager.set(key, value);
     if (!norm) return false;
     const newList = list.filter(i => nf(i) !== norm);
     if (newList.length === list.length) {
-      // Интегратор не найден в списке - возможно, он только что добавлен и еще не синхронизирован
+      // РРЅС‚РµРіСЂР°С‚РѕСЂ РЅРµ РЅР°Р№РґРµРЅ РІ СЃРїРёСЃРєРµ - РІРѕР·РјРѕР¶РЅРѕ, РѕРЅ С‚РѕР»СЊРєРѕ С‡С‚Рѕ РґРѕР±Р°РІР»РµРЅ Рё РµС‰Рµ РЅРµ СЃРёРЅС…СЂРѕРЅРёР·РёСЂРѕРІР°РЅ
       // Попробуем удалить напрямую из localStorage
       try {
         const stored = localStorage.getItem(INTEGRATORS_STORAGE_KEY);
@@ -1595,7 +1656,7 @@ const setState = (key, value) => StateManager.set(key, value);
   };
 
   // initFilters экспортируется из filter-init.js; data-loader оставляет обёртку для совместимости
-  // Инициализация селекта вендоров с возможностью добавления новых
+  // РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ СЃРµР»РµРєС‚Р° РІРµРЅРґРѕСЂРѕРІ СЃ РІРѕР·РјРѕР¶РЅРѕСЃС‚СЊСЋ РґРѕР±Р°РІР»РµРЅРёСЏ РЅРѕРІС‹С…
   function initVendorsSelect() {
     const customSelect = document.querySelector('.custom-select-modal[data-field="techVendors"]');
     if (!customSelect) {

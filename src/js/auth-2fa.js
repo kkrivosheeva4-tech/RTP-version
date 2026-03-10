@@ -1,10 +1,3 @@
-/**
- * API 2FA: заглушки для verify и setup.
- * В будущем — вызовы POST /api/v1/auth/2fa/verify/ и /setup/
- */
-
-import QRCode from 'qrcode';
-
 /** Base32 decode (RFC 4648) */
 function base32Decode(str) {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
@@ -50,83 +43,237 @@ async function verifyTOTPWithWebCrypto(secretBase32, token, windowSeconds = 30) 
   return false;
 }
 
+function getApiConfig() {
+  if (typeof window !== 'undefined' && window.ApiConfig) return window.ApiConfig;
+  return null;
+}
+
+function isApiAuthEnabled(pending) {
+  if (pending && pending.isApi === true) return true;
+  const cfg = getApiConfig();
+  if (!cfg || typeof cfg.getUseApi !== 'function') return false;
+  return cfg.getUseApi() === true;
+}
+
+function getApiBaseUrl(pending) {
+  if (pending && typeof pending.api_base_url === 'string' && pending.api_base_url.trim()) {
+    return pending.api_base_url.trim().replace(/\/$/, '');
+  }
+  if (typeof window !== 'undefined' && typeof window.API_BASE_URL === 'string' && window.API_BASE_URL.trim()) {
+    return window.API_BASE_URL.trim().replace(/\/$/, '');
+  }
+  const cfg = getApiConfig();
+  if (cfg && typeof cfg.getBaseUrl === 'function') {
+    const url = String(cfg.getBaseUrl() || '').trim();
+    if (url) return url.replace(/\/$/, '');
+  }
+  return '';
+}
+
+function getTokenKey() {
+  const cfg = getApiConfig();
+  if (cfg && typeof cfg.getTokenStorageKey === 'function') return cfg.getTokenStorageKey();
+  return 'rmk_access_token';
+}
+
+function getRefreshTokenKey() {
+  const cfg = getApiConfig();
+  if (cfg && typeof cfg.getRefreshTokenStorageKey === 'function') return cfg.getRefreshTokenStorageKey();
+  return 'rmk_refresh_token';
+}
+
+function storeApiTokens(accessToken, refreshToken, remember) {
+  const tokenKey = getTokenKey();
+  const refreshKey = getRefreshTokenKey();
+  const primary = remember ? localStorage : sessionStorage;
+  const secondary = remember ? sessionStorage : localStorage;
+  try {
+    primary.setItem(tokenKey, accessToken);
+    primary.setItem(refreshKey, refreshToken);
+  } catch (_) {}
+  try {
+    secondary.removeItem(tokenKey);
+    secondary.removeItem(refreshKey);
+  } catch (_) {}
+}
+
+function storeLoggedInUser(username, role) {
+  localStorage.setItem('isLoggedIn', 'true');
+  localStorage.setItem('username', username);
+  localStorage.setItem('role', role);
+}
+
+let qrCodeLibPromise = null;
+
+async function getQrCodeLib() {
+  if (qrCodeLibPromise) return qrCodeLibPromise;
+  qrCodeLibPromise = import('qrcode')
+    .then((mod) => mod.default || mod)
+    .catch(() => null);
+  return qrCodeLibPromise;
+}
+
+async function buildQrVisual(qrPayload) {
+  if (!qrPayload) return { qrDataUrl: '', qrSvg: '', qrImageUrl: '' };
+  const qrLib = await getQrCodeLib();
+  if (qrLib) {
+    try {
+      const qrDataUrl = await qrLib.toDataURL(qrPayload, { width: 200, margin: 1 });
+      return { qrDataUrl, qrSvg: '', qrImageUrl: '' };
+    } catch (_) {
+      try {
+        const qrSvg = await qrLib.toString(qrPayload, { type: 'svg', margin: 1, width: 200 });
+        return { qrDataUrl: '', qrSvg, qrImageUrl: '' };
+      } catch (_) {
+        // continue to external fallback
+      }
+    }
+  }
+
+  const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=1&data=${encodeURIComponent(qrPayload)}`;
+  return { qrDataUrl: '', qrSvg: '', qrImageUrl };
+}
+
+async function apiLoadMe(accessToken, pending) {
+  const baseUrl = getApiBaseUrl(pending);
+  if (!baseUrl || !accessToken) return null;
+  try {
+    const response = await fetch(`${baseUrl}/api/v1/users/me`, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    if (!response.ok) return null;
+    return await response.json().catch(() => null);
+  } catch (_) {
+    return null;
+  }
+}
+
 /** Mock secret для проверки кода (тот же, что при настройке) */
 const MOCK_TOTP_SECRET = 'JBSWY3DPEHPK3PXP';
 
 /**
  * Проверка кода 2FA (страница ввода кода при повторном входе).
- * Mock: 123456 или TOTP-код из приложения.
  * @param {string} code — 6-значный код
  * @returns {Promise<{ success: boolean, error?: string }>}
  */
 export async function verify2FACode(code) {
   const pending = getAuth2faPending();
-  if (!pending) {
-    return { success: false, error: 'Сессия истекла. Войдите снова.' };
+  if (!pending) return { success: false, error: 'Сессия истекла. Войдите снова.' };
+
+  if (pending.isApi && pending.session_id && isApiAuthEnabled(pending)) {
+    const baseUrl = getApiBaseUrl(pending);
+    if (!baseUrl) return { success: false, error: 'API_BASE_URL не задан' };
+
+    try {
+      const response = await fetch(`${baseUrl}/api/v1/auth/2fa/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: pending.session_id, code })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        return { success: false, error: data.error || data.detail || 'Ошибка проверки кода.' };
+      }
+
+      const accessToken = data.access_token;
+      const refreshToken = data.refresh_token;
+      if (!accessToken || !refreshToken) {
+        return { success: false, error: 'Некорректный ответ сервера 2FA.' };
+      }
+
+      storeApiTokens(accessToken, refreshToken, pending.remember === true);
+      const me = await apiLoadMe(accessToken, pending);
+      const username = (me && me.username) || pending.username;
+      const role = (me && me.role) || pending.role || 'user';
+      storeLoggedInUser(username, role);
+      sessionStorage.removeItem('auth2faPending');
+      return { success: true };
+    } catch (_) {
+      return { success: false, error: 'Сервер недоступен' };
+    }
   }
+
   if (code === '123456') {
     try {
-      localStorage.setItem('isLoggedIn', 'true');
-      localStorage.setItem('username', pending.username);
-      localStorage.setItem('role', pending.role);
+      storeLoggedInUser(pending.username, pending.role || 'user');
       sessionStorage.removeItem('auth2faPending');
-    } catch (e) {
+    } catch (_) {
       return { success: false, error: 'Ошибка сохранения сессии' };
     }
     return { success: true };
   }
+
   try {
     const valid = await verifyTOTPWithWebCrypto(MOCK_TOTP_SECRET, code, 90);
-    if (valid) {
-      try {
-        localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('username', pending.username);
-        localStorage.setItem('role', pending.role);
-        sessionStorage.removeItem('auth2faPending');
-      } catch (e) {
-        return { success: false, error: 'Ошибка сохранения сессии' };
-      }
-      return { success: true };
+    if (!valid) return { success: false, error: 'Неверный код. Попробуйте снова.' };
+    try {
+      storeLoggedInUser(pending.username, pending.role || 'user');
+      sessionStorage.removeItem('auth2faPending');
+    } catch (_) {
+      return { success: false, error: 'Ошибка сохранения сессии' };
     }
-  } catch (e) {
+    return { success: true };
+  } catch (_) {
     return { success: false, error: 'Ошибка проверки кода.' };
   }
-  return { success: false, error: 'Неверный код. Попробуйте снова.' };
 }
 
 /**
  * Настройка 2FA — получение QR и secret.
- * Заглушка: возвращает mock данные. QR генерируется реально и сканируется приложениями.
- * @returns {Promise<{ qrDataUrl: string, secret: string }>}
+ * @returns {Promise<{ qrDataUrl: string, qrSvg: string, qrImageUrl: string, secret: string }>}
  */
 export async function setup2FA() {
+  const pending = getAuth2faPending();
+
+  if (pending && pending.isApi && pending.session_id && isApiAuthEnabled(pending)) {
+    const baseUrl = getApiBaseUrl(pending);
+    if (!baseUrl) throw new Error('API_BASE_URL не задан');
+
+    const response = await fetch(`${baseUrl}/api/v1/auth/2fa/setup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: pending.session_id })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.error || data.detail || 'Ошибка загрузки параметров 2FA');
+    }
+
+    const secret = String(data.secret || '');
+    const qrPayload = String(data.qr_url || '');
+    const qr = await buildQrVisual(qrPayload);
+    return { qrDataUrl: qr.qrDataUrl, qrSvg: qr.qrSvg, qrImageUrl: qr.qrImageUrl, secret };
+  }
+
   await new Promise((r) => setTimeout(r, 300));
-  const secret = 'JBSWY3DPEHPK3PXP';
+  const secret = MOCK_TOTP_SECRET;
   const issuer = 'Radar';
   const account = 'user';
   const otpauth = `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(account)}?secret=${secret}&issuer=${encodeURIComponent(issuer)}`;
-  let qrDataUrl;
-  try {
-    qrDataUrl = await QRCode.toDataURL(otpauth, { width: 200, margin: 1 });
-  } catch (e) {
-    qrDataUrl = 'data:image/svg+xml,' + encodeURIComponent(
-      '<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160"><rect width="160" height="160" fill="#f0f0f0"/><text x="80" y="80" text-anchor="middle" fill="#666" font-size="12">Ошибка генерации QR</text></svg>'
-    );
+  const qr = await buildQrVisual(otpauth);
+  if (!qr.qrDataUrl && !qr.qrSvg) {
+    return {
+      qrDataUrl: 'data:image/svg+xml,' + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160"><rect width="160" height="160" fill="#f0f0f0"/><text x="80" y="80" text-anchor="middle" fill="#666" font-size="12">Ошибка генерации QR</text></svg>'
+      ),
+      qrSvg: '',
+      qrImageUrl: '',
+      secret
+    };
   }
-  return { qrDataUrl, secret };
+  return { qrDataUrl: qr.qrDataUrl, qrSvg: qr.qrSvg, qrImageUrl: qr.qrImageUrl, secret };
 }
 
 /**
- * Завершить вход после успешной проверки 2FA (использует auth2faPending).
- * @returns {boolean} true если вход завершён, false если нет ожидающей сессии
+ * Завершить вход после успешной проверки 2FA (mock-flow).
+ * @returns {boolean}
  */
 export function completeLoginFrom2faPending() {
   const pending = getAuth2faPending();
-  if (!pending) return false;
+  if (!pending || pending.isApi) return false;
   try {
-    localStorage.setItem('isLoggedIn', 'true');
-    localStorage.setItem('username', pending.username);
-    localStorage.setItem('role', pending.role);
+    storeLoggedInUser(pending.username, pending.role || 'user');
     sessionStorage.removeItem('auth2faPending');
     return true;
   } catch {
@@ -134,14 +281,9 @@ export function completeLoginFrom2faPending() {
   }
 }
 
-/** Ключ localStorage для флага «2FA настроена» */
+/** Ключ localStorage для флага «2FA настроена» (mock) */
 const STORAGE_KEY_2FA_SETUP = '2fa_setup_usernames';
 
-/**
- * Проверить, настроил ли пользователь 2FA (уже сканировал QR).
- * @param {string} username
- * @returns {boolean}
- */
 export function has2faSetupComplete(username) {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_2FA_SETUP);
@@ -153,10 +295,6 @@ export function has2faSetupComplete(username) {
   }
 }
 
-/**
- * Сохранить, что пользователь завершил настройку 2FA.
- * @param {string} username
- */
 export function mark2faSetupComplete(username) {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_2FA_SETUP);
@@ -173,14 +311,16 @@ export function mark2faSetupComplete(username) {
 
 /**
  * Получить данные ожидающей 2FA сессии из sessionStorage.
- * @returns {{ username: string, role: string, token: string } | null}
+ * @returns {{ username: string, role?: string, token?: string, session_id?: string, api_base_url?: string, remember?: boolean, isApi?: boolean } | null}
  */
 export function getAuth2faPending() {
   try {
     const raw = sessionStorage.getItem('auth2faPending');
     if (!raw) return null;
     const data = JSON.parse(raw);
-    return data && data.username && data.role ? data : null;
+    if (!data || !data.username) return null;
+    if (!data.token && !data.session_id) return null;
+    return data;
   } catch {
     return null;
   }
@@ -188,19 +328,22 @@ export function getAuth2faPending() {
 
 /**
  * Подтверждение настройки 2FA кодом из приложения.
- * При переданном secret — проверка через TOTP (Web Crypto API).
- * Без secret — mock: успех при коде "123456".
  * @param {string} code — 6-значный код
- * @param {string} [secret] — секрет TOTP (для проверки кода из приложения)
+ * @param {string} [secret] — секрет TOTP (для mock-проверки)
  * @returns {Promise<{ success: boolean, error?: string }>}
  */
 export async function confirm2FASetup(code, secret) {
+  const pending = getAuth2faPending();
+  if (pending && pending.isApi && pending.session_id && isApiAuthEnabled(pending)) {
+    return verify2FACode(code);
+  }
+
   if (code === '123456') return { success: true };
   if (secret) {
     try {
       const valid = await verifyTOTPWithWebCrypto(secret, code, 90);
       return { success: valid, error: valid ? undefined : 'Неверный код. Попробуйте снова.' };
-    } catch (e) {
+    } catch (_) {
       return { success: false, error: 'Ошибка проверки кода.' };
     }
   }

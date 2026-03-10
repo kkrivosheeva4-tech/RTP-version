@@ -39,6 +39,53 @@
     throw new Error('DOMProxy не загружен');
   }
 
+  function isApiModeEnabled() {
+    try {
+      return !!(
+        typeof window !== 'undefined' &&
+        window.ApiConfig &&
+        typeof window.ApiConfig.getUseApi === 'function' &&
+        window.ApiConfig.getUseApi() === true
+      );
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function hasApiAccessToken() {
+    try {
+      const apiConfig = (typeof window !== 'undefined' && window.ApiConfig) ? window.ApiConfig : null;
+      const tokenKey = apiConfig && typeof apiConfig.getTokenStorageKey === 'function'
+        ? apiConfig.getTokenStorageKey()
+        : 'rmk_access_token';
+
+      const localToken = localStorage.getItem(tokenKey);
+      const sessionToken = sessionStorage.getItem(tokenKey);
+      return Boolean(
+        (localToken && String(localToken).trim()) ||
+        (sessionToken && String(sessionToken).trim())
+      );
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function redirectToAuthIfNeeded() {
+    if (typeof window === 'undefined' || !window.location) return;
+
+    const pathname = String(window.location.pathname || '');
+    if (
+      pathname.includes('/src/pages/auth.html') ||
+      pathname.includes('/src/pages/auth-2fa-setup.html') ||
+      pathname.includes('/src/pages/auth-2fa-verify.html')
+    ) {
+      return;
+    }
+
+    const returnPath = `${window.location.pathname || ''}${window.location.search || ''}`;
+    window.location.href = `/src/pages/auth.html${returnPath && returnPath !== '/' ? `?return=${encodeURIComponent(returnPath)}` : ''}`;
+  }
+
   // Инициализация приложения
   async function initApp() {
     // Обработчики событий (events.js загружен как ES module; вызываем после загрузки core-utils)
@@ -89,6 +136,15 @@
     const themeToggle = DOMCache.get('themeToggle');
     if (themeToggle) themeToggle.checked = isDark;
 
+    // Сначала показываем auth-состояние, затем — API загрузку.
+    if (typeof window.renderAuth === 'function') {
+      window.renderAuth();
+    }
+    if (isApiModeEnabled() && !hasApiAccessToken()) {
+      redirectToAuthIfNeeded();
+      return;
+    }
+
     // Загрузка данных
     await DataLoader.loadData();
 
@@ -121,11 +177,6 @@
     const technologies = StateAccessors.getTechnologies();
     const nextId = technologies.length > 0 ? Math.max(...technologies.map(t => Number(t.id) || 0)) + 1 : 1;
     StateManager.set('nextId', nextId);
-
-    // Инициализация авторизации
-    if (typeof window.renderAuth === 'function') {
-      window.renderAuth();
-    }
 
     // Рендер радара: полный радар с технологиями только на radar.html; на главной — только фон
     const isRadarPage = window.location.pathname.includes('radar.html') || window.location.href.includes('radar.html');

@@ -13,6 +13,41 @@ import Logger from '../core/logger.js';
   let vendorsListCache = null;
   let integratorsListCache = null;
 
+  function extractName(item) {
+    if (item == null) return '';
+    if (typeof item === 'string') return item.trim();
+    if (typeof item === 'object') {
+      const name = item.name ?? item.vendor_name ?? item.integrator_name ?? item.title ?? item.id;
+      return String(name ?? '').trim();
+    }
+    return String(item).trim();
+  }
+
+  function normalizeNameList(list) {
+    if (!Array.isArray(list)) return [];
+    const seen = new Set();
+    const result = [];
+    list.forEach(item => {
+      const name = extractName(item);
+      const key = name.toLowerCase();
+      if (!name || seen.has(key)) return;
+      seen.add(key);
+      result.push(name);
+    });
+    return result;
+  }
+
+  function getStateReferenceList(key) {
+    try {
+      if (window.StateManager && typeof window.StateManager.get === 'function') {
+        return normalizeNameList(window.StateManager.get(key) || []);
+      }
+    } catch (e) {
+      if (Logger) Logger.warn(`Не удалось получить ${key} из StateManager`, e);
+    }
+    return [];
+  }
+
   // Загрузка списка вендоров из JSON и localStorage (объединение)
   async function loadVendorsList() {
     if (vendorsListCache) {
@@ -20,6 +55,7 @@ import Logger from '../core/logger.js';
       return vendorsListCache;
     }
 
+    const stateVendors = getStateReferenceList('vendorsList');
     let jsonVendors = [];
     let localVendors = [];
 
@@ -54,18 +90,22 @@ import Logger from '../core/logger.js';
       if (Logger) Logger.warn('Ошибка при чтении вендоров из localStorage', e);
     }
 
-    // Объединяем списки: сначала из JSON, потом из localStorage (уникальные значения)
-    const combined = [...jsonVendors];
-    localVendors.forEach(vendor => {
-      const vendorStr = String(vendor).trim();
-      if (vendorStr && !combined.includes(vendorStr)) {
-        combined.push(vendorStr);
-      }
-    });
+    // Приоритет источника: backend state -> JSON -> localStorage
+    const combined = normalizeNameList([
+      ...stateVendors,
+      ...normalizeNameList(jsonVendors),
+      ...normalizeNameList(localVendors)
+    ]);
 
     vendorsListCache = combined;
+    try {
+      if (window.StateManager && typeof window.StateManager.set === 'function' && combined.length > 0) {
+        window.StateManager.set('vendorsList', combined);
+      }
+    } catch (e) { /* ignore */ }
     if (Logger) {
       Logger.debug('Объединенный список вендоров', {
+        state: stateVendors.length,
         json: jsonVendors.length,
         local: localVendors.length,
         total: combined.length
@@ -79,6 +119,7 @@ import Logger from '../core/logger.js';
   async function loadIntegratorsList() {
     if (integratorsListCache) return integratorsListCache;
 
+    const stateIntegrators = getStateReferenceList('integratorsList');
     let jsonIntegrators = [];
     let localIntegrators = [];
 
@@ -112,18 +153,22 @@ import Logger from '../core/logger.js';
       if (Logger) Logger.warn('Ошибка при чтении интеграторов из localStorage', e);
     }
 
-    // Объединяем списки: сначала из JSON, потом из localStorage (уникальные значения)
-    const combined = [...jsonIntegrators];
-    localIntegrators.forEach(integrator => {
-      const integratorStr = String(integrator).trim();
-      if (integratorStr && !combined.includes(integratorStr)) {
-        combined.push(integratorStr);
-      }
-    });
+    // Приоритет источника: backend state -> JSON -> localStorage
+    const combined = normalizeNameList([
+      ...stateIntegrators,
+      ...normalizeNameList(jsonIntegrators),
+      ...normalizeNameList(localIntegrators)
+    ]);
 
     integratorsListCache = combined;
+    try {
+      if (window.StateManager && typeof window.StateManager.set === 'function' && combined.length > 0) {
+        window.StateManager.set('integratorsList', combined);
+      }
+    } catch (e) { /* ignore */ }
     if (Logger) {
       Logger.debug('Объединенный список интеграторов', {
+        state: stateIntegrators.length,
         json: jsonIntegrators.length,
         local: localIntegrators.length,
         total: combined.length
@@ -156,24 +201,26 @@ import Logger from '../core/logger.js';
       }
 
       // Объединяем существующие и новые вендоры (уникальные значения)
-      const combined = [...existingVendors];
-      vendors.forEach(vendor => {
-        const vendorStr = String(vendor).trim();
-        if (vendorStr && !combined.includes(vendorStr)) {
-          combined.push(vendorStr);
-        }
-      });
+      const combined = normalizeNameList([
+        ...normalizeNameList(existingVendors),
+        ...normalizeNameList(vendors)
+      ]);
 
       // Сохраняем объединенный список в localStorage
       localStorage.setItem(VENDORS_STORAGE_KEY, JSON.stringify(combined));
 
       // Обновляем кэш
-      vendorsListCache = vendors;
+      vendorsListCache = combined;
+      try {
+        if (window.StateManager && typeof window.StateManager.set === 'function') {
+          window.StateManager.set('vendorsList', combined);
+        }
+      } catch (e) { /* ignore */ }
 
       if (Logger) {
         Logger.debug('Сохранен список вендоров в localStorage', {
           existing: existingVendors.length,
-          new: vendors.length,
+          new: normalizeNameList(vendors).length,
           total: combined.length
         });
       }
@@ -205,24 +252,26 @@ import Logger from '../core/logger.js';
       }
 
       // Объединяем существующие и новые интеграторы (уникальные значения)
-      const combined = [...existingIntegrators];
-      integrators.forEach(integrator => {
-        const integratorStr = String(integrator).trim();
-        if (integratorStr && !combined.includes(integratorStr)) {
-          combined.push(integratorStr);
-        }
-      });
+      const combined = normalizeNameList([
+        ...normalizeNameList(existingIntegrators),
+        ...normalizeNameList(integrators)
+      ]);
 
       // Сохраняем объединенный список в localStorage
       localStorage.setItem(INTEGRATORS_STORAGE_KEY, JSON.stringify(combined));
 
       // Обновляем кэш
-      integratorsListCache = integrators;
+      integratorsListCache = combined;
+      try {
+        if (window.StateManager && typeof window.StateManager.set === 'function') {
+          window.StateManager.set('integratorsList', combined);
+        }
+      } catch (e) { /* ignore */ }
 
       if (Logger) {
         Logger.debug('Сохранен список интеграторов в localStorage', {
           existing: existingIntegrators.length,
-          new: integrators.length,
+          new: normalizeNameList(integrators).length,
           total: combined.length
         });
       }
@@ -268,7 +317,7 @@ import Logger from '../core/logger.js';
       vendorsListCache = null;
       if (window.StateManager && typeof window.StateManager.get === 'function') {
         const fromState = window.StateManager.get('vendorsList') || [];
-        const merged = [...new Set([...fromState, ...existingVendors])];
+        const merged = normalizeNameList([...fromState, ...existingVendors]);
         window.StateManager.set('vendorsList', merged);
       }
 
@@ -319,7 +368,7 @@ import Logger from '../core/logger.js';
       integratorsListCache = null;
       if (window.StateManager && typeof window.StateManager.get === 'function') {
         const fromState = window.StateManager.get('integratorsList') || [];
-        const merged = [...new Set([...fromState, ...existingIntegrators])];
+        const merged = normalizeNameList([...fromState, ...existingIntegrators]);
         window.StateManager.set('integratorsList', merged);
       }
 
@@ -345,13 +394,27 @@ import Logger from '../core/logger.js';
     return encodeURIComponent(String(name || '').trim()).replace(/%/g, '_');
   }
 
+  function parseHiddenMultiValue(raw) {
+    const s = String(raw || '').trim();
+    if (!s) return [];
+    if (s.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(s);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        return [];
+      }
+    }
+    return [s];
+  }
+
   // Обновление селектов вендоров в модальных окнах
   // vendorsListOverride — опционально: актуальный список (после rename/delete из DataLoader)
   // vendorRenameMap — опционально: { oldName, newName } для переноса интеграторов при переименовании
   function updateVendorsSelects(vendorsListOverride, vendorRenameMap) {
     const vendorFields = ['techVendors', 'editVendors'];
     const loadList = vendorsListOverride && Array.isArray(vendorsListOverride)
-      ? Promise.resolve(vendorsListOverride)
+      ? Promise.resolve(normalizeNameList(vendorsListOverride))
       : loadVendorsList();
 
     vendorFields.forEach(fieldId => {
@@ -376,14 +439,14 @@ import Logger from '../core/logger.js';
         }
 
         loadList.then(vendorsList => {
-          const list = Array.isArray(vendorsList) ? vendorsList : [];
+          const list = Array.isArray(vendorsList) ? normalizeNameList(vendorsList) : [];
           // Всегда заполняем селект (даже при пустом списке) — для отображения опции «Добавить нового»
           window.Filters.populateSelectForModal(fieldId, list, 'Выберите');
 
           // Восстанавливаем выбранные значения вендоров
           if (savedValue && typeof window.setCustomSelectValue === 'function') {
             requestAnimationFrame(() => {
-              window.setCustomSelectValue(fieldId, savedValue);
+              window.setCustomSelectValue(fieldId, parseHiddenMultiValue(savedValue));
               if (hiddenInput) {
                 hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
                 hiddenInput.dispatchEvent(new Event('input', { bubbles: true }));
@@ -402,7 +465,7 @@ import Logger from '../core/logger.js';
                   }
                   const integratorInput = document.getElementById(targetFieldId);
                   if (integratorInput && typeof window.setCustomSelectValue === 'function') {
-                    window.setCustomSelectValue(targetFieldId, value);
+                    window.setCustomSelectValue(targetFieldId, parseHiddenMultiValue(value));
                   }
                 });
               }, 300);
@@ -440,7 +503,7 @@ import Logger from '../core/logger.js';
       const customSelect = document.querySelector(`.custom-select-modal[data-field="${fieldId}"]`);
       if (customSelect && window.Filters && typeof window.Filters.populateSelectForModal === 'function') {
         loadIntegratorsList().then(integratorsList => {
-          const list = Array.isArray(integratorsList) ? integratorsList : [];
+          const list = Array.isArray(integratorsList) ? normalizeNameList(integratorsList) : [];
           // Всегда заполняем селект (даже при пустом списке) — для отображения опции «Добавить нового»
           window.Filters.populateSelectForModal(fieldId, list, 'Выберите');
 
@@ -448,7 +511,7 @@ import Logger from '../core/logger.js';
           const savedValue = savedIntegratorValues.get(fieldId);
           if (savedValue && typeof window.setCustomSelectValue === 'function') {
             requestAnimationFrame(() => {
-              window.setCustomSelectValue(fieldId, savedValue);
+              window.setCustomSelectValue(fieldId, parseHiddenMultiValue(savedValue));
             });
           }
         });

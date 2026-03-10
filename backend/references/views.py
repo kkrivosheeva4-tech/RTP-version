@@ -4,8 +4,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from admin_panel.models import AuditLog
 from auth_custom.models import UserProfile
 from auth_custom.permissions import READ_ROLES, RolePermission
+from config.api_errors import error_response
+from config.observability import audit_log
 from references.models import (
     DigitalDirection,
     Enterprise,
@@ -37,19 +40,36 @@ class ReferenceAPIView(APIView):
 
     def get(self, request, name: str):
         if name not in SUPPORTED_REFERENCE_NAMES:
-            return Response({"error": f"Unsupported reference: {name}"}, status=status.HTTP_404_NOT_FOUND)
+            return error_response(
+                f"Unsupported reference: {name}",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
 
         return Response(self._serialize_reference(name), status=status.HTTP_200_OK)
 
     @transaction.atomic
     def put(self, request, name: str):
         if name not in SUPPORTED_REFERENCE_NAMES:
-            return Response({"error": f"Unsupported reference: {name}"}, status=status.HTTP_404_NOT_FOUND)
+            return error_response(
+                f"Unsupported reference: {name}",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
 
+        before_payload = self._serialize_reference(name)
         try:
             self._save_reference(name, request.data)
         except ValueError as exc:
-            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+            return error_response(str(exc), status_code=status.HTTP_400_BAD_REQUEST)
+
+        after_payload = self._serialize_reference(name)
+        audit_log(
+            action=AuditLog.ACTION_UPDATE,
+            entity_type="reference",
+            entity_id=name,
+            request=request,
+            before_data=before_payload,
+            after_data=after_payload,
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def _serialize_reference(self, name: str):

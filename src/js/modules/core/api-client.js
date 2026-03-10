@@ -21,6 +21,7 @@ const DEFAULT_REFRESH_PATH = '/api/v1/auth/refresh';
 
 /** URL для редиректа при 401 после неудачного refresh */
 const AUTH_PAGE = '/src/pages/auth.html';
+let refreshInFlightPromise = null;
 
 function getStorage() {
   if (typeof window === 'undefined') return { getItem: () => null, setItem: () => {}, removeItem: () => {} };
@@ -38,6 +39,40 @@ function getSessionStorage() {
   } catch (_) {
     return { getItem: () => null, removeItem: () => {} };
   }
+}
+
+function readTokenFromAnyStorage(key) {
+  const local = getStorage();
+  const session = getSessionStorage();
+  const localValue = local.getItem(key);
+  if (localValue) {
+    return { token: localValue, source: 'local', local, session };
+  }
+  const sessionValue = session.getItem(key);
+  if (sessionValue) {
+    return { token: sessionValue, source: 'session', local, session };
+  }
+  return { token: null, source: null, local, session };
+}
+
+function clearAuthTokensEverywhere(tokenKey, refreshKey, local, session) {
+  local.removeItem(tokenKey);
+  local.removeItem(refreshKey);
+  session.removeItem(tokenKey);
+  session.removeItem(refreshKey);
+}
+
+function writeRefreshedTokens(source, tokenKey, refreshKey, accessToken, refreshToken, local, session) {
+  const primary = source === 'session' ? session : local;
+  const secondary = source === 'session' ? local : session;
+
+  primary.setItem(tokenKey, accessToken);
+  if (refreshToken) {
+    primary.setItem(refreshKey, refreshToken);
+  }
+
+  secondary.removeItem(tokenKey);
+  secondary.removeItem(refreshKey);
 }
 
 /**
@@ -64,54 +99,78 @@ function buildUrl(baseUrl, path, query) {
  * @returns {Promise<string|null>} новый access-токен или null
  */
 async function tryRefreshToken() {
-  const config = getConfig();
-  const baseUrl = config.getBaseUrl();
-  if (!baseUrl || !baseUrl.trim()) return null;
+  if (refreshInFlightPromise) {
+    return refreshInFlightPromise;
+  }
 
-  const storage = getStorage();
-  const refreshKey = config.getRefreshTokenStorageKey();
-  const tokenKey = config.getTokenStorageKey();
-  const refreshToken = storage.getItem(refreshKey);
-  if (!refreshToken) return null;
+  refreshInFlightPromise = (async () => {
+    const config = getConfig();
+    const baseUrl = config.getBaseUrl();
+    if (!baseUrl || !baseUrl.trim()) return null;
 
-  const refreshPath = (typeof window !== 'undefined' && window.API_REFRESH_PATH) || DEFAULT_REFRESH_PATH;
-  const url = buildUrl(baseUrl, refreshPath);
+    const refreshKey = config.getRefreshTokenStorageKey();
+    const tokenKey = config.getTokenStorageKey();
+    const {
+      token: refreshToken,
+      source: refreshSource,
+      local,
+      session
+    } = readTokenFromAnyStorage(refreshKey);
+    if (!refreshToken) return null;
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), config.getDefaultTimeout());
+    const refreshPath = (typeof window !== 'undefined' && window.API_REFRESH_PATH) || DEFAULT_REFRESH_PATH;
+    const url = buildUrl(baseUrl, refreshPath);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), config.getDefaultTimeout());
+
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + refreshToken
+        },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
+      if (!res.ok) {
+        // При невалидном/отозванном refresh очищаем все токены.
+        if (res.status === 400 || res.status === 401 || res.status === 403) {
+          clearAuthTokensEverywhere(tokenKey, refreshKey, local, session);
+        }
+        return null;
+      }
+
+      const json = await res.json().catch(() => ({}));
+      const newAccess = json.access_token || json.accessToken;
+      const newRefresh = json.refresh_token || json.refreshToken;
+      if (newAccess) {
+        writeRefreshedTokens(
+          refreshSource,
+          tokenKey,
+          refreshKey,
+          newAccess,
+          newRefresh,
+          local,
+          session
+        );
+        return newAccess;
+      }
+    } catch (_) {
+      clearTimeout(timeoutId);
+      // Сетевые сбои не должны инвалидировать локальную сессию.
+    }
+    return null;
+  })();
 
   try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + refreshToken
-      },
-      body: JSON.stringify({ refresh_token: refreshToken }),
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
-
-    if (!res.ok) {
-      storage.removeItem(tokenKey);
-      storage.removeItem(refreshKey);
-      return null;
-    }
-
-    const json = await res.json().catch(() => ({}));
-    const newAccess = json.access_token || json.accessToken;
-    const newRefresh = json.refresh_token || json.refreshToken;
-    if (newAccess) {
-      storage.setItem(tokenKey, newAccess);
-      if (newRefresh) storage.setItem(refreshKey, newRefresh);
-      return newAccess;
-    }
-  } catch (_) {
-    clearTimeout(timeoutId);
-    storage.removeItem(tokenKey);
-    storage.removeItem(refreshKey);
+    return await refreshInFlightPromise;
+  } finally {
+    refreshInFlightPromise = null;
   }
-  return null;
 }
 
 /**

@@ -143,6 +143,14 @@ import StateManager from '../core/state-manager.js';
     return Array.from(blocksSet).sort();
   }
 
+  function getAllKnownBlocks(allTechnologies) {
+    const techBlocks = getAllUniqueBlocks(Array.isArray(allTechnologies) ? allTechnologies : []);
+    const referenceBlocks = (getBlocksListFromState() || [])
+      .map(b => (typeof b === 'string' ? b.trim() : String(b || '').trim()))
+      .filter(Boolean);
+    return Array.from(new Set([...referenceBlocks, ...techBlocks])).sort();
+  }
+
   // Получить блоки для выбранных предприятий из привязки (шаг 9.5).
   // При нескольких предприятиях возвращает объединение блоков всех выбранных.
   function getBlocksForEnterprisesFromMapping(selectedEnterpriseNames) {
@@ -197,7 +205,7 @@ import StateManager from '../core/state-manager.js';
   function getBlocksForEnterprises(selectedEnterprises, allTechnologies) {
     if (!selectedEnterprises || selectedEnterprises.length === 0) {
       // Если предприятия не выбраны, показать все блоки
-      return getAllUniqueBlocks(allTechnologies);
+      return getAllKnownBlocks(allTechnologies);
     }
 
     const blocksSet = new Set();
@@ -215,7 +223,8 @@ import StateManager from '../core/state-manager.js';
         ? false // Технология без предприятий не учитывается при фильтрации
         : techEnterprises.some(ent => enterpriseSet.has(ent));
 
-      if (belongsToSelected) {
+      const isHoldingWide = tech.holdingWide === true || tech.holdingWide === 'true';
+      if (belongsToSelected || isHoldingWide) {
         const techBlocks = Array.isArray(tech.blocks)
           ? tech.blocks
           : (tech.blocks ? [tech.blocks] : [tech.block].filter(Boolean));
@@ -267,7 +276,8 @@ import StateManager from '../core/state-manager.js';
         ? false // Технология без предприятий не учитывается при фильтрации
         : techEnterprises.some(ent => enterpriseSet.has(ent));
 
-      if (belongsToSelected) {
+      const isHoldingWide = tech.holdingWide === true || tech.holdingWide === 'true';
+      if (belongsToSelected || isHoldingWide) {
         const techFunctions = Array.isArray(tech.functions)
           ? tech.functions
           : (tech.function ? [tech.function] : []);
@@ -338,8 +348,8 @@ import StateManager from '../core/state-manager.js';
           ? fromMapping
           : getBlocksForEnterprises(selectedEnterprises, allTechnologies);
       } else {
-        // Если предприятия не выбраны, показываем все блоки
-        filteredItems = getAllUniqueBlocks(allTechnologies);
+        // Если предприятия не выбраны, показываем все известные блоки
+        filteredItems = getAllKnownBlocks(allTechnologies);
       }
 
       // Затем фильтруем по зуммированному квадранту, если есть
@@ -734,7 +744,7 @@ import StateManager from '../core/state-manager.js';
             ? fromMapping
             : getBlocksForEnterprises(selectedEnterprises, allTechnologies);
         } else {
-          availableBlocks = getAllUniqueBlocks(allTechnologies);
+          availableBlocks = getAllKnownBlocks(allTechnologies);
         }
 
         // Применяем дополнительную фильтрацию по квадранту, если есть
@@ -903,7 +913,6 @@ import StateManager from '../core/state-manager.js';
   function updateModalBlocksForEnterprises(companyFieldId) {
     const blockFieldId = companyFieldId === 'techCompany' ? 'techBlock' : 'editBlock';
     const blockInput = document.getElementById(blockFieldId);
-    const companyInput = document.getElementById(companyFieldId);
     let currentSelected = [];
     if (blockInput && blockInput.value) {
       try {
@@ -913,27 +922,11 @@ import StateManager from '../core/state-manager.js';
         currentSelected = blockInput.value.split(',').map(s => s.trim()).filter(Boolean);
       }
     }
-    const blocksListFull = getBlocksListFromState();
-    let blocksList = blocksListFull;
-    if (companyInput && companyInput.value && blocksListFull.length > 0) {
-      let selectedCompanies = [];
-      try {
-        const p = JSON.parse(companyInput.value);
-        selectedCompanies = Array.isArray(p) ? p : (p ? [p] : []);
-      } catch {
-        selectedCompanies = companyInput.value.split(',').map(s => s.trim()).filter(Boolean);
-      }
-      if (selectedCompanies.length > 0) {
-        const fromMapping = getBlocksForEnterprisesFromMapping(selectedCompanies);
-        if (fromMapping && fromMapping.length > 0) {
-          blocksList = fromMapping;
-        }
-      }
-    }
+    const blocksList = getBlocksListFromState();
     if (blocksList.length > 0) {
       populateSelectForModal(blockFieldId, blocksList, 'Выберите');
       // Восстанавливаем выбор блоков (только те, что остались в списке)
-      const validSelected = currentSelected.filter(b => blocksList.includes(b));
+      const validSelected = currentSelected;
       if (validSelected.length > 0 && typeof window.setCustomSelectValue === 'function') {
         window.setCustomSelectValue(blockFieldId, validSelected);
       }
@@ -1145,8 +1138,21 @@ import StateManager from '../core/state-manager.js';
       // Селект не найден (это нормально, если модальное окно закрыто)
       return;
     }
-    if (!Array.isArray(items) || items.length === 0) {
-      if (window.Logger) window.Logger.warn(`populateSelectForModal: для "${selectId}" передан пустой массив или не массив:`, items);
+    const normalizedItems = Array.isArray(items)
+      ? items
+        .map((item) => {
+          if (item == null) return '';
+          if (typeof item === 'string') return item.trim();
+          if (typeof item === 'object') {
+            const name = item.name ?? item.vendor_name ?? item.integrator_name ?? item.title ?? item.id;
+            return String(name ?? '').trim();
+          }
+          return String(item).trim();
+        })
+        .filter(Boolean)
+      : [];
+    if (normalizedItems.length === 0 && window.Logger) {
+      window.Logger.warn(`populateSelectForModal: для "${selectId}" передан пустой массив или не массив:`, items);
     }
     const optionsList = customSelect.querySelector('.select-options');
     if (!optionsList) {
@@ -1293,7 +1299,7 @@ import StateManager from '../core/state-manager.js';
       }
     }
 
-    items.forEach(item => {
+    normalizedItems.forEach(item => {
       if (needsCheckboxes) {
         const li = document.createElement('li');
         li.classList.add('select-option-item');

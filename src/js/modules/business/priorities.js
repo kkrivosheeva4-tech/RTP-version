@@ -241,8 +241,11 @@ import Logger from '../core/logger.js';
     let sidebarFilteredTechs = allTechs.filter(t => {
       // Фильтр по предприятию (как на радаре)
       if (e.length > 0) {
-        const techCompanies = Array.isArray(t.company) ? t.company : (t.company ? [t.company] : []);
-        if (techCompanies.length === 0 || !techCompanies.some(company => e.includes(company))) return false;
+        const isHoldingWide = t.holdingWide === true || t.holdingWide === 'true';
+        if (!isHoldingWide) {
+          const techCompanies = Array.isArray(t.company) ? t.company : (t.company ? [t.company] : []);
+          if (techCompanies.length === 0 || !techCompanies.some(company => e.includes(company))) return false;
+        }
       }
       // Фильтр по направлениям (t.directions или t.direction)
       if (d.length > 0) {

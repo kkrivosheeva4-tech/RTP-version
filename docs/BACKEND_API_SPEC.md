@@ -1,7 +1,7 @@
 ﻿# Единая спецификация Backend API (Frontend ↔ Backend)
 
-**Дата обновления:** 04.03.2026  
-**Проверка соответствия фронтенду:** 04.03.2026  
+**Дата обновления:** 06.03.2026  
+**Проверка соответствия фронтенду:** 06.03.2026  
 **Назначение:** единый источник требований для backend-разработчиков и интеграции frontend с API.
 
 ---
@@ -47,6 +47,8 @@
 - Контент: `Content-Type: application/json`.
 - CORS (dev): разрешить origin `http://localhost:5173`.
 - Разрешенные заголовки минимум: `Authorization`, `Content-Type`.
+- OpenAPI schema: `GET /api/v1/openapi.json`.
+- Swagger UI: `GET /api/v1/docs`.
 - При `401` frontend автоматически вызывает refresh; при провале refresh выполняет редирект на страницу auth.
 
 ---
@@ -285,7 +287,7 @@ Authorization: Bearer <access_token>
 
 - ApiClient готов: Bearer token, 401 + refresh, нормализация ошибок.
 - DataService переключает mock/API через `USE_API` и `API_BASE_URL`.
-- `auth.js` и `auth-2fa.js` пока используют mock-flow и должны быть переключены на backend endpoints.
+- `auth.js` и `auth-2fa.js` поддерживают backend 2FA flow (`login -> 2fa/setup|verify -> tokens`) и mock-flow.
 
 ---
 

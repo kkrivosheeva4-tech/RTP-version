@@ -1,7 +1,7 @@
 from django.urls import include, path
 
 from auth_custom.views import MeAPIView
-from config.views import health_check
+from config.views import MetricsAPIView, health_check, openapi_schema_view, swagger_ui_view
 from technologies.views import (
     TechnologyBulkAPIView,
     TechnologyDetailAPIView,
@@ -11,6 +11,12 @@ from technologies.views import (
 urlpatterns = [
     path("health", health_check, name="health"),
     path("health/", health_check, name="health-slash"),
+    path("openapi.json", openapi_schema_view, name="openapi-json-noslash"),
+    path("openapi.json/", openapi_schema_view, name="openapi-json"),
+    path("docs", swagger_ui_view, name="swagger-ui-noslash"),
+    path("docs/", swagger_ui_view, name="swagger-ui"),
+    path("metrics", MetricsAPIView.as_view(), name="metrics-noslash"),
+    path("metrics/", MetricsAPIView.as_view(), name="metrics"),
     path("technologies", TechnologyListCreateAPIView.as_view(), name="technologies-list-noslash"),
     path("technologies/bulk", TechnologyBulkAPIView.as_view(), name="technologies-bulk-noslash"),
     path("technologies/<int:pk>", TechnologyDetailAPIView.as_view(), name="technologies-detail-noslash"),

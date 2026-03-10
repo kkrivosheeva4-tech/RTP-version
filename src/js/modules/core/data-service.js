@@ -64,6 +64,240 @@ function wrapApiError(err) {
   throw new Error(String(err || 'Неизвестная ошибка'));
 }
 
+function getStateValue(key, fallback = null) {
+  try {
+    if (typeof window !== 'undefined' && window.StateManager && typeof window.StateManager.get === 'function') {
+      const value = window.StateManager.get(key);
+      return value == null ? fallback : value;
+    }
+  } catch (e) {
+    Logger.warn(`DataService: ошибка чтения state "${key}"`, e);
+  }
+  return fallback;
+}
+
+function normalizeReadinessToBackend(value) {
+  if (value == null || value === '') return 1;
+  const n = Number(value);
+  if (Number.isNaN(n)) return 1;
+  if (n >= 1 && n <= 9) return Math.round(n);
+  const rounded = Math.round(n);
+  if (rounded <= 0) return 1;
+  if (rounded === 1) return 3;
+  if (rounded === 2) return 6;
+  return 9;
+}
+
+function hasExplicitValue(value) {
+  return value !== undefined && value !== null && value !== '';
+}
+
+function normalizeEnterpriseReadinessToBackend(value) {
+  if (!hasExplicitValue(value)) return undefined;
+  return normalizeReadinessToBackend(value);
+}
+
+function normalizeStatusToBackend(value, isImplemented) {
+  const raw = String(value || '').trim();
+  const norm = raw.toLowerCase();
+  if (isImplemented === true) return 'Внедрена';
+  if (isImplemented === false) return 'Невнедренна';
+  if (norm === 'внедрена' || norm === 'внедренна') return 'Внедрена';
+  if (norm === 'невнедрена' || norm === 'невнедренна') return 'Невнедренна';
+  if (norm === 'используемые') return 'Внедрена';
+  if (norm === 'внедряемые' || norm === 'перспективные') return 'Невнедренна';
+  return raw || 'planned';
+}
+
+function normalizeName(item) {
+  if (item == null) return '';
+  if (typeof item === 'string') return item.trim();
+  if (typeof item === 'object') {
+    const val = item.name ?? item.title ?? item.id;
+    return String(val ?? '').trim();
+  }
+  return String(item).trim();
+}
+
+function toArray(value) {
+  if (Array.isArray(value)) return value;
+  return value == null || value === '' ? [] : [value];
+}
+
+function buildDirectionNameToIdMap() {
+  const map = {};
+  const directions = getStateValue('digitalDirections', []);
+  if (Array.isArray(directions)) {
+    directions.forEach((d) => {
+      const id = d && typeof d === 'object' ? d.id : null;
+      const name = normalizeName(d);
+      if (id != null && name) map[name] = Number(id);
+    });
+  }
+  return map;
+}
+
+function buildEnterpriseNameToIdMap() {
+  const map = {};
+  const enterprises = getStateValue('enterprisesList', []);
+  if (Array.isArray(enterprises)) {
+    enterprises.forEach((e) => {
+      const id = e && typeof e === 'object' ? (e.id ?? e.enterprise_id) : null;
+      const name = normalizeName(e);
+      if (id != null && name) map[name] = Number(id);
+    });
+  }
+  return map;
+}
+
+function toApiTechnologyPayload(tech) {
+  const t = tech && typeof tech === 'object' ? tech : {};
+  const nameToBlockId = getStateValue('nameToBlockId', {}) || {};
+  const directionNameToId = buildDirectionNameToIdMap();
+  const enterpriseNameToId = buildEnterpriseNameToIdMap();
+
+  const rawBlocks = Array.isArray(t.blocks) && t.blocks.length > 0 ? t.blocks : toArray(t.block);
+  const blockIds = rawBlocks
+    .map((b) => {
+      if (typeof b === 'number') return b;
+      const asNum = Number(b);
+      if (!Number.isNaN(asNum) && asNum > 0) return asNum;
+      const byName = nameToBlockId[String(b || '').trim()];
+      return byName != null ? Number(byName) : null;
+    })
+    .filter((id) => Number.isInteger(id) && id > 0);
+
+  const rawDirections = Array.isArray(t.directions) && t.directions.length > 0 ? t.directions : toArray(t.direction);
+  const directionIds = rawDirections
+    .map((d) => {
+      if (typeof d === 'number') return d;
+      const asNum = Number(d);
+      if (!Number.isNaN(asNum) && asNum > 0) return asNum;
+      const byName = directionNameToId[String(d || '').trim()];
+      return byName != null ? Number(byName) : null;
+    })
+    .filter((id) => Number.isInteger(id) && id > 0);
+
+  let enterprisesPayload = [];
+  if (Array.isArray(t.enterprises) && t.enterprises.length > 0) {
+    enterprisesPayload = t.enterprises
+      .map((e) => {
+        const enterpriseId = Number(e?.enterpriseId);
+        if (!Number.isInteger(enterpriseId) || enterpriseId <= 0) return null;
+        const enterprisePayload = { enterpriseId };
+        const isImplemented = typeof e?.isImplemented === 'boolean' ? e.isImplemented : undefined;
+        const technologicalReadiness = normalizeEnterpriseReadinessToBackend(e?.technologicalReadiness);
+        const organizationalReadiness = normalizeEnterpriseReadinessToBackend(e?.organizationalReadiness);
+
+        if (technologicalReadiness !== undefined) {
+          enterprisePayload.technologicalReadiness = technologicalReadiness;
+        }
+        if (organizationalReadiness !== undefined) {
+          enterprisePayload.organizationalReadiness = organizationalReadiness;
+        }
+        if (hasExplicitValue(e?.status) || typeof isImplemented === 'boolean') {
+          enterprisePayload.status = normalizeStatusToBackend(e?.status, isImplemented);
+        }
+        return enterprisePayload;
+      })
+      .filter(Boolean);
+  } else {
+    const companies = toArray(t.company).map(normalizeName).filter(Boolean);
+    enterprisesPayload = companies
+      .map((companyName) => {
+        const enterpriseId = Number(enterpriseNameToId[companyName]);
+        if (!Number.isInteger(enterpriseId) || enterpriseId <= 0) return null;
+        const ratings = t.companyRatings && typeof t.companyRatings === 'object' ? t.companyRatings[companyName] : null;
+        const enterprisePayload = { enterpriseId };
+        const isImplemented = ratings && typeof ratings.isImplemented === 'boolean' ? ratings.isImplemented : undefined;
+        const technologicalReadiness = normalizeEnterpriseReadinessToBackend(ratings?.techRead);
+        const organizationalReadiness = normalizeEnterpriseReadinessToBackend(ratings?.organRead);
+
+        if (technologicalReadiness !== undefined) {
+          enterprisePayload.technologicalReadiness = technologicalReadiness;
+        }
+        if (organizationalReadiness !== undefined) {
+          enterprisePayload.organizationalReadiness = organizationalReadiness;
+        }
+        if ((ratings && hasExplicitValue(ratings.status)) || typeof isImplemented === 'boolean') {
+          enterprisePayload.status = normalizeStatusToBackend(ratings?.status, isImplemented);
+        }
+        return enterprisePayload;
+      })
+      .filter(Boolean);
+  }
+
+  const functionCoverage = (
+    Array.isArray(t.functionCoverage) && t.functionCoverage.length > 0
+      ? t.functionCoverage
+      : (Array.isArray(t.functions) && t.functions.length > 0 ? t.functions : toArray(t.func))
+  )
+    .map((f) => String(f || '').trim())
+    .filter(Boolean);
+
+  const vendorsPayload = toArray(t.vendors)
+    .map((v) => {
+      if (typeof v === 'string') {
+        const name = v.trim();
+        return name ? { name, integrators: [] } : null;
+      }
+      if (!v || typeof v !== 'object') return null;
+      const name = normalizeName(v.name ?? v.id ?? '');
+      if (!name) return null;
+      const integrators = toArray(v.integrators)
+        .map((i) => normalizeName(i))
+        .filter(Boolean);
+      return { name, integrators };
+    })
+    .filter(Boolean);
+
+  const marketExamples = (() => {
+    if (Array.isArray(t.marketExamples)) return t.marketExamples.map((x) => String(x || '').trim()).filter(Boolean);
+    if (typeof t.exampleDesc === 'string' && t.exampleDesc.trim()) {
+      return t.exampleDesc
+        .split('\n')
+        .map((x) => x.trim())
+        .filter(Boolean);
+    }
+    return [];
+  })();
+
+  const documentationFiles = toArray(t.files)
+    .map((f) => {
+      if (typeof f === 'string') return f.trim();
+      if (f && typeof f === 'object') return String(f.path || f.url || f.name || '').trim();
+      return '';
+    })
+    .filter(Boolean);
+
+  const payload = {
+    name: String(t.name || '').trim(),
+    description: String(t.description || '').trim(),
+    block: blockIds.length > 0 ? blockIds[0] : null,
+    blocks: blockIds,
+    function: String(t.func || '').trim(),
+    functionCoverage,
+    enterprises: enterprisesPayload,
+    directions: directionIds,
+    trlStage: (() => {
+      const trl = Number(t.trlStage);
+      if (Number.isNaN(trl)) return 1;
+      return Math.max(1, Math.min(9, Math.round(trl)));
+    })(),
+    status: normalizeStatusToBackend(t.status || t.level),
+    vendors: vendorsPayload,
+    marketExamples,
+    documentationFiles,
+  };
+
+  if (t.id != null) {
+    const id = Number(t.id);
+    if (Number.isInteger(id) && id > 0) payload.id = id;
+  }
+
+  return payload;
+}
+
 // ========== MOCK-РЕЖИМ (USE_API === false) ==========
 
 async function mockLoadReference(name) {
@@ -254,7 +488,9 @@ async function apiCreateTech(tech) {
   if (!client || typeof client.post !== 'function') {
     throw new Error('ApiClient недоступен');
   }
-  const res = await client.post('/api/v1/technologies', tech);
+  const payload = toApiTechnologyPayload(tech);
+  delete payload.id;
+  const res = await client.post('/api/v1/technologies', payload);
   if (!res || res.ok === false) {
     wrapApiError(res || { error: 'Ошибка создания технологии' });
   }
@@ -275,7 +511,8 @@ async function apiUpdateTech(id, tech) {
     throw new Error('ApiClient недоступен');
   }
   const method = client.patch || client.put;
-  const res = await method(`/api/v1/technologies/${id}`, tech);
+  const payload = toApiTechnologyPayload({ ...tech, id });
+  const res = await method(`/api/v1/technologies/${id}`, payload);
   if (!res || res.ok === false) {
     wrapApiError(res || { error: 'Ошибка обновления технологии' });
   }
@@ -306,7 +543,10 @@ async function apiSaveTechnologies(technologies) {
   if (!client || typeof client.put !== 'function') {
     throw new Error('ApiClient недоступен');
   }
-  const res = await client.put('/api/v1/technologies/bulk', technologies);
+  const payload = Array.isArray(technologies)
+    ? technologies.map((t) => toApiTechnologyPayload(t)).filter((t) => t && t.name)
+    : [];
+  const res = await client.put('/api/v1/technologies/bulk', payload);
   if (!res || res.ok === false) {
     wrapApiError(res || { error: 'Ошибка массового сохранения технологий' });
   }

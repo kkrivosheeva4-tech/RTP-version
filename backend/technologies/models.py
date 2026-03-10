@@ -194,11 +194,13 @@ class TechnologyEnterpriseReadiness(models.Model):
     )
     technological_readiness = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(9)],
-        default=1,
+        null=True,
+        blank=True,
     )
     organizational_readiness = models.PositiveSmallIntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(9)],
-        default=1,
+        null=True,
+        blank=True,
     )
     status = models.CharField(max_length=64, default="planned")
     created_at = models.DateTimeField(auto_now_add=True)

@@ -131,6 +131,20 @@ const getTechnologies = () => {
     });
   }
 
+  function syncSidebarIconButtonsVisibility() {
+    const sidebarWrapper = document.querySelector(".sidebar-wrapper");
+    const isExpanded = !!(sidebarWrapper && sidebarWrapper.classList.contains("expanded"));
+    const searchIconBtn = document.getElementById("searchIconBtn");
+    const filterIconBtn = document.getElementById("filterIconBtn");
+
+    if (searchIconBtn) {
+      searchIconBtn.style.display = isExpanded ? "none" : "";
+    }
+    if (filterIconBtn) {
+      filterIconBtn.style.display = isExpanded ? "none" : "";
+    }
+  }
+
   /**
    * Увеличивает масштаб (зум) квадранта
    * @param {string|number} qId - ID квадранта
@@ -169,6 +183,8 @@ const getTechnologies = () => {
       sidebarWrapper.classList.add("expanded");
       // Перемещаем кнопку "Сбросить выбор" под фильтры
       moveResetButtonToFilterPanel();
+      // При раскрытой панели иконки поиска/фильтра должны быть скрыты.
+      syncSidebarIconButtonsVisibility();
     }
 
     // Открываем правую панель приоритета сектора при зуме
@@ -193,6 +209,9 @@ const getTechnologies = () => {
 
     // Сбрасываем текущий зуммированный квадрант
     setCurrentZoomedQuadrant(null);
+
+    // Актуализируем видимость кнопок поиска/фильтра в зависимости от состояния панели.
+    syncSidebarIconButtonsVisibility();
 
     // Закрываем правую панель приоритета
     closeQuadrantPriorityPanel();

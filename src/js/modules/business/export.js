@@ -480,6 +480,38 @@ import { generatePdf } from './export-pdf.js';
 
   // ===== ФУНКЦИИ ЗАПОЛНЕНИЯ И НАСТРОЙКИ ФИЛЬТРОВ =====
 
+  function normalizeRefName(item) {
+    if (item == null) return '';
+    if (typeof item === 'string') return item.trim();
+    if (typeof item === 'object') {
+      const name = item.name ?? item.vendor_name ?? item.integrator_name ?? item.title ?? item.id;
+      return String(name ?? '').trim();
+    }
+    return String(item).trim();
+  }
+
+  function getStateReferenceList(key) {
+    try {
+      if (window.StateManager && typeof window.StateManager.get === 'function') {
+        const list = window.StateManager.get(key) || [];
+        if (!Array.isArray(list)) return [];
+        const seen = new Set();
+        return list
+          .map(normalizeRefName)
+          .filter(Boolean)
+          .filter(name => {
+            const k = name.toLowerCase();
+            if (seen.has(k)) return false;
+            seen.add(k);
+            return true;
+          });
+      }
+    } catch (e) {
+      if (Logger && typeof Logger.warn === 'function') Logger.warn(`Ошибка чтения ${key} из state`, e);
+    }
+    return [];
+  }
+
   // Конфигурация фильтров для заполнения
   const FILTER_CONFIG = [
     {
@@ -516,7 +548,11 @@ import { generatePdf } from './export-pdf.js';
       source: async () => {
         const vendorSet = new Set();
 
-        // 1. Собираем вендоры из всех технологий
+        // 1. Берем вендоров из state (backend reference)
+        const stateVendors = getStateReferenceList('vendorsList');
+        stateVendors.forEach(name => vendorSet.add(name));
+
+        // 2. Собираем вендоры из всех технологий
         const technologies = safeGet('getTechnologies', []);
         technologies.forEach(tech => {
           if (tech.vendors && Array.isArray(tech.vendors)) {
@@ -532,13 +568,13 @@ import { generatePdf } from './export-pdf.js';
           }
         });
 
-        // 2. Добавляем вендоры из JSON файла (если доступен модуль VendorsFiles)
+        // 3. Добавляем вендоры из JSON/state через VendorsFiles
         if (typeof window.VendorsFiles !== 'undefined' && typeof window.VendorsFiles.loadVendorsList === 'function') {
           try {
             const jsonVendors = await window.VendorsFiles.loadVendorsList();
             if (Array.isArray(jsonVendors)) {
               jsonVendors.forEach(vendor => {
-                const vendorName = String(vendor).trim();
+                const vendorName = normalizeRefName(vendor);
                 if (vendorName) vendorSet.add(vendorName);
               });
             }
@@ -547,14 +583,14 @@ import { generatePdf } from './export-pdf.js';
           }
         }
 
-        // 3. Добавляем вендоры из localStorage
+        // 4. Добавляем вендоры из localStorage
         try {
           const stored = localStorage.getItem('rmk_vendors_list');
           if (stored) {
             const parsed = JSON.parse(stored);
             if (Array.isArray(parsed)) {
               parsed.forEach(vendor => {
-                const vendorName = String(vendor).trim();
+                const vendorName = normalizeRefName(vendor);
                 if (vendorName) vendorSet.add(vendorName);
               });
             }
@@ -572,7 +608,11 @@ import { generatePdf } from './export-pdf.js';
       source: async () => {
         const integratorSet = new Set();
 
-        // 1. Собираем интеграторы из всех технологий
+        // 1. Берем интеграторов из state (backend reference)
+        const stateIntegrators = getStateReferenceList('integratorsList');
+        stateIntegrators.forEach(name => integratorSet.add(name));
+
+        // 2. Собираем интеграторы из всех технологий
         const technologies = safeGet('getTechnologies', []);
         technologies.forEach(tech => {
           if (tech.vendors && Array.isArray(tech.vendors)) {
@@ -592,13 +632,13 @@ import { generatePdf } from './export-pdf.js';
           }
         });
 
-        // 2. Добавляем интеграторы из JSON файла (если доступен модуль VendorsFiles)
+        // 3. Добавляем интеграторы из JSON/state через VendorsFiles
         if (typeof window.VendorsFiles !== 'undefined' && typeof window.VendorsFiles.loadIntegratorsList === 'function') {
           try {
             const jsonIntegrators = await window.VendorsFiles.loadIntegratorsList();
             if (Array.isArray(jsonIntegrators)) {
               jsonIntegrators.forEach(integrator => {
-                const integratorName = String(integrator).trim();
+                const integratorName = normalizeRefName(integrator);
                 if (integratorName) integratorSet.add(integratorName);
               });
             }
@@ -607,14 +647,14 @@ import { generatePdf } from './export-pdf.js';
           }
         }
 
-        // 3. Добавляем интеграторы из localStorage
+        // 4. Добавляем интеграторы из localStorage
         try {
           const stored = localStorage.getItem('rmk_integrators_list');
           if (stored) {
             const parsed = JSON.parse(stored);
             if (Array.isArray(parsed)) {
               parsed.forEach(integrator => {
-                const integratorName = String(integrator).trim();
+                const integratorName = normalizeRefName(integrator);
                 if (integratorName) integratorSet.add(integratorName);
               });
             }

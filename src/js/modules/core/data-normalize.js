@@ -92,12 +92,19 @@ export function normalizeTechnologyFromNewFormat(tech, blockIdToName, enterprise
             ? normalizeReadiness(ent.organizationalReadiness)
             : null;
           const statusLower = String(ent.status || '').trim().toLowerCase();
-          const isImplemented = statusLower === 'внедрена' || statusLower === 'внедренна';
+          let isImplemented;
+          if (statusLower === 'внедрена' || statusLower === 'внедренна') {
+            isImplemented = true;
+          } else if (statusLower === 'невнедрена' || statusLower === 'невнедренна') {
+            isImplemented = false;
+          } else {
+            isImplemented = undefined;
+          }
 
           companyRatings[companyName] = {
             techRead: techReadValue,
             organRead: organReadValue,
-            isImplemented: isImplemented
+            ...(typeof isImplemented === 'boolean' ? { isImplemented } : {})
           };
         }
       });

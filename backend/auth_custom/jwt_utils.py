@@ -72,6 +72,10 @@ def _refresh_lifetime_days() -> int:
     return int(os.getenv("REFRESH_TOKEN_LIFETIME_DAYS", "7"))
 
 
+def _twofa_session_lifetime_minutes() -> int:
+    return int(os.getenv("TWOFA_SESSION_LIFETIME_MINUTES", "10"))
+
+
 def create_access_token(*, user_id: int, username: str, role: str) -> str:
     now = datetime.now(tz=timezone.utc)
     payload = {
@@ -99,9 +103,27 @@ def create_refresh_token(*, user_id: int) -> tuple[str, str, datetime]:
     return encode_jwt(payload, _jwt_secret()), jti, expires_at
 
 
+def create_2fa_session_token(*, user_id: int, username: str, role: str) -> str:
+    now = datetime.now(tz=timezone.utc)
+    payload = {
+        "sub": str(user_id),
+        "username": username,
+        "role": role,
+        "type": "2fa_session",
+        "jti": uuid.uuid4().hex,
+        "iat": int(now.timestamp()),
+        "exp": int((now + timedelta(minutes=_twofa_session_lifetime_minutes())).timestamp()),
+    }
+    return encode_jwt(payload, _jwt_secret())
+
+
 def decode_access_token(token: str) -> dict:
     return decode_jwt(token, _jwt_secret(), expected_type="access")
 
 
 def decode_refresh_token(token: str) -> dict:
     return decode_jwt(token, _jwt_secret(), expected_type="refresh")
+
+
+def decode_2fa_session_token(token: str) -> dict:
+    return decode_jwt(token, _jwt_secret(), expected_type="2fa_session")

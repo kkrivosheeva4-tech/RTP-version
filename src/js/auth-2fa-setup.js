@@ -66,19 +66,23 @@ document.addEventListener('DOMContentLoaded', function () {
   // Загрузка QR и secret при открытии страницы
   setup2FA().then(function (data) {
     currentSecret = data.secret;
-    if (qrPlaceholder && data.qrDataUrl) {
+    if (qrPlaceholder && data.qrSvg) {
+      qrPlaceholder.innerHTML = data.qrSvg;
+    } else if (qrPlaceholder && data.qrImageUrl) {
+      qrPlaceholder.innerHTML = '<img src="' + data.qrImageUrl + '" alt="QR-код для сканирования" width="200" height="200" style="border-radius:8px">';
+    } else if (qrPlaceholder && data.qrDataUrl) {
       qrPlaceholder.innerHTML = '<img src="' + data.qrDataUrl + '" alt="QR-код для сканирования" width="200" height="200" style="border-radius:8px">';
     }
     if (manualSecret && data.secret) {
       manualSecret.value = data.secret;
     }
     if (codeConfirmGroup) codeConfirmGroup.style.display = 'block';
-  }).catch(function () {
+  }).catch(function (err) {
     if (qrPlaceholder) {
       const inner = qrPlaceholder.querySelector('.qr-placeholder__inner');
       if (inner) {
         const text = inner.querySelector('.qr-placeholder__text');
-        if (text) text.textContent = 'Ошибка загрузки. Повторите попытку.';
+        if (text) text.textContent = (err && err.message) ? err.message : 'Ошибка загрузки. Повторите попытку.';
       }
     }
   });
@@ -108,7 +112,7 @@ document.addEventListener('DOMContentLoaded', function () {
         submitBtn.removeAttribute('disabled');
         if (result.success) {
           const pending = getAuth2faPending();
-          if (pending) {
+          if (pending && !pending.isApi) {
             mark2faSetupComplete(pending.username);
             completeLoginFrom2faPending();
           }
