@@ -147,6 +147,18 @@ import Logger from '../core/logger.js';
     return isLoggedIn && !!username && hasRoleCapability(capability);
   }
 
+  function setSidebarExpanded(isExpanded) {
+    const sidebarWrapper = document.querySelector('.sidebar-wrapper');
+    if (!sidebarWrapper) return;
+    if (isExpanded) {
+      sidebarWrapper.classList.remove('collapsed');
+      sidebarWrapper.classList.add('expanded');
+      return;
+    }
+    sidebarWrapper.classList.remove('expanded');
+    sidebarWrapper.classList.add('collapsed');
+  }
+
   // Определение шагов тура
   const TOUR_STEPS = [
     {
@@ -486,11 +498,7 @@ import Logger from '../core/logger.js';
       showSkip: true,
       beforeShow: () => {
         // Раскрываем боковую панель перед показом шага
-        const sidebarWrapper = document.querySelector('.sidebar-wrapper');
-        if (sidebarWrapper) {
-          sidebarWrapper.classList.remove('collapsed');
-          sidebarWrapper.classList.add('expanded');
-        }
+        setSidebarExpanded(true);
         // Убеждаемся, что контейнер поиска виден и поверх overlay
         const searchContainer = document.querySelector('.search-container');
         if (searchContainer) {
@@ -540,13 +548,10 @@ import Logger from '../core/logger.js';
       target: '#filterPanel',
       position: 'right',
       showSkip: true,
+      waitForElement: true,
       beforeShow: () => {
         // Раскрываем боковую панель перед показом шага
-        const sidebarWrapper = document.querySelector('.sidebar-wrapper');
-        if (sidebarWrapper) {
-          sidebarWrapper.classList.remove('collapsed');
-          sidebarWrapper.classList.add('expanded');
-        }
+        setSidebarExpanded(true);
         // Убеждаемся, что сайдбар виден и поверх overlay
         const sidebar = document.getElementById('sidebar');
         if (sidebar) {
@@ -585,7 +590,10 @@ import Logger from '../core/logger.js';
       description: 'Радар разделен на квадранты и кольца зрелости. Кликните на технологию, чтобы увидеть детальную информацию. Для детального просмотра сектора кликните на него - откроется увеличенный вид с модальным окном списка технологий.',
       target: '#techRadar',
       position: 'center',
-      showSkip: true
+      showSkip: true,
+      beforeShow: () => {
+        setSidebarExpanded(false);
+      }
     },
     {
       id: 'quadrant-zoom',
@@ -595,6 +603,7 @@ import Logger from '../core/logger.js';
       position: 'center',
       showSkip: true,
       beforeShow: () => {
+        setSidebarExpanded(false);
         // Убеждаемся, что радар виден
         const radar = document.getElementById('techRadar');
         if (radar) {
@@ -676,6 +685,7 @@ import Logger from '../core/logger.js';
         return priorityPanel !== null;
       },
       beforeShow: () => {
+        setSidebarExpanded(false);
         let targetQuadrantId = null;
         if (typeof window.getCurrentZoomedQuadrant === 'function') {
           const currentZoomed = window.getCurrentZoomedQuadrant();
@@ -766,6 +776,7 @@ import Logger from '../core/logger.js';
         return priorityPanel !== null;
       },
       beforeShow: () => {
+        setSidebarExpanded(false);
         // Убеждаемся, что зум не сброшен
         const currentZoomed = typeof window.getCurrentZoomedQuadrant === 'function'
           ? window.getCurrentZoomedQuadrant()
@@ -1861,6 +1872,17 @@ import Logger from '../core/logger.js';
                              (!element.classList.contains('hidden') &&
                               element.style.display !== 'none' &&
                               element.offsetParent !== null);
+            if (isVisible) {
+              displayStep(step, renderToken);
+              return;
+            }
+          } else if (step.target === '#filterPanel') {
+            // Для панели фильтров проверяем, что сайдбар реально раскрыт и панель имеет размер.
+            const sidebarWrapper = document.querySelector('.sidebar-wrapper');
+            const wrapperExpanded = !!(sidebarWrapper && sidebarWrapper.classList.contains('expanded'));
+            const rect = element.getBoundingClientRect();
+            const hasSize = rect.width > 0 && rect.height > 0;
+            const isVisible = wrapperExpanded && hasSize && (element.offsetParent !== null || element.style.display !== 'none');
             if (isVisible) {
               displayStep(step, renderToken);
               return;
