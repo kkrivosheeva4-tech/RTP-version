@@ -970,6 +970,9 @@ import Logger from '../core/logger.js';
   let overlay = null;
   let tooltip = null;
   let isTourActive = false;
+  let highlightUpdateIntervalId = null;
+  let detailPanelUpdateIntervalId = null;
+  let activeStepRenderToken = 0;
 
   /**
    * Проверяет, проходил ли пользователь тур
@@ -1033,10 +1036,73 @@ import Logger from '../core/logger.js';
     return tooltip;
   }
 
+  function clearOverlayIntervals() {
+    if (highlightUpdateIntervalId !== null) {
+      clearInterval(highlightUpdateIntervalId);
+      highlightUpdateIntervalId = null;
+    }
+    if (detailPanelUpdateIntervalId !== null) {
+      clearInterval(detailPanelUpdateIntervalId);
+      detailPanelUpdateIntervalId = null;
+    }
+  }
+
+  function clearOverlayMasks() {
+    const styleElement = document.getElementById('onboarding-sector1-cutout-style');
+    if (styleElement) {
+      styleElement.remove();
+    }
+
+    const maskSvg = document.getElementById('onboarding-quadrant-zoom-mask');
+    if (maskSvg) {
+      maskSvg.remove();
+    }
+
+    const detailPanelMaskSvg = document.getElementById('onboarding-detail-panel-mask');
+    if (detailPanelMaskSvg) {
+      detailPanelMaskSvg.remove();
+    }
+
+    if (overlay) {
+      overlay.style.mask = '';
+      overlay.style.webkitMask = '';
+      overlay.style.background = '';
+    }
+  }
+
+  function cleanupTransientHighlights() {
+    document.querySelectorAll('.onboarding-highlight').forEach((el) => {
+      el.classList.remove('onboarding-highlight');
+    });
+    document.querySelectorAll('.onboarding-highlight-container').forEach((el) => {
+      el.classList.remove('onboarding-highlight-container');
+    });
+    document.querySelectorAll('.onboarding-visible').forEach((el) => {
+      el.classList.remove('onboarding-visible');
+    });
+    document.querySelectorAll('.onboarding-highlight-input').forEach((el) => {
+      el.classList.remove('onboarding-highlight-input');
+    });
+    document.querySelectorAll('.onboarding-highlight-label').forEach((el) => {
+      el.classList.remove('onboarding-highlight-label');
+    });
+    document.querySelectorAll('.underline-line').forEach((el) => {
+      el.remove();
+    });
+  }
+
+  function resetStepArtifactsForTransition() {
+    clearOverlayIntervals();
+    clearOverlayMasks();
+    cleanupTransientHighlights();
+  }
+
   /**
    * Удаляет overlay и tooltip
    */
   function removeOverlay() {
+    clearOverlayIntervals();
+    clearOverlayMasks();
     if (overlay) {
       overlay.remove();
       overlay = null;
@@ -1044,26 +1110,6 @@ import Logger from '../core/logger.js';
     if (tooltip) {
       tooltip.remove();
       tooltip = null;
-    }
-    // Удаляем динамический style элемент, если он существует
-    const styleElement = document.getElementById('onboarding-sector1-cutout-style');
-    if (styleElement) {
-      styleElement.remove();
-    }
-    // Удаляем SVG mask для шага 8, если он существует
-    const maskSvg = document.getElementById('onboarding-quadrant-zoom-mask');
-    if (maskSvg) {
-      maskSvg.remove();
-    }
-    // Удаляем SVG mask для шага 13 (detail-panel), если он существует
-    const detailPanelMaskSvg = document.getElementById('onboarding-detail-panel-mask');
-    if (detailPanelMaskSvg) {
-      detailPanelMaskSvg.remove();
-    }
-    // Очищаем интервал обновления для detail-panel
-    if (overlay && overlay.dataset.detailPanelUpdateInterval) {
-      clearInterval(overlay.dataset.detailPanelUpdateInterval);
-      delete overlay.dataset.detailPanelUpdateInterval;
     }
   }
 
@@ -1079,6 +1125,20 @@ import Logger from '../core/logger.js';
       width: rect.width,
       height: rect.height
     };
+  }
+
+  function applyHighlightRect(rect, padding = 10) {
+    if (!overlay || !rect) return;
+    const top = rect.top - padding;
+    const left = rect.left - padding;
+    const width = rect.width + padding * 2;
+    const height = rect.height + padding * 2;
+
+    overlay.style.display = 'block';
+    overlay.style.setProperty('--highlight-top', `${top}px`);
+    overlay.style.setProperty('--highlight-left', `${left}px`);
+    overlay.style.setProperty('--highlight-width', `${width}px`);
+    overlay.style.setProperty('--highlight-height', `${height}px`);
   }
 
   /**
@@ -1184,16 +1244,7 @@ import Logger from '../core/logger.js';
 
       // Добавляем отступ для лучшей видимости
       const padding = 10;
-      const top = rect.top - padding;
-      const left = rect.left - padding;
-      const width = rect.width + padding * 2;
-      const height = rect.height + padding * 2;
-
-      overlay.style.display = 'block';
-      overlay.style.setProperty('--highlight-top', `${top}px`);
-      overlay.style.setProperty('--highlight-left', `${left}px`);
-      overlay.style.setProperty('--highlight-width', `${width}px`);
-      overlay.style.setProperty('--highlight-height', `${height}px`);
+      applyHighlightRect(rect, padding);
 
       // Убеждаемся, что панель детальной информации и модальное окно списка технологий видимы поверх overlay
       const currentStep = TOUR_STEPS[currentStepIndex];
@@ -1218,15 +1269,16 @@ import Logger from '../core/logger.js';
       // Для шага search и priority-panel обновляем подсветку периодически, чтобы она не слетала
       if (currentStep && (currentStep.id === 'search' || currentStep.id === 'priority-panel')) {
         // Останавливаем предыдущий интервал, если он существует
-        if (overlay.dataset.highlightUpdateInterval) {
-          clearInterval(overlay.dataset.highlightUpdateInterval);
+        if (highlightUpdateIntervalId !== null) {
+          clearInterval(highlightUpdateIntervalId);
+          highlightUpdateIntervalId = null;
         }
         // Устанавливаем периодическое обновление подсветки
         const stepIndex = currentStepIndex;
-        overlay.dataset.highlightUpdateInterval = setInterval(() => {
+        highlightUpdateIntervalId = setInterval(() => {
           if (!isTourActive || currentStepIndex !== stepIndex) {
-            clearInterval(overlay.dataset.highlightUpdateInterval);
-            delete overlay.dataset.highlightUpdateInterval;
+            clearInterval(highlightUpdateIntervalId);
+            highlightUpdateIntervalId = null;
             return;
           }
           const step = TOUR_STEPS[currentStepIndex];
@@ -1239,15 +1291,18 @@ import Logger from '../core/logger.js';
               }
             }
             if (targetElement && document.contains(targetElement)) {
-              highlightElement(targetElement, step.position);
+              const targetRect = getElementRect(targetElement);
+              if (targetRect && targetRect.width > 0 && targetRect.height > 0) {
+                applyHighlightRect(targetRect, 10);
+              }
             }
           }
         }, 200);
       } else {
         // Останавливаем периодическое обновление для других шагов
-        if (overlay && overlay.dataset.highlightUpdateInterval) {
-          clearInterval(overlay.dataset.highlightUpdateInterval);
-          delete overlay.dataset.highlightUpdateInterval;
+        if (highlightUpdateIntervalId !== null) {
+          clearInterval(highlightUpdateIntervalId);
+          highlightUpdateIntervalId = null;
         }
       }
 
@@ -1268,10 +1323,7 @@ import Logger from '../core/logger.js';
               }
               const updatedRect = getElementRect(element);
               if (updatedRect) {
-                overlay.style.setProperty('--highlight-top', `${updatedRect.top - padding}px`);
-                overlay.style.setProperty('--highlight-left', `${updatedRect.left - padding}px`);
-                overlay.style.setProperty('--highlight-width', `${updatedRect.width + padding * 2}px`);
-                overlay.style.setProperty('--highlight-height', `${updatedRect.height + padding * 2}px`);
+                applyHighlightRect(updatedRect, padding);
               }
             });
           });
@@ -1394,10 +1446,19 @@ import Logger from '../core/logger.js';
       requestAnimationFrame(() => {
         updateCutouts();
         // Устанавливаем периодическое обновление для отслеживания изменений позиций
-        if (overlay.dataset.detailPanelUpdateInterval) {
-          clearInterval(overlay.dataset.detailPanelUpdateInterval);
+        if (detailPanelUpdateIntervalId !== null) {
+          clearInterval(detailPanelUpdateIntervalId);
+          detailPanelUpdateIntervalId = null;
         }
-        overlay.dataset.detailPanelUpdateInterval = setInterval(updateCutouts, 100);
+        const stepIndex = currentStepIndex;
+        detailPanelUpdateIntervalId = setInterval(() => {
+          if (!isTourActive || currentStepIndex !== stepIndex) {
+            clearInterval(detailPanelUpdateIntervalId);
+            detailPanelUpdateIntervalId = null;
+            return;
+          }
+          updateCutouts();
+        }, 100);
       });
     });
   }
@@ -1630,6 +1691,24 @@ import Logger from '../core/logger.js';
     return -1;
   }
 
+  function getNextVisibleStepIndex(fromStepIndex) {
+    for (let i = fromStepIndex + 1; i < TOUR_STEPS.length; i++) {
+      if (isStepVisible(TOUR_STEPS[i])) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  function getPreviousVisibleStepIndex(fromStepIndex) {
+    for (let i = fromStepIndex - 1; i >= 0; i--) {
+      if (isStepVisible(TOUR_STEPS[i])) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
   /**
    * Получает порядковый номер текущего шага среди видимых
    */
@@ -1648,10 +1727,15 @@ import Logger from '../core/logger.js';
    * Отображает шаг тура
    */
   function showStep(stepIndex) {
+    if (!isTourActive) return;
+
     if (stepIndex < 0 || stepIndex >= TOUR_STEPS.length) {
       endTour();
       return;
     }
+
+    const renderToken = ++activeStepRenderToken;
+    resetStepArtifactsForTransition();
 
     const step = TOUR_STEPS[stepIndex];
     currentStepIndex = stepIndex;
@@ -1679,6 +1763,10 @@ import Logger from '../core/logger.js';
       const initialDelay = isProspectsModal ? 50 : 0; // 50ms задержка для модального окна (уменьшено с 150ms)
 
       const checkElement = () => {
+        if (!isTourActive || renderToken !== activeStepRenderToken) {
+          return;
+        }
+
         attempts++;
         const element = document.querySelector(step.target);
 
@@ -1690,7 +1778,7 @@ import Logger from '../core/logger.js';
                              element.style.display === 'block' ||
                              (element.style.display !== 'none' && element.offsetParent !== null);
             if (isVisible) {
-              displayStep(step);
+              displayStep(step, renderToken);
               return;
             }
           } else if (step.target === '#prospectsModal') {
@@ -1705,7 +1793,7 @@ import Logger from '../core/logger.js';
             // Модальное окно видимо, если есть класс 'open' ИЛИ (не скрыто И отображается)
             const isVisible = hasOpenClass || (notHidden && notAriaHidden && isDisplayed);
             if (isVisible) {
-              displayStep(step);
+              displayStep(step, renderToken);
               return;
             }
           } else if (step.target === '#exportPdfModal') {
@@ -1715,7 +1803,7 @@ import Logger from '../core/logger.js';
                               element.style.display !== 'none' &&
                               element.offsetParent !== null);
             if (isVisible) {
-              displayStep(step);
+              displayStep(step, renderToken);
               return;
             }
           } else if (step.target === '#addTechPanel') {
@@ -1725,7 +1813,7 @@ import Logger from '../core/logger.js';
                               element.style.display !== 'none' &&
                               element.offsetParent !== null);
             if (isVisible) {
-              displayStep(step);
+              displayStep(step, renderToken);
               return;
             }
           } else if (step.target === '#addBlockPanel') {
@@ -1735,13 +1823,13 @@ import Logger from '../core/logger.js';
                               element.style.display !== 'none' &&
                               element.offsetParent !== null);
             if (isVisible) {
-              displayStep(step);
+              displayStep(step, renderToken);
               return;
             }
           } else {
             // Для других элементов просто проверяем существование и видимость
             if (element.offsetParent !== null || element.style.display !== 'none') {
-              displayStep(step);
+              displayStep(step, renderToken);
               return;
             }
           }
@@ -1764,7 +1852,7 @@ import Logger from '../core/logger.js';
               }
             }
           }
-          displayStep(step);
+          displayStep(step, renderToken);
           return;
         }
 
@@ -1785,7 +1873,10 @@ import Logger from '../core/logger.js';
     } else {
       // Используем requestAnimationFrame для немедленного отображения без задержки
       requestAnimationFrame(() => {
-        displayStep(step);
+        if (!isTourActive || renderToken !== activeStepRenderToken) {
+          return;
+        }
+        displayStep(step, renderToken);
       });
     }
   }
@@ -1793,9 +1884,19 @@ import Logger from '../core/logger.js';
   /**
    * Отображает шаг
    */
-  function displayStep(step) {
+  function displayStep(step, renderToken = activeStepRenderToken) {
+    if (!isTourActive || renderToken !== activeStepRenderToken) {
+      return;
+    }
+
+    const currentStep = TOUR_STEPS[currentStepIndex];
+    if (!currentStep || currentStep.id !== step.id) {
+      return;
+    }
+
     createOverlay();
     createTooltip();
+    clearOverlayMasks();
 
     // Для шага report-button подсвечиваем кнопку "Отчеты" в боковой панели
     // Делаем это после создания overlay, чтобы кнопка была видна поверх затемнения
@@ -1883,6 +1984,10 @@ import Logger from '../core/logger.js';
     }
 
     // Заполняем tooltip
+    const prevVisibleStepIndex = getPreviousVisibleStepIndex(currentStepIndex);
+    const nextVisibleStepIndex = getNextVisibleStepIndex(currentStepIndex);
+    const isLastVisibleStep = nextVisibleStepIndex === -1;
+
     tooltip.innerHTML = `
       <div class="onboarding-tooltip-header">
         <h3 class="onboarding-tooltip-title">${step.title}</h3>
@@ -1900,10 +2005,10 @@ import Logger from '../core/logger.js';
           Шаг ${getCurrentVisibleStepNumber()} из ${getVisibleSteps().length}
         </div>
         <div class="onboarding-tooltip-actions">
-          ${currentStepIndex > 0 ? '<button class="onboarding-btn onboarding-btn-secondary" data-action="prev">Назад</button>' : ''}
+          ${prevVisibleStepIndex !== -1 ? '<button class="onboarding-btn onboarding-btn-secondary" data-action="prev">Назад</button>' : ''}
           ${step.showSkip ? '<button class="onboarding-btn onboarding-btn-secondary" data-action="skip">Пропустить</button>' : ''}
           <button class="onboarding-btn onboarding-btn-primary" data-action="next">
-            ${currentStepIndex === TOUR_STEPS.length - 1 ? 'Завершить' : 'Далее'}
+            ${isLastVisibleStep ? 'Завершить' : 'Далее'}
           </button>
         </div>
       </div>
@@ -1928,43 +2033,34 @@ import Logger from '../core/logger.js';
     if (prevBtn) {
       prevBtn.onclick = () => {
         // Выполняем afterHide для текущего шага
-        const currentStep = TOUR_STEPS[currentStepIndex];
-        if (currentStep && currentStep.afterHide && typeof currentStep.afterHide === 'function') {
-          currentStep.afterHide(currentStepIndex);
+        const activeStep = TOUR_STEPS[currentStepIndex];
+        if (activeStep && activeStep.afterHide && typeof activeStep.afterHide === 'function') {
+          activeStep.afterHide(currentStepIndex);
         }
 
-        // Находим предыдущий видимый шаг
-        let prevIndex = currentStepIndex - 1;
-        while (prevIndex >= 0) {
-          const prevStep = TOUR_STEPS[prevIndex];
-          if (isStepVisible(prevStep)) {
-            saveProgress(prevIndex);
-            showStep(prevIndex);
-            return;
-          }
-          prevIndex--;
-        }
-        // Если не нашли предыдущий видимый шаг, просто переходим на предыдущий индекс
-        if (prevIndex < 0 && currentStepIndex > 0) {
-          saveProgress(currentStepIndex - 1);
-          showStep(currentStepIndex - 1);
+        const prevIndex = getPreviousVisibleStepIndex(currentStepIndex);
+        if (prevIndex !== -1) {
+          saveProgress(prevIndex);
+          showStep(prevIndex);
+          return;
         }
       };
     }
     if (nextBtn) {
       nextBtn.onclick = () => {
         // Выполняем afterHide для текущего шага
-        const currentStep = TOUR_STEPS[currentStepIndex];
-        if (currentStep && currentStep.afterHide && typeof currentStep.afterHide === 'function') {
-          currentStep.afterHide(currentStepIndex);
+        const activeStep = TOUR_STEPS[currentStepIndex];
+        if (activeStep && activeStep.afterHide && typeof activeStep.afterHide === 'function') {
+          activeStep.afterHide(currentStepIndex);
         }
 
-        if (currentStepIndex === TOUR_STEPS.length - 1) {
+        const nextIndex = getNextVisibleStepIndex(currentStepIndex);
+        if (nextIndex === -1) {
           completeTour();
           endTour();
         } else {
-          saveProgress(currentStepIndex + 1);
-          showStep(currentStepIndex + 1);
+          saveProgress(nextIndex);
+          showStep(nextIndex);
         }
       };
     }
@@ -2033,6 +2129,7 @@ import Logger from '../core/logger.js';
    */
   function endTour() {
     isTourActive = false;
+    activeStepRenderToken++;
 
     // Выполняем afterHide для текущего шага, если есть
     const currentStep = TOUR_STEPS[currentStepIndex];
@@ -2042,7 +2139,7 @@ import Logger from '../core/logger.js';
 
     // Убеждаемся, что панель скрыта при завершении тура
     const sidebarWrapper = document.querySelector('.sidebar-wrapper');
-    if (sidebarWrapper && (currentStep.id === 'search' || currentStep.id === 'filters')) {
+    if (sidebarWrapper && currentStep && (currentStep.id === 'search' || currentStep.id === 'filters')) {
       sidebarWrapper.classList.remove('expanded');
       sidebarWrapper.classList.add('collapsed');
     }
@@ -2079,17 +2176,8 @@ import Logger from '../core/logger.js';
     window.removeEventListener('resize', updateHighlightPosition);
     window.removeEventListener('scroll', updateHighlightPosition);
 
-    // Останавливаем все интервалы обновления
-    if (overlay) {
-      if (overlay.dataset.highlightUpdateInterval) {
-        clearInterval(overlay.dataset.highlightUpdateInterval);
-        delete overlay.dataset.highlightUpdateInterval;
-      }
-      if (overlay.dataset.detailPanelUpdateInterval) {
-        clearInterval(overlay.dataset.detailPanelUpdateInterval);
-        delete overlay.dataset.detailPanelUpdateInterval;
-      }
-    }
+    // Останавливаем все интервалы обновления и очищаем временные подсветки.
+    resetStepArtifactsForTransition();
 
     removeOverlay();
     document.body.style.overflow = '';
