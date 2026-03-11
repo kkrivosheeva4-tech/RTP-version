@@ -8,7 +8,144 @@ import Logger from '../core/logger.js';
   const STORAGE_KEY = 'rmk_onboarding_completed';
   const STORAGE_PROGRESS_KEY = 'rmk_onboarding_progress';
   const STORAGE_VERSION_KEY = 'rmk_onboarding_version';
-  const CURRENT_VERSION = '1.0';
+  const CURRENT_VERSION = '1.1';
+
+  // Master-flow тура и ролевые профили показа шагов (P3).
+  const MASTER_FLOW_STEP_IDS = Object.freeze([
+    'welcome',
+    'sidebar',
+    'report-button',
+    'add-technology',
+    'add-block',
+    'search',
+    'filters',
+    'radar',
+    'quadrant-zoom',
+    'priority-panel',
+    'detail-panel',
+    'proposal-workflow',
+    'admin-panel-entry',
+    'complete'
+  ]);
+
+  const ROLE_PROFILE_STEP_IDS = Object.freeze({
+    guest: Object.freeze([
+      'welcome',
+      'sidebar',
+      'report-button',
+      'search',
+      'filters',
+      'radar',
+      'quadrant-zoom',
+      'priority-panel',
+      'detail-panel',
+      'complete'
+    ]),
+    editor: Object.freeze([
+      'welcome',
+      'sidebar',
+      'report-button',
+      'search',
+      'filters',
+      'radar',
+      'quadrant-zoom',
+      'priority-panel',
+      'detail-panel',
+      'proposal-workflow',
+      'complete'
+    ]),
+    owner: Object.freeze([
+      'welcome',
+      'sidebar',
+      'report-button',
+      'add-technology',
+      'add-block',
+      'search',
+      'filters',
+      'radar',
+      'quadrant-zoom',
+      'priority-panel',
+      'detail-panel',
+      'proposal-workflow',
+      'complete'
+    ]),
+    admin: Object.freeze([
+      'welcome',
+      'sidebar',
+      'report-button',
+      'add-technology',
+      'add-block',
+      'search',
+      'filters',
+      'radar',
+      'quadrant-zoom',
+      'priority-panel',
+      'detail-panel',
+      'proposal-workflow',
+      'admin-panel-entry',
+      'complete'
+    ])
+  });
+
+  function normalizeRole(role) {
+    const roleApi = window.RoleCapabilities || window.RolesConfig || null;
+    if (roleApi && typeof roleApi.normalizeRole === 'function') {
+      return roleApi.normalizeRole(role);
+    }
+    return String(role || '').trim().toLowerCase();
+  }
+
+  function getCurrentRoleForTour() {
+    const roleApi = window.RoleCapabilities || window.RolesConfig || null;
+    if (roleApi && typeof roleApi.getCurrentRole === 'function') {
+      return normalizeRole(roleApi.getCurrentRole());
+    }
+    return normalizeRole(localStorage.getItem('role'));
+  }
+
+  function resolveRoleProfile(role) {
+    const normalized = normalizeRole(role || getCurrentRoleForTour());
+    if (ROLE_PROFILE_STEP_IDS[normalized]) {
+      return normalized;
+    }
+    return 'guest';
+  }
+
+  function getRoleProfileStepIds(role) {
+    return ROLE_PROFILE_STEP_IDS[resolveRoleProfile(role)].slice();
+  }
+
+  function isStepAllowedByRoleProfile(step, role) {
+    if (!step || !step.id) return false;
+    return getRoleProfileStepIds(role).includes(step.id);
+  }
+
+  function isStepVisible(step, role, options = {}) {
+    if (!isStepAllowedByRoleProfile(step, role)) {
+      return false;
+    }
+    if (options.skipConditional === true) {
+      return true;
+    }
+    if (step.conditional && typeof step.conditional === 'function') {
+      return step.conditional();
+    }
+    return true;
+  }
+
+  function hasRoleCapability(capability) {
+    const roleApi = window.RoleCapabilities || window.RolesConfig || null;
+    if (roleApi && typeof roleApi.hasCapability === 'function') {
+      return roleApi.hasCapability(capability);
+    }
+    return false;
+  }
+
+  function isAuthorizedFor(capability) {
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    const username = localStorage.getItem('username');
+    return isLoggedIn && !!username && hasRoleCapability(capability);
+  }
 
   // Определение шагов тура
   const TOUR_STEPS = [
@@ -37,15 +174,9 @@ import Logger from '../core/logger.js';
       showSkip: true,
       waitForElement: true,
       conditional: () => {
-        // Показываем шаг только для авторизованных пользователей
-        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-        const role = localStorage.getItem('role');
-        const username = localStorage.getItem('username');
-        const isAuthorized = isLoggedIn && (role === 'admin' || role === 'architect') && username;
-
         // Также проверяем, что модальное окно существует
         const exportModal = document.getElementById('exportPdfModal');
-        return isAuthorized && exportModal !== null;
+        return isAuthorizedFor('export_reports') && exportModal !== null;
       },
       beforeShow: () => {
         // Открываем модальное окно экспорта сразу, без задержки
@@ -117,15 +248,9 @@ import Logger from '../core/logger.js';
       showSkip: true,
       waitForElement: true,
       conditional: () => {
-        // Показываем шаг только для авторизованных пользователей
-        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-        const role = localStorage.getItem('role');
-        const username = localStorage.getItem('username');
-        const isAuthorized = isLoggedIn && (role === 'admin' || role === 'architect') && username;
-
         // Также проверяем, что модальное окно существует
         const addTechPanel = document.getElementById('addTechPanel');
-        return isAuthorized && addTechPanel !== null;
+        return isAuthorizedFor('manage_technologies') && addTechPanel !== null;
       },
       beforeShow: () => {
         // Подсвечиваем кнопку "Добавить" в боковой панели
@@ -242,15 +367,9 @@ import Logger from '../core/logger.js';
       showSkip: true,
       waitForElement: true,
       conditional: () => {
-        // Показываем шаг только для авторизованных пользователей
-        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-        const role = localStorage.getItem('role');
-        const username = localStorage.getItem('username');
-        const isAuthorized = isLoggedIn && (role === 'admin' || role === 'architect') && username;
-
         // Также проверяем, что модальное окно существует
         const addBlockPanel = document.getElementById('addBlockPanel');
-        return isAuthorized && addBlockPanel !== null;
+        return isAuthorizedFor('manage_technologies') && addBlockPanel !== null;
       },
       beforeShow: () => {
         // Подсвечиваем кнопку "Добавить" в боковой панели
@@ -672,11 +791,7 @@ import Logger from '../core/logger.js';
             }
 
             // Скрываем кнопки "Редактировать" и "Удалить" для неавторизованных пользователей
-            // Проверяем авторизацию по нескольким параметрам
-            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-            const role = localStorage.getItem('role');
-            const username = localStorage.getItem('username');
-            const isAuthorized = isLoggedIn && (role === 'admin' || role === 'architect') && username;
+            const isAuthorized = isAuthorizedFor('manage_technologies');
 
             const editBtn = detailPanel.querySelector('#editTechBtn');
             const deleteBtn = detailPanel.querySelector('#deleteTechBtn');
@@ -737,10 +852,7 @@ import Logger from '../core/logger.js';
           const techActions = detailPanel.querySelector('.tech-actions');
 
           // Восстанавливаем отображение кнопок в зависимости от авторизации
-          const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-          const role = localStorage.getItem('role');
-          const username = localStorage.getItem('username');
-          const isAuthorized = isLoggedIn && (role === 'admin' || role === 'architect') && username;
+          const isAuthorized = isAuthorizedFor('manage_technologies');
 
           if (isAuthorized) {
             if (editBtn) {
@@ -820,6 +932,28 @@ import Logger from '../core/logger.js';
           }
           detailPanel.style.position = '';
         }
+      }
+    },
+    {
+      id: 'proposal-workflow',
+      title: 'Предложения изменений и модерация',
+      description: 'Для ролей editor/owner/admin доступен сценарий предложений изменений: editor формирует предложение, owner/admin его рассматривают (approve/reject), а editor отслеживает статусы модерации.',
+      target: null,
+      position: 'center',
+      showSkip: true,
+      conditional: () => {
+        return hasRoleCapability('create_proposals') && hasRoleCapability('view_proposal_statuses');
+      }
+    },
+    {
+      id: 'admin-panel-entry',
+      title: 'Функции админ-панели',
+      description: 'Роль admin получает доступ к админ-панели: управление пользователями, метриками и системными разделами. Переход в админку доступен по роли в правом верхнем углу.',
+      target: null,
+      position: 'center',
+      showSkip: true,
+      conditional: () => {
+        return hasRoleCapability('manage_admin_panel');
       }
     },
     {
@@ -1476,12 +1610,7 @@ import Logger from '../core/logger.js';
    * Получает видимые шаги (для подсчета общего количества)
    */
   function getVisibleSteps() {
-    return TOUR_STEPS.filter(step => {
-      if (step.conditional && typeof step.conditional === 'function') {
-        return step.conditional();
-      }
-      return true;
-    });
+    return TOUR_STEPS.filter((step) => isStepVisible(step));
   }
 
   /**
@@ -1491,8 +1620,7 @@ import Logger from '../core/logger.js';
     let visibleCount = 0;
     for (let i = 0; i < TOUR_STEPS.length; i++) {
       const step = TOUR_STEPS[i];
-      const isVisible = !step.conditional || (typeof step.conditional === 'function' && step.conditional());
-      if (isVisible) {
+      if (isStepVisible(step)) {
         if (visibleCount === visibleIndex) {
           return i;
         }
@@ -1509,8 +1637,7 @@ import Logger from '../core/logger.js';
     let visibleCount = 0;
     for (let i = 0; i <= currentStepIndex; i++) {
       const step = TOUR_STEPS[i];
-      const isVisible = !step.conditional || (typeof step.conditional === 'function' && step.conditional());
-      if (isVisible) {
+      if (isStepVisible(step)) {
         visibleCount++;
       }
     }
@@ -1529,8 +1656,8 @@ import Logger from '../core/logger.js';
     const step = TOUR_STEPS[stepIndex];
     currentStepIndex = stepIndex;
 
-    // Проверяем условие показа шага
-    if (step.conditional && !step.conditional()) {
+    // Проверяем условие показа шага (роль + conditional).
+    if (!isStepVisible(step)) {
       // Пропускаем шаг, если условие не выполнено
       showStep(stepIndex + 1);
       return;
@@ -1810,8 +1937,7 @@ import Logger from '../core/logger.js';
         let prevIndex = currentStepIndex - 1;
         while (prevIndex >= 0) {
           const prevStep = TOUR_STEPS[prevIndex];
-          // Проверяем, видим ли этот шаг
-          if (!prevStep.conditional || (typeof prevStep.conditional === 'function' && prevStep.conditional())) {
+          if (isStepVisible(prevStep)) {
             saveProgress(prevIndex);
             showStep(prevIndex);
             return;
@@ -1983,6 +2109,20 @@ import Logger from '../core/logger.js';
     localStorage.removeItem(STORAGE_VERSION_KEY);
   }
 
+  function getMasterFlowStepIds() {
+    return MASTER_FLOW_STEP_IDS.slice();
+  }
+
+  function getRoleProfileName(role) {
+    return resolveRoleProfile(role);
+  }
+
+  function getVisibleStepIdsForRole(role, options = {}) {
+    return TOUR_STEPS
+      .filter((step) => isStepVisible(step, role, options))
+      .map((step) => step.id);
+  }
+
   /**
    * Инициализирует модуль
    */
@@ -2001,7 +2141,11 @@ import Logger from '../core/logger.js';
     endTour,
     resetTour,
     hasCompletedTour,
-    completeTour
+    completeTour,
+    getMasterFlowStepIds,
+    getRoleProfileName,
+    getRoleProfileStepIds,
+    getVisibleStepIdsForRole
   };
 
   if (typeof window !== 'undefined') {
