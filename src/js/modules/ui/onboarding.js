@@ -504,7 +504,7 @@ import Logger from '../core/logger.js';
           sidebar.classList.add('onboarding-visible');
         }
       },
-      afterHide: (stepIndex) => {
+      afterHide: (stepIndex, transition = {}) => {
         // Убираем классы видимости
         const searchContainer = document.querySelector('.search-container');
         const sidebar = document.getElementById('sidebar');
@@ -514,24 +514,22 @@ import Logger from '../core/logger.js';
         if (sidebar) {
           sidebar.classList.remove('onboarding-visible');
         }
-        // Скрываем панель только если следующий шаг не требует её раскрытия
-        const nextStepIndex = (stepIndex !== undefined ? stepIndex : currentStepIndex) + 1;
-        if (nextStepIndex < TOUR_STEPS.length) {
-          const nextStep = TOUR_STEPS[nextStepIndex];
-          if (nextStep && nextStep.id !== 'filters') {
-            const sidebarWrapper = document.querySelector('.sidebar-wrapper');
-            if (sidebarWrapper) {
-              sidebarWrapper.classList.remove('expanded');
-              sidebarWrapper.classList.add('collapsed');
-            }
-          }
-        } else {
-          // Если это последний шаг, скрываем панель
-          const sidebarWrapper = document.querySelector('.sidebar-wrapper');
-          if (sidebarWrapper) {
-            sidebarWrapper.classList.remove('expanded');
-            sidebarWrapper.classList.add('collapsed');
-          }
+        const currentIndex = stepIndex !== undefined ? stepIndex : currentStepIndex;
+        const direction = transition && transition.direction ? transition.direction : 'next';
+        const targetStepIndex =
+          transition && typeof transition.toStepIndex === 'number'
+            ? transition.toStepIndex
+            : (direction === 'prev' ? currentIndex - 1 : currentIndex + 1);
+        const targetStep =
+          targetStepIndex >= 0 && targetStepIndex < TOUR_STEPS.length
+            ? TOUR_STEPS[targetStepIndex]
+            : null;
+        const shouldKeepExpanded = !!(targetStep && targetStep.id === 'filters');
+
+        const sidebarWrapper = document.querySelector('.sidebar-wrapper');
+        if (sidebarWrapper && !shouldKeepExpanded) {
+          sidebarWrapper.classList.remove('expanded');
+          sidebarWrapper.classList.add('collapsed');
         }
       }
     },
@@ -671,59 +669,88 @@ import Logger from '../core/logger.js';
       target: '#quadrantPriorityPanel',
       position: 'center',
       showSkip: true,
+      waitForElement: true,
       conditional: () => {
         // Показываем шаг, если панель существует
         const priorityPanel = document.getElementById('quadrantPriorityPanel');
         return priorityPanel !== null;
       },
       beforeShow: () => {
-        // Зуммируем первый доступный квадрант для демонстрации
-        if (typeof window.zoomQuadrant === 'function' && typeof window.getQuadrantIdForBlock === 'function') {
-          // Пробуем зуммировать первый квадрант
-          const quadrants = window.QUADRANTS || [];
-          if (quadrants.length > 0) {
-            const firstQuadrant = quadrants[0];
-            if (firstQuadrant && firstQuadrant.id) {
-              // Используем requestAnimationFrame для более быстрого выполнения
-              requestAnimationFrame(() => {
-                window.zoomQuadrant(firstQuadrant.id, { source: 'onboarding' });
-                // Открываем панель списка технологий и заполняем список
-                requestAnimationFrame(() => {
-                  requestAnimationFrame(() => {
-                    if (typeof window.openQuadrantPriorityPanel === 'function') {
-                      window.openQuadrantPriorityPanel();
-                      // Заполняем список технологий
-                      if (typeof window.recomputeQuadrantPriorityList === 'function') {
-                        window.recomputeQuadrantPriorityList(firstQuadrant.id);
-                      }
-                      // Убеждаемся, что модальное окно видно поверх overlay
-                      const priorityPanel = document.getElementById('quadrantPriorityPanel');
-                      if (priorityPanel) {
-                        priorityPanel.style.zIndex = '10004';
-                        priorityPanel.style.position = 'fixed';
-                      }
-                      // Подсвечиваем поле поиска внутри модального окна
-                      const searchInput = document.getElementById('qpSearchInput');
-                      if (searchInput) {
-                        searchInput.classList.add('onboarding-highlight-input');
-                      }
-                    }
-                  });
-                });
-              });
-            }
+        let targetQuadrantId = null;
+        if (typeof window.getCurrentZoomedQuadrant === 'function') {
+          const currentZoomed = window.getCurrentZoomedQuadrant();
+          if (currentZoomed !== null && currentZoomed !== undefined && currentZoomed !== '') {
+            targetQuadrantId = currentZoomed;
           }
         }
+        if (targetQuadrantId === null) {
+          const quadrants = Array.isArray(window.QUADRANTS) ? window.QUADRANTS : [];
+          if (quadrants.length > 0 && quadrants[0] && quadrants[0].id !== undefined) {
+            targetQuadrantId = quadrants[0].id;
+          }
+        }
+        if (targetQuadrantId === null) {
+          targetQuadrantId = 1;
+        }
+
+        if (typeof window.zoomQuadrant === 'function') {
+          window.zoomQuadrant(targetQuadrantId, { source: 'onboarding' });
+        }
+
+        // Открываем панель списка технологий и заполняем список
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            if (typeof window.openQuadrantPriorityPanel === 'function') {
+              window.openQuadrantPriorityPanel(targetQuadrantId);
+            }
+            if (typeof window.recomputeQuadrantPriorityList === 'function') {
+              window.recomputeQuadrantPriorityList(targetQuadrantId);
+            }
+
+            // Убеждаемся, что модальное окно видно поверх overlay
+            const priorityPanel = document.getElementById('quadrantPriorityPanel');
+            if (priorityPanel) {
+              priorityPanel.classList.add('open');
+              priorityPanel.setAttribute('aria-hidden', 'false');
+              priorityPanel.style.display = '';
+              priorityPanel.style.zIndex = '10004';
+              priorityPanel.style.position = 'fixed';
+            }
+
+            // Подсвечиваем поле поиска внутри модального окна
+            const searchInput = document.getElementById('qpSearchInput');
+            if (searchInput) {
+              searchInput.classList.add('onboarding-highlight-input');
+            }
+          });
+        });
       },
-      afterHide: () => {
+      afterHide: (stepIndex, transition = {}) => {
         // Убираем подсветку поля поиска
         const searchInput = document.getElementById('qpSearchInput');
         if (searchInput) {
           searchInput.classList.remove('onboarding-highlight-input');
         }
-        // Не закрываем панель и не убираем зум - они нужны для следующих шагов
-        // Панель и зум будут закрыты только после шага со списком технологий
-        // Overlay обрабатывается автоматически при переходе между шагами
+
+        // При возврате назад к quadrant-zoom сохраняем состояние zoom/panel.
+        const direction = transition && transition.direction ? transition.direction : 'next';
+        const toStepIndex =
+          transition && typeof transition.toStepIndex === 'number'
+            ? transition.toStepIndex
+            : ((stepIndex !== undefined ? stepIndex : currentStepIndex) + 1);
+        const toStep =
+          toStepIndex >= 0 && toStepIndex < TOUR_STEPS.length
+            ? TOUR_STEPS[toStepIndex]
+            : null;
+        const shouldPreserve = direction === 'prev' && toStep && toStep.id === 'quadrant-zoom';
+
+        if (!shouldPreserve) {
+          const priorityPanel = document.getElementById('quadrantPriorityPanel');
+          if (priorityPanel) {
+            priorityPanel.style.position = '';
+            priorityPanel.style.zIndex = '';
+          }
+        }
       }
     },
     {
@@ -843,7 +870,7 @@ import Logger from '../core/logger.js';
           });
         });
       },
-      afterHide: (stepIndex) => {
+      afterHide: (stepIndex, transition = {}) => {
         // Восстанавливаем видимость кнопок после тура
         const detailPanel = document.getElementById('detailPanel');
         if (detailPanel) {
@@ -896,17 +923,21 @@ import Logger from '../core/logger.js';
         // Проверяем, является ли следующий шаг последним (complete)
         // Это нужно, чтобы не сбрасывать зум при переходе с шага detail-panel на шаг complete
         const currentIndex = stepIndex !== undefined ? stepIndex : currentStepIndex;
-        const currentStepObj = currentIndex >= 0 && currentIndex < TOUR_STEPS.length ? TOUR_STEPS[currentIndex] : null;
-        const isCurrentStepDetailPanel = currentStepObj && currentStepObj.id === 'detail-panel';
-        const nextStepIndex = currentIndex + 1;
-        const isLastStep = currentIndex === TOUR_STEPS.length - 1;
-        const nextStep = !isLastStep && nextStepIndex < TOUR_STEPS.length ? TOUR_STEPS[nextStepIndex] : null;
+        const direction = transition && transition.direction ? transition.direction : 'next';
+        const targetStepIndex =
+          transition && typeof transition.toStepIndex === 'number'
+            ? transition.toStepIndex
+            : (direction === 'prev' ? currentIndex - 1 : currentIndex + 1);
+        const nextStep =
+          targetStepIndex >= 0 && targetStepIndex < TOUR_STEPS.length
+            ? TOUR_STEPS[targetStepIndex]
+            : null;
         const isNextStepComplete = nextStep && nextStep.id === 'complete';
 
         // Закрываем панель списка технологий и убираем зум после шага
         // НО не сбрасываем зум и не закрываем панель, если мы на шаге detail-panel и следующий шаг - это завершающий шаг (complete)
         // Это позволяет сохранить зум при переходе с шага 9 (detail-panel) на шаг 10 (complete)
-        const shouldPreserveZoom = isCurrentStepDetailPanel && isNextStepComplete;
+        const shouldPreserveZoom = direction === 'prev' || isNextStepComplete;
         if (!shouldPreserveZoom) {
           if (typeof window.closeQuadrantPriorityPanel === 'function') {
             window.closeQuadrantPriorityPanel();
@@ -1723,6 +1754,14 @@ import Logger from '../core/logger.js';
     return visibleCount;
   }
 
+  function runStepAfterHide(stepIndex, transition = {}) {
+    if (stepIndex < 0 || stepIndex >= TOUR_STEPS.length) return;
+    const step = TOUR_STEPS[stepIndex];
+    if (step && step.afterHide && typeof step.afterHide === 'function') {
+      step.afterHide(stepIndex, transition);
+    }
+  }
+
   /**
    * Отображает шаг тура
    */
@@ -1822,6 +1861,17 @@ import Logger from '../core/logger.js';
                              (!element.classList.contains('hidden') &&
                               element.style.display !== 'none' &&
                               element.offsetParent !== null);
+            if (isVisible) {
+              displayStep(step, renderToken);
+              return;
+            }
+          } else if (step.target === '#quadrantPriorityPanel') {
+            // Для панели списка технологий проверяем, что она открыта.
+            const ariaHidden = element.getAttribute('aria-hidden');
+            const isVisible =
+              element.classList.contains('open') &&
+              ariaHidden !== 'true' &&
+              (element.style.display !== 'none' || element.offsetParent !== null);
             if (isVisible) {
               displayStep(step, renderToken);
               return;
@@ -2032,13 +2082,11 @@ import Logger from '../core/logger.js';
     }
     if (prevBtn) {
       prevBtn.onclick = () => {
-        // Выполняем afterHide для текущего шага
-        const activeStep = TOUR_STEPS[currentStepIndex];
-        if (activeStep && activeStep.afterHide && typeof activeStep.afterHide === 'function') {
-          activeStep.afterHide(currentStepIndex);
-        }
-
         const prevIndex = getPreviousVisibleStepIndex(currentStepIndex);
+        runStepAfterHide(currentStepIndex, {
+          direction: 'prev',
+          toStepIndex: prevIndex
+        });
         if (prevIndex !== -1) {
           saveProgress(prevIndex);
           showStep(prevIndex);
@@ -2048,16 +2096,14 @@ import Logger from '../core/logger.js';
     }
     if (nextBtn) {
       nextBtn.onclick = () => {
-        // Выполняем afterHide для текущего шага
-        const activeStep = TOUR_STEPS[currentStepIndex];
-        if (activeStep && activeStep.afterHide && typeof activeStep.afterHide === 'function') {
-          activeStep.afterHide(currentStepIndex);
-        }
-
         const nextIndex = getNextVisibleStepIndex(currentStepIndex);
+        runStepAfterHide(currentStepIndex, {
+          direction: 'next',
+          toStepIndex: nextIndex
+        });
         if (nextIndex === -1) {
           completeTour();
-          endTour();
+          endTour({ skipCurrentAfterHide: true });
         } else {
           saveProgress(nextIndex);
           showStep(nextIndex);
@@ -2066,21 +2112,21 @@ import Logger from '../core/logger.js';
     }
     if (skipBtn) {
       skipBtn.onclick = () => {
-        // Выполняем afterHide для текущего шага
-        const currentStep = TOUR_STEPS[currentStepIndex];
-        if (currentStep && currentStep.afterHide && typeof currentStep.afterHide === 'function') {
-          currentStep.afterHide(currentStepIndex);
-        }
+        runStepAfterHide(currentStepIndex, {
+          direction: 'skip',
+          toStepIndex: -1
+        });
 
         // Скрываем панель при пропуске
+        const currentStep = TOUR_STEPS[currentStepIndex];
         const sidebarWrapper = document.querySelector('.sidebar-wrapper');
-        if (sidebarWrapper && (currentStep.id === 'search' || currentStep.id === 'filters')) {
+        if (sidebarWrapper && currentStep && (currentStep.id === 'search' || currentStep.id === 'filters')) {
           sidebarWrapper.classList.remove('expanded');
           sidebarWrapper.classList.add('collapsed');
         }
 
         completeTour();
-        endTour();
+        endTour({ skipCurrentAfterHide: true });
       };
     }
 
@@ -2127,14 +2173,17 @@ import Logger from '../core/logger.js';
   /**
    * Завершает тур
    */
-  function endTour() {
+  function endTour(options = {}) {
     isTourActive = false;
     activeStepRenderToken++;
 
     // Выполняем afterHide для текущего шага, если есть
     const currentStep = TOUR_STEPS[currentStepIndex];
-    if (currentStep && currentStep.afterHide && typeof currentStep.afterHide === 'function') {
-      currentStep.afterHide(currentStepIndex);
+    if (!options.skipCurrentAfterHide) {
+      runStepAfterHide(currentStepIndex, {
+        direction: 'end',
+        toStepIndex: -1
+      });
     }
 
     // Убеждаемся, что панель скрыта при завершении тура
