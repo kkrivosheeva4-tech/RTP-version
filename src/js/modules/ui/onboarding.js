@@ -280,58 +280,21 @@ import Logger from '../core/logger.js';
           }
         }
 
-        // Открываем модальное окно добавления технологии
+        // Открываем модальное окно добавления технологии напрямую.
+        // Через клик по chooseAddTech возможен toggle и мгновенное закрытие при повторном вызове.
         const addTechPanel = document.getElementById('addTechPanel');
-        const chooseAddTechBtn = document.getElementById('chooseAddTech');
+        if (!addTechPanel) return;
 
-        if (addTechPanel) {
-          // Убеждаемся, что модальное окно видно поверх overlay
-          addTechPanel.style.zIndex = '10005';
-          addTechPanel.style.position = 'fixed';
+        addTechPanel.style.zIndex = '10005';
+        addTechPanel.style.position = 'fixed';
 
-          // Открываем модальное окно через клик на кнопку, если она доступна
-          if (chooseAddTechBtn) {
-            // Сначала открываем popover, если он закрыт
-            const pop = document.getElementById('addChoicePopover');
-            if (pop) {
-              // Убираем класс hidden, если он есть
-              pop.classList.remove('hidden');
-              if (pop.style.display !== 'block' && !pop.classList.contains('open')) {
-                const addIconBtn = document.getElementById('addIconBtn');
-                if (addIconBtn) {
-                  const rect = addIconBtn.getBoundingClientRect();
-                  pop.style.display = 'block';
-                  pop.style.position = 'fixed';
-                  pop.style.top = `${rect.bottom + 8}px`;
-                  pop.style.left = `${rect.right + 8}px`;
-                  pop.style.zIndex = '10006';
-                  pop.classList.add('open');
-                }
-              } else {
-                // Если popover уже открыт, убеждаемся, что он виден поверх overlay
-                pop.style.zIndex = '10006';
-              }
-            }
-            // Минимальная задержка перед кликом на кнопку, чтобы popover успел открыться
-            requestAnimationFrame(() => {
-              requestAnimationFrame(() => {
-                chooseAddTechBtn.click();
-              });
-            });
-          } else {
-            // Если кнопка недоступна, открываем модальное окно напрямую
-            if (addTechPanel.classList.contains('hidden') || addTechPanel.hasAttribute('aria-hidden')) {
-              addTechPanel.classList.remove('hidden');
-              addTechPanel.setAttribute('aria-hidden', 'false');
-              addTechPanel.style.display = 'block';
-              addTechPanel.classList.add('open');
-
-              // Вызываем функцию открытия модального окна, если она доступна
-              if (typeof window.showModal === 'function') {
-                window.showModal('addTechPanel');
-              }
-            }
-          }
+        if (typeof window.showModal === 'function') {
+          window.showModal('addTechPanel');
+        } else {
+          addTechPanel.classList.remove('hidden');
+          addTechPanel.classList.add('open');
+          addTechPanel.setAttribute('aria-hidden', 'false');
+          addTechPanel.style.display = 'block';
         }
       },
       afterHide: () => {
@@ -399,58 +362,20 @@ import Logger from '../core/logger.js';
           }
         }
 
-        // Открываем модальное окно добавления функционального блока
+        // Открываем модальное окно добавления блока напрямую (без toggle через popover).
         const addBlockPanel = document.getElementById('addBlockPanel');
-        const chooseAddBlockBtn = document.getElementById('chooseAddBlock');
+        if (!addBlockPanel) return;
 
-        if (addBlockPanel) {
-          // Убеждаемся, что модальное окно видно поверх overlay
-          addBlockPanel.style.zIndex = '10005';
-          addBlockPanel.style.position = 'fixed';
+        addBlockPanel.style.zIndex = '10005';
+        addBlockPanel.style.position = 'fixed';
 
-          // Открываем модальное окно через клик на кнопку, если она доступна
-          if (chooseAddBlockBtn) {
-            // Сначала открываем popover, если он закрыт
-            const pop = document.getElementById('addChoicePopover');
-            if (pop) {
-              // Убираем класс hidden, если он есть
-              pop.classList.remove('hidden');
-              if (pop.style.display !== 'block' && !pop.classList.contains('open')) {
-                const addIconBtn = document.getElementById('addIconBtn');
-                if (addIconBtn) {
-                  const rect = addIconBtn.getBoundingClientRect();
-                  pop.style.display = 'block';
-                  pop.style.position = 'fixed';
-                  pop.style.top = `${rect.bottom + 8}px`;
-                  pop.style.left = `${rect.right + 8}px`;
-                  pop.style.zIndex = '10006';
-                  pop.classList.add('open');
-                }
-              } else {
-                // Если popover уже открыт, убеждаемся, что он виден поверх overlay
-                pop.style.zIndex = '10006';
-              }
-            }
-            // Минимальная задержка перед кликом на кнопку, чтобы popover успел открыться
-            requestAnimationFrame(() => {
-              requestAnimationFrame(() => {
-                chooseAddBlockBtn.click();
-              });
-            });
-          } else {
-            // Если кнопка недоступна, открываем модальное окно напрямую
-            if (addBlockPanel.classList.contains('hidden') || addBlockPanel.hasAttribute('aria-hidden')) {
-              addBlockPanel.classList.remove('hidden');
-              addBlockPanel.setAttribute('aria-hidden', 'false');
-              addBlockPanel.style.display = 'block';
-              addBlockPanel.classList.add('open');
-
-              // Вызываем функцию открытия модального окна, если она доступна
-              if (typeof window.showModal === 'function') {
-                window.showModal('addBlockPanel');
-              }
-            }
-          }
+        if (typeof window.showModal === 'function') {
+          window.showModal('addBlockPanel');
+        } else {
+          addBlockPanel.classList.remove('hidden');
+          addBlockPanel.classList.add('open');
+          addBlockPanel.setAttribute('aria-hidden', 'false');
+          addBlockPanel.style.display = 'block';
         }
       },
       afterHide: () => {
@@ -1655,6 +1580,52 @@ import Logger from '../core/logger.js';
     });
   }
 
+  function getTooltipCoordinatesForPlacement(rect, tooltipRect, placement) {
+    const spacing = 20;
+    switch (placement) {
+      case 'top':
+        return {
+          top: rect.top - tooltipRect.height - spacing,
+          left: rect.left + rect.width / 2 - tooltipRect.width / 2
+        };
+      case 'bottom':
+        return {
+          top: rect.bottom + spacing,
+          left: rect.left + rect.width / 2 - tooltipRect.width / 2
+        };
+      case 'left':
+        return {
+          top: rect.top + rect.height / 2 - tooltipRect.height / 2,
+          left: rect.left - tooltipRect.width - spacing
+        };
+      case 'right':
+      default:
+        return {
+          top: rect.top + rect.height / 2 - tooltipRect.height / 2,
+          left: rect.right + spacing
+        };
+    }
+  }
+
+  function clampTooltipToViewport(coords, tooltipRect) {
+    const margin = 10;
+    const clampedTop = Math.max(margin, Math.min(coords.top, window.innerHeight - tooltipRect.height - margin));
+    const clampedLeft = Math.max(margin, Math.min(coords.left, window.innerWidth - tooltipRect.width - margin));
+    return { top: clampedTop, left: clampedLeft };
+  }
+
+  function rectsOverlap(a, b) {
+    if (!a || !b) return false;
+    return !(a.right <= b.left || a.left >= b.right || a.bottom <= b.top || a.top >= b.bottom);
+  }
+
+  function getOverlapArea(a, b) {
+    if (!rectsOverlap(a, b)) return 0;
+    const overlapWidth = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+    const overlapHeight = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+    return Math.max(0, overlapWidth) * Math.max(0, overlapHeight);
+  }
+
   /**
    * Позиционирует tooltip относительно элемента
    */
@@ -1666,43 +1637,83 @@ import Logger from '../core/logger.js';
 
     if (!element || position === 'center') {
       // Центрированное позиционирование
+      tooltip.style.width = '';
       top = window.innerHeight / 2 - tooltipRect.height / 2;
       left = window.innerWidth / 2 - tooltipRect.width / 2;
     } else {
       const rect = element.getBoundingClientRect();
-      const spacing = 20;
+      const requestedPlacement = position || 'right';
 
-      switch (position) {
-        case 'top':
-          top = rect.top - tooltipRect.height - spacing;
-          left = rect.left + rect.width / 2 - tooltipRect.width / 2;
-          break;
-        case 'bottom':
-          top = rect.bottom + spacing;
-          left = rect.left + rect.width / 2 - tooltipRect.width / 2;
-          break;
-        case 'left':
-          top = rect.top + rect.height / 2 - tooltipRect.height / 2;
-          left = rect.left - tooltipRect.width - spacing;
-          break;
-        case 'right':
-          top = rect.top + rect.height / 2 - tooltipRect.height / 2;
-          left = rect.right + spacing;
-          break;
-        default:
-          top = rect.bottom + spacing;
-          left = rect.left + rect.width / 2 - tooltipRect.width / 2;
+      const requestedCoords = getTooltipCoordinatesForPlacement(rect, tooltipRect, requestedPlacement);
+      const requestedClamped = clampTooltipToViewport(requestedCoords, tooltipRect);
+
+      let bestTop = requestedClamped.top;
+      let bestLeft = requestedClamped.left;
+
+      const targetRect = {
+        top: rect.top,
+        left: rect.left,
+        right: rect.right,
+        bottom: rect.bottom
+      };
+      let tooltipRectCandidate = {
+        top: bestTop,
+        left: bestLeft,
+        right: bestLeft + tooltipRect.width,
+        bottom: bestTop + tooltipRect.height
+      };
+
+      if (rectsOverlap(tooltipRectCandidate, targetRect)) {
+        const placements = ['right', 'bottom', 'top', 'left'];
+        const uniquePlacements = [requestedPlacement, ...placements.filter((p) => p !== requestedPlacement)];
+        let minOverlap = Number.POSITIVE_INFINITY;
+
+        for (const placement of uniquePlacements) {
+          const coords = getTooltipCoordinatesForPlacement(rect, tooltipRect, placement);
+          const clamped = clampTooltipToViewport(coords, tooltipRect);
+          const candidate = {
+            top: clamped.top,
+            left: clamped.left,
+            right: clamped.left + tooltipRect.width,
+            bottom: clamped.top + tooltipRect.height
+          };
+
+          const overlapArea = getOverlapArea(candidate, targetRect);
+          if (overlapArea < minOverlap) {
+            minOverlap = overlapArea;
+            bestTop = clamped.top;
+            bestLeft = clamped.left;
+            tooltipRectCandidate = candidate;
+          }
+
+          if (overlapArea === 0) {
+            break;
+          }
+        }
+
+        // Для шага фильтров дополнительно стараемся увести tooltip правее,
+        // даже если полностью избежать пересечения не удалось на узком экране.
+        const activeStep = TOUR_STEPS[currentStepIndex];
+        if (activeStep && activeStep.id === 'filters' && rectsOverlap(tooltipRectCandidate, targetRect)) {
+          const availableRight = window.innerWidth - rect.right - 24;
+          if (availableRight > 220) {
+            const adaptiveWidth = Math.max(220, Math.min(tooltipRect.width, availableRight));
+            tooltip.style.width = `${adaptiveWidth}px`;
+            const refreshedRect = tooltip.getBoundingClientRect();
+            const rightCoords = getTooltipCoordinatesForPlacement(rect, refreshedRect, 'right');
+            const rightClamped = clampTooltipToViewport(rightCoords, refreshedRect);
+            bestTop = rightClamped.top;
+            bestLeft = rightClamped.left;
+          }
+        } else {
+          tooltip.style.width = '';
+        }
+      } else {
+        tooltip.style.width = '';
       }
 
-      // Проверяем границы экрана
-      if (top < 10) top = 10;
-      if (left < 10) left = 10;
-      if (top + tooltipRect.height > window.innerHeight - 10) {
-        top = window.innerHeight - tooltipRect.height - 10;
-      }
-      if (left + tooltipRect.width > window.innerWidth - 10) {
-        left = window.innerWidth - tooltipRect.width - 10;
-      }
+      top = bestTop;
+      left = bestLeft;
     }
 
     tooltip.style.top = `${top + window.scrollY}px`;
