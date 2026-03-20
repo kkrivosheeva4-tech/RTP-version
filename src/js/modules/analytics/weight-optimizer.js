@@ -3,7 +3,26 @@
  * Использует методы оптимизации (градиентный спуск, генетические алгоритмы)
  * для подбора оптимальных весов на основе исторических данных
  */
+
+import FactorEngine from '../radar/factor-engine.js';
+
 'use strict';
+
+  function getModelConfig(config = {}) {
+    if (config.modelConfig) return config.modelConfig;
+    if (typeof window !== 'undefined' && window.RadarModelConfig) return window.RadarModelConfig;
+    return {};
+  }
+
+  function getDefaultWeights(config = {}) {
+    const modelConfig = getModelConfig(config);
+    const registry = FactorEngine.buildFactorRegistry(modelConfig);
+    const defaults = {};
+    registry.forEach(f => {
+      defaults[f.id] = f.weight;
+    });
+    return defaults;
+  }
 
   /**
    * Функция потерь для оптимизации весов
@@ -16,31 +35,28 @@
   function calculateLoss(weights, technologies, config) {
     if (!technologies || technologies.length === 0) return Infinity;
 
-    const bias = config.bias || -0.6;
-    const alpha = config.alpha || 4;
+    const modelConfig = getModelConfig(config);
+    const radiusConfig = FactorEngine.resolveRadiusConfig(modelConfig);
+    const baseRegistry = FactorEngine.buildFactorRegistry(modelConfig);
+    const registry = baseRegistry.map(f => ({
+      ...f,
+      weight: weights[f.id] !== undefined ? weights[f.id] : f.weight
+    }));
     const targetRadius = config.targetRadius || 50; // Целевой средний радиус
 
     let totalLoss = 0;
     let validCount = 0;
 
     technologies.forEach(tech => {
-      // Извлекаем факторы
-      const techRead = tech.techRead !== undefined ? tech.techRead / 3 : 0.5;
-      const organRead = tech.organRead !== undefined ? tech.organRead / 3 : 0.5;
-      const funcCover = tech.funcCover !== undefined ? tech.funcCover / 3 : 0;
-      const trlStage = tech.trlStage !== undefined ? (tech.trlStage - 1) / 2 : 0;
-
-      // Вычисляем сводный показатель
-      const z_i = weights.techRead * techRead +
-                  weights.organRead * organRead +
-                  weights.funcCover * funcCover +
-                  weights.trlStage * trlStage +
-                  bias;
-
-      // Логистическая функция
-      const expTerm = Math.exp(-alpha * z_i);
-      const p_i = 1 / (1 + expTerm);
-      const radius = 100 * (1 - p_i);
+      const readiness = FactorEngine.calculateReadinessIndex({
+        tech,
+        modelConfig,
+        registry
+      });
+      if (readiness.insufficientData) {
+        return;
+      }
+      const radius = radiusConfig.min + (radiusConfig.max - radiusConfig.min) * (1 - readiness.z);
 
       // Функция потерь: квадратичное отклонение от целевого распределения
       // Поощряем равномерное распределение по зонам
@@ -121,15 +137,17 @@
     const mutationRate = config.mutationRate || 0.1;
     const crossoverRate = config.crossoverRate || 0.7;
 
+    const defaultWeights = getDefaultWeights(config);
+    const factorKeys = Object.keys(defaultWeights);
+    if (factorKeys.length === 0) return {};
+
     // Инициализация популяции
     let population = [];
     for (let i = 0; i < populationSize; i++) {
-      const weights = {
-        techRead: Math.random(),
-        organRead: Math.random(),
-        funcCover: Math.random(),
-        trlStage: Math.random()
-      };
+      const weights = {};
+      factorKeys.forEach(key => {
+        weights[key] = Math.random();
+      });
       // Нормализуем
       const sum = Object.values(weights).reduce((a, b) => a + b, 0);
       Object.keys(weights).forEach(key => weights[key] /= sum);
@@ -234,16 +252,16 @@
     }
 
     const method = options.method || 'gradient'; // 'gradient' или 'genetic'
-    const initialWeights = options.initialWeights || {
-      techRead: 0.30,
-      organRead: 0.30,
-      funcCover: 0.20,
-      trlStage: 0.20
-    };
+    const defaultWeights = getDefaultWeights(options);
+    if (Object.keys(defaultWeights).length === 0) {
+      return null;
+    }
+    const initialWeights = options.initialWeights
+      ? { ...defaultWeights, ...options.initialWeights }
+      : defaultWeights;
 
     const config = {
-      bias: options.bias || -0.6,
-      alpha: options.alpha || 4,
+      modelConfig: getModelConfig(options),
       targetRadius: options.targetRadius || 50,
       learningRate: options.learningRate || 0.01,
       maxIterations: options.maxIterations || 100,

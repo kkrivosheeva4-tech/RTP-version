@@ -88,14 +88,16 @@
   }
 
   function getLoggedInUserName() {
-    const u1 = localStorage.getItem('username');
-    const u2 = localStorage.getItem('userName');
-    return (u1 || u2 || '').trim() || 'system';
+    if (window.AuthModule && typeof window.AuthModule.getCurrentUsername === 'function') {
+      const username = window.AuthModule.getCurrentUsername();
+      if (username) return username;
+    }
+    return 'system';
   }
 
-  function safeLogout() {
+  async function safeLogout() {
     if (typeof window.AuthModule !== 'undefined' && typeof window.AuthModule.safeLogout === 'function') {
-      window.AuthModule.safeLogout();
+      await window.AuthModule.safeLogout();
     } else if (typeof window.clearAuthFromStorage === 'function') {
       window.clearAuthFromStorage();
     } else {
@@ -156,25 +158,20 @@
   }
 
   function getRoleName(role) {
-    const roles = {
-      'admin': 'Администратор',
-      'architect': 'Архитектор',
-      'director': 'Директор',
-      'project_manager': 'Руководитель проекта',
-      'analyst': 'Аналитик'
-    };
-    return roles[role] || role;
+    if (window.RolesConfig && typeof window.RolesConfig.getRoleLabel === 'function') {
+      return window.RolesConfig.getRoleLabel(role);
+    }
+    return (role != null ? String(role) : '').trim() || 'Пользователь';
   }
 
   function getRoleClass(role) {
-    const classes = {
-      'admin': 'status-active',
-      'architect': 'status-active',
-      'director': 'status-active',
-      'project_manager': 'status-active',
-      'analyst': 'status-active'
-    };
-    return classes[role] || 'status-inactive';
+    let normalized = '';
+    if (window.RolesConfig && typeof window.RolesConfig.normalizeRole === 'function') {
+      normalized = window.RolesConfig.normalizeRole(role);
+    } else {
+      normalized = (role != null ? String(role) : '').trim().toLowerCase();
+    }
+    return normalized ? 'status-active' : 'status-inactive';
   }
 
   function getActionName(action) {

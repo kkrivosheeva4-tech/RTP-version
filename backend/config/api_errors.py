@@ -5,7 +5,6 @@ from typing import Any
 from rest_framework import status
 from rest_framework.response import Response
 
-
 STATUS_CODE_TO_ERROR_CODE = {
     status.HTTP_400_BAD_REQUEST: "bad_request",
     status.HTTP_401_UNAUTHORIZED: "unauthorized",
@@ -61,11 +60,15 @@ def _first_scalar(value: Any) -> str:
     return str(value) if value is not None else ""
 
 
-def normalize_error_payload(data: Any, status_code: int, *, code: str | None = None) -> dict[str, Any]:
+def normalize_error_payload(
+    data: Any, status_code: int, *, code: str | None = None
+) -> dict[str, Any]:
     if _is_standard_error_payload(data):
         return data
 
-    message = _first_scalar(data).strip() or STATUS_CODE_TO_DEFAULT_MESSAGE.get(status_code, "Request failed.")
+    message = _first_scalar(data).strip() or STATUS_CODE_TO_DEFAULT_MESSAGE.get(
+        status_code, "Request failed."
+    )
     payload: dict[str, Any] = {
         "ok": False,
         "error": message,

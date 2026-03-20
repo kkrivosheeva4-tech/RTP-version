@@ -2,6 +2,9 @@
 // Основная страница радара для всех ролей (архитекторы, директоры, РП, администраторы)
 
 import Logger from './js/modules/core/logger.js';
+import './js/config/api-config-loader.js'; // важно загрузить до auth/UI инициализации
+import './js/config/roles-config.js';
+import './js/vendor/radar-vendors.js';
 import './js/modules/core/escape-utils.js';
 import './js/modules/core/dom-utils.js';
 import StateManager from './js/modules/core/state-manager.js';
@@ -60,6 +63,7 @@ import './js/modules/business/export-filters.js';
 import './js/modules/business/export-pdf.js';
 import './js/modules/business/export.js';
 import './js/modules/business/auth.js';
+import './js/modules/business/moderation.js';
 import './js/modules/business/priorities.js';
 
 // Analytics модули (шаг 7.4 — пятая группа)
@@ -77,7 +81,6 @@ import './js/modules/integration/events.js';
 import './js/audit-logger.js';
 import './js/script.js';
 import './js/radar-utils.js';
-import './js/config/api-config-loader.js'; // шаг 10.1: api-config.local.js (опц.) → api-config.js
 import './js/modules/core/api-client.js';
 import './js/modules/core/data-indexing.js';
 import './js/modules/utils/func-cover-utils.js';
@@ -110,10 +113,10 @@ window.POSITION_PAD = POSITION_PAD;
 window.POSITION_ANGLE_PAD = POSITION_ANGLE_PAD;
 window.MIN_BLIP_DISTANCE = MIN_BLIP_DISTANCE;
 window.TECHTYPE_TO_SHAPE = {
-  'Базовые': 'circle',
-  'Интегрированные': 'circle',
+  Базовые: 'circle',
+  Интегрированные: 'circle',
   'Платформенные решения': 'circle',
-  'Управление с ML и AI': 'circle',
+  'Управление с ML и AI': 'circle'
 };
 window.RINGS = RINGS;
 window.QUADRANTS = QUADRANTS;

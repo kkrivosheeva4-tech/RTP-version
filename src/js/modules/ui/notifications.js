@@ -12,7 +12,8 @@ import Logger from '../core/logger.js';
   const NOTIFICATION_TYPES = {
     ADD: 'add',
     EDIT: 'edit',
-    DELETE: 'delete'
+    DELETE: 'delete',
+    PROPOSAL: 'proposal'
   };
 
   /**
@@ -56,6 +57,8 @@ import Logger from '../core/logger.js';
         return '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M11.333 2.667a1.414 1.414 0 0 1 2 2L5.333 12.667 2 13.333l.667-3.333L9.333 2.667z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
       case NOTIFICATION_TYPES.DELETE:
         return '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 4h12M6 4V2.667A1.333 1.333 0 0 1 7.333 1.333h1.334A1.333 1.333 0 0 1 10 2.667V4m2 0v9.333A1.333 1.333 0 0 1 10.667 14.667H5.333A1.333 1.333 0 0 1 4 13.333V4h10zM6.667 7.333v4M9.333 7.333v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      case NOTIFICATION_TYPES.PROPOSAL:
+        return '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 4h12v9H7l-3 3V4z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 7h6M7 10h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
       default:
         return '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 2C5.582 2 2 5.582 2 10s3.582 8 8 8 8-3.582 8-8-3.582-8-8-8zm0 14c-3.314 0-6-2.686-6-6s2.686-6 6-6 6 2.686 6 6-2.686 6-6 6z" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>';
     }
@@ -91,6 +94,16 @@ import Logger from '../core/logger.js';
         case NOTIFICATION_TYPES.DELETE:
           message = `Удалена технология: ${techName}`;
           break;
+        case NOTIFICATION_TYPES.PROPOSAL: {
+          const proposalAction = details && details.proposalAction ? String(details.proposalAction) : '';
+          const actionLabel = proposalAction === 'create'
+            ? 'создание'
+            : proposalAction === 'delete'
+              ? 'удаление'
+              : 'изменение';
+          message = `Предложено ${actionLabel}: ${techName}`;
+          break;
+        }
         default:
           message = `Изменение в технологии: ${techName}`;
       }
@@ -106,7 +119,9 @@ import Logger from '../core/logger.js';
         // Дополнительные данные для подробного просмотра
         companies: details.companies || [],
         changedFields: details.changedFields || {},
-        oldTech: details.oldTech || null
+        oldTech: details.oldTech || null,
+        proposalAction: details.proposalAction || '',
+        proposalStatus: details.proposalStatus || ''
       };
 
       notifications.push(notification);
@@ -449,6 +464,17 @@ import Logger from '../core/logger.js';
                 ${oldCompanies.map(c => `<li>${escapeHtml(c)}</li>`).join('')}
               </ul>
             ` : '<p><em>Информация о предприятиях не сохранена</em></p>'}
+          </div>
+        `;
+        break;
+
+      case NOTIFICATION_TYPES.PROPOSAL:
+        content = `
+          <div class="notification-detail-section">
+            <h4>Предложение отправлено на модерацию</h4>
+            <p><strong>Название:</strong> ${escapeHtml(notification.techName)}</p>
+            <p><strong>Тип предложения:</strong> ${escapeHtml(notification.proposalAction || 'update')}</p>
+            <p><strong>Статус:</strong> ${escapeHtml(notification.proposalStatus || 'draft')}</p>
           </div>
         `;
         break;

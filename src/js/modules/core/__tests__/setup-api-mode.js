@@ -4,6 +4,7 @@
  */
 if (typeof global !== 'undefined') {
   global.window = global.window || {};
-  global.window.API_BASE_URL = 'http://test.local';
+  // Loopback host avoids slow DNS resolution in Node/MSW on Windows.
+  global.window.API_BASE_URL = 'http://127.0.0.1';
   global.window.USE_API = true;
 }

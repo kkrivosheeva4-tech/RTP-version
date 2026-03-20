@@ -10,129 +10,321 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('references', '0001_initial'),
+        ("references", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Technology',
+            name="Technology",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=255, unique=True)),
-                ('description', models.TextField(blank=True)),
-                ('legacy_function', models.CharField(blank=True, max_length=255)),
-                ('trl_stage', models.PositiveSmallIntegerField(default=1, validators=[django.core.validators.MinValueValidator(1), django.core.validators.MaxValueValidator(9)])),
-                ('status', models.CharField(blank=True, default='research', max_length=64)),
-                ('market_examples', models.JSONField(blank=True, default=list)),
-                ('documentation_files', models.JSONField(blank=True, default=list)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('primary_block', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='primary_technologies', to='references.functionalblock')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("name", models.CharField(max_length=255, unique=True)),
+                ("description", models.TextField(blank=True)),
+                ("legacy_function", models.CharField(blank=True, max_length=255)),
+                (
+                    "trl_stage",
+                    models.PositiveSmallIntegerField(
+                        default=1,
+                        validators=[
+                            django.core.validators.MinValueValidator(1),
+                            django.core.validators.MaxValueValidator(9),
+                        ],
+                    ),
+                ),
+                ("status", models.CharField(blank=True, default="research", max_length=64)),
+                ("market_examples", models.JSONField(blank=True, default=list)),
+                ("documentation_files", models.JSONField(blank=True, default=list)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "primary_block",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="primary_technologies",
+                        to="references.functionalblock",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['name'],
+                "ordering": ["name"],
             },
         ),
         migrations.CreateModel(
-            name='TechnologyBlock',
+            name="TechnologyBlock",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('block', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='technology_links', to='references.functionalblock')),
-                ('technology', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='technology_blocks', to='technologies.technology')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                (
+                    "block",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="technology_links",
+                        to="references.functionalblock",
+                    ),
+                ),
+                (
+                    "technology",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="technology_blocks",
+                        to="technologies.technology",
+                    ),
+                ),
             ],
         ),
         migrations.AddField(
-            model_name='technology',
-            name='blocks',
-            field=models.ManyToManyField(blank=True, related_name='technologies', through='technologies.TechnologyBlock', to='references.functionalblock'),
+            model_name="technology",
+            name="blocks",
+            field=models.ManyToManyField(
+                blank=True,
+                related_name="technologies",
+                through="technologies.TechnologyBlock",
+                to="references.functionalblock",
+            ),
         ),
         migrations.CreateModel(
-            name='TechnologyDirection',
+            name="TechnologyDirection",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('direction', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='technology_links', to='references.digitaldirection')),
-                ('technology', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='technology_directions', to='technologies.technology')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                (
+                    "direction",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="technology_links",
+                        to="references.digitaldirection",
+                    ),
+                ),
+                (
+                    "technology",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="technology_directions",
+                        to="technologies.technology",
+                    ),
+                ),
             ],
         ),
         migrations.AddField(
-            model_name='technology',
-            name='directions',
-            field=models.ManyToManyField(blank=True, related_name='technologies', through='technologies.TechnologyDirection', to='references.digitaldirection'),
+            model_name="technology",
+            name="directions",
+            field=models.ManyToManyField(
+                blank=True,
+                related_name="technologies",
+                through="technologies.TechnologyDirection",
+                to="references.digitaldirection",
+            ),
         ),
         migrations.CreateModel(
-            name='TechnologyEnterpriseReadiness',
+            name="TechnologyEnterpriseReadiness",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('technological_readiness', models.PositiveSmallIntegerField(default=1, validators=[django.core.validators.MinValueValidator(1), django.core.validators.MaxValueValidator(9)])),
-                ('organizational_readiness', models.PositiveSmallIntegerField(default=1, validators=[django.core.validators.MinValueValidator(1), django.core.validators.MaxValueValidator(9)])),
-                ('status', models.CharField(default='planned', max_length=64)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('enterprise', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='technology_readiness', to='references.enterprise')),
-                ('technology', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='enterprise_readiness', to='technologies.technology')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                (
+                    "technological_readiness",
+                    models.PositiveSmallIntegerField(
+                        default=1,
+                        validators=[
+                            django.core.validators.MinValueValidator(1),
+                            django.core.validators.MaxValueValidator(9),
+                        ],
+                    ),
+                ),
+                (
+                    "organizational_readiness",
+                    models.PositiveSmallIntegerField(
+                        default=1,
+                        validators=[
+                            django.core.validators.MinValueValidator(1),
+                            django.core.validators.MaxValueValidator(9),
+                        ],
+                    ),
+                ),
+                ("status", models.CharField(default="planned", max_length=64)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "enterprise",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="technology_readiness",
+                        to="references.enterprise",
+                    ),
+                ),
+                (
+                    "technology",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="enterprise_readiness",
+                        to="technologies.technology",
+                    ),
+                ),
             ],
         ),
         migrations.AddField(
-            model_name='technology',
-            name='enterprises',
-            field=models.ManyToManyField(blank=True, related_name='technologies', through='technologies.TechnologyEnterpriseReadiness', to='references.enterprise'),
+            model_name="technology",
+            name="enterprises",
+            field=models.ManyToManyField(
+                blank=True,
+                related_name="technologies",
+                through="technologies.TechnologyEnterpriseReadiness",
+                to="references.enterprise",
+            ),
         ),
         migrations.CreateModel(
-            name='TechnologyFunctionCoverage',
+            name="TechnologyFunctionCoverage",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('function', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='technology_links', to='references.functionreference')),
-                ('technology', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='technology_functions', to='technologies.technology')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                (
+                    "function",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="technology_links",
+                        to="references.functionreference",
+                    ),
+                ),
+                (
+                    "technology",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="technology_functions",
+                        to="technologies.technology",
+                    ),
+                ),
             ],
         ),
         migrations.AddField(
-            model_name='technology',
-            name='function_coverage',
-            field=models.ManyToManyField(blank=True, related_name='technologies', through='technologies.TechnologyFunctionCoverage', to='references.functionreference'),
+            model_name="technology",
+            name="function_coverage",
+            field=models.ManyToManyField(
+                blank=True,
+                related_name="technologies",
+                through="technologies.TechnologyFunctionCoverage",
+                to="references.functionreference",
+            ),
         ),
         migrations.CreateModel(
-            name='TechnologyVendor',
+            name="TechnologyVendor",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('technology', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='technology_vendors', to='technologies.technology')),
-                ('vendor', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='technology_links', to='references.vendor')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                (
+                    "technology",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="technology_vendors",
+                        to="technologies.technology",
+                    ),
+                ),
+                (
+                    "vendor",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="technology_links",
+                        to="references.vendor",
+                    ),
+                ),
             ],
         ),
         migrations.AddField(
-            model_name='technology',
-            name='vendors',
-            field=models.ManyToManyField(blank=True, related_name='technologies', through='technologies.TechnologyVendor', to='references.vendor'),
+            model_name="technology",
+            name="vendors",
+            field=models.ManyToManyField(
+                blank=True,
+                related_name="technologies",
+                through="technologies.TechnologyVendor",
+                to="references.vendor",
+            ),
         ),
         migrations.CreateModel(
-            name='TechnologyVendorIntegrator',
+            name="TechnologyVendorIntegrator",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('integrator', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='technology_vendor_links', to='references.integrator')),
-                ('technology_vendor', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='integrator_links', to='technologies.technologyvendor')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                (
+                    "integrator",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="technology_vendor_links",
+                        to="references.integrator",
+                    ),
+                ),
+                (
+                    "technology_vendor",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="integrator_links",
+                        to="technologies.technologyvendor",
+                    ),
+                ),
             ],
         ),
         migrations.AddConstraint(
-            model_name='technologyblock',
-            constraint=models.UniqueConstraint(fields=('technology', 'block'), name='uq_technology_block'),
+            model_name="technologyblock",
+            constraint=models.UniqueConstraint(
+                fields=("technology", "block"), name="uq_technology_block"
+            ),
         ),
         migrations.AddConstraint(
-            model_name='technologydirection',
-            constraint=models.UniqueConstraint(fields=('technology', 'direction'), name='uq_technology_direction'),
+            model_name="technologydirection",
+            constraint=models.UniqueConstraint(
+                fields=("technology", "direction"), name="uq_technology_direction"
+            ),
         ),
         migrations.AddConstraint(
-            model_name='technologyenterprisereadiness',
-            constraint=models.UniqueConstraint(fields=('technology', 'enterprise'), name='uq_technology_enterprise_readiness'),
+            model_name="technologyenterprisereadiness",
+            constraint=models.UniqueConstraint(
+                fields=("technology", "enterprise"), name="uq_technology_enterprise_readiness"
+            ),
         ),
         migrations.AddConstraint(
-            model_name='technologyfunctioncoverage',
-            constraint=models.UniqueConstraint(fields=('technology', 'function'), name='uq_technology_function'),
+            model_name="technologyfunctioncoverage",
+            constraint=models.UniqueConstraint(
+                fields=("technology", "function"), name="uq_technology_function"
+            ),
         ),
         migrations.AddConstraint(
-            model_name='technologyvendor',
-            constraint=models.UniqueConstraint(fields=('technology', 'vendor'), name='uq_technology_vendor'),
+            model_name="technologyvendor",
+            constraint=models.UniqueConstraint(
+                fields=("technology", "vendor"), name="uq_technology_vendor"
+            ),
         ),
         migrations.AddConstraint(
-            model_name='technologyvendorintegrator',
-            constraint=models.UniqueConstraint(fields=('technology_vendor', 'integrator'), name='uq_technology_vendor_integrator'),
+            model_name="technologyvendorintegrator",
+            constraint=models.UniqueConstraint(
+                fields=("technology_vendor", "integrator"), name="uq_technology_vendor_integrator"
+            ),
         ),
     ]

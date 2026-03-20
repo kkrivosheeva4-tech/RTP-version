@@ -1167,16 +1167,16 @@ const setState = (key, value) => StateManager.set(key, value);
           jsonIntegrators = normalizeReferenceList(jsonData);
         }
       } catch (e) { /* ignore */ }
-      
+
       // Фильтруем список: оставляем только те интеграторы, которых нет в JSON
       // Это пользовательские интеграторы, которые нужно сохранить в localStorage
       const nf = normalizeForComparison;
       const jsonNormSet = new Set(jsonIntegrators.map(i => nf(String(i))));
       const userIntegrators = normalizedList.filter(i => !jsonNormSet.has(nf(String(i))));
-      
+
       // Сохраняем только пользовательские интеграторы в localStorage
       localStorage.setItem(INTEGRATORS_STORAGE_KEY, JSON.stringify(userIntegrators));
-      
+
       // Очищаем кэш после сохранения
       if (window.VendorsFiles && typeof window.VendorsFiles.clearIntegratorsCache === 'function') {
         window.VendorsFiles.clearIntegratorsCache();
@@ -1486,7 +1486,7 @@ const setState = (key, value) => StateManager.set(key, value);
       const addOpt = optionsList.querySelector('.add-new-integrator-option, .add-new-option[data-add-new="integrator"]');
       const list = integratorsListOverride || getState('integratorsList') || [];
       let integratorOpts = Array.from(optionsList.querySelectorAll('li.select-option-item[data-value]:not(.add-new-integrator-option):not(.add-new-option)'));
-      
+
       // СНАЧАЛА обновляем названия в существующих опциях при переименовании
       if (options && options.integratorRenameMap) {
         const { oldName, newName } = options.integratorRenameMap;
@@ -1517,17 +1517,17 @@ const setState = (key, value) => StateManager.set(key, value);
         // Обновляем список опций после переименования
         integratorOpts = Array.from(optionsList.querySelectorAll('li.select-option-item[data-value]:not(.add-new-integrator-option):not(.add-new-option)'));
       }
-      
+
       // ПОТОМ проверяем, какие элементы нужно добавить
       const currentValues = new Set(integratorOpts.map(li => {
         const val = li.getAttribute('data-value');
         return val ? nf(val) : null;
       }).filter(Boolean));
-      
+
       list.forEach(i => {
         const normI = nf(i);
         if (currentValues.has(normI)) return; // Элемент уже есть (возможно, после переименования)
-        
+
         const li = document.createElement('li');
         li.className = 'select-option-item';
         li.setAttribute('data-value', i);
@@ -1581,7 +1581,7 @@ const setState = (key, value) => StateManager.set(key, value);
           optionsList.appendChild(li);
         }
       });
-      
+
       const listNorm = new Set(list.map(i => nf(i)));
       integratorOpts.forEach(li => {
         const val = li.getAttribute('data-value');

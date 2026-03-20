@@ -3,24 +3,46 @@
  * Автоматически адаптирует параметры (α, bias) под распределение данных
  */
 
+import FactorEngine from '../radar/factor-engine.js';
+
 'use strict';
+
+  function getCalibrationRegistry(options = {}) {
+    const modelConfig = options.modelConfig ||
+      ((typeof window !== 'undefined' && window.RadarModelConfig) ? window.RadarModelConfig : {});
+    return FactorEngine.buildFactorRegistry(modelConfig);
+  }
+
+  function getNumericFactorValue(tech, factorId) {
+    if (!tech) return null;
+    const direct = tech[factorId];
+    const directN = Number(direct);
+    if (direct !== undefined && direct !== null && !Number.isNaN(directN)) return directN;
+    const extracted = FactorEngine.extractRawFactorValue(tech, factorId);
+    const n = Number(extracted);
+    return Number.isNaN(n) ? null : n;
+  }
 
   /**
    * Анализ распределения факторов готовности
    * @param {Array} technologies - Массив технологий
    * @returns {Object} Статистика распределения
    */
-  function analyzeDistribution(technologies) {
+  function analyzeDistribution(technologies, options = {}) {
     if (!technologies || technologies.length === 0) return null;
 
-    const factors = ['techRead', 'organRead', 'funcCover', 'trlStage'];
+    const registry = getCalibrationRegistry(options);
+    const factors = registry.map(f => f.id);
+    const registryById = {};
+    registry.forEach(f => {
+      registryById[f.id] = f;
+    });
     const stats = {};
 
     factors.forEach(factor => {
       const values = technologies
-        .map(t => t[factor])
-        .filter(v => v !== undefined && v !== null && !isNaN(Number(v)))
-        .map(v => Number(v));
+        .map(t => getNumericFactorValue(t, factor))
+        .filter(v => v !== undefined && v !== null && !isNaN(Number(v)));
 
       if (values.length === 0) {
         stats[factor] = null;
@@ -31,9 +53,10 @@
       const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length;
       const stdDev = Math.sqrt(variance);
 
-      // Нормализуем в диапазон [0, 1]
-      const maxValue = factor === 'trlStage' ? 3 : 3;
-      const minValue = factor === 'trlStage' ? 1 : 0;
+      // Нормализуем в диапазон [0, 1] на основе registry scale.
+      const factorCfg = registryById[factor];
+      const minValue = factorCfg && factorCfg.scale ? factorCfg.scale.min : (factor === 'trlStage' ? 1 : 0);
+      const maxValue = factorCfg && factorCfg.scale ? factorCfg.scale.max : 3;
       const normalizedMean = (mean - minValue) / (maxValue - minValue);
       const normalizedStdDev = stdDev / (maxValue - minValue);
 
@@ -60,7 +83,7 @@
     if (!distributionStats) return 4; // Значение по умолчанию
 
     // Вычисляем среднюю нормализованную вариативность
-    const factors = ['techRead', 'organRead', 'funcCover', 'trlStage'];
+    const factors = Object.keys(distributionStats);
     let totalStdDev = 0;
     let count = 0;
 
@@ -104,7 +127,7 @@
     if (!distributionStats) return -0.6; // Значение по умолчанию
 
     // Вычисляем среднюю нормализованную готовность
-    const factors = ['techRead', 'organRead', 'funcCover', 'trlStage'];
+    const factors = Object.keys(distributionStats);
     let totalMean = 0;
     let count = 0;
 
@@ -164,7 +187,7 @@
     // Начало адаптивной калибровки
 
     // Анализируем распределение
-    const distributionStats = analyzeDistribution(technologies);
+    const distributionStats = analyzeDistribution(technologies, options);
 
     // Калибруем параметры
     const alpha = calibrateAlpha(distributionStats);

@@ -664,8 +664,9 @@ import { DOMCache } from '../core/dom-utils.js';
       addBtnEl.addEventListener("click", (e) => {
         e.stopPropagation();
         if (
-          typeof window.checkArchitectRole === "function" &&
-          !window.checkArchitectRole()
+          window.ModerationFlow &&
+          typeof window.ModerationFlow.canSubmitTechnologyChanges === 'function' &&
+          !window.ModerationFlow.canSubmitTechnologyChanges()
         )
           return;
         const pop = document.getElementById("addChoicePopover");
@@ -986,6 +987,12 @@ import { DOMCache } from '../core/dom-utils.js';
     let ignoreOutsideClickUntil = 0;
     document.addEventListener("click", (e) => {
       if (Date.now() < ignoreOutsideClickUntil) return;
+      // Во время интерактивного тура не закрываем модальные окна по внешнему клику:
+      // кнопки "Назад/Далее" в tooltip технически являются внешним кликом для модалок.
+      if (
+        window.__onboardingTourActive === true ||
+        !!document.querySelector(".onboarding-tooltip.visible")
+      ) return;
       // Игнорируем клики по переключателю темы и его элементам
       if (e.target.closest("#themeToggle") || e.target.id === "themeToggle" ||
         e.target.closest("label[for='themeToggle']") ||

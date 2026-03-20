@@ -52,24 +52,6 @@
     }
   }
 
-  function hasApiAccessToken() {
-    try {
-      const apiConfig = (typeof window !== 'undefined' && window.ApiConfig) ? window.ApiConfig : null;
-      const tokenKey = apiConfig && typeof apiConfig.getTokenStorageKey === 'function'
-        ? apiConfig.getTokenStorageKey()
-        : 'rmk_access_token';
-
-      const localToken = localStorage.getItem(tokenKey);
-      const sessionToken = sessionStorage.getItem(tokenKey);
-      return Boolean(
-        (localToken && String(localToken).trim()) ||
-        (sessionToken && String(sessionToken).trim())
-      );
-    } catch (_) {
-      return false;
-    }
-  }
-
   function redirectToAuthIfNeeded() {
     if (typeof window === 'undefined' || !window.location) return;
 
@@ -137,10 +119,19 @@
     if (themeToggle) themeToggle.checked = isDark;
 
     // Сначала показываем auth-состояние, затем — API загрузку.
+    // force=true: всегда проверяем сессию с сервером, чтобы не загружать данные при устаревшем/пустом состоянии
+    if (isApiModeEnabled() && window.AuthModule && typeof window.AuthModule.bootstrapAuthSession === 'function') {
+      await window.AuthModule.bootstrapAuthSession(true);
+    }
     if (typeof window.renderAuth === 'function') {
       window.renderAuth();
     }
-    if (isApiModeEnabled() && !hasApiAccessToken()) {
+    if (
+      isApiModeEnabled() &&
+      window.AuthModule &&
+      typeof window.AuthModule.isAuthenticated === 'function' &&
+      !window.AuthModule.isAuthenticated()
+    ) {
       redirectToAuthIfNeeded();
       return;
     }
@@ -183,7 +174,7 @@
     if (isRadarPage && typeof window.renderRadar === 'function') {
       window.renderRadar();
     } else if (!isRadarPage && typeof window.renderRadarBackground === 'function') {
-      window.renderRadarBackground();
+      window.renderRadarBackground({ showSectorLabels: false });
     }
 
     // Функция positionOptions находится в модуле select-events.js
@@ -221,6 +212,10 @@
     // Инициализация ARIA менеджера
     if (window.AriaManager && typeof window.AriaManager.init === 'function') {
       window.AriaManager.init();
+    }
+
+    if (window.ModerationFlow && typeof window.ModerationFlow.init === 'function') {
+      window.ModerationFlow.init();
     }
 
     // Инициализация интерактивного тура
@@ -342,6 +337,24 @@
       confirmDeleteBtn.onclick = async () => {
         const currentTech = StateAccessors.getCurrentTech();
         if (!currentTech) return;
+        if (
+          window.ModerationFlow &&
+          typeof window.ModerationFlow.isProposalOnlyMode === 'function' &&
+          window.ModerationFlow.isProposalOnlyMode()
+        ) {
+          try {
+            await window.ModerationFlow.createProposal('delete', {
+              technologyId: currentTech.id
+            });
+            window.hideModal('deleteConfirmModal');
+          } catch (err) {
+            if (window.Logger) window.Logger.warn('Не удалось отправить предложение на удаление', err);
+            if (DataLoader && typeof DataLoader.showNotification === 'function') {
+              DataLoader.showNotification((err && err.message) ? err.message : 'Не удалось отправить предложение на модерацию', false);
+            }
+          }
+          return;
+        }
         const DataService = typeof window !== 'undefined' && window.DataService ? window.DataService : null;
         try {
           if (DataService && typeof DataService.deleteTech === 'function') {
@@ -439,7 +452,10 @@
             const raw = localStorage.getItem(key);
             const list = raw ? (JSON.parse(raw) || []) : [];
             const arr = Array.isArray(list) ? list : [];
-            const username = (localStorage.getItem('username') || localStorage.getItem('userName') || 'system').trim() || 'system';
+            let username = 'system';
+            if (window.AuthModule && typeof window.AuthModule.getCurrentUsername === 'function') {
+              username = (window.AuthModule.getCurrentUsername() || 'system').trim() || 'system';
+            }
             const now = (typeof window.getAuditTimestamp === 'function')
               ? window.getAuditTimestamp()
               : new Date().toISOString().slice(0, 19).replace('T', ' ');

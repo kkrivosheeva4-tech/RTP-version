@@ -30,17 +30,6 @@ function getTokenStorageKey() {
     return 'rmk_access_token';
 }
 
-function hasStoredAccessToken() {
-    const key = getTokenStorageKey();
-    try {
-        if (localStorage.getItem(key)) return true;
-    } catch (_) {}
-    try {
-        if (sessionStorage.getItem(key)) return true;
-    } catch (_) {}
-    return false;
-}
-
 function clearLegacyAuthState() {
     try { localStorage.removeItem('isLoggedIn'); } catch (_) {}
     try { localStorage.removeItem('username'); } catch (_) {}
@@ -80,14 +69,22 @@ function getRefreshTokenKey() {
     return 'rmk_refresh_token';
 }
 
+function isRefreshCookieMode() {
+    const cfg = getApiConfig();
+    if (!cfg || typeof cfg.getUseRefreshCookieAuth !== 'function') return false;
+    return cfg.getUseRefreshCookieAuth() === true;
+}
+
 async function apiLogin(username, password) {
     const baseUrl = getApiBaseUrl();
     if (!baseUrl) return { ok: false, error: 'API_BASE_URL не задан' };
+    const useRefreshCookieAuth = isRefreshCookieMode();
 
     try {
         const response = await fetch(`${baseUrl}/api/v1/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: useRefreshCookieAuth ? 'include' : 'same-origin',
             body: JSON.stringify({ username, password })
         });
         const data = await response.json().catch(() => ({}));
@@ -101,13 +98,30 @@ async function apiLogin(username, password) {
 }
 
 function storeApiTokens(accessToken, refreshToken, remember) {
+    if (window.ApiClient && typeof window.ApiClient.setAccessToken === 'function') {
+        window.ApiClient.setAccessToken(accessToken);
+    }
     const tokenKey = getTokenKey();
     const refreshKey = getRefreshTokenKey();
+    const useRefreshCookieAuth = isRefreshCookieMode();
+    if (useRefreshCookieAuth) {
+        try {
+            localStorage.removeItem(tokenKey);
+            localStorage.removeItem(refreshKey);
+            sessionStorage.removeItem(tokenKey);
+            sessionStorage.removeItem(refreshKey);
+        } catch (_) {}
+        return;
+    }
     const primary = remember ? localStorage : sessionStorage;
     const secondary = remember ? sessionStorage : localStorage;
     try {
         primary.setItem(tokenKey, accessToken);
-        primary.setItem(refreshKey, refreshToken);
+        if (!useRefreshCookieAuth && refreshToken) {
+            primary.setItem(refreshKey, refreshToken);
+        } else {
+            primary.removeItem(refreshKey);
+        }
     } catch (_) {}
     try {
         secondary.removeItem(tokenKey);
@@ -118,10 +132,12 @@ function storeApiTokens(accessToken, refreshToken, remember) {
 async function apiLoadMe(accessToken) {
     const baseUrl = getApiBaseUrl();
     if (!baseUrl || !accessToken) return null;
+    const useRefreshCookieAuth = isRefreshCookieMode();
     try {
         const response = await fetch(`${baseUrl}/api/v1/users/me`, {
             method: 'GET',
-            headers: { Authorization: `Bearer ${accessToken}` }
+            headers: { Authorization: `Bearer ${accessToken}` },
+            credentials: useRefreshCookieAuth ? 'include' : 'same-origin'
         });
         if (!response.ok) return null;
         return await response.json().catch(() => null);
@@ -131,46 +147,58 @@ async function apiLoadMe(accessToken) {
 }
 
 // Проверка состояния авторизации при загрузке
-document.addEventListener('DOMContentLoaded', function() {
-    // Проверяем, не авторизован ли пользователь уже
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    const savedUsername = localStorage.getItem('username');
-    if (isLoggedIn && savedUsername && hasStoredAccessToken()) {
-        const user = getUsers().find(u => u.username === savedUsername) || { role: localStorage.getItem('role') || 'user' };
-        if (user) {
-            // Если сессия уже активна — логируем "автовход" (на случай, когда пользователь не вводит пароль повторно)
-            try {
-                let ok = false;
-                if (typeof window.appendAdminAudit === 'function') {
-                    ok = !!window.appendAdminAudit('login', `Автовход (сессия активна) (${user.role})`);
-                }
-                if (!ok) {
-                    const key = 'adminAuditLogs';
-                    const raw = localStorage.getItem(key);
-                    const list = raw ? (JSON.parse(raw) || []) : [];
-                    const arr = Array.isArray(list) ? list : [];
-                    const now = getAuditTimestampLocal();
-                    const nextId = arr.length > 0 ? (Math.max(...arr.map(x => Number(x && x.id) || 0)) + 1) : 1;
-                    arr.unshift({
-                        id: nextId,
-                        date: now,
-                        user: savedUsername,
-                        action: 'login',
-                        details: `Автовход (сессия активна) (${user.role})`,
-                        tz: 'local',
-                        ip: 'local'
-                    });
-                    localStorage.setItem(key, JSON.stringify(arr));
-                }
-            } catch (err) {
-                if (window.Logger) window.Logger.warn('Ошибка при логировании автовхода:', err);
-            }
-            // Если пользователь уже авторизован, перенаправляем его на нужную страницу в зависимости от роли
-            // Директоры и РП теперь идут на index.html, а затем выбирают предприятие для перехода на радар
+function runAuthInit() {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', runAuthInit);
+        return;
+    }
+    initAuthPage();
+}
+
+async function initAuthPage() {
+    if (isApiAuthEnabled()) {
+        if (window.AuthModule && typeof window.AuthModule.bootstrapAuthSession === 'function') {
+            await window.AuthModule.bootstrapAuthSession();
+        }
+        if (window.AuthModule && typeof window.AuthModule.isAuthenticated === 'function' && window.AuthModule.isAuthenticated()) {
             window.location.href = '/src/pages/index.html';
-            return; // Прерываем выполнение
-        } else {
-            // Если пользователь сохранен, но не найден в списке, очищаем localStorage
+            return;
+        }
+    } else {
+        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+        const savedUsername = localStorage.getItem('username');
+        if (isLoggedIn && savedUsername) {
+            const user = getUsers().find(u => u.username === savedUsername) || { role: localStorage.getItem('role') || 'user' };
+            if (user) {
+                try {
+                    let ok = false;
+                    if (typeof window.appendAdminAudit === 'function') {
+                        ok = !!window.appendAdminAudit('login', `Автовход (сессия активна) (${user.role})`);
+                    }
+                    if (!ok) {
+                        const key = 'adminAuditLogs';
+                        const raw = localStorage.getItem(key);
+                        const list = raw ? (JSON.parse(raw) || []) : [];
+                        const arr = Array.isArray(list) ? list : [];
+                        const now = getAuditTimestampLocal();
+                        const nextId = arr.length > 0 ? (Math.max(...arr.map(x => Number(x && x.id) || 0)) + 1) : 1;
+                        arr.unshift({
+                            id: nextId,
+                            date: now,
+                            user: savedUsername,
+                            action: 'login',
+                            details: `Автовход (сессия активна) (${user.role})`,
+                            tz: 'local',
+                            ip: 'local'
+                        });
+                        localStorage.setItem(key, JSON.stringify(arr));
+                    }
+                } catch (err) {
+                    if (window.Logger) window.Logger.warn('Ошибка при логировании автовхода:', err);
+                }
+                window.location.href = '/src/pages/index.html';
+                return;
+            }
             if (typeof window.clearAuthFromStorage === 'function') {
                 window.clearAuthFromStorage();
             } else {
@@ -178,10 +206,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 localStorage.removeItem('username');
             }
         }
-    }
-
-    if (isLoggedIn && savedUsername && !hasStoredAccessToken()) {
-        clearLegacyAuthState();
     }
 
     // Если пользователь не авторизован, инициализируем частицы при наличии контейнера
@@ -264,17 +288,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (isApiAuthEnabled()) {
                 const loginResult = await apiLogin(username, password);
+                const cookieMode = isRefreshCookieMode();
 
-                if (loginResult.ok && loginResult.data && loginResult.data.access_token && loginResult.data.refresh_token) {
+                if (
+                    loginResult.ok &&
+                    loginResult.data &&
+                    loginResult.data.access_token &&
+                    (cookieMode || loginResult.data.refresh_token)
+                ) {
                     storeApiTokens(loginResult.data.access_token, loginResult.data.refresh_token, remember);
 
                     const me = await apiLoadMe(loginResult.data.access_token);
                     const userRole = (me && me.role) || (getUsers().find(u => u.username === username) || {}).role || 'user';
                     const userName = (me && me.username) || username;
-
-                    localStorage.setItem('isLoggedIn', 'true');
-                    localStorage.setItem('username', userName);
-                    localStorage.setItem('role', userRole);
+                    if (window.AuthModule && typeof window.AuthModule.setAuthSession === 'function') {
+                        window.AuthModule.setAuthSession(
+                            { username: userName, role: userRole, is_2fa_enabled: true },
+                            { accessToken: loginResult.data.access_token, clearLegacy: true }
+                        );
+                    }
 
                     window.location.href = '/src/pages/index.html';
                     return;
@@ -385,7 +417,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-});
+}
+
+runAuthInit();
 
 // Создание частиц
 function createParticles() {

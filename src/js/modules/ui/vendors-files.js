@@ -48,7 +48,7 @@ import Logger from '../core/logger.js';
     return [];
   }
 
-  // Загрузка списка вендоров из JSON и localStorage (объединение)
+  // Загрузка списка вендоров: DataService (API/JSON) + localStorage (пользовательские)
   async function loadVendorsList() {
     if (vendorsListCache) {
       if (Logger) Logger.debug('Используем кэш списка вендоров', vendorsListCache.length);
@@ -56,25 +56,36 @@ import Logger from '../core/logger.js';
     }
 
     const stateVendors = getStateReferenceList('vendorsList');
-    let jsonVendors = [];
+    let refVendors = [];
     let localVendors = [];
 
-    // Загружаем из JSON
+    // Загружаем через DataService (API при USE_API=true, иначе JSON)
     try {
-      const response = await fetch('/src/data/ru/vendors.json');
-      if (response.ok) {
-        jsonVendors = await response.json();
-        if (!Array.isArray(jsonVendors)) {
-          if (Logger) Logger.warn('Данные вендоров из JSON не являются массивом, преобразуем', jsonVendors);
-          jsonVendors = Array.isArray(jsonVendors) ? jsonVendors : [];
-        }
-        if (Logger) Logger.debug('Загружен список вендоров из JSON', jsonVendors.length);
+      const ds = typeof window !== 'undefined' ? window.DataService : null;
+      if (ds && typeof ds.loadReference === 'function') {
+        const data = await ds.loadReference('vendors');
+        refVendors = Array.isArray(data) ? data : (data && typeof data === 'object' ? [] : []);
+        if (Logger) Logger.debug('Загружен список вендоров через DataService', refVendors.length);
       }
     } catch (e) {
-      if (Logger) Logger.warn('Не удалось загрузить список вендоров из JSON', e);
+      if (Logger) Logger.warn('Не удалось загрузить вендоров через DataService', e);
     }
 
-    // Загружаем из localStorage
+    // Fallback: прямой fetch JSON (если DataService недоступен)
+    if (refVendors.length === 0) {
+      try {
+        const response = await fetch('/src/data/ru/vendors.json');
+        if (response.ok) {
+          const json = await response.json();
+          refVendors = Array.isArray(json) ? json : [];
+          if (Logger) Logger.debug('Загружен список вендоров из JSON', refVendors.length);
+        }
+      } catch (e) {
+        if (Logger) Logger.warn('Не удалось загрузить список вендоров из JSON', e);
+      }
+    }
+
+    // Загружаем из localStorage (пользовательские дополнения)
     try {
       const stored = localStorage.getItem(VENDORS_STORAGE_KEY);
       if (stored) {
@@ -90,10 +101,10 @@ import Logger from '../core/logger.js';
       if (Logger) Logger.warn('Ошибка при чтении вендоров из localStorage', e);
     }
 
-    // Приоритет источника: backend state -> JSON -> localStorage
+    // Приоритет источника: state -> DataService/JSON -> localStorage
     const combined = normalizeNameList([
       ...stateVendors,
-      ...normalizeNameList(jsonVendors),
+      ...normalizeNameList(refVendors),
       ...normalizeNameList(localVendors)
     ]);
 
@@ -106,7 +117,7 @@ import Logger from '../core/logger.js';
     if (Logger) {
       Logger.debug('Объединенный список вендоров', {
         state: stateVendors.length,
-        json: jsonVendors.length,
+        ref: refVendors.length,
         local: localVendors.length,
         total: combined.length
       });
@@ -115,29 +126,41 @@ import Logger from '../core/logger.js';
     return vendorsListCache;
   }
 
-  // Загрузка списка интеграторов из JSON и localStorage (объединение)
+  // Загрузка списка интеграторов: DataService (API/JSON) + localStorage (пользовательские)
   async function loadIntegratorsList() {
     if (integratorsListCache) return integratorsListCache;
 
     const stateIntegrators = getStateReferenceList('integratorsList');
-    let jsonIntegrators = [];
+    let refIntegrators = [];
     let localIntegrators = [];
 
-    // Загружаем из JSON
+    // Загружаем через DataService (API при USE_API=true, иначе JSON)
     try {
-      const response = await fetch('/src/data/ru/integrators.json');
-      if (response.ok) {
-        jsonIntegrators = await response.json();
-        if (!Array.isArray(jsonIntegrators)) {
-          jsonIntegrators = Array.isArray(jsonIntegrators) ? jsonIntegrators : [];
-        }
-        if (Logger) Logger.debug('Загружен список интеграторов из JSON', jsonIntegrators.length);
+      const ds = typeof window !== 'undefined' ? window.DataService : null;
+      if (ds && typeof ds.loadReference === 'function') {
+        const data = await ds.loadReference('integrators');
+        refIntegrators = Array.isArray(data) ? data : (data && typeof data === 'object' ? [] : []);
+        if (Logger) Logger.debug('Загружен список интеграторов через DataService', refIntegrators.length);
       }
     } catch (e) {
-      if (Logger) Logger.warn('Не удалось загрузить список интеграторов из JSON', e);
+      if (Logger) Logger.warn('Не удалось загрузить интеграторов через DataService', e);
     }
 
-    // Загружаем из localStorage
+    // Fallback: прямой fetch JSON (если DataService недоступен)
+    if (refIntegrators.length === 0) {
+      try {
+        const response = await fetch('/src/data/ru/integrators.json');
+        if (response.ok) {
+          const json = await response.json();
+          refIntegrators = Array.isArray(json) ? json : [];
+          if (Logger) Logger.debug('Загружен список интеграторов из JSON', refIntegrators.length);
+        }
+      } catch (e) {
+        if (Logger) Logger.warn('Не удалось загрузить список интеграторов из JSON', e);
+      }
+    }
+
+    // Загружаем из localStorage (пользовательские дополнения)
     try {
       const stored = localStorage.getItem(INTEGRATORS_STORAGE_KEY);
       if (stored) {
@@ -153,10 +176,10 @@ import Logger from '../core/logger.js';
       if (Logger) Logger.warn('Ошибка при чтении интеграторов из localStorage', e);
     }
 
-    // Приоритет источника: backend state -> JSON -> localStorage
+    // Приоритет источника: state -> DataService/JSON -> localStorage
     const combined = normalizeNameList([
       ...stateIntegrators,
-      ...normalizeNameList(jsonIntegrators),
+      ...normalizeNameList(refIntegrators),
       ...normalizeNameList(localIntegrators)
     ]);
 
@@ -169,7 +192,7 @@ import Logger from '../core/logger.js';
     if (Logger) {
       Logger.debug('Объединенный список интеграторов', {
         state: stateIntegrators.length,
-        json: jsonIntegrators.length,
+        ref: refIntegrators.length,
         local: localIntegrators.length,
         total: combined.length
       });

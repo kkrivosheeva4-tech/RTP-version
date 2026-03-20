@@ -1,65 +1,107 @@
 /**
- * Пример конфигурации математической модели радара РТП
+ * Пример конфигурации математической модели радара РТП (P2 factor engine)
  *
- * Скопируйте этот файл в radar-model-config.js и настройте параметры под ваши требования
- *
- * ОБНОВЛЕНО (2026-01-29): Добавлена поддержка конфигурируемых параметров модели
+ * Скопируйте файл в `radar-model-config.js` и настройте параметры под ваш контур.
+ * Для обратной совместимости поддерживаются legacy-поля `weights`, `r_min`, `r_max`.
  */
 
 (function() {
   'use strict';
 
-  // Конфигурация математической модели радара
   window.RadarModelConfig = {
-    /**
-     * Веса факторов готовности
-     * Сумма всех весов должна быть равна 1.0
-     * Если сумма не равна 1.0, веса автоматически нормализуются
-     */
-    weights: {
-      techRead: 0.30,   // 30% - Технологическая готовность (0-3)
-      organRead: 0.30,  // 30% - Организационная готовность (0-3)
-      funcCover: 0.20,  // 20% - Покрытие функций (0-3)
-      trlStage: 0.20    // 20% - TRL стадия (1-3)
+    // Новый формат радиуса
+    radius: {
+      min: 5,
+      max: 95
     },
 
-    /**
-     * Сдвиг (bias) для калибровки общей строгости модели
-     *
-     * Влияние:
-     * - Отрицательные значения: более строгая модель (технологии дальше от центра)
-     * - Положительные значения: более мягкая модель (технологии ближе к центру)
-     *
-     * Текущее значение -0.6 обеспечивает:
-     * - Максимальные параметры → r ≈ 17% (близко к центру)
-     * - Средние параметры → r ≈ 60% (среднее положение)
-     * - Минимальные параметры → r ≈ 92% (у края)
-     */
-    bias: -0.6,
+    // Минимум валидных факторов для обычного позиционирования.
+    // Если валидных факторов меньше, технология уходит в зону insufficient-data.
+    minValidFactors: 3,
 
-    /**
-     * Параметр чувствительности логистической функции (ALPHA)
-     *
-     * Влияние:
-     * - Малые значения (2-3): более плавные переходы
-     * - Средние значения (4): умеренные переходы (рекомендуется)
-     * - Большие значения (5-6): более резкие переходы
-     *
-     * Рекомендуемый диапазон: 3-5
-     */
-    alpha: 4,
+    // Новый формат factor registry
+    factors: {
+      techRead: {
+        enabled: true,
+        weight: 0.35,
+        impact: 'positive',
+        fallbackPolicy: 'none',
+        scale: { min: 0, max: 3 }
+      },
+      organRead: {
+        enabled: true,
+        weight: 0.35,
+        impact: 'positive',
+        fallbackPolicy: 'none',
+        scale: { min: 0, max: 3 }
+      },
+      funcCover: {
+        enabled: true,
+        weight: 0.20,
+        impact: 'positive',
+        fallbackPolicy: 'constant',
+        fallbackValue: 0,
+        scale: { min: 0, max: 3 }
+      },
+      trlStage: {
+        enabled: true,
+        weight: 0.10,
+        impact: 'positive',
+        fallbackPolicy: 'constant',
+        fallbackValue: 1,
+        scale: { min: 1, max: 3 }
+      },
 
-    /**
-     * Метаданные конфигурации (опционально, для документации)
-     */
+      // Пример отрицательных факторов (отключены по умолчанию)
+      implementationCostPressure: {
+        enabled: false,
+        weight: 0.15,
+        impact: 'negative', // Для "отрицательных" факторов используем impact, а не negative weight
+        fallbackPolicy: 'none',
+        scale: { min: 0, max: 10000000 } // Источник: tech.costProm
+      },
+      integrationRisk: {
+        enabled: false,
+        weight: 0.15,
+        impact: 'negative',
+        fallbackPolicy: 'none', // Источник: tech.risks / tech.integrationRisk
+        scale: { min: 0, max: 3 }
+      },
+      integrationComplexity: {
+        enabled: false,
+        weight: 0.10,
+        impact: 'negative',
+        fallbackPolicy: 'none', // Источник: tech.complexity / tech.integrationComplexity
+        scale: { min: 0, max: 3 }
+      }
+    },
+
+    // Legacy-совместимость: можно оставить для старых сценариев.
+    // Если в `factors.<id>.weight` задан вес, он имеет приоритет над `weights.<id>`.
+    weights: {
+      techRead: 0.35,
+      organRead: 0.35,
+      funcCover: 0.20,
+      trlStage: 0.10
+    },
+    r_min: 5,
+    r_max: 95,
+
+    // Общие параметры prediction-pipeline для fallbackPolicy: 'predict'
+    prediction: {
+      method: 'knn', // 'knn' | 'regression'
+      k: 5,
+      minTrainingSize: 5
+    },
+
+    // Legacy bridge: если включить, techRead/organRead автоматически получат predict-fallback,
+    // даже если у них в factors.* еще указан fallbackPolicy: 'none'.
+    enableMissingDataPrediction: false,
+
     _metadata: {
-      calibrated: '2026-01-29',
-      calibratedBy: 'System',
-      description: 'Базовая калибровка модели',
-      version: '1.0'
+      updated: '2026-03-11',
+      version: '2.0-factor-engine',
+      description: 'Конфигурация модели для P2'
     }
   };
-
-  // Конфигурация модели загружена
-
 })();

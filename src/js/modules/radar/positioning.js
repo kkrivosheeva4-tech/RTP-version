@@ -5,13 +5,14 @@
 // Использует функции из radar-utils.js: polarToCartesian, cartesianToPolar
 
 import Logger from '../core/logger.js';
+import FactorEngine from './factor-engine.js';
 
 'use strict';
 
 // ОБНОВЛЕНО (2026-01-29): Кеш для расчетов позиций технологий
   // Кеширует результаты расчета позиций для улучшения производительности
   const positionCache = new Map();
-  const CACHE_VERSION = '2.3'; // Версия кеша (обновлено: веса techRead/organRead 0.35, trlStage 0.10)
+  const CACHE_VERSION = '2.5'; // Версия кеша (обновлено: dynamic factor registry + predict fallback)
   const CACHE_STORAGE_KEY = 'rmk_position_cache'; // Ключ для localStorage
   const CACHE_STORAGE_VERSION_KEY = 'rmk_position_cache_version'; // Ключ для версии кеша
 
@@ -34,11 +35,6 @@ import Logger from '../core/logger.js';
       }
     }
 
-    // Создаем ключ на основе ID и основных параметров, влияющих на позицию
-    const techRead = tech.techRead !== undefined ? tech.techRead : 'null';
-    const organRead = tech.organRead !== undefined ? tech.organRead : 'null';
-    const funcCover = tech.funcCover !== undefined ? tech.funcCover : 'null';
-    const trlStage = tech.trlStage !== undefined ? tech.trlStage : 'null';
     const directions = Array.isArray(tech.directions) ? tech.directions.join(',') : (tech.direction || '');
 
     // Учитываем предприятия, если они есть
@@ -65,19 +61,30 @@ import Logger from '../core/logger.js';
     // Это помогает избежать рассинхронизации кеша при изменении window.RadarModelConfig.
     let modelKey = '';
     try {
-      const cfg = (typeof window !== 'undefined' && window.RadarModelConfig) ? window.RadarModelConfig : {};
-      const w = (cfg && cfg.weights) ? cfg.weights : {};
-      const rMin = (cfg && cfg.r_min !== undefined) ? cfg.r_min : 5;
-      const rMax = (cfg && cfg.r_max !== undefined) ? cfg.r_max : 95;
       const pad = (typeof window !== 'undefined' && window.POSITION_ANGLE_PAD !== undefined) ? window.POSITION_ANGLE_PAD : 8;
-      // Стабильный порядок полей
-      modelKey = `rmin=${rMin};rmax=${rMax};w=${w.techRead ?? ''},${w.organRead ?? ''},${w.funcCover ?? ''},${w.trlStage ?? ''};pad=${pad}`;
+      const cfg = getModelConfig();
+      const registry = getPositioningRegistry(cfg);
+      const factorModelSignature = FactorEngine.getModelSignature(cfg);
+      const factorSnapshot = registry.map((factor) => {
+        let factorValue = null;
+        if (factor.id === 'funcCover') {
+          factorValue = tech.funcCover !== undefined && tech.funcCover !== null
+            ? tech.funcCover
+            : (Array.isArray(tech.functionCoverage) ? tech.functionCoverage.join(',') : null);
+        } else if (factor.id === 'techRead' || factor.id === 'organRead' || factor.id === 'trlStage') {
+          factorValue = tech[factor.id] !== undefined ? tech[factor.id] : null;
+        } else {
+          factorValue = FactorEngine.extractRawFactorValue(tech, factor.id);
+        }
+        return `${factor.id}=${String(factorValue ?? 'null')}`;
+      }).join('|');
+      modelKey = `${factorModelSignature};pad=${pad};snapshot=${factorSnapshot}`;
     } catch (e) {
       modelKey = '';
     }
 
     // Включаем фильтр по предприятиям в ключ кеша
-    return `${CACHE_VERSION}:${tech.id}:${techRead}:${organRead}:${funcCover}:${trlStage}:${directions}:${enterprisesKey}:filter:${selectedEnterpriseFilter}:model:${modelKey}`;
+    return `${CACHE_VERSION}:${tech.id}:${directions}:${enterprisesKey}:filter:${selectedEnterpriseFilter}:model:${modelKey}`;
   }
 
   /**
@@ -369,6 +376,143 @@ import Logger from '../core/logger.js';
     return 10;
   }
 
+  function getModelConfig() {
+    return (typeof window !== 'undefined' && window.RadarModelConfig)
+      ? window.RadarModelConfig
+      : {};
+  }
+
+  function getPredictionConfig(modelConfig = {}) {
+    const prediction = modelConfig && typeof modelConfig.prediction === 'object' ? modelConfig.prediction : {};
+    const k = Number(prediction.k);
+    const minTrainingSize = Number(prediction.minTrainingSize);
+    return {
+      legacyEnabled: modelConfig.enableMissingDataPrediction === true,
+      method: prediction.method === 'regression' ? 'regression' : 'knn',
+      k: Number.isFinite(k) && k > 0 ? Math.round(k) : 5,
+      minTrainingSize: Number.isFinite(minTrainingSize) && minTrainingSize > 0 ? Math.round(minTrainingSize) : 5
+    };
+  }
+
+  function getPositioningRegistry(modelConfig = getModelConfig()) {
+    const registry = FactorEngine.buildFactorRegistry(modelConfig);
+    const predictionConfig = getPredictionConfig(modelConfig);
+    if (!predictionConfig.legacyEnabled) {
+      return registry;
+    }
+    return registry.map((factor) => {
+      if ((factor.id === 'techRead' || factor.id === 'organRead') && factor.fallbackPolicy === 'none') {
+        return { ...factor, fallbackPolicy: 'predict' };
+      }
+      return factor;
+    });
+  }
+
+  function validateFactorWithConfig(value, factor, factorName) {
+    const scale = factor && factor.scale ? factor.scale : { min: 0, max: 3 };
+    return validateAndNormalizeFactor(value, factorName, scale.min, scale.max, null);
+  }
+
+  function resolveFuncCoverInput(tech) {
+    let rawValue = null;
+    if (tech && tech.funcCover !== undefined && tech.funcCover !== null && tech.funcCover !== '') {
+      rawValue = validateAndNormalizeFactor(
+        tech.funcCover,
+        `funcCover (tech.id=${tech.id || 'unknown'})`,
+        0,
+        3,
+        null
+      );
+    } else if (Array.isArray(tech && tech.functionCoverage) && tech.functionCoverage.length > 0) {
+      const blockIds = Array.isArray(tech.blocks) ? tech.blocks : (tech.block ? (Array.isArray(tech.block) ? tech.block : [tech.block]) : []);
+      if (window.FuncCoverUtils && typeof window.FuncCoverUtils.calculateFuncCoverSync === 'function') {
+        rawValue = window.FuncCoverUtils.calculateFuncCoverSync(tech.functionCoverage, blockIds, { useWeights: true });
+      } else if (window.FuncCoverUtils && typeof window.FuncCoverUtils.calculateFuncCoverLegacy === 'function') {
+        rawValue = window.FuncCoverUtils.calculateFuncCoverLegacy(tech.functionCoverage.length);
+      } else {
+        const funcCount = tech.functionCoverage.length;
+        rawValue = funcCount === 1 ? 1 : (funcCount >= 2 && funcCount <= 3 ? 2 : 3);
+      }
+      rawValue = validateAndNormalizeFactor(
+        rawValue,
+        `funcCover (tech.id=${tech.id || 'unknown'})`,
+        0,
+        3,
+        null
+      );
+    }
+
+    return {
+      rawValue,
+      available: rawValue !== null && rawValue !== undefined
+    };
+  }
+
+  function resolveTrlStageInput(tech) {
+    const rawValue = validateAndNormalizeFactor(
+      tech ? tech.trlStage : null,
+      `trlStage (tech.id=${(tech && tech.id) || 'unknown'})`,
+      1,
+      3,
+      null
+    );
+    return {
+      rawValue,
+      available: rawValue !== null && rawValue !== undefined
+    };
+  }
+
+  function resolveExtraFactorInput(tech, factor) {
+    const rawValue = validateFactorWithConfig(
+      FactorEngine.extractRawFactorValue(tech, factor.id),
+      factor,
+      `${factor.id} (tech.id=${(tech && tech.id) || 'unknown'})`
+    );
+    return {
+      rawValue,
+      available: rawValue !== null && rawValue !== undefined
+    };
+  }
+
+  function buildPredictionResolver(modelConfig, registry, techForPrediction) {
+    if (!window.MissingDataPredictor) {
+      return null;
+    }
+
+    let allTechnologies = [];
+    if (window.StateAccessors && typeof window.StateAccessors.getTechnologies === 'function') {
+      allTechnologies = window.StateAccessors.getTechnologies() || [];
+    }
+
+    const predictionConfig = getPredictionConfig(modelConfig);
+    if (!Array.isArray(allTechnologies) || allTechnologies.length < predictionConfig.minTrainingSize) {
+      return null;
+    }
+
+    const factorIds = Array.isArray(registry) ? registry.map((factor) => factor.id) : [];
+    return function predictValue(factor) {
+      if (!factor || !factor.id) return null;
+      if (predictionConfig.method === 'regression' && typeof window.MissingDataPredictor.linearRegressionPrediction === 'function') {
+        return window.MissingDataPredictor.linearRegressionPrediction(
+          techForPrediction,
+          allTechnologies,
+          factor.id,
+          { modelConfig, factors: factorIds }
+        );
+      }
+      if (typeof window.MissingDataPredictor.kNNPrediction === 'function') {
+        return window.MissingDataPredictor.kNNPrediction(
+          techForPrediction,
+          allTechnologies,
+          factor.id,
+          predictionConfig.k,
+          { modelConfig, factors: factorIds }
+        );
+      }
+      return null;
+    };
+  }
+
   /**
    * Определение отсутствующих данных в технологии
    * ОБНОВЛЕНО (2026-01-29): Добавлена функция для визуальной индикации неполноты данных
@@ -377,10 +521,11 @@ import Logger from '../core/logger.js';
    * @returns {Object} Объект с информацией об отсутствующих данных
    */
   function getMissingDataInfo(tech) {
+    const registry = getPositioningRegistry(getModelConfig());
     if (!tech) {
       return {
         hasMissingData: true,
-        missingFactors: ['techRead', 'organRead', 'funcCover', 'trlStage'],
+        missingFactors: registry.map((factor) => factor.id),
         missingEnterprises: []
       };
     }
@@ -433,19 +578,30 @@ import Logger from '../core/logger.js';
     }
 
     // Проверяем funcCover
-    if ((tech.funcCover === undefined || tech.funcCover === null || tech.funcCover === 0) &&
-      (!Array.isArray(tech.functionCoverage) || tech.functionCoverage.length === 0)) {
+    const funcCoverInput = resolveFuncCoverInput(tech);
+    if (!funcCoverInput.available) {
       missingFactors.push('funcCover');
     }
 
     // Проверяем trlStage
-    if (tech.trlStage === undefined || tech.trlStage === null) {
+    const trlStageInput = resolveTrlStageInput(tech);
+    if (!trlStageInput.available) {
       missingFactors.push('trlStage');
     }
 
+    registry.forEach((factor) => {
+      if (factor.id === 'techRead' || factor.id === 'organRead' || factor.id === 'funcCover' || factor.id === 'trlStage') {
+        return;
+      }
+      const input = resolveExtraFactorInput(tech, factor);
+      if (!input.available) {
+        missingFactors.push(factor.id);
+      }
+    });
+
     return {
       hasMissingData: missingFactors.length > 0,
-      missingFactors: missingFactors,
+      missingFactors: [...new Set(missingFactors)],
       missingEnterprises: [...new Set(missingEnterprises)], // Убираем дубликаты
       hasEnterprises: hasEnterprises
     };
@@ -568,50 +724,8 @@ import Logger from '../core/logger.js';
     // Линейная модель более интуитивна и предсказуема
     // Параметры можно переопределить через window.RadarModelConfig
 
-    // Веса факторов (w_k)
-    // Все факторы положительные - "приближающие" (уменьшают радиус).
-    // Готовность по предприятиям (techRead, organRead) имеет больший вес, чтобы при низких
-    // оценках технология не смещалась к центру из-за одного высокого TRL.
-    const defaultWeights = {
-      techRead: 0.35,      // Технологическая готовность предприятия (0-3)
-      organRead: 0.35,     // Организационная готовность предприятия (0-3)
-      funcCover: 0.20,     // Покрытие функций (0-3)
-      trlStage: 0.10       // TRL стадия (1-3) — общая зрелость технологии
-    };
-
-    // Получаем веса из конфигурации или используем значения по умолчанию
-    let weights = defaultWeights;
-    if (window.RadarModelConfig && window.RadarModelConfig.weights) {
-      weights = Object.assign({}, defaultWeights, window.RadarModelConfig.weights);
-
-      // Нормализуем веса, чтобы их сумма была равна 1.0
-      const sum = weights.techRead + weights.organRead + weights.funcCover + weights.trlStage;
-      if (Math.abs(sum - 1.0) > 0.001) {
-        if (Logger && typeof Logger.warn === 'function') {
-          Logger.warn(`[Positioning] Сумма весов факторов (${sum.toFixed(3)}) не равна 1.0. Выполняется нормализация.`);
-        } else {
-          // Сумма весов факторов не равна 1.0, выполняется нормализация
-        }
-        const normalizationFactor = 1.0 / sum;
-        weights = {
-          techRead: weights.techRead * normalizationFactor,
-          organRead: weights.organRead * normalizationFactor,
-          funcCover: weights.funcCover * normalizationFactor,
-          trlStage: weights.trlStage * normalizationFactor
-        };
-      }
-    }
-
-    // ОБНОВЛЕНО: Параметры калибровки для линейной модели
-    // r_min и r_max определяют диапазон радиуса
-    // r_min = 5%: минимальный радиус (близко к центру) для максимальной готовности
-    // r_max = 95%: максимальный радиус (близко к краю) для минимальной готовности
-    const r_min = (window.RadarModelConfig && window.RadarModelConfig.r_min !== undefined)
-      ? window.RadarModelConfig.r_min
-      : 5; // Значение по умолчанию: 5%
-    const r_max = (window.RadarModelConfig && window.RadarModelConfig.r_max !== undefined)
-      ? window.RadarModelConfig.r_max
-      : 95; // Значение по умолчанию: 95%
+    const modelConfig = getModelConfig();
+    const registry = getPositioningRegistry(modelConfig);
 
     // Извлечение и нормализация факторов (s_ik → x_ik)
     // techRead и organRead вычисляются как среднее значение по выбранным предприятиям из фильтра
@@ -816,181 +930,64 @@ import Logger from '../core/logger.js';
       );
     }
 
-    // funcCover и trlStage - общие значения для технологии
-    // Если funcCover не задан, вычисляем его из functionCoverage
-    let funcCover = tech.funcCover !== undefined && tech.funcCover !== null ? tech.funcCover : null;
+    const funcCoverInput = resolveFuncCoverInput(tech);
+    const trlStageInput = resolveTrlStageInput(tech);
+    const rawFactors = {};
+    const availability = {};
 
-    // ОБНОВЛЕНО (2026-01-29): Исправлена асинхронность расчета funcCover
-    // ОБНОВЛЕНО: Добавлен учет важности функций
-    // Теперь используем синхронный расчет с предзагруженными данными
-    if (funcCover === null || funcCover === undefined || funcCover === 0) {
-      // Вычисляем funcCover из functionCoverage (массив функций)
-      if (Array.isArray(tech.functionCoverage) && tech.functionCoverage.length > 0) {
-        const blockIds = Array.isArray(tech.blocks) ? tech.blocks : (tech.block ? (Array.isArray(tech.block) ? tech.block : [tech.block]) : []);
-
-        // Пытаемся использовать синхронный расчет с учетом блоков и важности функций
-        if (window.FuncCoverUtils && typeof window.FuncCoverUtils.calculateFuncCoverSync === 'function') {
-          // Используем синхронный метод, который работает с предзагруженными данными
-          // Включаем учет важности функций по умолчанию
-          funcCover = window.FuncCoverUtils.calculateFuncCoverSync(tech.functionCoverage, blockIds, { useWeights: true });
-        } else if (window.FuncCoverUtils && typeof window.FuncCoverUtils.calculateFuncCoverLegacy === 'function') {
-          // Fallback на legacy расчет
-          funcCover = window.FuncCoverUtils.calculateFuncCoverLegacy(tech.functionCoverage.length);
-        } else {
-          // Fallback если модуль не загружен
-          const funcCount = tech.functionCoverage.length;
-          if (funcCount === 1) {
-            funcCover = 1;
-          } else if (funcCount >= 2 && funcCount <= 3) {
-            funcCover = 2;
-          } else if (funcCount >= 4) {
-            funcCover = 3;
-          }
-        }
-      } else {
-        // Если functionCoverage пуст или отсутствует, используем 0
-        funcCover = 0;
+    registry.forEach((factor) => {
+      if (factor.id === 'techRead') {
+        rawFactors[factor.id] = techRead;
+        availability[factor.id] = techRead !== null && techRead !== undefined;
+        return;
       }
-    }
-
-    // Валидация funcCover
-    funcCover = validateAndNormalizeFactor(
-      funcCover,
-      `funcCover (tech.id=${tech.id || 'unknown'})`,
-      0,
-      3,
-      0 // Значение по умолчанию - отсутствие покрытия
-    );
-    // Если валидация вернула null, используем 0
-    if (funcCover === null) {
-      funcCover = 0;
-    }
-
-    // Валидация trlStage
-    const trlStage = validateAndNormalizeFactor(
-      tech.trlStage,
-      `trlStage (tech.id=${tech.id || 'unknown'})`,
-      1,
-      3,
-      1 // Значение по умолчанию - минимальная стадия
-    );
-    // Если валидация вернула null, используем 1
-    const trlStageValue = trlStage !== null ? trlStage : 1;
-
-    // ВАЖНО: НЕ заполняем пропуски "предсказаниями" по умолчанию.
-    // Это ломает прозрачность: технология без оценок может оказаться в "нормальной" зоне.
-    // Если когда-нибудь понадобится эксперимент, можно включить флаг:
-    // window.RadarModelConfig.enableMissingDataPrediction = true
-    const enableMissingDataPrediction =
-      (window.RadarModelConfig && window.RadarModelConfig.enableMissingDataPrediction === true);
-
-    if (enableMissingDataPrediction && (techRead === null || techRead === undefined) && window.MissingDataPredictor) {
-      let allTechnologies = [];
-      if (window.StateAccessors && typeof window.StateAccessors.getTechnologies === 'function') {
-        allTechnologies = window.StateAccessors.getTechnologies() || [];
+      if (factor.id === 'organRead') {
+        rawFactors[factor.id] = organRead;
+        availability[factor.id] = organRead !== null && organRead !== undefined;
+        return;
       }
-      if (allTechnologies.length >= 5) {
-        const prediction = window.MissingDataPredictor.kNNPrediction(tech, allTechnologies, 'techRead', 5);
-        if (prediction !== null) techRead = prediction;
+      if (factor.id === 'funcCover') {
+        rawFactors[factor.id] = funcCoverInput.rawValue;
+        availability[factor.id] = funcCoverInput.available;
+        return;
       }
-    }
-
-    if (enableMissingDataPrediction && (organRead === null || organRead === undefined) && window.MissingDataPredictor) {
-      let allTechnologies = [];
-      if (window.StateAccessors && typeof window.StateAccessors.getTechnologies === 'function') {
-        allTechnologies = window.StateAccessors.getTechnologies() || [];
+      if (factor.id === 'trlStage') {
+        rawFactors[factor.id] = trlStageInput.rawValue;
+        availability[factor.id] = trlStageInput.available;
+        return;
       }
-      if (allTechnologies.length >= 5) {
-        const prediction = window.MissingDataPredictor.kNNPrediction(tech, allTechnologies, 'organRead', 5);
-        if (prediction !== null) organRead = prediction;
-      }
-    }
+      const input = resolveExtraFactorInput(tech, factor);
+      rawFactors[factor.id] = input.rawValue;
+      availability[factor.id] = input.available;
+    });
 
-    // Нормализация факторов в диапазон [0, 1]
-    // techRead, organRead, funcCover: 0-3 → x = value/3
-    // trlStage: 1-3 → x = (value-1)/2
-    // ОБНОВЛЕНО: Явная обработка отсутствующих данных
-    // Не используем средние значения - если данные отсутствуют, они не учитываются в расчете
-    // Технологии с отсутствующими данными позиционируются в отдельной зоне
+    const techForPrediction = { ...(tech || {}), ...rawFactors };
+    const factorResult = FactorEngine.calculateReadinessIndex({
+      tech,
+      modelConfig,
+      registry,
+      rawFactors,
+      availability,
+      predictValue: buildPredictionResolver(modelConfig, registry, techForPrediction),
+      logger: Logger
+    });
 
-    // Подсчитываем количество отсутствующих факторов
-    const missingFactors = [];
-    if (techRead === null || techRead === undefined) missingFactors.push('techRead');
-    if (organRead === null || organRead === undefined) missingFactors.push('organRead');
-    // funcCover = 0 — валидный минимум, это не "пропуск".
-    // Считаем funcCover отсутствующим только если не задано поле и нет functionCoverage.
-    const hasFunctionCoverage = Array.isArray(tech.functionCoverage) && tech.functionCoverage.length > 0;
-    const hasFuncCoverField = (tech.funcCover !== undefined && tech.funcCover !== null);
-    if (!hasFuncCoverField && !hasFunctionCoverage) missingFactors.push('funcCover');
-    if (trlStageValue === null || trlStageValue === undefined) missingFactors.push('trlStage');
-
-    const hasMissingData = missingFactors.length > 0;
-
-    // Если отсутствует более 2 факторов, позиционируем в зоне "недостаточно данных"
-    if (missingFactors.length >= 2) {
+    // Зона недостаточных данных: если валидных факторов меньше порога модели.
+    if (factorResult.insufficientData) {
       if (Logger && typeof Logger.debug === 'function') {
-        Logger.debug(`[Positioning] Технология ${tech.id || 'unknown'} имеет недостаточно данных (${missingFactors.join(', ')}), позиционируется в зоне недостаточных данных`);
+        Logger.debug(`[Positioning] Технология ${tech.id || 'unknown'} имеет недостаточно данных (${factorResult.missingFactors.join(', ')}), позиционируется в зоне недостаточных данных`);
       }
-      // Позиционируем в зоне "недостаточно данных" (близко к краю, радиус ~85%)
       return {
         theta: theta,
-        radius: 85, // Зона недостаточных данных
+        radius: 85,
         hasMissingData: true,
-        missingFactors: missingFactors
+        missingFactors: factorResult.missingFactors,
+        insufficientData: true
       };
     }
 
-    // Нормализация факторов (только для имеющихся данных)
-    let x_techRead = null;
-    let x_organRead = null;
-
-    if (techRead !== null && techRead !== undefined) {
-      x_techRead = techRead / 3;
-    }
-
-    if (organRead !== null && organRead !== undefined) {
-      x_organRead = organRead / 3;
-    }
-
-    const x_funcCover = funcCover / 3;
-    const x_trlStage = (trlStageValue - 1) / 2;
-
-    // Вычисление сводного показателя: z_i = Σ(w_k * x_ik)
-    // ОБНОВЛЕНО: Линейная модель без bias (более интуитивна)
-    // Если фактор отсутствует, он не учитывается в расчете
-    // Пересчитываем веса для имеющихся факторов
-    let availableWeights = {
-      techRead: x_techRead !== null ? weights.techRead : 0,
-      organRead: x_organRead !== null ? weights.organRead : 0,
-      funcCover: weights.funcCover,
-      trlStage: weights.trlStage
-    };
-
-    // Нормализуем веса, чтобы их сумма была равна 1.0
-    const totalWeight = availableWeights.techRead + availableWeights.organRead +
-      availableWeights.funcCover + availableWeights.trlStage;
-
-    if (totalWeight > 0 && Math.abs(totalWeight - 1.0) > 0.001) {
-      const normalizationFactor = 1.0 / totalWeight;
-      availableWeights = {
-        techRead: availableWeights.techRead * normalizationFactor,
-        organRead: availableWeights.organRead * normalizationFactor,
-        funcCover: availableWeights.funcCover * normalizationFactor,
-        trlStage: availableWeights.trlStage * normalizationFactor
-      };
-    }
-
-    // Вычисляем сводный показатель готовности: z_i = Σ(w_k * x_ik)
-    // z_i ∈ [0, 1] - степень готовности (0 = минимальная, 1 = максимальная)
-    let z_i = 0;
-    if (x_techRead !== null) {
-      z_i += availableWeights.techRead * x_techRead;
-    }
-    if (x_organRead !== null) {
-      z_i += availableWeights.organRead * x_organRead;
-    }
-    z_i += availableWeights.funcCover * x_funcCover;
-    z_i += availableWeights.trlStage * x_trlStage;
+    const { min: r_min, max: r_max } = FactorEngine.resolveRadiusConfig(modelConfig);
+    const z_i = factorResult.z;
 
     // ОБНОВЛЕНО: Линейная модель вместо логистической функции
     // r_i = r_min + (r_max - r_min) * (1 - z_i)
@@ -1012,8 +1009,9 @@ import Logger from '../core/logger.js';
     return {
       theta: theta,
       radius: r_i, // Радиус в процентах (0 < r < 100)
-      hasMissingData: hasMissingData,
-      missingFactors: hasMissingData ? missingFactors : []
+      hasMissingData: factorResult.hasMissingData,
+      missingFactors: factorResult.hasMissingData ? factorResult.missingFactors : [],
+      insufficientData: false
     };
   }
 
@@ -1045,7 +1043,7 @@ import Logger from '../core/logger.js';
     const radarPos = calculateRadarPosition(tech);
 
     // ОБНОВЛЕНО: Проверяем наличие отсутствующих данных
-    if (radarPos.hasMissingData && radarPos.missingFactors && radarPos.missingFactors.length >= 2) {
+    if (radarPos.insufficientData === true) {
       // Технология с недостаточными данными - позиционируем в зоне недостаточных данных
       const maxR = (Array.isArray(RINGS) && RINGS.length > 0) ? RINGS.length * RADIUS_STEP : 3 * RADIUS_STEP;
       const availableRadius = maxR - POSITION_PAD;
@@ -1205,7 +1203,7 @@ import Logger from '../core/logger.js';
     const radarPos = calculateRadarPosition(tech);
 
     // ОБНОВЛЕНО: Проверяем наличие отсутствующих данных
-    if (radarPos.hasMissingData && radarPos.missingFactors && radarPos.missingFactors.length >= 2) {
+    if (radarPos.insufficientData === true) {
       // Технология с недостаточными данными - позиционируем в зоне недостаточных данных
       const maxR = (Array.isArray(RINGS) && RINGS.length > 0) ? RINGS.length * RADIUS_STEP : 3 * RADIUS_STEP;
       const availableRadius = maxR - POSITION_PAD;

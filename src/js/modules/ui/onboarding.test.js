@@ -58,6 +58,12 @@ function setupConditionalTargets() {
   `;
 }
 
+function setupMinimalConditionalTargets() {
+  document.body.innerHTML = `
+    <div id="exportPdfModal"></div>
+  `;
+}
+
 function setupRoleApi(store) {
   const normalizeRole = (role) => {
     const normalized = String(role || '').trim().toLowerCase();
@@ -81,6 +87,12 @@ function setupRoleApi(store) {
   };
 }
 
+function setupAuthApi(store) {
+  window.AuthModule = {
+    isAuthenticated: () => store.get('isLoggedIn') === 'true'
+  };
+}
+
 function getVisibleIdsFor(role) {
   localStorage.setItem('role', role);
   return OnboardingTour.getVisibleStepIdsForRole(role);
@@ -91,11 +103,13 @@ describe('onboarding role-based flow (P3)', () => {
     const store = setupLocalStorage();
     setupConditionalTargets();
     setupRoleApi(store);
+    setupAuthApi(store);
   });
 
   afterEach(() => {
     document.body.innerHTML = '';
     delete window.RoleCapabilities;
+    delete window.AuthModule;
   });
 
   test('defines master-flow with role-specific steps', () => {
@@ -125,10 +139,10 @@ describe('onboarding role-based flow (P3)', () => {
     expect(visible).not.toContain('admin-panel-entry');
   });
 
-  test('editor sees proposal step but not owner/admin steps', () => {
+  test('editor sees proposal and add-technology steps but not owner/admin steps', () => {
     const visible = getVisibleIdsFor('editor');
     expect(visible).toContain('proposal-workflow');
-    expect(visible).not.toContain('add-technology');
+    expect(visible).toContain('add-technology');
     expect(visible).not.toContain('add-block');
     expect(visible).not.toContain('admin-panel-entry');
   });
@@ -147,5 +161,41 @@ describe('onboarding role-based flow (P3)', () => {
     expect(visible).toContain('add-block');
     expect(visible).toContain('proposal-workflow');
     expect(visible).toContain('admin-panel-entry');
+  });
+
+  test('production-like: editor flow hides steps whose target panels are absent from DOM', () => {
+    setupMinimalConditionalTargets();
+
+    const visible = getVisibleIdsFor('editor');
+
+    expect(visible).toContain('proposal-workflow');
+    expect(visible).not.toContain('add-technology');
+    expect(visible).not.toContain('priority-panel');
+    expect(visible).not.toContain('detail-panel');
+  });
+
+  test('production-like: owner flow hides add-block when panel is absent', () => {
+    document.body.innerHTML = `
+      <div id="exportPdfModal"></div>
+      <div id="addTechPanel"></div>
+      <div id="quadrantPriorityPanel"></div>
+    `;
+
+    const visible = getVisibleIdsFor('owner');
+
+    expect(visible).toContain('add-technology');
+    expect(visible).toContain('priority-panel');
+    expect(visible).toContain('detail-panel');
+    expect(visible).not.toContain('add-block');
+  });
+
+  test('skipConditional=true exposes role profile even without DOM targets', () => {
+    setupMinimalConditionalTargets();
+
+    const visible = OnboardingTour.getVisibleStepIdsForRole('editor', { skipConditional: true });
+
+    expect(visible).toContain('add-technology');
+    expect(visible).toContain('priority-panel');
+    expect(visible).toContain('detail-panel');
   });
 });

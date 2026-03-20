@@ -107,16 +107,13 @@ def log_auth_event(
     metric_base = f"auth.{event}.{outcome}"
     increment_metric(metric_base)
 
-    log_message = (
-        "auth event=%s outcome=%s username=%s user_id=%s status_code=%s reason=%s"
-        % (
-            event,
-            outcome,
-            username_value,
-            getattr(user, "id", None),
-            status_code if status_code is not None else "",
-            reason or "",
-        )
+    log_message = "auth event=%s outcome=%s username=%s user_id=%s status_code=%s reason=%s" % (
+        event,
+        outcome,
+        username_value,
+        getattr(user, "id", None),
+        status_code if status_code is not None else "",
+        reason or "",
     )
     if success:
         AUTH_LOGGER.info(log_message)

@@ -82,14 +82,37 @@ function getRefreshTokenKey() {
   return 'rmk_refresh_token';
 }
 
+function isRefreshCookieMode() {
+  const cfg = getApiConfig();
+  if (!cfg || typeof cfg.getUseRefreshCookieAuth !== 'function') return false;
+  return cfg.getUseRefreshCookieAuth() === true;
+}
+
 function storeApiTokens(accessToken, refreshToken, remember) {
+  if (window.ApiClient && typeof window.ApiClient.setAccessToken === 'function') {
+    window.ApiClient.setAccessToken(accessToken);
+  }
   const tokenKey = getTokenKey();
   const refreshKey = getRefreshTokenKey();
+  const useRefreshCookieAuth = isRefreshCookieMode();
+  if (useRefreshCookieAuth) {
+    try {
+      localStorage.removeItem(tokenKey);
+      localStorage.removeItem(refreshKey);
+      sessionStorage.removeItem(tokenKey);
+      sessionStorage.removeItem(refreshKey);
+    } catch (_) {}
+    return;
+  }
   const primary = remember ? localStorage : sessionStorage;
   const secondary = remember ? sessionStorage : localStorage;
   try {
     primary.setItem(tokenKey, accessToken);
-    primary.setItem(refreshKey, refreshToken);
+    if (!useRefreshCookieAuth && refreshToken) {
+      primary.setItem(refreshKey, refreshToken);
+    } else {
+      primary.removeItem(refreshKey);
+    }
   } catch (_) {}
   try {
     secondary.removeItem(tokenKey);
@@ -98,9 +121,11 @@ function storeApiTokens(accessToken, refreshToken, remember) {
 }
 
 function storeLoggedInUser(username, role) {
-  localStorage.setItem('isLoggedIn', 'true');
-  localStorage.setItem('username', username);
-  localStorage.setItem('role', role);
+  if (window.AuthModule && typeof window.AuthModule.setAuthSession === 'function') {
+    window.AuthModule.setAuthSession({ username, role, is_2fa_enabled: true }, { clearLegacy: true });
+    return;
+  }
+  // Auth-state не сохраняется в localStorage — используем AuthModule
 }
 
 let qrCodeLibPromise = null;
@@ -114,16 +139,16 @@ async function getQrCodeLib() {
 }
 
 async function buildQrVisual(qrPayload) {
-  if (!qrPayload) return { qrDataUrl: '', qrSvg: '', qrImageUrl: '' };
+  if (!qrPayload) return { qrDataUrl: '', qrSvg: '', qrImageUrl: '', qrImageUrlFallback: '' };
   const qrLib = await getQrCodeLib();
   if (qrLib) {
     try {
       const qrDataUrl = await qrLib.toDataURL(qrPayload, { width: 200, margin: 1 });
-      return { qrDataUrl, qrSvg: '', qrImageUrl: '' };
+      return { qrDataUrl, qrSvg: '', qrImageUrl: '', qrImageUrlFallback: '' };
     } catch (_) {
       try {
         const qrSvg = await qrLib.toString(qrPayload, { type: 'svg', margin: 1, width: 200 });
-        return { qrDataUrl: '', qrSvg, qrImageUrl: '' };
+        return { qrDataUrl: '', qrSvg, qrImageUrl: '', qrImageUrlFallback: '' };
       } catch (_) {
         // continue to external fallback
       }
@@ -131,16 +156,19 @@ async function buildQrVisual(qrPayload) {
   }
 
   const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=1&data=${encodeURIComponent(qrPayload)}`;
-  return { qrDataUrl: '', qrSvg: '', qrImageUrl };
+  const qrImageUrlFallback = `https://quickchart.io/qr?size=200&margin=1&text=${encodeURIComponent(qrPayload)}`;
+  return { qrDataUrl: '', qrSvg: '', qrImageUrl, qrImageUrlFallback };
 }
 
 async function apiLoadMe(accessToken, pending) {
   const baseUrl = getApiBaseUrl(pending);
   if (!baseUrl || !accessToken) return null;
+  const useRefreshCookieAuth = isRefreshCookieMode();
   try {
     const response = await fetch(`${baseUrl}/api/v1/users/me`, {
       method: 'GET',
-      headers: { Authorization: `Bearer ${accessToken}` }
+      headers: { Authorization: `Bearer ${accessToken}` },
+      credentials: useRefreshCookieAuth ? 'include' : 'same-origin'
     });
     if (!response.ok) return null;
     return await response.json().catch(() => null);
@@ -164,11 +192,13 @@ export async function verify2FACode(code) {
   if (pending.isApi && pending.session_id && isApiAuthEnabled(pending)) {
     const baseUrl = getApiBaseUrl(pending);
     if (!baseUrl) return { success: false, error: 'API_BASE_URL не задан' };
+    const useRefreshCookieAuth = isRefreshCookieMode();
 
     try {
       const response = await fetch(`${baseUrl}/api/v1/auth/2fa/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: useRefreshCookieAuth ? 'include' : 'same-origin',
         body: JSON.stringify({ session_id: pending.session_id, code })
       });
       const data = await response.json().catch(() => ({}));
@@ -178,7 +208,7 @@ export async function verify2FACode(code) {
 
       const accessToken = data.access_token;
       const refreshToken = data.refresh_token;
-      if (!accessToken || !refreshToken) {
+      if (!accessToken || (!useRefreshCookieAuth && !refreshToken)) {
         return { success: false, error: 'Некорректный ответ сервера 2FA.' };
       }
 
@@ -186,7 +216,14 @@ export async function verify2FACode(code) {
       const me = await apiLoadMe(accessToken, pending);
       const username = (me && me.username) || pending.username;
       const role = (me && me.role) || pending.role || 'user';
-      storeLoggedInUser(username, role);
+      if (window.AuthModule && typeof window.AuthModule.setAuthSession === 'function') {
+        window.AuthModule.setAuthSession(
+          { username, role, is_2fa_enabled: true },
+          { accessToken, clearLegacy: true }
+        );
+      } else {
+        storeLoggedInUser(username, role);
+      }
       sessionStorage.removeItem('auth2faPending');
       return { success: true };
     } catch (_) {
@@ -221,7 +258,7 @@ export async function verify2FACode(code) {
 
 /**
  * Настройка 2FA — получение QR и secret.
- * @returns {Promise<{ qrDataUrl: string, qrSvg: string, qrImageUrl: string, secret: string }>}
+ * @returns {Promise<{ qrDataUrl: string, qrSvg: string, qrImageUrl: string, qrImageUrlFallback: string, secret: string }>}
  */
 export async function setup2FA() {
   const pending = getAuth2faPending();
@@ -229,10 +266,12 @@ export async function setup2FA() {
   if (pending && pending.isApi && pending.session_id && isApiAuthEnabled(pending)) {
     const baseUrl = getApiBaseUrl(pending);
     if (!baseUrl) throw new Error('API_BASE_URL не задан');
+    const useRefreshCookieAuth = isRefreshCookieMode();
 
     const response = await fetch(`${baseUrl}/api/v1/auth/2fa/setup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: useRefreshCookieAuth ? 'include' : 'same-origin',
       body: JSON.stringify({ session_id: pending.session_id })
     });
     const data = await response.json().catch(() => ({}));
@@ -241,9 +280,28 @@ export async function setup2FA() {
     }
 
     const secret = String(data.secret || '');
+    const serverQrSvgUrl = String(data.qr_svg_url || '').trim();
+    if (serverQrSvgUrl) {
+      const normalizedQrImageUrl = serverQrSvgUrl.startsWith('http')
+        ? serverQrSvgUrl
+        : `${baseUrl}${serverQrSvgUrl.startsWith('/') ? '' : '/'}${serverQrSvgUrl}`;
+      return {
+        qrDataUrl: '',
+        qrSvg: '',
+        qrImageUrl: normalizedQrImageUrl,
+        qrImageUrlFallback: '',
+        secret
+      };
+    }
     const qrPayload = String(data.qr_url || '');
     const qr = await buildQrVisual(qrPayload);
-    return { qrDataUrl: qr.qrDataUrl, qrSvg: qr.qrSvg, qrImageUrl: qr.qrImageUrl, secret };
+    return {
+      qrDataUrl: qr.qrDataUrl,
+      qrSvg: qr.qrSvg,
+      qrImageUrl: qr.qrImageUrl,
+      qrImageUrlFallback: qr.qrImageUrlFallback,
+      secret
+    };
   }
 
   await new Promise((r) => setTimeout(r, 300));
@@ -259,10 +317,17 @@ export async function setup2FA() {
       ),
       qrSvg: '',
       qrImageUrl: '',
+      qrImageUrlFallback: '',
       secret
     };
   }
-  return { qrDataUrl: qr.qrDataUrl, qrSvg: qr.qrSvg, qrImageUrl: qr.qrImageUrl, secret };
+  return {
+    qrDataUrl: qr.qrDataUrl,
+    qrSvg: qr.qrSvg,
+    qrImageUrl: qr.qrImageUrl,
+    qrImageUrlFallback: qr.qrImageUrlFallback,
+    secret
+  };
 }
 
 /**

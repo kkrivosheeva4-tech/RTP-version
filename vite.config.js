@@ -15,6 +15,8 @@ export default defineConfig({
         'src/pages/radar': path.resolve(__dirname, 'src/pages/radar.html'),
         'src/pages/admin': path.resolve(__dirname, 'src/pages/admin.html'),
         'src/pages/auth': path.resolve(__dirname, 'src/pages/auth.html'),
+        'src/pages/auth-2fa-setup': path.resolve(__dirname, 'src/pages/auth-2fa-setup.html'),
+        'src/pages/auth-2fa-verify': path.resolve(__dirname, 'src/pages/auth-2fa-verify.html'),
         'src/pages/help': path.resolve(__dirname, 'src/pages/help.html'),
       },
     },

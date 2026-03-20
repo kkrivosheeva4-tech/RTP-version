@@ -1426,5 +1426,3 @@ body.dark #hoverLabel::after {
   border-width: 6px 6px 0 6px;
   border-color: var(--hover-label-bg-dark, #f0f0f0) transparent transparent transparent;
 }
-
-

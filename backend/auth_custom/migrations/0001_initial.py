@@ -15,15 +15,41 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='UserProfile',
+            name="UserProfile",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('role', models.CharField(choices=[('admin', 'Admin'), ('architect', 'Architect'), ('director', 'Director'), ('project_manager', 'Project Manager'), ('analyst', 'Analyst'), ('viewer', 'Viewer')], default='viewer', max_length=32)),
-                ('is_2fa_enabled', models.BooleanField(default=False)),
-                ('totp_secret', models.CharField(blank=True, max_length=255)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('user', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='profile', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                (
+                    "role",
+                    models.CharField(
+                        choices=[
+                            ("admin", "Admin"),
+                            ("architect", "Architect"),
+                            ("director", "Director"),
+                            ("project_manager", "Project Manager"),
+                            ("analyst", "Analyst"),
+                            ("viewer", "Viewer"),
+                        ],
+                        default="viewer",
+                        max_length=32,
+                    ),
+                ),
+                ("is_2fa_enabled", models.BooleanField(default=False)),
+                ("totp_secret", models.CharField(blank=True, max_length=255)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "user",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="profile",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
     ]

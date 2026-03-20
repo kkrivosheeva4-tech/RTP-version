@@ -1,9 +1,10 @@
 /**
  * Страница проверки кода 2FA (auth-2fa-verify.html)
  */
+import './config/api-config-loader.js';
 import { verify2FACode, getAuth2faPending } from './auth-2fa.js';
 
-document.addEventListener('DOMContentLoaded', function () {
+function init2FAVerifyPage() {
   const codeInput = document.getElementById('code2fa');
   const form = document.getElementById('verify2faForm');
   const submitBtn = document.getElementById('submitBtn');
@@ -105,4 +106,16 @@ document.addEventListener('DOMContentLoaded', function () {
       });
     });
   }
-});
+}
+
+let verifyPageInitialized = false;
+function bootstrap2FAVerifyPage() {
+  if (verifyPageInitialized) return;
+  verifyPageInitialized = true;
+  init2FAVerifyPage();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bootstrap2FAVerifyPage, { once: true });
+}
+bootstrap2FAVerifyPage();

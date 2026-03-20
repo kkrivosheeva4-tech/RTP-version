@@ -1,92 +1,186 @@
 /**
- * Единый конфиг ролей и системных учёток.
- * Используется страницей входа (auth.js) и админ-панелью (admin-users.js).
- * При переходе на API: auth и admin только потребляют данные; реальные учётки приходят с бэкенда.
+ * Единый конфиг ролей и возможностей (role model v2).
+ * Источник правды для auth/admin/onboarding/ui-gating.
  */
 (function () {
   'use strict';
 
   var ROLES = {
-    ADMIN: 'admin',
-    ARCHITECT: 'architect',
-    DIRECTOR: 'director',
-    PROJECT_MANAGER: 'project_manager',
-    ANALYST: 'analyst'
+    GUEST: 'guest',
+    EDITOR: 'editor',
+    OWNER: 'owner',
+    ADMIN: 'admin'
   };
 
-  /** Отображаемые названия ролей (для UI админки и др.) */
+  var LEGACY_TO_V2 = {
+    architect: ROLES.OWNER,
+    director: ROLES.OWNER,
+    project_manager: ROLES.OWNER,
+    analyst: ROLES.GUEST,
+    viewer: ROLES.GUEST
+  };
+
   var ROLE_LABELS = {
-    admin: 'Администратор',
-    architect: 'Архитектор',
-    director: 'Директор',
-    project_manager: 'Руководитель проекта',
-    analyst: 'Аналитик'
+    guest: 'Гость',
+    editor: 'Редактор',
+    owner: 'Владелец',
+    admin: 'Администратор'
   };
 
-  /** Системные учётки для отображения в админке (шаблон по умолчанию) и для mock-входа. Без паролей. */
+  var CAPABILITIES_BY_ROLE = {
+    guest: ['read_radar', 'use_filters', 'export_reports'],
+    editor: [
+      'read_radar',
+      'use_filters',
+      'export_reports',
+      'create_proposals',
+      'view_proposal_statuses'
+    ],
+    owner: [
+      'read_radar',
+      'use_filters',
+      'export_reports',
+      'manage_technologies',
+      'publish_technologies',
+      'create_proposals',
+      'view_proposal_statuses',
+      'review_proposals'
+    ],
+    admin: [
+      'read_radar',
+      'use_filters',
+      'export_reports',
+      'manage_technologies',
+      'publish_technologies',
+      'create_proposals',
+      'view_proposal_statuses',
+      'review_proposals',
+      'manage_admin_panel',
+      'manage_users'
+    ]
+  };
+
   var SYSTEM_ACCOUNTS = [
     { username: 'admin', role: ROLES.ADMIN },
-    { username: 'architect', role: ROLES.ARCHITECT },
-    { username: 'director', role: ROLES.DIRECTOR },
-    { username: 'project_manager', role: ROLES.PROJECT_MANAGER }
+    { username: 'owner', role: ROLES.OWNER },
+    { username: 'editor', role: ROLES.EDITOR },
+    { username: 'guest', role: ROLES.GUEST }
   ];
 
-  /**
-   * Пароли только для mock-режима (dev). При переходе на API вход — через API, пароли не используются.
-   * Ключ — username, значение — пароль.
-   */
+  // Legacy-учетки оставляем только для плавного перехода в mock-режиме.
+  var LEGACY_ALIAS_ACCOUNTS = [
+    { username: 'architect', role: ROLES.OWNER },
+    { username: 'director', role: ROLES.OWNER },
+    { username: 'project_manager', role: ROLES.OWNER },
+    { username: 'analyst', role: ROLES.GUEST }
+  ];
+
   var MOCK_PASSWORDS = {
     admin: 'admin123',
+    owner: 'owner123',
+    editor: 'editor123',
+    guest: 'guest123',
     architect: 'architect123',
     director: 'director123',
-    project_manager: 'pm123'
+    project_manager: 'pm123',
+    analyst: 'analyst123'
   };
 
-  /**
-   * Список учёток для mock-проверки входа (auth.js): { username, password, role }.
-   */
+  function normalizeRole(role) {
+    var key = (role == null ? '' : String(role)).trim().toLowerCase();
+    if (!key) return ROLES.GUEST;
+    if (ROLE_LABELS[key]) return key;
+    if (LEGACY_TO_V2[key]) return LEGACY_TO_V2[key];
+    return ROLES.GUEST;
+  }
+
+  function getCurrentRole() {
+    if (typeof window !== 'undefined' && window.AuthModule && typeof window.AuthModule.getCurrentRole === 'function') {
+      return normalizeRole(window.AuthModule.getCurrentRole());
+    }
+    return ROLES.GUEST;
+  }
+
+  function hasCapability(capability, role) {
+    var normalized = normalizeRole(role || getCurrentRole());
+    var caps = CAPABILITIES_BY_ROLE[normalized] || [];
+    return caps.indexOf(String(capability || '').trim()) !== -1;
+  }
+
+  function canManageTechnologies(role) {
+    return hasCapability('manage_technologies', role);
+  }
+
+  function canExportReports(role) {
+    return hasCapability('export_reports', role);
+  }
+
+  function canAccessAdminPanel(role) {
+    return hasCapability('manage_admin_panel', role);
+  }
+
+  function canCreateProposals(role) {
+    return hasCapability('create_proposals', role);
+  }
+
+  function canReviewProposals(role) {
+    return hasCapability('review_proposals', role);
+  }
+
+  function canSubmitTechnologyChanges(role) {
+    return canManageTechnologies(role) || canCreateProposals(role);
+  }
+
+  function isProposalOnlyRole(role) {
+    return canCreateProposals(role) && !canManageTechnologies(role);
+  }
+
   function getUsersForMockAuth() {
-    return SYSTEM_ACCOUNTS.map(function (acc) {
+    var merged = SYSTEM_ACCOUNTS.concat(LEGACY_ALIAS_ACCOUNTS);
+    return merged.map(function (acc) {
       return {
         username: acc.username,
         password: MOCK_PASSWORDS[acc.username] || '',
-        role: acc.role
+        role: normalizeRole(acc.role)
       };
     });
   }
 
-  /**
-   * Список системных учёток без паролей — для шаблона в админке (таблица пользователей по умолчанию).
-   * @returns {Array<{username: string, role: string}>}
-   */
   function getSystemAccountsForAdmin() {
     return SYSTEM_ACCOUNTS.slice();
   }
 
-  /**
-   * Отображаемое название роли по ключу.
-   * @param {string} roleKey
-   * @returns {string}
-   */
   function getRoleLabel(roleKey) {
-    return ROLE_LABELS[roleKey] || roleKey;
+    var normalized = normalizeRole(roleKey);
+    return ROLE_LABELS[normalized] || normalized;
   }
 
-  /**
-   * Проверка, что роль входит в список известных (для доступа в админку и т.д.).
-   * @param {string} role
-   * @returns {boolean}
-   */
   function isKnownRole(role) {
-    return Object.keys(ROLE_LABELS).indexOf(role) !== -1;
+    var normalized = normalizeRole(role);
+    return Object.keys(ROLE_LABELS).indexOf(normalized) !== -1;
   }
 
-  window.RolesConfig = {
+  var api = {
     ROLES: ROLES,
     ROLE_LABELS: ROLE_LABELS,
+    LEGACY_TO_V2: LEGACY_TO_V2,
+    CAPABILITIES_BY_ROLE: CAPABILITIES_BY_ROLE,
+    normalizeRole: normalizeRole,
+    getCurrentRole: getCurrentRole,
+    hasCapability: hasCapability,
+    canManageTechnologies: canManageTechnologies,
+    canExportReports: canExportReports,
+    canAccessAdminPanel: canAccessAdminPanel,
+    canCreateProposals: canCreateProposals,
+    canReviewProposals: canReviewProposals,
+    canSubmitTechnologyChanges: canSubmitTechnologyChanges,
+    isProposalOnlyRole: isProposalOnlyRole,
     getUsersForMockAuth: getUsersForMockAuth,
     getSystemAccountsForAdmin: getSystemAccountsForAdmin,
     getRoleLabel: getRoleLabel,
     isKnownRole: isKnownRole
   };
+
+  window.RolesConfig = api;
+  window.RoleCapabilities = api;
 })();

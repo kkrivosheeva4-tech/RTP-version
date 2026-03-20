@@ -1,4 +1,4 @@
-﻿# Радар технологий - Интерактивная визуализация цифровой зрелости
+# Радар технологий - Интерактивная визуализация цифровой зрелости
 
 Веб-приложение для визуализации и анализа технологических решений и цифровой зрелости предприятий холдинга РМК.
 
@@ -127,60 +127,44 @@
 ## 🔧 Требования
 
 - **Веб-браузер**: Chrome, Firefox, Edge, Safari (последние версии)
-- **Для разработки**: Node.js 18+ и npm
+- **Backend/запуск приложения**: Python 3.11+ (Django)
+- **Node.js 18+ и npm**: только для сборки фронтенда (`npm run build`)
 - **Интернет**: требуется для загрузки CDN библиотек (`jsPDF`, `html2canvas`, `Chart.js`)
+
+### Модель запуска: Django, не Node.js
+
+**Приложение в runtime работает на Django.** Node.js используется только для:
+
+- сборки фронтенда (`npm run build` → Vite);
+- оркестрационных скриптов (`dev-fullstack.mjs`, `prodlike:start` и т.п.).
+
+Сервер HTTP — это Django (`manage.py runserver` или WSGI в production). Фронтенд раздаётся из `dist/` через Django при `SERVE_FRONTEND_FROM_DJANGO=True`.
 
 ## 🚀 Установка и запуск
 
-### ⚡ Вариант 1: Vite (рекомендуется для разработки)
+### Вариант 1: Django (основной запуск приложения)
 
-Проект собирается и запускается через **Vite**. Требуется Node.js.
+Приложение запускается только через Django на одном порту:
+
+```bash
+python backend/manage.py runserver 127.0.0.1:8000
+```
+
+Откройте в браузере: `http://127.0.0.1:8000/`
+
+### Вариант 2: Сборка фронтенда (отдельно)
+
+Node.js используется только для сборки фронтенда:
 
 ```bash
 # Установка зависимостей (один раз)
 npm install
 
-# Режим разработки с hot-reload
-npm run dev
-```
-
-Откройте в браузере: `http://localhost:5173`
-
-**Другие команды:**
-
-```bash
-# Production build (перед сборкой создаётся api-config.local.js при отсутствии)
+# Production build фронтенда
 npm run build
-
-# Просмотр собранной версии
-npm run preview
-
-# Unit-тесты (Vitest)
-npm run test
-
-# E2E тесты (Playwright)
-npm run test:e2e
 ```
 
-Папка `dist/` после `npm run build` готова к развёртыванию на любом статическом хостинге.
-
-**Подключение API:** при необходимости работы с backend создайте `src/js/config/api-config.local.js` по образцу `api-config.local.example.js` и задайте `API_BASE_URL`, `USE_API`. Подробнее — **[docs/BACKEND_API_SPEC.md](docs/BACKEND_API_SPEC.md)**.
-
-### Вариант 2: Запуск без Node.js (только готовый build)
-
-Если у вас уже есть папка `dist/` (после `npm run build`), можно раздавать её через любой веб-сервер:
-
-**Python:**
-```bash
-cd dist && python -m http.server 8000
-```
-
-**PowerShell / PHP / Live Server** — см. **[ЗАПУСК_БЕЗ_NODE.md](ЗАПУСК_БЕЗ_NODE.md)**.
-
-### Вариант 3: Скрипты start-server (Windows / Linux)
-
-- **Windows**: `start-server.bat`
-- **Linux/Mac**: `chmod +x start-server.sh && ./start-server.sh`
+Папка `dist/` после `npm run build` используется Django при `SERVE_FRONTEND_FROM_DJANGO=1`.
 
 > ⚠️ **Важно**: Не открывайте HTML файлы напрямую (двойным кликом) — браузер блокирует загрузку JSON из-за CORS. Всегда используйте локальный веб-сервер.
 
@@ -427,4 +411,3 @@ cd dist && python -m http.server 8000
 **Версия package.json**: 1.0.0
 **Дата обновления документации**: 26.02.2026
 **Разработчик**: РМК‑Диджитал
-

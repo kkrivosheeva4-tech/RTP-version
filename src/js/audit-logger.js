@@ -99,6 +99,10 @@ const STORAGE_KEY = 'adminAuditLogs';
   }
 
   function getUsernameFromStorage() {
+    if (window.AuthModule && typeof window.AuthModule.getCurrentUsername === 'function') {
+      const username = window.AuthModule.getCurrentUsername();
+      if (username) return username;
+    }
     try {
       const u = localStorage.getItem('username') || localStorage.getItem('userName') || '';
       return String(u).trim() || 'system';
@@ -108,6 +112,9 @@ const STORAGE_KEY = 'adminAuditLogs';
   }
 
   function getRoleFromStorage() {
+    if (window.AuthModule && typeof window.AuthModule.getCurrentRole === 'function') {
+      return String(window.AuthModule.getCurrentRole() || '').trim();
+    }
     try {
       return String(localStorage.getItem('role') || '').trim() || '';
     } catch (_) {

@@ -258,7 +258,9 @@ class Command(BaseCommand):
                 if enterprise_name:
                     enterprise = Enterprise.objects.filter(name=enterprise_name).first()
             if not enterprise:
-                self.stdout.write(self.style.WARNING(f"Skip mapping: unknown enterprise {enterprise_id}"))
+                self.stdout.write(
+                    self.style.WARNING(f"Skip mapping: unknown enterprise {enterprise_id}")
+                )
                 continue
 
             EnterpriseBlockMapping.objects.filter(enterprise=enterprise).exclude(

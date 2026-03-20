@@ -1,0 +1,12 @@
+node_modules
+backend/.venv
+backend/venv
+dist
+playwright-report
+test-results
+logs
+.git
+.cursor
+__pycache__
+*.pyc
+backend/storage/backups

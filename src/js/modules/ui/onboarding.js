@@ -45,6 +45,7 @@ import Logger from '../core/logger.js';
       'welcome',
       'sidebar',
       'report-button',
+      'add-technology',
       'search',
       'filters',
       'radar',
@@ -96,11 +97,14 @@ import Logger from '../core/logger.js';
   }
 
   function getCurrentRoleForTour() {
+    if (window.AuthModule && typeof window.AuthModule.getCurrentRole === 'function') {
+      return normalizeRole(window.AuthModule.getCurrentRole());
+    }
     const roleApi = window.RoleCapabilities || window.RolesConfig || null;
     if (roleApi && typeof roleApi.getCurrentRole === 'function') {
       return normalizeRole(roleApi.getCurrentRole());
     }
-    return normalizeRole(localStorage.getItem('role'));
+    return normalizeRole('');
   }
 
   function resolveRoleProfile(role) {
@@ -142,9 +146,15 @@ import Logger from '../core/logger.js';
   }
 
   function isAuthorizedFor(capability) {
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    const username = localStorage.getItem('username');
-    return isLoggedIn && !!username && hasRoleCapability(capability);
+    const isAuthenticated =
+      window.AuthModule && typeof window.AuthModule.isAuthenticated === 'function'
+        ? window.AuthModule.isAuthenticated()
+        : false;
+    return isAuthenticated && hasRoleCapability(capability);
+  }
+
+  function isAuthorizedForAny(capabilities) {
+    return (Array.isArray(capabilities) ? capabilities : []).some((capability) => isAuthorizedFor(capability));
   }
 
   function setSidebarExpanded(isExpanded) {
@@ -262,7 +272,7 @@ import Logger from '../core/logger.js';
       conditional: () => {
         // Также проверяем, что модальное окно существует
         const addTechPanel = document.getElementById('addTechPanel');
-        return isAuthorizedFor('manage_technologies') && addTechPanel !== null;
+        return isAuthorizedForAny(['manage_technologies', 'create_proposals']) && addTechPanel !== null;
       },
       beforeShow: () => {
         // Подсвечиваем кнопку "Добавить" в боковой панели
@@ -490,7 +500,7 @@ import Logger from '../core/logger.js';
           filterPanel.classList.add('onboarding-visible');
         }
       },
-      afterHide: (stepIndex) => {
+      afterHide: (stepIndex, transition = {}) => {
         // Убираем классы видимости
         const sidebar = document.getElementById('sidebar');
         const filterPanel = document.getElementById('filterPanel');
@@ -500,10 +510,22 @@ import Logger from '../core/logger.js';
         if (filterPanel) {
           filterPanel.classList.remove('onboarding-visible');
         }
-        // Скрываем боковую панель после прохождения шага фильтров
-        // Всегда скрываем, так как следующий шаг (радар) не требует панели
+        // Скрываем боковую панель после шага фильтров,
+        // но оставляем раскрытой при возврате на шаги, где она нужна.
+        const currentIndex = stepIndex !== undefined ? stepIndex : currentStepIndex;
+        const direction = transition && transition.direction ? transition.direction : 'next';
+        const targetStepIndex =
+          transition && typeof transition.toStepIndex === 'number'
+            ? transition.toStepIndex
+            : (direction === 'prev' ? currentIndex - 1 : currentIndex + 1);
+        const targetStep =
+          targetStepIndex >= 0 && targetStepIndex < TOUR_STEPS.length
+            ? TOUR_STEPS[targetStepIndex]
+            : null;
+        const shouldKeepExpanded = !!(targetStep && (targetStep.id === 'search' || targetStep.id === 'filters'));
+
         const sidebarWrapper = document.querySelector('.sidebar-wrapper');
-        if (sidebarWrapper) {
+        if (sidebarWrapper && !shouldKeepExpanded) {
           sidebarWrapper.classList.remove('expanded');
           sidebarWrapper.classList.add('collapsed');
         }
@@ -754,7 +776,7 @@ import Logger from '../core/logger.js';
             }
 
             // Скрываем кнопки "Редактировать" и "Удалить" для неавторизованных пользователей
-            const isAuthorized = isAuthorizedFor('manage_technologies');
+            const isAuthorized = isAuthorizedForAny(['manage_technologies', 'create_proposals']);
 
             const editBtn = detailPanel.querySelector('#editTechBtn');
             const deleteBtn = detailPanel.querySelector('#deleteTechBtn');
@@ -815,7 +837,7 @@ import Logger from '../core/logger.js';
           const techActions = detailPanel.querySelector('.tech-actions');
 
           // Восстанавливаем отображение кнопок в зависимости от авторизации
-          const isAuthorized = isAuthorizedFor('manage_technologies');
+          const isAuthorized = isAuthorizedForAny(['manage_technologies', 'create_proposals']);
 
           if (isAuthorized) {
             if (editBtn) {
@@ -940,6 +962,12 @@ import Logger from '../core/logger.js';
   let highlightUpdateIntervalId = null;
   let detailPanelUpdateIntervalId = null;
   let activeStepRenderToken = 0;
+
+  function setOnboardingActiveFlag(isActive) {
+    if (typeof window === 'undefined') return;
+    window.__onboardingTourActive = !!isActive;
+  }
+  setOnboardingActiveFlag(false);
 
   /**
    * Проверяет, проходил ли пользователь тур
@@ -1234,7 +1262,7 @@ import Logger from '../core/logger.js';
       }
 
       // Для шага search и priority-panel обновляем подсветку периодически, чтобы она не слетала
-      if (currentStep && (currentStep.id === 'search' || currentStep.id === 'priority-panel')) {
+      if (currentStep && (currentStep.id === 'search' || currentStep.id === 'filters' || currentStep.id === 'priority-panel')) {
         // Останавливаем предыдущий интервал, если он существует
         if (highlightUpdateIntervalId !== null) {
           clearInterval(highlightUpdateIntervalId);
@@ -1261,6 +1289,9 @@ import Logger from '../core/logger.js';
               const targetRect = getElementRect(targetElement);
               if (targetRect && targetRect.width > 0 && targetRect.height > 0) {
                 applyHighlightRect(targetRect, 10);
+                if (step.id === 'filters' && tooltip && tooltip.classList.contains('visible')) {
+                  positionTooltip(targetElement, step.position);
+                }
               }
             }
           }
@@ -2182,6 +2213,9 @@ import Logger from '../core/logger.js';
     const element = document.querySelector(step.target);
     if (element) {
       highlightElement(element, step.position);
+      if (tooltip && tooltip.classList.contains('visible')) {
+        positionTooltip(element, step.position);
+      }
     }
   }
 
@@ -2192,6 +2226,7 @@ import Logger from '../core/logger.js';
     if (isTourActive) return;
 
     isTourActive = true;
+    setOnboardingActiveFlag(true);
     const startIndex = resume ? loadProgress() : 0;
     showStep(startIndex);
 
@@ -2208,6 +2243,7 @@ import Logger from '../core/logger.js';
    */
   function endTour(options = {}) {
     isTourActive = false;
+    setOnboardingActiveFlag(false);
     activeStepRenderToken++;
 
     // Выполняем afterHide для текущего шага, если есть

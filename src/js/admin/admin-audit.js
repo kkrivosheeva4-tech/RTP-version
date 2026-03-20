@@ -1,8 +1,10 @@
 /**
- * Раздел «Журнал аудита» админ-панели: загрузка из localStorage, пагинация, фильтры.
+ * Раздел «Журнал аудита» админ-панели: загрузка из backend API, пагинация, фильтры.
  */
 (function () {
   'use strict';
+
+  var AUDIT_API_PATH = '/api/v1/admin-panel/audit';
 
   function getCommon() {
     return window.AdminCommon;
@@ -12,10 +14,63 @@
     return getCommon().AdminState;
   }
 
+  function getApiClient() {
+    return window.ApiClient || null;
+  }
+
+  function isApiMode() {
+    var client = getApiClient();
+    var cfg = window.ApiConfig;
+    return !!(client && typeof client.get === 'function' && cfg && typeof cfg.getUseApi === 'function' && cfg.getUseApi());
+  }
+
   function addAuditLog(action, details) {
     if (typeof window.addAdminAuditLog === 'function') {
       window.addAdminAuditLog(action, details);
     }
+  }
+
+  function mapApiAuditToLocal(log) {
+    var user = (log && log.actor && log.actor.username) ? String(log.actor.username) : 'system';
+    var date = (log && log.created_at) ? String(log.created_at) : '';
+    if (date && date.indexOf('T') !== -1) {
+      date = date.replace('T', ' ').slice(0, 19);
+    }
+    return {
+      id: log && log.id ? Number(log.id) : 0,
+      date: date,
+      user: user,
+      action: (log && log.action) ? String(log.action) : 'update',
+      details: (log && log.entity_type && log.entity_id) ? (log.entity_type + ':' + log.entity_id) : ((log && log.after_data && typeof log.after_data === 'object') ? JSON.stringify(log.after_data) : ''),
+      tz: 'local',
+      ip: (log && log.ip_address) ? String(log.ip_address) : 'local'
+    };
+  }
+
+  async function fetchAuditFromApi() {
+    var client = getApiClient();
+    if (!client || typeof client.get !== 'function') {
+      throw new Error('ApiClient недоступен для загрузки журнала аудита');
+    }
+    var state = getState();
+    var params = [];
+    var actionFilter = document.getElementById('auditActionFilter') && document.getElementById('auditActionFilter').value;
+    var dateFrom = document.getElementById('auditDateFrom') && document.getElementById('auditDateFrom').value;
+    var dateTo = document.getElementById('auditDateTo') && document.getElementById('auditDateTo').value;
+    if (actionFilter) params.push('action=' + encodeURIComponent(actionFilter));
+    if (dateFrom) params.push('date_from=' + encodeURIComponent(dateFrom + ' 00:00:00'));
+    if (dateTo) params.push('date_to=' + encodeURIComponent(dateTo + ' 23:59:59'));
+    params.push('limit=' + (state.AUDIT_PAGE_SIZE || 100));
+    params.push('offset=' + (Math.max(0, (state.auditCurrentPage || 1) - 1) * (state.AUDIT_PAGE_SIZE || 100)));
+    var url = AUDIT_API_PATH + (params.length ? '?' + params.join('&') : '');
+    var response = await client.get(url);
+    if (!response || response.ok === false) {
+      throw new Error((response && response.error) || 'Не удалось загрузить журнал аудита');
+    }
+    var data = response.data || {};
+    var results = Array.isArray(data.results) ? data.results : [];
+    var count = Number(data.count) || results.length;
+    return { results: results.map(mapApiAuditToLocal), count: count };
   }
 
   function normalizeAuditLogs(list) {
@@ -194,6 +249,24 @@
       'Очистка журнала аудита',
       'Очистить журнал аудита за период: ' + periodLabel + '?',
       function () {
+        if (isApiMode()) {
+          var client = getApiClient();
+          var beforeVal = (dateTo || dateFrom) + (dateTo ? ' 23:59:59' : ' 00:00:00');
+          client.delete(AUDIT_API_PATH, { body: { before: beforeVal } })
+            .then(function (res) {
+              var deleted = (res && res.data && res.data.deleted) || 0;
+              state.auditCurrentPage = 1;
+              common.showNotification('Очистка', 'Удалено записей: ' + deleted, 'success');
+              loadAuditLogs();
+              if (window.AdminDashboard && typeof window.AdminDashboard.updateDashboardStats === 'function') {
+                window.AdminDashboard.updateDashboardStats();
+              }
+            })
+            .catch(function (err) {
+              common.showNotification('Ошибка', (err && err.message) || 'Не удалось очистить журнал', 'error', true);
+            });
+          return;
+        }
         state.auditLogs = normalizeAuditLogs(getCommon().readStorageJson(getCommon().ADMIN_STORAGE.AUDIT, []));
         var before = state.auditLogs.length;
         var kept = state.auditLogs.filter(function (log) {
@@ -217,28 +290,18 @@
     );
   }
 
-  function loadAuditLogs() {
+  function renderAuditTable(filteredLogs) {
     var state = getState();
     var common = getCommon();
     var tbody = document.getElementById('auditTableBody');
     if (!tbody) return;
-    var raw = common.readStorageJson(common.ADMIN_STORAGE.AUDIT, []);
-    var normalized = normalizeAuditLogs(raw);
-    state.auditLogs = normalized;
-    try {
-      if (Array.isArray(raw) && raw.some(function (l) { return l && !('tz' in l); })) {
-        common.persistAuditLogs();
-      }
-    } catch (_) { }
     tbody.innerHTML = '';
-    var filteredLogs = getFilteredAuditLogs();
     var bounds = getAuditDateBoundsFromUi();
     var hasDateFilter = !!(bounds.dateFrom || bounds.dateTo);
     var pageSize = state.AUDIT_PAGE_SIZE || 30;
     updateAuditPaginationUi(filteredLogs.length);
     var start = (state.auditCurrentPage - 1) * pageSize;
     var pageLogs = filteredLogs.slice(start, start + pageSize);
-
     if (filteredLogs.length === 0 && hasDateFilter) {
       var emptyRow = document.createElement('tr');
       var emptyCell = document.createElement('td');
@@ -271,6 +334,38 @@
         tbody.appendChild(row);
       });
     }
+  }
+
+  function loadAuditLogs() {
+    var state = getState();
+    var common = getCommon();
+    var tbody = document.getElementById('auditTableBody');
+    if (!tbody) return;
+    if (isApiMode()) {
+      fetchAuditFromApi()
+        .then(function (res) {
+          state.auditLogs = res.results;
+          renderAuditTable(res.results);
+        })
+        .catch(function (err) {
+          state.auditLogs = [];
+          renderAuditTable([]);
+          if (common.showNotification) {
+            common.showNotification('Ошибка', (err && err.message) || 'Не удалось загрузить журнал аудита', 'error', true);
+          }
+        });
+      return;
+    }
+    var raw = common.readStorageJson(common.ADMIN_STORAGE.AUDIT, []);
+    var normalized = normalizeAuditLogs(raw);
+    state.auditLogs = normalized;
+    try {
+      if (Array.isArray(raw) && raw.some(function (l) { return l && !('tz' in l); })) {
+        common.persistAuditLogs();
+      }
+    } catch (_) { }
+    var filteredLogs = getFilteredAuditLogs();
+    renderAuditTable(filteredLogs);
   }
 
   function init() {
@@ -318,6 +413,8 @@
   window.AdminAudit = {
     init: init,
     loadAuditLogs: loadAuditLogs,
-    normalizeAuditLogs: normalizeAuditLogs
+    normalizeAuditLogs: normalizeAuditLogs,
+    fetchAuditFromApi: fetchAuditFromApi,
+    isApiMode: isApiMode
   };
 })();

@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -15,6 +16,7 @@ class TestTechnologiesApi(APITestCase):
     TEST_2FA_SECRET = "JBSWY3DPEHPK3PXP"
 
     def setUp(self):
+        cache.clear()
         FunctionalBlock.objects.create(id=1, name="Block 1")
         FunctionalBlock.objects.create(id=2, name="Block 2")
         DigitalDirection.objects.create(id=1, name="Direction 1", quadrant=1)
@@ -24,22 +26,33 @@ class TestTechnologiesApi(APITestCase):
         FunctionReference.objects.create(name="Function A", block_id=1)
         FunctionReference.objects.create(name="Function B", block_id=2)
 
-        self.architect = User.objects.create_user(username="architect", password="architect123")
-        architect_profile, _ = UserProfile.objects.get_or_create(user=self.architect)
-        architect_profile.role = UserProfile.ROLE_ARCHITECT
-        architect_profile.is_2fa_enabled = True
-        architect_profile.totp_secret = self.TEST_2FA_SECRET
-        architect_profile.save(update_fields=["role", "is_2fa_enabled", "totp_secret", "updated_at"])
+        self.owner = User.objects.create_user(username="owner", password="owner123")
+        owner_profile, _ = UserProfile.objects.get_or_create(user=self.owner)
+        owner_profile.role = UserProfile.ROLE_OWNER
+        owner_profile.is_2fa_enabled = True
+        owner_profile.totp_secret = self.TEST_2FA_SECRET
+        owner_profile.save(update_fields=["role", "is_2fa_enabled", "totp_secret", "updated_at"])
 
-        self.analyst = User.objects.create_user(username="analyst", password="analyst123")
-        analyst_profile, _ = UserProfile.objects.get_or_create(user=self.analyst)
-        analyst_profile.role = UserProfile.ROLE_ANALYST
-        analyst_profile.is_2fa_enabled = True
-        analyst_profile.totp_secret = self.TEST_2FA_SECRET
-        analyst_profile.save(update_fields=["role", "is_2fa_enabled", "totp_secret", "updated_at"])
+        self.editor = User.objects.create_user(username="editor", password="editor123")
+        editor_profile, _ = UserProfile.objects.get_or_create(user=self.editor)
+        editor_profile.role = UserProfile.ROLE_EDITOR
+        editor_profile.is_2fa_enabled = True
+        editor_profile.totp_secret = self.TEST_2FA_SECRET
+        editor_profile.save(update_fields=["role", "is_2fa_enabled", "totp_secret", "updated_at"])
 
-        self.architect_token = self._login("architect", "architect123")
-        self.analyst_token = self._login("analyst", "analyst123")
+        self.guest = User.objects.create_user(username="guest", password="guest123")
+        guest_profile, _ = UserProfile.objects.get_or_create(user=self.guest)
+        guest_profile.role = UserProfile.ROLE_GUEST
+        guest_profile.is_2fa_enabled = True
+        guest_profile.totp_secret = self.TEST_2FA_SECRET
+        guest_profile.save(update_fields=["role", "is_2fa_enabled", "totp_secret", "updated_at"])
+
+        self.owner_token = self._login("owner", "owner123")
+        self.editor_token = self._login("editor", "editor123")
+        self.guest_token = self._login("guest", "guest123")
+
+    def tearDown(self):
+        cache.clear()
 
     def _login(self, username, password):
         response = self.client.post(
@@ -87,7 +100,7 @@ class TestTechnologiesApi(APITestCase):
         }
 
     def test_create_and_get_technology(self):
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.architect_token}")
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_token}")
         response = self.client.post("/api/v1/technologies", data=self.payload(), format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         tech_id = response.data["id"]
@@ -106,9 +119,17 @@ class TestTechnologiesApi(APITestCase):
         self.assertEqual(get_response.data["trlStage"], 5)
 
     def test_list_filter_by_enterprise_id(self):
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.architect_token}")
-        self.client.post("/api/v1/technologies", data=self.payload(name="Tech E1", enterprise_id=1), format="json")
-        self.client.post("/api/v1/technologies", data=self.payload(name="Tech E2", enterprise_id=2), format="json")
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_token}")
+        self.client.post(
+            "/api/v1/technologies",
+            data=self.payload(name="Tech E1", enterprise_id=1),
+            format="json",
+        )
+        self.client.post(
+            "/api/v1/technologies",
+            data=self.payload(name="Tech E2", enterprise_id=2),
+            format="json",
+        )
 
         response = self.client.get("/api/v1/technologies?enterpriseId=1")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -116,8 +137,10 @@ class TestTechnologiesApi(APITestCase):
         self.assertEqual(response.data[0]["name"], "Tech E1")
 
     def test_update_and_delete_technology(self):
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.architect_token}")
-        create_response = self.client.post("/api/v1/technologies", data=self.payload(), format="json")
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_token}")
+        create_response = self.client.post(
+            "/api/v1/technologies", data=self.payload(), format="json"
+        )
         tech_id = create_response.data["id"]
 
         patch_response = self.client.patch(
@@ -148,8 +171,10 @@ class TestTechnologiesApi(APITestCase):
         )
 
     def test_bulk_upsert(self):
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.architect_token}")
-        created = self.client.post("/api/v1/technologies", data=self.payload(name="Bulk Base"), format="json")
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_token}")
+        created = self.client.post(
+            "/api/v1/technologies", data=self.payload(name="Bulk Base"), format="json"
+        )
         tech_id = created.data["id"]
 
         bulk_payload = [
@@ -172,8 +197,10 @@ class TestTechnologiesApi(APITestCase):
         )
 
     def test_bulk_upsert_by_name_when_id_is_unknown(self):
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.architect_token}")
-        created = self.client.post("/api/v1/technologies", data=self.payload(name="Bulk Name Match"), format="json")
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_token}")
+        created = self.client.post(
+            "/api/v1/technologies", data=self.payload(name="Bulk Name Match"), format="json"
+        )
         tech_id = created.data["id"]
 
         bulk_payload = [
@@ -189,18 +216,22 @@ class TestTechnologiesApi(APITestCase):
         self.assertEqual(Technology.objects.get(id=tech_id).trl_stage, 8)
 
     def test_create_duplicate_name_returns_400(self):
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.architect_token}")
-        first = self.client.post("/api/v1/technologies", data=self.payload(name="Tech Duplicate"), format="json")
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_token}")
+        first = self.client.post(
+            "/api/v1/technologies", data=self.payload(name="Tech Duplicate"), format="json"
+        )
         self.assertEqual(first.status_code, status.HTTP_201_CREATED)
 
-        second = self.client.post("/api/v1/technologies", data=self.payload(name="Tech Duplicate"), format="json")
+        second = self.client.post(
+            "/api/v1/technologies", data=self.payload(name="Tech Duplicate"), format="json"
+        )
         self.assertEqual(second.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(second.data["ok"])
         self.assertEqual(second.data["code"], "bad_request")
         self.assertIn("name", second.data["details"])
 
     def test_invalid_enterprise_filter_returns_400(self):
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.architect_token}")
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_token}")
         response = self.client.get("/api/v1/technologies?enterpriseId=bad")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(response.data["ok"])
@@ -212,15 +243,26 @@ class TestTechnologiesApi(APITestCase):
         self.assertFalse(response.data["ok"])
         self.assertEqual(response.data["code"], "unauthorized")
 
-    def test_analyst_cannot_write(self):
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.analyst_token}")
-        response = self.client.post("/api/v1/technologies", data=self.payload(name="Analyst Tech"), format="json")
+    def test_guest_cannot_write(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.guest_token}")
+        response = self.client.post(
+            "/api/v1/technologies", data=self.payload(name="Guest Tech"), format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertFalse(response.data["ok"])
+        self.assertEqual(response.data["code"], "forbidden")
+
+    def test_editor_cannot_write_technology_directly(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.editor_token}")
+        response = self.client.post(
+            "/api/v1/technologies", data=self.payload(name="Editor Tech"), format="json"
+        )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertFalse(response.data["ok"])
         self.assertEqual(response.data["code"], "forbidden")
 
     def test_create_with_duplicate_directions_returns_400(self):
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.architect_token}")
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_token}")
         bad_payload = self.payload(name="Duplicate Directions")
         bad_payload["directions"] = [1, 1]
         response = self.client.post("/api/v1/technologies", data=bad_payload, format="json")
@@ -230,7 +272,7 @@ class TestTechnologiesApi(APITestCase):
         self.assertIn("directions", response.data["details"])
 
     def test_create_with_duplicate_enterprise_rows_returns_400(self):
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.architect_token}")
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_token}")
         bad_payload = self.payload(name="Duplicate Enterprises")
         bad_payload["enterprises"] = [
             {
@@ -251,3 +293,103 @@ class TestTechnologiesApi(APITestCase):
         self.assertFalse(response.data["ok"])
         self.assertEqual(response.data["code"], "bad_request")
         self.assertIn("enterprises.enterpriseId", response.data["details"])
+
+    def test_editor_can_create_update_proposal_and_owner_can_approve(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_token}")
+        create_response = self.client.post(
+            "/api/v1/technologies",
+            data=self.payload(name="Tech For Proposal"),
+            format="json",
+        )
+        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+        tech_id = create_response.data["id"]
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.editor_token}")
+        proposal_response = self.client.post(
+            "/api/v1/technology-proposals",
+            data={
+                "action": "update",
+                "technologyId": tech_id,
+                "payload": {"name": "Tech Approved From Proposal", "trlStage": 8},
+                "comment": "Need rename and raise TRL",
+            },
+            format="json",
+        )
+        self.assertEqual(proposal_response.status_code, status.HTTP_201_CREATED)
+        proposal_id = proposal_response.data["id"]
+        self.assertEqual(proposal_response.data["status"], "draft")
+
+        mine_response = self.client.get("/api/v1/technology-proposals/mine")
+        self.assertEqual(mine_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(mine_response.data), 1)
+        self.assertEqual(mine_response.data[0]["id"], proposal_id)
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_token}")
+        pending_response = self.client.get("/api/v1/technology-proposals/pending")
+        self.assertEqual(pending_response.status_code, status.HTTP_200_OK)
+        self.assertTrue(any(row["id"] == proposal_id for row in pending_response.data))
+
+        approve_response = self.client.post(
+            f"/api/v1/technology-proposals/{proposal_id}/approve",
+            data={"review_comment": "Approved"},
+            format="json",
+        )
+        self.assertEqual(approve_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(approve_response.data["status"], "approved")
+
+        tech_response = self.client.get(f"/api/v1/technologies/{tech_id}")
+        self.assertEqual(tech_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(tech_response.data["name"], "Tech Approved From Proposal")
+        self.assertEqual(tech_response.data["trlStage"], 8)
+
+    def test_guest_cannot_create_proposal(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.guest_token}")
+        response = self.client.post(
+            "/api/v1/technology-proposals",
+            data={
+                "action": "create",
+                "payload": {"name": "Guest Draft", "blocks": [1], "block": 1},
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_owner_can_reject_proposal(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.editor_token}")
+        proposal_response = self.client.post(
+            "/api/v1/technology-proposals",
+            data={
+                "action": "create",
+                "payload": {
+                    "name": "Rejected Draft",
+                    "description": "draft",
+                    "block": 1,
+                    "blocks": [1],
+                    "functionCoverage": ["Function A"],
+                    "enterprises": [
+                        {
+                            "enterpriseId": 1,
+                            "technologicalReadiness": 3,
+                            "organizationalReadiness": 3,
+                            "status": "planned",
+                        }
+                    ],
+                    "directions": [1],
+                    "trlStage": 3,
+                    "status": "planned",
+                    "vendors": [],
+                },
+            },
+            format="json",
+        )
+        self.assertEqual(proposal_response.status_code, status.HTTP_201_CREATED)
+        proposal_id = proposal_response.data["id"]
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_token}")
+        reject_response = self.client.post(
+            f"/api/v1/technology-proposals/{proposal_id}/reject",
+            data={"review_comment": "Needs more detail"},
+            format="json",
+        )
+        self.assertEqual(reject_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(reject_response.data["status"], "rejected")

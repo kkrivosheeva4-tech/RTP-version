@@ -1,0 +1,74 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: rtp3
+      POSTGRES_USER: rtp3
+      POSTGRES_PASSWORD: rtp3
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rtp3 -d rtp3"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SECRET_KEY: docker-compose-local-secret
+      DEBUG: "False"
+      LOG_LEVEL: INFO
+      ALLOWED_HOSTS: localhost,127.0.0.1
+      CORS_ALLOWED_ORIGINS: http://localhost:8000
+      CORS_ALLOW_ALL_ORIGINS: "False"
+      CORS_ALLOW_CREDENTIALS: "True"
+      CSRF_TRUSTED_ORIGINS: http://localhost:8000
+      SECURE_SSL_REDIRECT: "False"
+      SESSION_COOKIE_SECURE: "False"
+      CSRF_COOKIE_SECURE: "False"
+      USE_X_FORWARDED_HOST: "False"
+      USE_X_FORWARDED_PORT: "False"
+      SECURE_PROXY_SSL_HEADER_ENABLED: "False"
+      SECURE_HSTS_SECONDS: "0"
+      SECURE_HSTS_INCLUDE_SUBDOMAINS: "False"
+      SECURE_HSTS_PRELOAD: "False"
+      AUTH_REFRESH_COOKIE_ENABLED: "True"
+      AUTH_RETURN_REFRESH_TOKEN_IN_BODY: "False"
+      AUTH_REFRESH_COOKIE_SECURE: "False"
+      AUTH_REFRESH_COOKIE_HTTPONLY: "True"
+      AUTH_REFRESH_COOKIE_SAMESITE: Lax
+      AUTH_REFRESH_COOKIE_PATH: /api/v1/auth/
+      AUTH_REFRESH_REQUIRE_CSRF: "True"
+      SERVE_FRONTEND_FROM_DJANGO: "True"
+      DB_ENGINE: postgresql
+      DB_NAME: rtp3
+      DB_USER: rtp3
+      DB_PASSWORD: rtp3
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_CONN_MAX_AGE: "0"
+      DB_CONNECT_TIMEOUT: "10"
+      DB_SSLMODE: disable
+      ACCESS_TOKEN_LIFETIME_MINUTES: "30"
+      REFRESH_TOKEN_LIFETIME_DAYS: "7"
+      TWOFA_SESSION_LIFETIME_MINUTES: "10"
+      TOTP_ISSUER: Radar
+    ports:
+      - "8000:8000"
+    command: >
+      sh -c "python backend/manage.py migrate &&
+             python backend/manage.py seed_references &&
+             python backend/manage.py seed_technologies &&
+             python backend/manage.py seed_users &&
+             python backend/manage.py runserver 0.0.0.0:8000"
+
+volumes:
+  postgres-data:

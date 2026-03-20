@@ -124,6 +124,19 @@ function toArray(value) {
   return value == null || value === '' ? [] : [value];
 }
 
+function uniqueTrimmedStrings(items) {
+  const seen = new Set();
+  return toArray(items)
+    .map((item) => String(item || '').trim())
+    .filter((item) => {
+      if (!item) return false;
+      const key = item.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
 function buildDirectionNameToIdMap() {
   const map = {};
   const directions = getStateValue('digitalDirections', []);
@@ -252,23 +265,21 @@ function toApiTechnologyPayload(tech) {
     .filter(Boolean);
 
   const marketExamples = (() => {
-    if (Array.isArray(t.marketExamples)) return t.marketExamples.map((x) => String(x || '').trim()).filter(Boolean);
+    if (Array.isArray(t.marketExamples)) return uniqueTrimmedStrings(t.marketExamples);
     if (typeof t.exampleDesc === 'string' && t.exampleDesc.trim()) {
-      return t.exampleDesc
+      return uniqueTrimmedStrings(t.exampleDesc
         .split('\n')
-        .map((x) => x.trim())
-        .filter(Boolean);
+        .map((x) => x.trim()));
     }
     return [];
   })();
 
-  const documentationFiles = toArray(t.files)
+  const documentationFiles = uniqueTrimmedStrings(toArray(t.files)
     .map((f) => {
       if (typeof f === 'string') return f.trim();
       if (f && typeof f === 'object') return String(f.path || f.url || f.name || '').trim();
       return '';
-    })
-    .filter(Boolean);
+    }));
 
   const payload = {
     name: String(t.name || '').trim(),
@@ -538,6 +549,72 @@ async function apiDeleteTech(id) {
   }
 }
 
+async function apiCreateTechnologyProposal(action, options) {
+  const client = getApiClient();
+  if (!client || typeof client.post !== 'function') {
+    throw new Error('ApiClient недоступен');
+  }
+  const normalizedAction = String(action || '').trim().toLowerCase();
+  const payload = {
+    action: normalizedAction
+  };
+  const technologyId = options && options.technologyId != null ? Number(options.technologyId) : null;
+  if (Number.isInteger(technologyId) && technologyId > 0) {
+    payload.technologyId = technologyId;
+  }
+  if (options && options.tech) {
+    payload.payload = toApiTechnologyPayload(options.tech);
+    delete payload.payload.id;
+  }
+  if (options && typeof options.comment === 'string' && options.comment.trim()) {
+    payload.comment = options.comment.trim();
+  }
+  const res = await client.post('/api/v1/technology-proposals', payload);
+  if (!res || res.ok === false) {
+    wrapApiError(res || { error: 'Ошибка создания предложения' });
+  }
+  return res && res.data != null ? res.data : res;
+}
+
+async function apiLoadMyTechnologyProposals() {
+  const client = getApiClient();
+  if (!client || typeof client.get !== 'function') {
+    throw new Error('ApiClient недоступен');
+  }
+  const res = await client.get('/api/v1/technology-proposals/mine');
+  if (!res || res.ok === false) {
+    wrapApiError(res || { error: 'Ошибка загрузки моих предложений' });
+  }
+  return Array.isArray(res && res.data) ? res.data : [];
+}
+
+async function apiLoadPendingTechnologyProposals() {
+  const client = getApiClient();
+  if (!client || typeof client.get !== 'function') {
+    throw new Error('ApiClient недоступен');
+  }
+  const res = await client.get('/api/v1/technology-proposals/pending');
+  if (!res || res.ok === false) {
+    wrapApiError(res || { error: 'Ошибка загрузки предложений на ревью' });
+  }
+  return Array.isArray(res && res.data) ? res.data : [];
+}
+
+async function apiReviewTechnologyProposal(id, decision, reviewComment) {
+  const client = getApiClient();
+  if (!client || typeof client.post !== 'function') {
+    throw new Error('ApiClient недоступен');
+  }
+  const normalizedDecision = String(decision || '').trim().toLowerCase();
+  const res = await client.post(`/api/v1/technology-proposals/${id}/${normalizedDecision}`, {
+    review_comment: typeof reviewComment === 'string' ? reviewComment.trim() : ''
+  });
+  if (!res || res.ok === false) {
+    wrapApiError(res || { error: 'Ошибка обработки предложения' });
+  }
+  return res && res.data != null ? res.data : res;
+}
+
 async function apiSaveTechnologies(technologies) {
   const client = getApiClient();
   if (!client || typeof client.put !== 'function') {
@@ -621,6 +698,41 @@ const DataService = {
       return apiDeleteTech(id);
     }
     return mockDeleteTech(id);
+  },
+
+  async createTechnologyProposal(action, options) {
+    if (getUseApi()) {
+      return apiCreateTechnologyProposal(action, options);
+    }
+    return Promise.reject(new Error('Moderation flow доступен только в API режиме'));
+  },
+
+  async loadMyTechnologyProposals() {
+    if (getUseApi()) {
+      return apiLoadMyTechnologyProposals();
+    }
+    return Promise.resolve([]);
+  },
+
+  async loadPendingTechnologyProposals() {
+    if (getUseApi()) {
+      return apiLoadPendingTechnologyProposals();
+    }
+    return Promise.resolve([]);
+  },
+
+  async approveTechnologyProposal(id, reviewComment) {
+    if (getUseApi()) {
+      return apiReviewTechnologyProposal(id, 'approve', reviewComment);
+    }
+    return Promise.reject(new Error('Moderation flow доступен только в API режиме'));
+  },
+
+  async rejectTechnologyProposal(id, reviewComment) {
+    if (getUseApi()) {
+      return apiReviewTechnologyProposal(id, 'reject', reviewComment);
+    }
+    return Promise.reject(new Error('Moderation flow доступен только в API режиме'));
   },
 
   /**

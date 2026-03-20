@@ -15,6 +15,7 @@ from technologies.models import (
     TechnologyDirection,
     TechnologyEnterpriseReadiness,
     TechnologyFunctionCoverage,
+    TechnologyProposal,
     TechnologyVendor,
     TechnologyVendorIntegrator,
 )
@@ -22,8 +23,12 @@ from technologies.models import (
 
 class EnterpriseReadinessSerializer(serializers.Serializer):
     enterpriseId = serializers.IntegerField()
-    technologicalReadiness = serializers.IntegerField(min_value=1, max_value=9, required=False, allow_null=True)
-    organizationalReadiness = serializers.IntegerField(min_value=1, max_value=9, required=False, allow_null=True)
+    technologicalReadiness = serializers.IntegerField(
+        min_value=1, max_value=9, required=False, allow_null=True
+    )
+    organizationalReadiness = serializers.IntegerField(
+        min_value=1, max_value=9, required=False, allow_null=True
+    )
     status = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
 
@@ -49,7 +54,9 @@ class TechnologySerializer(serializers.Serializer):
         default=list,
     )
     enterprises = EnterpriseReadinessSerializer(many=True, required=False, default=list)
-    directions = serializers.ListField(child=serializers.IntegerField(), required=False, default=list)
+    directions = serializers.ListField(
+        child=serializers.IntegerField(), required=False, default=list
+    )
     trlStage = serializers.IntegerField(min_value=1, max_value=9, required=False, default=1)
     status = serializers.CharField(required=False, allow_blank=True, default="planned")
     vendors = VendorSerializer(many=True, required=False, default=list)
@@ -75,24 +82,32 @@ class TechnologySerializer(serializers.Serializer):
             if self.instance is not None:
                 name_qs = name_qs.exclude(id=self.instance.id)
             if name_qs.exists():
-                raise serializers.ValidationError({"name": "Technology with this name already exists."})
+                raise serializers.ValidationError(
+                    {"name": "Technology with this name already exists."}
+                )
 
         block_ids = self._collect_block_ids(attrs)
         self._ensure_unique_integers(block_ids, "blocks")
         if self.instance is None and not block_ids:
             raise serializers.ValidationError({"blocks": "At least one block is required."})
 
-        existing_block_ids = set(FunctionalBlock.objects.filter(id__in=block_ids).values_list("id", flat=True))
+        existing_block_ids = set(
+            FunctionalBlock.objects.filter(id__in=block_ids).values_list("id", flat=True)
+        )
         missing_blocks = sorted(set(block_ids) - existing_block_ids)
         if missing_blocks:
             raise serializers.ValidationError({"blocks": f"Unknown block ids: {missing_blocks}"})
 
         direction_ids = attrs.get("directions", []) or []
         self._ensure_unique_integers(direction_ids, "directions")
-        existing_directions = set(DigitalDirection.objects.filter(id__in=direction_ids).values_list("id", flat=True))
+        existing_directions = set(
+            DigitalDirection.objects.filter(id__in=direction_ids).values_list("id", flat=True)
+        )
         missing_directions = sorted(set(direction_ids) - existing_directions)
         if missing_directions:
-            raise serializers.ValidationError({"directions": f"Unknown direction ids: {missing_directions}"})
+            raise serializers.ValidationError(
+                {"directions": f"Unknown direction ids: {missing_directions}"}
+            )
 
         function_names = attrs.get("functionCoverage", []) or []
         cleaned_functions = self._normalize_unique_strings(function_names, "functionCoverage")
@@ -101,13 +116,19 @@ class TechnologySerializer(serializers.Serializer):
 
         enterprise_ids = [row.get("enterpriseId") for row in attrs.get("enterprises", [])]
         self._ensure_unique_integers(enterprise_ids, "enterprises.enterpriseId")
-        existing_enterprises = set(Enterprise.objects.filter(id__in=enterprise_ids).values_list("id", flat=True))
+        existing_enterprises = set(
+            Enterprise.objects.filter(id__in=enterprise_ids).values_list("id", flat=True)
+        )
         missing_enterprises = sorted(set(enterprise_ids) - existing_enterprises)
         if missing_enterprises:
-            raise serializers.ValidationError({"enterprises": f"Unknown enterprise ids: {missing_enterprises}"})
+            raise serializers.ValidationError(
+                {"enterprises": f"Unknown enterprise ids: {missing_enterprises}"}
+            )
 
         if "marketExamples" in attrs:
-            attrs["marketExamples"] = self._normalize_unique_strings(attrs.get("marketExamples", []), "marketExamples")
+            attrs["marketExamples"] = self._normalize_unique_strings(
+                attrs.get("marketExamples", []), "marketExamples"
+            )
 
         if "documentationFiles" in attrs:
             attrs["documentationFiles"] = self._normalize_unique_strings(
@@ -124,10 +145,14 @@ class TechnologySerializer(serializers.Serializer):
                 raise serializers.ValidationError({"vendors": f"vendors[{index}].name is required"})
             vendor_key = vendor_name.lower()
             if vendor_key in seen_vendors:
-                raise serializers.ValidationError({"vendors": f"Duplicate vendor name: {vendor_name}"})
+                raise serializers.ValidationError(
+                    {"vendors": f"Duplicate vendor name: {vendor_name}"}
+                )
             seen_vendors.add(vendor_key)
 
-            integrators = self._normalize_unique_strings(vendor.get("integrators", []), f"vendors[{index}].integrators")
+            integrators = self._normalize_unique_strings(
+                vendor.get("integrators", []), f"vendors[{index}].integrators"
+            )
             normalized_vendors.append({"name": vendor_name, "integrators": integrators})
 
         if "vendors" in attrs:
@@ -164,17 +189,28 @@ class TechnologySerializer(serializers.Serializer):
         instance.trl_stage = validated_data.get("trlStage", instance.trl_stage)
         instance.status = validated_data.get("status", instance.status)
         instance.market_examples = validated_data.get("marketExamples", instance.market_examples)
-        instance.documentation_files = validated_data.get("documentationFiles", instance.documentation_files)
+        instance.documentation_files = validated_data.get(
+            "documentationFiles", instance.documentation_files
+        )
         instance.save()
 
-        relation_fields = {"blocks", "block", "functionCoverage", "enterprises", "directions", "vendors"}
+        relation_fields = {
+            "blocks",
+            "block",
+            "functionCoverage",
+            "enterprises",
+            "directions",
+            "vendors",
+        }
         if relation_fields.intersection(validated_data.keys()):
             self._sync_relations(instance, validated_data)
         return instance
 
     def to_representation(self, instance):
         block_ids = list(
-            TechnologyBlock.objects.filter(technology=instance).values_list("block_id", flat=True).order_by("block_id")
+            TechnologyBlock.objects.filter(technology=instance)
+            .values_list("block_id", flat=True)
+            .order_by("block_id")
         )
         direction_ids = list(
             TechnologyDirection.objects.filter(technology=instance)
@@ -199,7 +235,11 @@ class TechnologySerializer(serializers.Serializer):
         )
 
         vendors = []
-        vendor_links = TechnologyVendor.objects.filter(technology=instance).select_related("vendor").order_by("vendor__name")
+        vendor_links = (
+            TechnologyVendor.objects.filter(technology=instance)
+            .select_related("vendor")
+            .order_by("vendor__name")
+        )
         for vendor_link in vendor_links:
             integrator_names = list(
                 TechnologyVendorIntegrator.objects.filter(technology_vendor=vendor_link)
@@ -261,7 +301,9 @@ class TechnologySerializer(serializers.Serializer):
             seen.add(value)
         if duplicates:
             sorted_duplicates = sorted(duplicates)
-            raise serializers.ValidationError({field_name: f"Duplicate values are not allowed: {sorted_duplicates}"})
+            raise serializers.ValidationError(
+                {field_name: f"Duplicate values are not allowed: {sorted_duplicates}"}
+            )
 
     @staticmethod
     def _normalize_unique_strings(values, field_name: str):
@@ -272,7 +314,9 @@ class TechnologySerializer(serializers.Serializer):
         for index, value in enumerate(values):
             cleaned = str(value).strip()
             if not cleaned:
-                raise serializers.ValidationError({field_name: f"{field_name}[{index}] must be non-empty string"})
+                raise serializers.ValidationError(
+                    {field_name: f"{field_name}[{index}] must be non-empty string"}
+                )
             key = cleaned.lower()
             if key in seen:
                 raise serializers.ValidationError({field_name: f"Duplicate value: {cleaned}"})
@@ -348,3 +392,114 @@ class TechnologySerializer(serializers.Serializer):
                     technology_vendor=vendor_link,
                     integrator=integrator,
                 )
+
+
+class TechnologyProposalCreateSerializer(serializers.Serializer):
+    action = serializers.ChoiceField(
+        choices=TechnologyProposal.ACTION_CHOICES,
+        required=False,
+        default=TechnologyProposal.ACTION_UPDATE,
+    )
+    technologyId = serializers.IntegerField(required=False, allow_null=True)
+    payload = serializers.JSONField(required=False)
+    comment = serializers.CharField(required=False, allow_blank=True, default="")
+
+    def validate(self, attrs):
+        action = attrs.get("action", TechnologyProposal.ACTION_UPDATE)
+        technology_id = attrs.get("technologyId")
+        payload = attrs.get("payload")
+
+        if action in {TechnologyProposal.ACTION_UPDATE, TechnologyProposal.ACTION_DELETE}:
+            if technology_id in (None, ""):
+                raise serializers.ValidationError(
+                    {"technologyId": "technologyId is required for update/delete actions."}
+                )
+            technology = Technology.objects.filter(id=technology_id).first()
+            if not technology:
+                raise serializers.ValidationError(
+                    {"technologyId": f"Technology {technology_id} not found."}
+                )
+            attrs["technology"] = technology
+
+        if action == TechnologyProposal.ACTION_CREATE and technology_id not in (None, ""):
+            raise serializers.ValidationError(
+                {"technologyId": "technologyId must be empty for create action."}
+            )
+
+        if action in {TechnologyProposal.ACTION_CREATE, TechnologyProposal.ACTION_UPDATE}:
+            if not isinstance(payload, dict) or not payload:
+                raise serializers.ValidationError(
+                    {"payload": "payload must be a non-empty object for create/update actions."}
+                )
+
+        if (
+            action == TechnologyProposal.ACTION_DELETE
+            and payload is not None
+            and not isinstance(payload, dict)
+        ):
+            raise serializers.ValidationError(
+                {"payload": "payload must be an object when provided."}
+            )
+
+        return attrs
+
+    def create(self, validated_data):
+        technology = validated_data.pop("technology", None)
+        technology_id = validated_data.pop("technologyId", None)
+        created_by = self.context["request"].user
+        target_technology_id = technology_id or (technology.id if technology else None)
+        return TechnologyProposal.objects.create(
+            technology=technology,
+            target_technology_id=target_technology_id,
+            action=validated_data.get("action", TechnologyProposal.ACTION_UPDATE),
+            payload=validated_data.get("payload", {}),
+            comment=validated_data.get("comment", ""),
+            created_by=created_by,
+        )
+
+
+class TechnologyProposalReviewSerializer(serializers.Serializer):
+    review_comment = serializers.CharField(required=False, allow_blank=True, default="")
+
+
+class TechnologyProposalSerializer(serializers.Serializer):
+    id = serializers.IntegerField(read_only=True)
+    action = serializers.CharField(read_only=True)
+    status = serializers.CharField(read_only=True)
+    technologyId = serializers.IntegerField(read_only=True, allow_null=True)
+    payload = serializers.JSONField(read_only=True)
+    comment = serializers.CharField(read_only=True)
+    review_comment = serializers.CharField(read_only=True)
+    created_by = serializers.JSONField(read_only=True)
+    reviewed_by = serializers.JSONField(read_only=True)
+    reviewed_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    created_at = serializers.DateTimeField(read_only=True)
+    updated_at = serializers.DateTimeField(read_only=True)
+
+    def to_representation(self, instance):
+        created_by = {
+            "id": instance.created_by_id,
+            "username": instance.created_by.username,
+        }
+        reviewed_by = None
+        if instance.reviewed_by_id:
+            reviewed_by = {
+                "id": instance.reviewed_by_id,
+                "username": instance.reviewed_by.username,
+            }
+
+        technology_id = instance.target_technology_id or instance.technology_id
+        return {
+            "id": instance.id,
+            "action": instance.action,
+            "status": instance.status,
+            "technologyId": technology_id,
+            "payload": instance.payload or {},
+            "comment": instance.comment or "",
+            "review_comment": instance.review_comment or "",
+            "created_by": created_by,
+            "reviewed_by": reviewed_by,
+            "reviewed_at": instance.reviewed_at,
+            "created_at": instance.created_at,
+            "updated_at": instance.updated_at,
+        }

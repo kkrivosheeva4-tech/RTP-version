@@ -15,6 +15,24 @@ import { generatePdf } from './export-pdf.js';
     return typeof window[fnName] === 'function' ? window[fnName]() : defaultValue;
   }
 
+  function canExportReports() {
+    const roleApi = window.RoleCapabilities || window.RolesConfig || null;
+    if (roleApi && typeof roleApi.canExportReports === 'function') {
+      return roleApi.canExportReports();
+    }
+    if (roleApi && typeof roleApi.hasCapability === 'function') {
+      return roleApi.hasCapability('export_reports');
+    }
+    if (window.AuthModule && typeof window.AuthModule.isAuthenticated === 'function') {
+      return window.AuthModule.isAuthenticated();
+    }
+    try {
+      return String(localStorage.getItem('role') || '').trim() !== '';
+    } catch (_) {
+      return false;
+    }
+  }
+
   // Универсальная функция для установки значений в multi-select
   function setMultiSelectFilter(fieldName, values, placeholder) {
     const container = document.getElementById(`filter_${fieldName}_container`);
@@ -421,7 +439,7 @@ import { generatePdf } from './export-pdf.js';
     }
 
     try {
-      if (typeof window.checkArchitectRole === 'function' && !window.checkArchitectRole()) {
+      if (!canExportReports()) {
         throw new Error('Недостаточно прав для экспорта отчета');
       }
 
@@ -853,7 +871,7 @@ import { generatePdf } from './export-pdf.js';
 
   // Функция для показа модального окна выбора полей
   function showExportPdfModal() {
-    if (typeof window.checkArchitectRole === 'function' && !window.checkArchitectRole()) return;
+    if (!canExportReports()) return;
 
     const modal = document.getElementById('exportPdfModal');
     if (!modal) return;

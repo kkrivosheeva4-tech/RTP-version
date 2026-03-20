@@ -4,7 +4,14 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from config.seed_utils import get_default_data_dir, load_json
-from references.models import DigitalDirection, Enterprise, FunctionalBlock, FunctionReference, Integrator, Vendor
+from references.models import (
+    DigitalDirection,
+    Enterprise,
+    FunctionalBlock,
+    FunctionReference,
+    Integrator,
+    Vendor,
+)
 from technologies.models import (
     Technology,
     TechnologyBlock,
@@ -98,7 +105,9 @@ class Command(BaseCommand):
         for block_id in self._collect_block_ids(payload):
             block = FunctionalBlock.objects.filter(id=block_id).first()
             if not block:
-                self.stdout.write(self.style.WARNING(f"Technology {technology.id}: unknown block {block_id}"))
+                self.stdout.write(
+                    self.style.WARNING(f"Technology {technology.id}: unknown block {block_id}")
+                )
                 continue
             TechnologyBlock.objects.create(technology=technology, block=block)
 
@@ -113,7 +122,9 @@ class Command(BaseCommand):
             direction = DigitalDirection.objects.filter(id=direction_id).first()
             if not direction:
                 self.stdout.write(
-                    self.style.WARNING(f"Technology {technology.id}: unknown direction {direction_id}")
+                    self.style.WARNING(
+                        f"Technology {technology.id}: unknown direction {direction_id}"
+                    )
                 )
                 continue
             TechnologyDirection.objects.create(technology=technology, direction=direction)
@@ -125,7 +136,9 @@ class Command(BaseCommand):
             enterprise = Enterprise.objects.filter(id=enterprise_id).first()
             if not enterprise:
                 self.stdout.write(
-                    self.style.WARNING(f"Technology {technology.id}: unknown enterprise {enterprise_id}")
+                    self.style.WARNING(
+                        f"Technology {technology.id}: unknown enterprise {enterprise_id}"
+                    )
                 )
                 continue
             TechnologyEnterpriseReadiness.objects.create(
@@ -158,7 +171,9 @@ class Command(BaseCommand):
                 continue
 
             vendor, _ = Vendor.objects.get_or_create(name=vendor_name)
-            technology_vendor = TechnologyVendor.objects.create(technology=technology, vendor=vendor)
+            technology_vendor = TechnologyVendor.objects.create(
+                technology=technology, vendor=vendor
+            )
 
             for integrator_name in integrators:
                 integrator_name = str(integrator_name).strip()

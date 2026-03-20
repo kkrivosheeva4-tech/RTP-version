@@ -1,8 +1,29 @@
 // Модуль работы с приоритетами технологий
 
 import Logger from '../core/logger.js';
+import FactorEngine from '../radar/factor-engine.js';
 
 'use strict';
+
+  const FACTOR_LABELS = {
+    techRead: 'технологическая готовность',
+    organRead: 'организационная готовность',
+    funcCover: 'покрытие функций',
+    trlStage: 'TRL',
+    implementationCostPressure: 'стоимость внедрения',
+    integrationRisk: 'интеграционные риски',
+    integrationComplexity: 'интеграционная сложность'
+  };
+
+  const WEAK_LINK_COMMENTS = {
+    techRead: 'Слабое звено: технологическая готовность. Важно доработать прототипы и архитектуру.',
+    organRead: 'Слабое звено: организационная готовность. Нужна подготовка процессов, команды и владельцев.',
+    funcCover: 'Слабое звено: покрытие функций. Технология пока закрывает недостаточно целевых задач.',
+    trlStage: 'Слабое звено: стадия TRL. Технология еще находится на ранней стадии зрелости.',
+    implementationCostPressure: 'Слабое звено: высокая стоимость внедрения. Нужна проработка экономического эффекта и масштаба проекта.',
+    integrationRisk: 'Слабое звено: интеграционные риски. Требуется снижение рисков стыковки с текущим ландшафтом.',
+    integrationComplexity: 'Слабое звено: интеграционная сложность. Нужна декомпозиция интеграционного контура и зависимостей.'
+  };
 
   /**
    * Безопасное приведение значения к числу в диапазоне [min, max].
@@ -55,6 +76,95 @@ import Logger from '../core/logger.js';
     return { orgN, techN, trlN, techRead, organRead, trlStage: trlNum };
   }
 
+  function getModelConfig() {
+    return (typeof window !== 'undefined' && window.RadarModelConfig)
+      ? window.RadarModelConfig
+      : {};
+  }
+
+  function resolveCompanyForTech(tech, company = null) {
+    const getCurrentEnterprise = window.getCurrentEnterprise || (() => (window.StateManager && window.StateManager.get ? window.StateManager.get('currentEnterprise') : undefined));
+    const currentEnterprise = getCurrentEnterprise();
+    if (!company && currentEnterprise &&
+      Array.isArray(tech.company) && tech.company.includes(currentEnterprise)) {
+      return currentEnterprise;
+    }
+    return company;
+  }
+
+  function resolveFunctionCoverageValue(tech) {
+    if (tech && tech.funcCover !== undefined && tech.funcCover !== null && tech.funcCover !== '') {
+      return tech.funcCover;
+    }
+    if (Array.isArray(tech && tech.functionCoverage)) {
+      return Math.max(0, Math.min(3, tech.functionCoverage.length));
+    }
+    return null;
+  }
+
+  function hasMeaningfulValue(value) {
+    return value !== undefined && value !== null && String(value).trim() !== '';
+  }
+
+  function getCompanyRatingsForPriority(tech, company = null) {
+    if (!company || !tech || !tech.companyRatings || typeof tech.companyRatings !== 'object') {
+      return null;
+    }
+    return tech.companyRatings[company] || null;
+  }
+
+  function getPriorityReadinessSources(tech, company = null) {
+    const ratings = getCompanyRatingsForPriority(tech, company);
+    const rawTechRead = ratings && hasMeaningfulValue(ratings.techRead)
+      ? ratings.techRead
+      : (hasMeaningfulValue(tech && (tech.techRead ?? tech.tech_read)) ? (tech.techRead ?? tech.tech_read) : null);
+    const rawOrganRead = ratings && hasMeaningfulValue(ratings.organRead)
+      ? ratings.organRead
+      : (hasMeaningfulValue(tech && (tech.organRead ?? tech.organ_read)) ? (tech.organRead ?? tech.organ_read) : null);
+
+    return {
+      techRead: rawTechRead == null ? null : clampNumber(rawTechRead, 0, 3),
+      organRead: rawOrganRead == null ? null : clampNumber(rawOrganRead, 0, 3),
+      hasTechRead: rawTechRead != null,
+      hasOrganRead: rawOrganRead != null
+    };
+  }
+
+  function calculatePriorityResult(tech, company = null) {
+    const resolvedCompany = resolveCompanyForTech(tech, company);
+    const readiness = getNormalizedReadinessAndTrl(tech, resolvedCompany);
+    const readinessSources = getPriorityReadinessSources(tech, resolvedCompany);
+    const funcCover = resolveFunctionCoverageValue(tech);
+    const hasFunctionCoverage = Array.isArray(tech && tech.functionCoverage) && tech.functionCoverage.length > 0;
+    const hasFuncCoverField = tech && tech.funcCover !== undefined && tech.funcCover !== null && tech.funcCover !== '';
+
+    return FactorEngine.calculateReadinessIndex({
+      tech,
+      modelConfig: getModelConfig(),
+      rawFactors: {
+        techRead: readinessSources.techRead,
+        organRead: readinessSources.organRead,
+        funcCover,
+        trlStage: readiness.trlStage
+      },
+      availability: {
+        techRead: readinessSources.hasTechRead,
+        organRead: readinessSources.hasOrganRead,
+        funcCover: hasFuncCoverField || hasFunctionCoverage,
+        // Для совместимости с positioning TRL доступен через fallback baseline-конфига.
+        trlStage: true
+      },
+      logger: Logger
+    });
+  }
+
+  function formatMissingFactors(ids) {
+    return ids
+      .map((id) => FACTOR_LABELS[id] || id)
+      .filter(Boolean)
+      .join(', ');
+  }
+
   /**
    * Вычисление приоритета технологии в диапазоне [0,1].
    * model:
@@ -64,26 +174,23 @@ import Logger from '../core/logger.js';
    * company - опциональный параметр для указания предприятия (для использования индивидуальных оценок)
    * Если каких‑то данных нет (особенно TRL), функция возвращает null.
    */
-  function computePriority(tech, model = 'mult', company = null) {
-    // Если не указано предприятие, но есть текущее предприятие и технология с несколькими предприятиями, используем его
-    const getCurrentEnterprise = window.getCurrentEnterprise || (() => (window.StateManager && window.StateManager.get ? window.StateManager.get('currentEnterprise') : undefined));
-    const currentEnterprise = getCurrentEnterprise();
-    if (!company && currentEnterprise &&
-      Array.isArray(tech.company) && tech.company.includes(currentEnterprise)) {
-      company = currentEnterprise;
+  function computePriority(tech, model = 'weighted', company = null) {
+    const factorResult = calculatePriorityResult(tech, company);
+    if (!factorResult || factorResult.insufficientData || !Array.isArray(factorResult.contributions) || factorResult.contributions.length === 0) {
+      return null;
     }
 
-    const { orgN, techN, trlN } = getNormalizedReadinessAndTrl(tech, company);
-    if (trlN == null || Number.isNaN(orgN) || Number.isNaN(techN)) return null;
-
+    const effectiveValues = factorResult.contributions.map((item) => item.effective);
     switch (model) {
       case 'avg':
-        return (orgN + techN + trlN) / 3;
+        return effectiveValues.reduce((sum, value) => sum + value, 0) / effectiveValues.length;
       case 'min':
-        return Math.min(orgN, techN, trlN);
+        return Math.min(...effectiveValues);
       case 'mult':
+        return effectiveValues.reduce((acc, value) => acc * value, 1);
+      case 'weighted':
       default:
-        return orgN * techN * trlN;
+        return factorResult.z;
     }
   }
 
@@ -123,33 +230,19 @@ import Logger from '../core/logger.js';
    * Определение «слабого звена» для комментария.
    */
   function getPriorityWeakLinkComment(tech, company = null) {
-    // Если не указано предприятие, но есть текущее предприятие и технология с несколькими предприятиями, используем его
-    const getCurrentEnterprise = window.getCurrentEnterprise || (() => (window.StateManager && window.StateManager.get ? window.StateManager.get('currentEnterprise') : undefined));
-    const currentEnterprise = getCurrentEnterprise();
-    if (!company && typeof currentEnterprise !== 'undefined' && currentEnterprise &&
-      Array.isArray(tech.company) && tech.company.includes(currentEnterprise)) {
-      company = currentEnterprise;
+    const factorResult = calculatePriorityResult(tech, company);
+    if (!factorResult) {
+      return 'Недостаточно данных для расчета приоритета.';
+    }
+    if (factorResult.insufficientData && factorResult.missingFactors.length > 0) {
+      return `Недостаточно данных: заполните ${formatMissingFactors(factorResult.missingFactors)}.`;
+    }
+    if (!Array.isArray(factorResult.contributions) || factorResult.contributions.length === 0) {
+      return 'Недостаточно данных для расчета приоритета.';
     }
 
-    const { orgN, techN, trlN, techRead, organRead, trlStage } = getNormalizedReadinessAndTrl(tech, company);
-    if (trlN == null) {
-      return 'Заполните TRL для более точной оценки приоритета.';
-    }
-    const values = [
-      { key: 'org', v: orgN, raw: organRead, label: 'организационная готовность' },
-      { key: 'tech', v: techN, raw: techRead, label: 'технологическая готовность' },
-      { key: 'trl', v: trlN, raw: trlStage, label: 'TRL' }
-    ];
-    values.sort((a, b) => a.v - b.v);
-    const weakest = values[0];
-
-    if (weakest.key === 'org') {
-      return 'Слабое звено: организационная готовность – нужна подготовка процессов и команды.';
-    }
-    if (weakest.key === 'tech') {
-      return 'Слабое звено: технологическая готовность – важно доработать прототипы и архитектуру.';
-    }
-    return 'Слабое звено: стадия TRL – технология ещё на ранней исследовательской стадии.';
+    const weakest = [...factorResult.contributions].sort((a, b) => a.effective - b.effective)[0];
+    return WEAK_LINK_COMMENTS[weakest.id] || `Слабое звено: ${FACTOR_LABELS[weakest.id] || weakest.id}.`;
   }
 
   /**

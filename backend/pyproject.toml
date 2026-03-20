@@ -1,0 +1,26 @@
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+include = "\\.pyi?$"
+extend-exclude = """
+/(
+  migrations
+)/
+"""
+
+[tool.isort]
+profile = "black"
+line_length = 100
+skip_gitignore = true
+known_first_party = ["admin_panel", "auth_custom", "config", "references", "technologies"]
+skip = ["backend/auth_custom/migrations"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["backend"]
+exclude = ["**/migrations"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E501"]

@@ -171,7 +171,7 @@ describe('validateDuplicateTechnology', () => {
     // Для реального теста используем строку, которая нормализуется одинаково
     const result1 = validateDuplicateTechnology('Тест', null); // должно быть false (дубликат)
     expect(result1.valid).toBe(false);
-    
+
     // Тест с реальными омоглифами, которые заменяются
     const technologies2 = [
       { id: 1, name: 'репа' } // нормализуется в 'repa'

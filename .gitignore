@@ -33,11 +33,13 @@ src/js/config/api-config.local.js
 .env.development.local
 .env.test.local
 .env.production.local
+backend/.env.prodlike.local
 backend/.venv/
 
 # Logs
 logs/
 *.log
+ops/local/Caddyfile.local
 
 # Temporary files
 *.tmp
@@ -48,8 +50,12 @@ logs/
 dist/
 build/
 out/
+playwright-report/
+test-results/
 
 # Python / Django
 __pycache__/
 *.py[cod]
 backend/db.sqlite3
+venv/
+.venv/

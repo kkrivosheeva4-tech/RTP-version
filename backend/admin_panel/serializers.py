@@ -14,6 +14,7 @@ class AdminUserSerializer(serializers.Serializer):
     username = serializers.CharField(read_only=True)
     email = serializers.EmailField(read_only=True, allow_blank=True)
     role = serializers.CharField(read_only=True)
+    legacy_role = serializers.CharField(read_only=True, allow_blank=True)
     is_active = serializers.BooleanField(read_only=True)
     is_2fa_enabled = serializers.BooleanField(read_only=True)
     created_at = serializers.DateTimeField(read_only=True)
@@ -25,7 +26,8 @@ class AdminUserSerializer(serializers.Serializer):
             "id": instance.id,
             "username": instance.username,
             "email": instance.email or "",
-            "role": profile.role,
+            "role": profile.get_effective_role(),
+            "legacy_role": profile.legacy_role or "",
             "is_active": instance.is_active,
             "is_2fa_enabled": profile.is_2fa_enabled,
             "created_at": instance.date_joined,
@@ -36,7 +38,9 @@ class AdminUserSerializer(serializers.Serializer):
 class AdminUserWriteSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=150, required=False)
     email = serializers.EmailField(required=False, allow_blank=True)
-    password = serializers.CharField(required=False, min_length=6, write_only=True, trim_whitespace=False)
+    password = serializers.CharField(
+        required=False, min_length=6, write_only=True, trim_whitespace=False
+    )
     role = serializers.ChoiceField(choices=UserProfile.ROLE_CHOICES, required=False)
     is_active = serializers.BooleanField(required=False)
     is_2fa_enabled = serializers.BooleanField(required=False)
@@ -83,10 +87,13 @@ class AdminUserWriteSerializer(serializers.Serializer):
         )
         profile, _ = UserProfile.objects.get_or_create(user=user)
         profile.role = validated_data["role"]
+        profile.legacy_role = ""
         profile.is_2fa_enabled = validated_data.get("is_2fa_enabled", False)
         if not profile.is_2fa_enabled:
             profile.totp_secret = ""
-        profile.save(update_fields=["role", "is_2fa_enabled", "totp_secret", "updated_at"])
+        profile.save(
+            update_fields=["role", "legacy_role", "is_2fa_enabled", "totp_secret", "updated_at"]
+        )
         return user
 
     @transaction.atomic
@@ -104,11 +111,14 @@ class AdminUserWriteSerializer(serializers.Serializer):
         profile, _ = UserProfile.objects.get_or_create(user=instance)
         if "role" in validated_data:
             profile.role = validated_data["role"]
+            profile.legacy_role = ""
         if "is_2fa_enabled" in validated_data:
             profile.is_2fa_enabled = validated_data["is_2fa_enabled"]
             if not profile.is_2fa_enabled:
                 profile.totp_secret = ""
-        profile.save(update_fields=["role", "is_2fa_enabled", "totp_secret", "updated_at"])
+        profile.save(
+            update_fields=["role", "legacy_role", "is_2fa_enabled", "totp_secret", "updated_at"]
+        )
         return instance
 
 
@@ -182,7 +192,9 @@ class EnterpriseSerializer(serializers.Serializer):
     block_ids = serializers.ListField(child=serializers.IntegerField(), read_only=True)
 
     def to_representation(self, instance):
-        block_ids = list(instance.block_mappings.order_by("block_id").values_list("block_id", flat=True))
+        block_ids = list(
+            instance.block_mappings.order_by("block_id").values_list("block_id", flat=True)
+        )
         return {
             "id": instance.id,
             "name": instance.name,
@@ -238,7 +250,9 @@ class EnterpriseWriteSerializer(serializers.Serializer):
                 continue
             seen.add(item)
             unique_ids.append(item)
-        existing_ids = set(FunctionalBlock.objects.filter(id__in=unique_ids).values_list("id", flat=True))
+        existing_ids = set(
+            FunctionalBlock.objects.filter(id__in=unique_ids).values_list("id", flat=True)
+        )
         missing = sorted(set(unique_ids) - existing_ids)
         if missing:
             raise serializers.ValidationError(f"Unknown block ids: {missing}")
@@ -269,9 +283,13 @@ class EnterpriseWriteSerializer(serializers.Serializer):
 
     @staticmethod
     def _sync_mappings(enterprise, block_ids):
-        EnterpriseBlockMapping.objects.filter(enterprise=enterprise).exclude(block_id__in=block_ids).delete()
+        EnterpriseBlockMapping.objects.filter(enterprise=enterprise).exclude(
+            block_id__in=block_ids
+        ).delete()
         existing = set(
-            EnterpriseBlockMapping.objects.filter(enterprise=enterprise).values_list("block_id", flat=True)
+            EnterpriseBlockMapping.objects.filter(enterprise=enterprise).values_list(
+                "block_id", flat=True
+            )
         )
         for block_id in block_ids:
             if block_id in existing:

@@ -11,7 +11,7 @@
 
 if (typeof window !== 'undefined') {
   /** Базовый URL backend API (без слэша в конце). Пусто — mock-режим. */
-  window.API_BASE_URL = ''; // например: 'http://localhost:8000'
+  window.API_BASE_URL = 'http://localhost:8000'; // например: 'http://localhost:8000'
 
   /**
    * Флаг источника данных: true — API, false — mock (JSON + VFS).
@@ -24,6 +24,13 @@ if (typeof window !== 'undefined') {
 
   /** Опционально: таймаут для тяжёлых запросов (экспорт и т.д.), мс */
   // window.HEAVY_REQUEST_TIMEOUT_MS = 30000;
+
+  /**
+   * Cookie auth для refresh-токена:
+   * true — refresh в HttpOnly cookie (рекомендуется для staging/prod);
+   * false — legacy хранение refresh в storage.
+   */
+  // window.USE_REFRESH_COOKIE_AUTH = true;
 }
 
 export {};

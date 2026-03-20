@@ -10,15 +10,15 @@ class Command(BaseCommand):
 
     DEFAULT_USERS = [
         {"username": "admin", "password": "admin123", "role": UserProfile.ROLE_ADMIN},
-        {"username": "architect", "password": "architect123", "role": UserProfile.ROLE_ARCHITECT},
-        {"username": "director", "password": "director123", "role": UserProfile.ROLE_DIRECTOR},
-        {
-            "username": "project_manager",
-            "password": "pm123",
-            "role": UserProfile.ROLE_PROJECT_MANAGER,
-        },
-        {"username": "analyst", "password": "analyst123", "role": UserProfile.ROLE_ANALYST},
-        {"username": "viewer", "password": "viewer123", "role": UserProfile.ROLE_VIEWER},
+        {"username": "owner", "password": "owner123", "role": UserProfile.ROLE_OWNER},
+        {"username": "editor", "password": "editor123", "role": UserProfile.ROLE_EDITOR},
+        {"username": "guest", "password": "guest123", "role": UserProfile.ROLE_GUEST},
+        # Legacy aliases retained for compatibility during migration.
+        {"username": "architect", "password": "architect123", "role": UserProfile.ROLE_OWNER},
+        {"username": "director", "password": "director123", "role": UserProfile.ROLE_OWNER},
+        {"username": "project_manager", "password": "pm123", "role": UserProfile.ROLE_OWNER},
+        {"username": "analyst", "password": "analyst123", "role": UserProfile.ROLE_GUEST},
+        {"username": "viewer", "password": "viewer123", "role": UserProfile.ROLE_GUEST},
     ]
 
     def add_arguments(self, parser):
@@ -63,7 +63,8 @@ class Command(BaseCommand):
 
                 profile, _ = UserProfile.objects.get_or_create(user=user)
                 profile.role = role
-                profile.save(update_fields=["role", "updated_at"])
+                profile.legacy_role = ""
+                profile.save(update_fields=["role", "legacy_role", "updated_at"])
 
         self.stdout.write(self.style.SUCCESS("Test users seeded."))
         self.stdout.write(f"Created: {created}")

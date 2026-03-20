@@ -5,6 +5,7 @@ from auth_custom.views import (
     LogoutAPIView,
     MeAPIView,
     RefreshAPIView,
+    TwoFAQrAPIView,
     TwoFASetupAPIView,
     TwoFAVerifyAPIView,
 )
@@ -16,6 +17,8 @@ urlpatterns = [
     path("refresh/", RefreshAPIView.as_view(), name="auth-refresh"),
     path("2fa/setup", TwoFASetupAPIView.as_view(), name="auth-2fa-setup-noslash"),
     path("2fa/setup/", TwoFASetupAPIView.as_view(), name="auth-2fa-setup"),
+    path("2fa/qr", TwoFAQrAPIView.as_view(), name="auth-2fa-qr-noslash"),
+    path("2fa/qr/", TwoFAQrAPIView.as_view(), name="auth-2fa-qr"),
     path("2fa/verify", TwoFAVerifyAPIView.as_view(), name="auth-2fa-verify-noslash"),
     path("2fa/verify/", TwoFAVerifyAPIView.as_view(), name="auth-2fa-verify"),
     path("logout", LogoutAPIView.as_view(), name="auth-logout-noslash"),

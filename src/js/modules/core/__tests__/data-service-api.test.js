@@ -75,4 +75,69 @@ describe('DataService (API mode, MSW mock)', () => {
       expect(after.length).toBe(len - 1);
     }
   });
+
+  it('createTechnologyProposal() и loadMyTechnologyProposals() работают для create/update', async () => {
+    const createDraft = await DataService.createTechnologyProposal('create', {
+      tech: {
+        name: 'Черновик MSW',
+        description: 'Новая технология через proposal',
+        block: 1,
+        blocks: [1],
+        directions: [1],
+        functionCoverage: ['Маркшейдерские работы'],
+        enterprises: [
+          {
+            enterpriseId: 1,
+            technologicalReadiness: 2,
+            organizationalReadiness: 2,
+            status: 'planned'
+          }
+        ],
+        trlStage: 3
+      },
+      comment: 'Нужно согласование'
+    });
+    expect(createDraft.status).toBe('draft');
+
+    const techs = await DataService.loadTechnologies();
+    const updateDraft = await DataService.createTechnologyProposal('update', {
+      technologyId: techs[0].id,
+      tech: {
+        ...techs[0],
+        name: 'Переименовано через proposal'
+      }
+    });
+    expect(updateDraft.status).toBe('draft');
+
+    const mine = await DataService.loadMyTechnologyProposals();
+    expect(mine).toHaveLength(2);
+    expect(mine.map((item) => item.action)).toEqual(['create', 'update']);
+  });
+
+  it('approve/reject proposal меняют статус и применяют изменения', async () => {
+    const techs = await DataService.loadTechnologies();
+    const target = techs[0];
+    const proposal = await DataService.createTechnologyProposal('update', {
+      technologyId: target.id,
+      tech: {
+        ...target,
+        name: 'Одобрено через proposal'
+      }
+    });
+
+    const pending = await DataService.loadPendingTechnologyProposals();
+    expect(pending.some((item) => item.id === proposal.id)).toBe(true);
+
+    const approved = await DataService.approveTechnologyProposal(proposal.id, 'OK');
+    expect(approved.status).toBe('approved');
+
+    const afterApprove = await DataService.loadTechnologies();
+    expect(afterApprove.find((item) => item.id === target.id)?.name).toBe('Одобрено через proposal');
+
+    const rejectedProposal = await DataService.createTechnologyProposal('delete', {
+      technologyId: target.id
+    });
+    const rejected = await DataService.rejectTechnologyProposal(rejectedProposal.id, 'Не сейчас');
+    expect(rejected.status).toBe('rejected');
+  });
 });

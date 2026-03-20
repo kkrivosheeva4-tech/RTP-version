@@ -9,8 +9,9 @@
   let blockFunctionCounts = null;
 
   /**
-   * Загрузка данных из functionToBlock.json
-   * ОБНОВЛЕНО (2026-01-29): Добавлено кеширование в localStorage для офлайн-работы
+   * Загрузка данных functionToBlock.
+   * При USE_API=true — из API (DataService), иначе — из JSON.
+   * Кэш только в памяти, не в localStorage.
    * @returns {Promise<Object>} Объект с маппингом функций на блоки
    */
   async function loadFunctionToBlockData() {
@@ -18,69 +19,23 @@
       return functionToBlockData;
     }
 
-    // ОБНОВЛЕНО (2026-01-29): Пробуем загрузить из localStorage
-    const STORAGE_KEY = 'rtp_functionToBlock_data';
-    const STORAGE_VERSION_KEY = 'rtp_functionToBlock_version';
-    const CURRENT_VERSION = '1.0'; // Версия данных для инвалидации кеша
-
     try {
-      // Проверяем localStorage
-      if (typeof localStorage !== 'undefined') {
-        const cachedVersion = localStorage.getItem(STORAGE_VERSION_KEY);
-        const cachedData = localStorage.getItem(STORAGE_KEY);
-
-        if (cachedVersion === CURRENT_VERSION && cachedData) {
-          try {
-            functionToBlockData = JSON.parse(cachedData);
-            // Данные functionToBlock загружены из localStorage
-            return functionToBlockData;
-          } catch (e) {
-            // Ошибка парсинга данных из localStorage, загружаем с сервера
-          }
-        }
+      const ds = typeof window !== 'undefined' ? window.DataService : null;
+      if (ds && typeof ds.loadReference === 'function') {
+        const data = await ds.loadReference('functionToBlock');
+        functionToBlockData = data && typeof data === 'object' ? data : {};
+        return functionToBlockData;
       }
-    } catch (e) {
-      // Ошибка доступа к localStorage
-    }
+    } catch (_) {}
 
     try {
-      // Используем абсолютный путь от корня сайта
       const response = await fetch('/src/data/ru/functionToBlock.json');
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       functionToBlockData = await response.json();
-      // Данные functionToBlock загружены с сервера
-
-      // ОБНОВЛЕНО (2026-01-29): Сохраняем в localStorage для последующих загрузок
-      try {
-        if (typeof localStorage !== 'undefined') {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(functionToBlockData));
-          localStorage.setItem(STORAGE_VERSION_KEY, CURRENT_VERSION);
-          // Данные functionToBlock сохранены в localStorage
-        }
-      } catch (e) {
-        // Ошибка сохранения в localStorage
-      }
-
       return functionToBlockData;
     } catch (error) {
-      // Ошибка загрузки functionToBlock.json
-
-      // ОБНОВЛЕНО (2026-01-29): Пробуем использовать устаревшие данные из localStorage
-      if (typeof localStorage !== 'undefined') {
-        const cachedData = localStorage.getItem(STORAGE_KEY);
-        if (cachedData) {
-          try {
-            functionToBlockData = JSON.parse(cachedData);
-            // Используются устаревшие данные из localStorage
-            return functionToBlockData;
-          } catch (e) {
-            // Ошибка парсинга устаревших данных
-          }
-        }
-      }
-
       functionToBlockData = {};
       return functionToBlockData;
     }
@@ -364,18 +319,8 @@
       weights = functionWeights;
     }
 
-    // Получаем маппинг функций на блоки (из кеша, если доступен)
-    let functionToBlockMap = {};
-    try {
-      if (typeof localStorage !== 'undefined') {
-        const cached = localStorage.getItem('rtp_functionToBlock_data');
-        if (cached) {
-          functionToBlockMap = JSON.parse(cached);
-        }
-      }
-    } catch (e) {
-      // Игнорируем ошибки
-    }
+    // Используем in-memory кэш (functionToBlockData), не localStorage
+    const functionToBlockMap = functionToBlockData || {};
 
     // Подсчитываем взвешенную сумму всех функций во всех блоках технологии
     let totalWeightedFunctions = 0;
@@ -515,6 +460,14 @@
    * ОБНОВЛЕНО: Загружает веса важности функций
    */
   async function init() {
+    // Одноразовая очистка: удаляем старые ключи из localStorage (больше не используем)
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem('rtp_functionToBlock_data');
+        localStorage.removeItem('rtp_functionToBlock_version');
+      }
+    } catch (_) {}
+
     // Инициализация FuncCoverUtils
     const ftb = await loadFunctionToBlockData();
     if (!blockFunctionCounts) {

@@ -1,0 +1,10 @@
+src/js/config/roles-config.js
+src/js/config/roles-config.test.js
+src/js/modules/business/auth.js
+src/js/modules/ui/common-ui.js
+src/js/modules/ui/onboarding.js
+src/pages/admin.html
+e2e/add-technology.spec.js
+e2e/auth.spec.js
+e2e/helpers/auth.js
+e2e/radar.spec.js

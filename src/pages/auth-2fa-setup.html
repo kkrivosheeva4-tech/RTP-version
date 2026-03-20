@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://api.qrserver.com; font-src 'self' data:; connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 http://localhost:5173 http://127.0.0.1:5173 ws://localhost:5173 ws://127.0.0.1:5173; worker-src 'self' blob:; base-uri 'self';" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 http://localhost:5173 http://127.0.0.1:5173 ws://localhost:5173 ws://127.0.0.1:5173; worker-src 'self' blob:; base-uri 'self';" />
   <meta name="description" content="Настройка двухфакторной аутентификации - Радар Технологий" />
   <meta name="theme-color" content="#ce9068" />
   <meta name="color-scheme" content="light dark">
@@ -79,6 +79,7 @@
         </div>
 
         <div class="btn-row">
+          <button id="retryQrBtn" class="btn btn--secondary" type="button">Повторить загрузку QR</button>
           <button id="submitBtn" class="btn" type="button">
             <span class="btn__text">Завершить настройку</span>
             <span class="btn__spinner" aria-hidden="true"></span>

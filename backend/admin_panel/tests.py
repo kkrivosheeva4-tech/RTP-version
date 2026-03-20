@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -17,6 +18,7 @@ class TestAdminPanelApi(APITestCase):
     TEST_2FA_SECRET = "JBSWY3DPEHPK3PXP"
 
     def setUp(self):
+        cache.clear()
         self.block_1 = FunctionalBlock.objects.create(id=1, name="Block 1")
         self.block_2 = FunctionalBlock.objects.create(id=2, name="Block 2")
         self.enterprise = Enterprise.objects.create(name="Enterprise A", code="EA")
@@ -29,17 +31,18 @@ class TestAdminPanelApi(APITestCase):
         admin_profile.totp_secret = self.TEST_2FA_SECRET
         admin_profile.save(update_fields=["role", "is_2fa_enabled", "totp_secret", "updated_at"])
 
-        self.analyst_user = User.objects.create_user(username="analyst", password="analyst123")
-        analyst_profile, _ = UserProfile.objects.get_or_create(user=self.analyst_user)
-        analyst_profile.role = UserProfile.ROLE_ANALYST
-        analyst_profile.is_2fa_enabled = True
-        analyst_profile.totp_secret = self.TEST_2FA_SECRET
-        analyst_profile.save(update_fields=["role", "is_2fa_enabled", "totp_secret", "updated_at"])
+        self.guest_user = User.objects.create_user(username="guest", password="guest123")
+        guest_profile, _ = UserProfile.objects.get_or_create(user=self.guest_user)
+        guest_profile.role = UserProfile.ROLE_GUEST
+        guest_profile.is_2fa_enabled = True
+        guest_profile.totp_secret = self.TEST_2FA_SECRET
+        guest_profile.save(update_fields=["role", "is_2fa_enabled", "totp_secret", "updated_at"])
 
         self.admin_token = self._login("admin", "admin123")
-        self.analyst_token = self._login("analyst", "analyst123")
+        self.guest_token = self._login("guest", "guest123")
 
     def tearDown(self):
+        cache.clear()
         for backup in BackupSnapshot.objects.all():
             try:
                 path = backup.storage_path
@@ -78,7 +81,7 @@ class TestAdminPanelApi(APITestCase):
                 "username": "viewer1",
                 "email": "viewer1@example.com",
                 "password": "viewer123",
-                "role": UserProfile.ROLE_VIEWER,
+                "role": UserProfile.ROLE_GUEST,
                 "is_active": True,
             },
             format="json",
@@ -92,11 +95,11 @@ class TestAdminPanelApi(APITestCase):
 
         patch_response = self.client.patch(
             f"/api/v1/admin-panel/users/{created_id}",
-            data={"role": UserProfile.ROLE_ANALYST, "is_active": False},
+            data={"role": UserProfile.ROLE_EDITOR, "is_active": False},
             format="json",
         )
         self.assertEqual(patch_response.status_code, status.HTTP_200_OK)
-        self.assertEqual(patch_response.data["role"], UserProfile.ROLE_ANALYST)
+        self.assertEqual(patch_response.data["role"], UserProfile.ROLE_EDITOR)
         self.assertFalse(patch_response.data["is_active"])
 
         delete_response = self.client.delete(f"/api/v1/admin-panel/users/{created_id}")
@@ -109,7 +112,7 @@ class TestAdminPanelApi(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_non_admin_cannot_access_admin_panel(self):
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.analyst_token}")
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.guest_token}")
         response = self.client.get("/api/v1/admin-panel/users")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -121,7 +124,9 @@ class TestAdminPanelApi(APITestCase):
             entity_type="auth",
             entity_id="1",
         )
-        AuditLog.objects.filter(id=old_log.id).update(created_at=timezone.now() - timedelta(days=10))
+        AuditLog.objects.filter(id=old_log.id).update(
+            created_at=timezone.now() - timedelta(days=10)
+        )
         AuditLog.objects.create(
             actor=self.admin_user,
             action=AuditLog.ACTION_UPDATE,
@@ -167,11 +172,57 @@ class TestAdminPanelApi(APITestCase):
         download_response = self.client.get(f"/api/v1/admin-panel/backups/{backup_id}/download")
         self.assertEqual(download_response.status_code, status.HTTP_200_OK)
         self.assertIn("attachment", download_response.headers.get("Content-Disposition", ""))
-        download_response.close()
+        self.assertGreater(len(download_response.content), 0)
 
         delete_response = self.client.delete(f"/api/v1/admin-panel/backups/{backup_id}")
         self.assertEqual(delete_response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(BackupSnapshot.objects.filter(id=backup_id).exists())
+
+    def test_backup_restore_recovers_enterprise_state(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_token}")
+        create_response = self.client.post(
+            "/api/v1/admin-panel/backups",
+            data={"name": "restore-backup", "description": "restore test"},
+            format="json",
+        )
+        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+        backup_id = create_response.data["id"]
+
+        self.enterprise.description = "mutated"
+        self.enterprise.code = "MUT"
+        self.enterprise.save(update_fields=["description", "code"])
+        EnterpriseBlockMapping.objects.filter(enterprise=self.enterprise).delete()
+        EnterpriseBlockMapping.objects.create(enterprise=self.enterprise, block=self.block_2)
+
+        dry_run_response = self.client.post(
+            f"/api/v1/admin-panel/backups/{backup_id}/restore",
+            data={"dry_run": True},
+            format="json",
+        )
+        self.assertEqual(dry_run_response.status_code, status.HTTP_200_OK)
+        self.assertTrue(dry_run_response.data["dry_run"])
+        self.assertGreaterEqual(dry_run_response.data["counts"]["enterprises"], 1)
+
+        restore_response = self.client.post(
+            f"/api/v1/admin-panel/backups/{backup_id}/restore",
+            data={},
+            format="json",
+        )
+        self.assertEqual(restore_response.status_code, status.HTTP_200_OK)
+        self.assertTrue(restore_response.data["ok"])
+        self.assertGreaterEqual(restore_response.data["restored_counts"]["enterprises"], 1)
+
+        self.enterprise.refresh_from_db()
+        self.assertEqual(self.enterprise.description, "")
+        self.assertEqual(self.enterprise.code, "EA")
+        self.assertEqual(
+            list(
+                EnterpriseBlockMapping.objects.filter(enterprise=self.enterprise)
+                .order_by("block_id")
+                .values_list("block_id", flat=True)
+            ),
+            [self.block_1.id],
+        )
 
     def test_enterprises_crud_with_block_ids(self):
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_token}")

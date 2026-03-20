@@ -1,0 +1,11 @@
+https://__LOCAL_HOST__, https://127.0.0.1 {
+  tls internal
+  encode zstd gzip
+
+  reverse_proxy __BACKEND_UPSTREAM__ {
+    header_up Host {host}
+    header_up X-Forwarded-Host {host}
+    header_up X-Forwarded-Port 443
+    header_up X-Forwarded-Proto https
+  }
+}

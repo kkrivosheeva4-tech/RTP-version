@@ -1,8 +1,10 @@
 /**
- * Раздел «Предприятия» админ-панели: загрузка из JSON/localStorage, CRUD, таблица и модалка.
+ * Раздел «Предприятия» админ-панели: загрузка из backend API, CRUD, таблица и модалка.
  */
 (function () {
   'use strict';
+
+  var ENTERPRISES_API_PATH = '/api/v1/admin-panel/enterprises';
 
   function getCommon() {
     return window.AdminCommon;
@@ -12,9 +14,76 @@
     return getCommon().AdminState;
   }
 
+  function getApiClient() {
+    return window.ApiClient || null;
+  }
+
+  function isApiMode() {
+    var client = getApiClient();
+    var cfg = window.ApiConfig;
+    return !!(client && typeof client.get === 'function' && cfg && typeof cfg.getUseApi === 'function' && cfg.getUseApi());
+  }
+
   function addAuditLog(action, details) {
     if (typeof window.addAdminAuditLog === 'function') {
       window.addAdminAuditLog(action, details);
+    }
+  }
+
+  function mapApiEnterpriseToLocal(e) {
+    return {
+      id: e && e.id ? Number(e.id) : 0,
+      name: (e && e.name != null ? String(e.name) : '').trim() || '',
+      code: (e && e.code != null ? String(e.code) : '').trim() || '',
+      description: (e && e.description != null ? String(e.description) : '').trim() || ''
+    };
+  }
+
+  async function fetchEnterprisesFromApi() {
+    var client = getApiClient();
+    if (!client || typeof client.get !== 'function') {
+      throw new Error('ApiClient недоступен для загрузки предприятий');
+    }
+    var response = await client.get(ENTERPRISES_API_PATH);
+    if (!response || response.ok === false) {
+      throw new Error((response && response.error) || 'Не удалось загрузить список предприятий');
+    }
+    var data = Array.isArray(response.data) ? response.data : [];
+    return data.map(mapApiEnterpriseToLocal);
+  }
+
+  async function createEnterpriseViaApi(payload) {
+    var client = getApiClient();
+    if (!client || typeof client.post !== 'function') {
+      throw new Error('ApiClient недоступен для создания предприятия');
+    }
+    var response = await client.post(ENTERPRISES_API_PATH, payload);
+    if (!response || response.ok === false) {
+      throw new Error((response && response.error) || 'Не удалось создать предприятие');
+    }
+    return mapApiEnterpriseToLocal(response.data || {});
+  }
+
+  async function updateEnterpriseViaApi(id, payload) {
+    var client = getApiClient();
+    if (!client || typeof client.patch !== 'function') {
+      throw new Error('ApiClient недоступен для обновления предприятия');
+    }
+    var response = await client.patch(ENTERPRISES_API_PATH + '/' + id, payload);
+    if (!response || response.ok === false) {
+      throw new Error((response && response.error) || 'Не удалось обновить предприятие');
+    }
+    return mapApiEnterpriseToLocal(response.data || {});
+  }
+
+  async function deleteEnterpriseViaApi(id) {
+    var client = getApiClient();
+    if (!client || typeof client.delete !== 'function') {
+      throw new Error('ApiClient недоступен для удаления предприятия');
+    }
+    var response = await client.delete(ENTERPRISES_API_PATH + '/' + id);
+    if (!response || response.ok === false) {
+      throw new Error((response && response.error) || 'Не удалось удалить предприятие');
     }
   }
 
@@ -43,6 +112,46 @@
   function loadEnterprisesFromJson() {
     var state = getState();
     var common = getCommon();
+    if (isApiMode()) {
+      fetchEnterprisesFromApi()
+        .then(function (list) {
+          state.enterprises = list;
+          if (state.currentSection === 'enterprises' && window.AdminEnterprises && typeof window.AdminEnterprises.loadEnterprises === 'function') {
+            window.AdminEnterprises.loadEnterprises();
+          }
+        })
+        .catch(function (e) {
+          if (typeof window.reportError === 'function') {
+            window.reportError(e, 'Загрузка списка предприятий');
+          } else if (window.Logger) {
+            window.Logger.warn('Failed to load enterprises', e);
+          }
+        });
+      return;
+    }
+    // Mock-режим: используем DataService (JSON/VFS), не прямой fetch
+    var ds = window.DataService;
+    if (ds && typeof ds.loadReference === 'function') {
+      ds.loadReference('enterprises')
+        .then(function (data) {
+          var list = Array.isArray(data) ? data : (data && data.length ? [] : []);
+          if (list.length) {
+            state.enterprises = normalizeEnterprises(list);
+            common.persistEnterprises();
+          }
+          if (state.currentSection === 'enterprises' && window.AdminEnterprises && typeof window.AdminEnterprises.loadEnterprises === 'function') {
+            window.AdminEnterprises.loadEnterprises();
+          }
+        })
+        .catch(function (e) {
+          if (typeof window.reportError === 'function') {
+            window.reportError(e, 'Загрузка списка предприятий');
+          } else if (window.Logger) {
+            window.Logger.warn('Failed to load enterprises', e);
+          }
+        });
+      return;
+    }
     fetch('/src/data/ru/enterprises.json')
       .then(function (response) {
         if (!response.ok) return;
@@ -159,6 +268,19 @@
       'Удаление предприятия',
       'Вы уверены, что хотите удалить предприятие "' + enterprise.name + '"?',
       function () {
+        if (isApiMode()) {
+          deleteEnterpriseViaApi(enterpriseId)
+            .then(function () {
+              state.enterprises = enterprises.filter(function (e) { return e.id !== enterpriseId; });
+              loadEnterprises();
+              addAuditLog('delete', 'Удалено предприятие "' + enterprise.name + '" (' + enterprise.code + ')');
+              common.showNotification('Успешно', 'Предприятие удалено', 'success');
+            })
+            .catch(function (err) {
+              common.showNotification('Ошибка', (err && err.message) || 'Не удалось удалить предприятие', 'error', true);
+            });
+          return;
+        }
         state.enterprises = enterprises.filter(function (e) { return e.id !== enterpriseId; });
         common.persistEnterprises();
         loadEnterprises();
@@ -182,14 +304,22 @@
       common.showNotification('Ошибка', 'Заполните все обязательные поля', 'error');
       return;
     }
-    var existingWithCode = enterprises.filter(function (e) {
-      return e.code.toLowerCase() === formData.code.toLowerCase() && e.id !== state.currentEnterpriseId;
-    })[0];
-    if (existingWithCode) {
-      common.showNotification('Ошибка', 'Предприятие с кодом "' + formData.code + '" уже существует', 'error');
-      return;
-    }
     if (state.currentEnterpriseId) {
+      if (isApiMode()) {
+        updateEnterpriseViaApi(state.currentEnterpriseId, formData)
+          .then(function (updated) {
+            var idx = enterprises.findIndex(function (x) { return x.id === state.currentEnterpriseId; });
+            if (idx !== -1) enterprises[idx] = updated;
+            loadEnterprises();
+            addAuditLog('update', 'Изменено предприятие: ' + formData.name);
+            common.showNotification('Успешно', 'Предприятие обновлено', 'success');
+            common.hideModal('enterpriseModal');
+          })
+          .catch(function (err) {
+            common.showNotification('Ошибка', (err && err.message) || 'Не удалось обновить предприятие', 'error', true);
+          });
+        return;
+      }
       var idx = -1;
       for (var i = 0; i < enterprises.length; i++) {
         if (enterprises[i].id === state.currentEnterpriseId) { idx = i; break; }
@@ -205,6 +335,27 @@
         common.showNotification('Успешно', 'Предприятие обновлено', 'success');
       }
     } else {
+      var existingWithCode = enterprises.filter(function (e) {
+        return e.code.toLowerCase() === formData.code.toLowerCase();
+      })[0];
+      if (existingWithCode && !isApiMode()) {
+        common.showNotification('Ошибка', 'Предприятие с кодом "' + formData.code + '" уже существует', 'error');
+        return;
+      }
+      if (isApiMode()) {
+        createEnterpriseViaApi(formData)
+          .then(function (newEnterprise) {
+            state.enterprises.push(newEnterprise);
+            loadEnterprises();
+            addAuditLog('create', 'Создано новое предприятие: ' + formData.name + ' (' + formData.code + ')');
+            common.showNotification('Успешно', 'Предприятие создано', 'success');
+            common.hideModal('enterpriseModal');
+          })
+          .catch(function (err) {
+            common.showNotification('Ошибка', (err && err.message) || 'Не удалось создать предприятие', 'error', true);
+          });
+        return;
+      }
       var maxId = 0;
       enterprises.forEach(function (e) {
         var id = Number(e && e.id) || 0;
@@ -242,6 +393,8 @@
     init: init,
     loadEnterprises: loadEnterprises,
     loadEnterprisesFromJson: loadEnterprisesFromJson,
-    normalizeEnterprises: normalizeEnterprises
+    normalizeEnterprises: normalizeEnterprises,
+    fetchEnterprisesFromApi: fetchEnterprisesFromApi,
+    isApiMode: isApiMode
   };
 })();

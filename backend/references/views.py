@@ -19,7 +19,6 @@ from references.models import (
     Vendor,
 )
 
-
 SUPPORTED_REFERENCE_NAMES = {
     "blocks",
     "functions",
@@ -102,14 +101,15 @@ class ReferenceAPIView(APIView):
             return list(Integrator.objects.order_by("name").values_list("name", flat=True))
 
         if name == "enterprises":
-            return list(Enterprise.objects.order_by("id").values("id", "name", "code", "description"))
+            return list(
+                Enterprise.objects.order_by("id").values("id", "name", "code", "description")
+            )
 
         if name == "enterprisesBlocksMapping":
             by_enterprise = {}
-            mappings = (
-                EnterpriseBlockMapping.objects.select_related("enterprise", "block")
-                .order_by("enterprise_id", "block_id")
-            )
+            mappings = EnterpriseBlockMapping.objects.select_related(
+                "enterprise", "block"
+            ).order_by("enterprise_id", "block_id")
             for mapping in mappings:
                 current = by_enterprise.setdefault(
                     mapping.enterprise_id,
@@ -129,7 +129,9 @@ class ReferenceAPIView(APIView):
             normalized = self._validate_blocks_payload(payload)
             keep_ids = [item["id"] for item in normalized]
             for item in normalized:
-                FunctionalBlock.objects.update_or_create(id=item["id"], defaults={"name": item["name"]})
+                FunctionalBlock.objects.update_or_create(
+                    id=item["id"], defaults={"name": item["name"]}
+                )
             FunctionalBlock.objects.exclude(id__in=keep_ids).delete()
             return
 
@@ -222,7 +224,9 @@ class ReferenceAPIView(APIView):
                 enterprise = Enterprise.objects.get(id=enterprise_id)
                 for block_id in block_ids:
                     FunctionalBlock.objects.get(id=block_id)
-                    EnterpriseBlockMapping.objects.get_or_create(enterprise=enterprise, block_id=block_id)
+                    EnterpriseBlockMapping.objects.get_or_create(
+                        enterprise=enterprise, block_id=block_id
+                    )
             return
 
         raise ValueError(f"Unsupported reference: {name}")
@@ -354,7 +358,9 @@ class ReferenceAPIView(APIView):
                 raise ValueError("directionToQuadrant key must be non-empty")
             if isinstance(value, list):
                 if len(value) != 1:
-                    raise ValueError(f"directionToQuadrant[{key}] list must contain exactly one item")
+                    raise ValueError(
+                        f"directionToQuadrant[{key}] list must contain exactly one item"
+                    )
                 quadrant = value[0]
             else:
                 quadrant = value
@@ -429,11 +435,17 @@ class ReferenceAPIView(APIView):
             if not isinstance(enterprise_id, int):
                 raise ValueError(f"enterprises_blocks_mapping[{idx}].enterprise_id must be integer")
             if not isinstance(block_ids, list):
-                raise ValueError(f"enterprises_blocks_mapping[{idx}].functional_blocks must be a list")
+                raise ValueError(
+                    f"enterprises_blocks_mapping[{idx}].functional_blocks must be a list"
+                )
             if enterprise_id not in known_enterprises:
-                raise ValueError(f"Unknown enterprise_id {enterprise_id} in enterprises_blocks_mapping[{idx}]")
+                raise ValueError(
+                    f"Unknown enterprise_id {enterprise_id} in enterprises_blocks_mapping[{idx}]"
+                )
             if enterprise_id in seen_enterprises:
-                raise ValueError(f"Duplicate enterprise_id {enterprise_id} in enterprises_blocks_mapping")
+                raise ValueError(
+                    f"Duplicate enterprise_id {enterprise_id} in enterprises_blocks_mapping"
+                )
             seen_enterprises.add(enterprise_id)
 
             unique_blocks = []

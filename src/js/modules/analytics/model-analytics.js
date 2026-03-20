@@ -9,7 +9,82 @@
  * ОБНОВЛЕНО (2026-01-29): Добавлен модуль аналитики для приоритета 3
  */
 
+import FactorEngine from '../radar/factor-engine.js';
+
 'use strict';
+
+  function getAnalyticsRegistry() {
+    const modelConfig = (typeof window !== 'undefined' && window.RadarModelConfig)
+      ? window.RadarModelConfig
+      : {};
+    const registry = FactorEngine.buildFactorRegistry(modelConfig);
+    return registry.length > 0 ? registry : FactorEngine.buildFactorRegistry({});
+  }
+
+  function getActiveFactorIds() {
+    return getAnalyticsRegistry().map(f => f.id);
+  }
+
+  function initFactorAccumulator(factorIds) {
+    const factors = {};
+    factorIds.forEach(id => {
+      factors[id] = [];
+    });
+    return factors;
+  }
+
+  function toNumericOrNull(value) {
+    if (value === undefined || value === null || value === '') return null;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function buildCorrelationMatrix(factors, factorIds) {
+    const matrix = {};
+    for (let i = 0; i < factorIds.length; i++) {
+      for (let j = i + 1; j < factorIds.length; j++) {
+        const a = factorIds[i];
+        const b = factorIds[j];
+        matrix[`${a}_${b}`] = calculateCorrelation(factors[a], factors[b]);
+      }
+    }
+    return matrix;
+  }
+
+  function buildFactorStatistics(factors, factorIds) {
+    const stats = {};
+    factorIds.forEach(id => {
+      const values = factors[id] || [];
+      stats[id] = {
+        count: values.length,
+        mean: values.length > 0
+          ? (values.reduce((a, b) => a + b, 0) / values.length).toFixed(2)
+          : 'N/A'
+      };
+    });
+    return stats;
+  }
+
+  function createModelConfigWithWeights(baseModelConfig, weights) {
+    const nextModelConfig = { ...(baseModelConfig || {}) };
+    const nextFactors = { ...(nextModelConfig.factors || {}) };
+
+    Object.entries(weights || {}).forEach(([factorId, weight]) => {
+      nextFactors[factorId] = {
+        ...(nextFactors[factorId] || {}),
+        enabled: true,
+        weight
+      };
+    });
+
+    nextModelConfig.factors = nextFactors;
+    nextModelConfig.weights = {
+      ...(nextModelConfig.weights || {}),
+      ...(weights || {})
+    };
+
+    return nextModelConfig;
+  }
 
   /**
    * Вычисление коэффициента корреляции Пирсона между двумя массивами
@@ -67,13 +142,13 @@
    * @returns {Object} Объект с факторами готовности
    */
   function extractFactors(tech) {
+    const activeFactorIds = getActiveFactorIds();
     if (!tech) {
-      return {
-        techRead: null,
-        organRead: null,
-        funcCover: null,
-        trlStage: null
-      };
+      const empty = {};
+      activeFactorIds.forEach(id => {
+        empty[id] = null;
+      });
+      return empty;
     }
 
     // Извлекаем techRead и organRead из enterprises
@@ -142,12 +217,20 @@
       trlStage = Number(tech.trlStage);
     }
 
-    return {
+    const baseFactors = {
       techRead: techRead,
       organRead: organRead,
       funcCover: funcCover,
       trlStage: trlStage
     };
+
+    // Дополнительные факторы берем из factor engine (слой P2.3).
+    activeFactorIds.forEach(id => {
+      if (baseFactors[id] !== undefined) return;
+      baseFactors[id] = toNumericOrNull(FactorEngine.extractRawFactorValue(tech, id));
+    });
+
+    return baseFactors;
   }
 
   /**
@@ -165,31 +248,19 @@
       };
     }
 
-    // Извлекаем факторы из всех технологий
-    const factors = {
-      techRead: [],
-      organRead: [],
-      funcCover: [],
-      trlStage: []
-    };
+    const factorIds = getActiveFactorIds();
+    const factors = initFactorAccumulator(factorIds);
 
     technologies.forEach(tech => {
       const extracted = extractFactors(tech);
-      if (extracted.techRead !== null) factors.techRead.push(extracted.techRead);
-      if (extracted.organRead !== null) factors.organRead.push(extracted.organRead);
-      if (extracted.funcCover !== null) factors.funcCover.push(extracted.funcCover);
-      if (extracted.trlStage !== null) factors.trlStage.push(extracted.trlStage);
+      factorIds.forEach(id => {
+        if (extracted[id] !== null && extracted[id] !== undefined) {
+          factors[id].push(extracted[id]);
+        }
+      });
     });
 
-    // Вычисляем корреляции между всеми парами факторов
-    const correlationMatrix = {
-      techRead_organRead: calculateCorrelation(factors.techRead, factors.organRead),
-      techRead_funcCover: calculateCorrelation(factors.techRead, factors.funcCover),
-      techRead_trlStage: calculateCorrelation(factors.techRead, factors.trlStage),
-      organRead_funcCover: calculateCorrelation(factors.organRead, factors.funcCover),
-      organRead_trlStage: calculateCorrelation(factors.organRead, factors.trlStage),
-      funcCover_trlStage: calculateCorrelation(factors.funcCover, factors.trlStage)
-    };
+    const correlationMatrix = buildCorrelationMatrix(factors, factorIds);
 
     // Интерпретация корреляций
     const interpretation = [];
@@ -224,17 +295,12 @@
     return {
       correlations: correlationMatrix,
       interpretation: interpretation,
-      factorCounts: {
-        techRead: factors.techRead.length,
-        organRead: factors.organRead.length,
-        funcCover: factors.funcCover.length,
-        trlStage: factors.trlStage.length
-      },
+      factorCounts: Object.fromEntries(factorIds.map(id => [id, factors[id].length])),
       statistics: {
         totalTechnologies: technologies.length,
         technologiesWithAllFactors: technologies.filter(tech => {
           const f = extractFactors(tech);
-          return f.techRead !== null && f.organRead !== null && f.funcCover !== null && f.trlStage !== null;
+          return factorIds.every(id => f[id] !== null && f[id] !== undefined);
         }).length
       }
     };
@@ -257,12 +323,8 @@
     // Вычисляем позиции для всех технологий
     const positions = [];
     const radii = [];
-    const factors = {
-      techRead: [],
-      organRead: [],
-      funcCover: [],
-      trlStage: []
-    };
+    const factorIds = getActiveFactorIds();
+    const factors = initFactorAccumulator(factorIds);
 
     technologies.forEach(tech => {
       if (!tech || !window.Positioning || typeof window.Positioning.calculateRadarPosition !== 'function') {
@@ -276,10 +338,11 @@
 
         // Извлекаем факторы
         const f = extractFactors(tech);
-        if (f.techRead !== null) factors.techRead.push(f.techRead);
-        if (f.organRead !== null) factors.organRead.push(f.organRead);
-        if (f.funcCover !== null) factors.funcCover.push(f.funcCover);
-        if (f.trlStage !== null) factors.trlStage.push(f.trlStage);
+        factorIds.forEach(id => {
+          if (f[id] !== null && f[id] !== undefined) {
+            factors[id].push(f[id]);
+          }
+        });
       }
     });
 
@@ -372,29 +435,7 @@
           minDistance: minDistance !== Infinity ? minDistance.toFixed(2) : 'N/A',
           rangeCoverage: rangeCoverage
         },
-        // Статистика факторов
-        factors: {
-          techRead: {
-            count: factors.techRead.length,
-            mean: factors.techRead.length > 0 ?
-              (factors.techRead.reduce((a, b) => a + b, 0) / factors.techRead.length).toFixed(2) : 'N/A'
-          },
-          organRead: {
-            count: factors.organRead.length,
-            mean: factors.organRead.length > 0 ?
-              (factors.organRead.reduce((a, b) => a + b, 0) / factors.organRead.length).toFixed(2) : 'N/A'
-          },
-          funcCover: {
-            count: factors.funcCover.length,
-            mean: factors.funcCover.length > 0 ?
-              (factors.funcCover.reduce((a, b) => a + b, 0) / factors.funcCover.length).toFixed(2) : 'N/A'
-          },
-          trlStage: {
-            count: factors.trlStage.length,
-            mean: factors.trlStage.length > 0 ?
-              (factors.trlStage.reduce((a, b) => a + b, 0) / factors.trlStage.length).toFixed(2) : 'N/A'
-          }
-        }
+        factors: buildFactorStatistics(factors, factorIds)
       },
       quality: {
         // Оценка качества (0-1, где 1 - отлично)
@@ -501,13 +542,20 @@
       alphaVariations = [1, 2, 3]           // Вариации ALPHA (±1, ±2, ±3)
     } = options;
 
-    // Базовые параметры
-    const baseWeights = {
-      techRead: 0.30,
-      organRead: 0.30,
-      funcCover: 0.20,
-      trlStage: 0.20
-    };
+    const baseModelConfig = (typeof window !== 'undefined' && window.RadarModelConfig)
+      ? window.RadarModelConfig
+      : {};
+    const registry = getAnalyticsRegistry();
+    const baseWeights = {};
+    registry.forEach(f => {
+      baseWeights[f.id] = f.weight;
+    });
+    if (Object.keys(baseWeights).length === 0) {
+      return {
+        error: 'Не удалось определить активные факторы модели',
+        results: null
+      };
+    }
     const baseBias = -0.6;
     const baseAlpha = 4;
 
@@ -518,11 +566,10 @@
     };
 
     // Вычисляем базовый средний радиус один раз
-    const baseAvgRadius = calculateAverageRadius(technologies, {
-      weights: baseWeights,
-      bias: baseBias,
-      alpha: baseAlpha
-    });
+    const baseAvgRadius = calculateAverageRadius(
+      technologies,
+      createModelConfigWithWeights(baseModelConfig, baseWeights)
+    );
 
     // Анализ чувствительности к весам
     Object.keys(baseWeights).forEach(factor => {
@@ -546,11 +593,7 @@
         }
 
         // Вычисляем средний радиус для тестовых весов
-        const testConfig = {
-          weights: testWeights,
-          bias: baseBias,
-          alpha: baseAlpha
-        };
+        const testConfig = createModelConfigWithWeights(baseModelConfig, testWeights);
 
         const avgRadius = calculateAverageRadius(technologies, testConfig);
 
@@ -566,11 +609,10 @@
     // Анализ чувствительности к bias
     biasVariations.forEach(variation => {
       const testBias = baseBias + variation;
-      const avgRadius = calculateAverageRadius(technologies, {
-        weights: baseWeights,
-        bias: testBias,
-        alpha: baseAlpha
-      });
+      const avgRadius = calculateAverageRadius(
+        technologies,
+        createModelConfigWithWeights(baseModelConfig, baseWeights)
+      );
 
       results.biasSensitivity.push({
         bias: testBias,
@@ -582,11 +624,10 @@
     // Анализ чувствительности к ALPHA
     alphaVariations.forEach(variation => {
       const testAlpha = Math.max(0.1, baseAlpha + variation);
-      const avgRadius = calculateAverageRadius(technologies, {
-        weights: baseWeights,
-        bias: baseBias,
-        alpha: testAlpha
-      });
+      const avgRadius = calculateAverageRadius(
+        technologies,
+        createModelConfigWithWeights(baseModelConfig, baseWeights)
+      );
 
       results.alphaSensitivity.push({
         alpha: testAlpha,

@@ -4,15 +4,81 @@
  */
 
 function getConfig() {
-  if (typeof window !== 'undefined' && window.ApiConfig) {
-    return window.ApiConfig;
+  if (typeof window !== 'undefined') {
+    const fallbackBaseUrl = (() => {
+      const explicit = typeof window.API_BASE_URL === 'string' ? window.API_BASE_URL.trim() : '';
+      if (explicit) return explicit;
+      const isHttpOrigin =
+        window.location &&
+        (window.location.protocol === 'http:' || window.location.protocol === 'https:');
+      const isViteDevPort =
+        window.location && (window.location.port === '5173' || window.location.port === '5174');
+      if (isHttpOrigin && !isViteDevPort) {
+        return window.location.origin;
+      }
+      return '';
+    })();
+
+    if (window.ApiConfig) {
+      return {
+        getBaseUrl: () => {
+          const configured =
+            typeof window.ApiConfig.getBaseUrl === 'function'
+              ? String(window.ApiConfig.getBaseUrl() || '').trim()
+              : '';
+          return configured || fallbackBaseUrl;
+        },
+        getUseApi: () => {
+          if (typeof window.ApiConfig.getUseApi === 'function') {
+            return window.ApiConfig.getUseApi();
+          }
+          if (typeof window.USE_API === 'boolean') {
+            return window.USE_API;
+          }
+          return fallbackBaseUrl !== '';
+        },
+        getDefaultTimeout: () =>
+          typeof window.ApiConfig.getDefaultTimeout === 'function'
+            ? window.ApiConfig.getDefaultTimeout()
+            : 8000,
+        getHeavyTimeout: () =>
+          typeof window.ApiConfig.getHeavyTimeout === 'function'
+            ? window.ApiConfig.getHeavyTimeout()
+            : 30000,
+        getTokenStorageKey: () =>
+          typeof window.ApiConfig.getTokenStorageKey === 'function'
+            ? window.ApiConfig.getTokenStorageKey()
+            : 'rmk_access_token',
+        getRefreshTokenStorageKey: () =>
+          typeof window.ApiConfig.getRefreshTokenStorageKey === 'function'
+            ? window.ApiConfig.getRefreshTokenStorageKey()
+            : 'rmk_refresh_token',
+        getUseRefreshCookieAuth: () =>
+          typeof window.ApiConfig.getUseRefreshCookieAuth === 'function'
+            ? window.ApiConfig.getUseRefreshCookieAuth()
+            : false
+      };
+    }
+
+    if (fallbackBaseUrl) {
+      return {
+        getBaseUrl: () => fallbackBaseUrl,
+        getUseApi: () => (typeof window.USE_API === 'boolean' ? window.USE_API : true),
+        getDefaultTimeout: () => 8000,
+        getHeavyTimeout: () => 30000,
+        getTokenStorageKey: () => 'rmk_access_token',
+        getRefreshTokenStorageKey: () => 'rmk_refresh_token',
+        getUseRefreshCookieAuth: () => false
+      };
+    }
   }
   return {
     getBaseUrl: () => '',
     getDefaultTimeout: () => 8000,
     getHeavyTimeout: () => 30000,
     getTokenStorageKey: () => 'rmk_access_token',
-    getRefreshTokenStorageKey: () => 'rmk_refresh_token'
+    getRefreshTokenStorageKey: () => 'rmk_refresh_token',
+    getUseRefreshCookieAuth: () => false
   };
 }
 
@@ -22,9 +88,11 @@ const DEFAULT_REFRESH_PATH = '/api/v1/auth/refresh';
 /** URL для редиректа при 401 после неудачного refresh */
 const AUTH_PAGE = '/src/pages/auth.html';
 let refreshInFlightPromise = null;
+let runtimeAccessToken = '';
 
 function getStorage() {
-  if (typeof window === 'undefined') return { getItem: () => null, setItem: () => {}, removeItem: () => {} };
+  if (typeof window === 'undefined')
+    return { getItem: () => null, setItem: () => {}, removeItem: () => {} };
   try {
     return localStorage;
   } catch (_) {
@@ -56,23 +124,78 @@ function readTokenFromAnyStorage(key) {
 }
 
 function clearAuthTokensEverywhere(tokenKey, refreshKey, local, session) {
+  clearAccessToken();
   local.removeItem(tokenKey);
   local.removeItem(refreshKey);
   session.removeItem(tokenKey);
   session.removeItem(refreshKey);
 }
 
-function writeRefreshedTokens(source, tokenKey, refreshKey, accessToken, refreshToken, local, session) {
+function setAccessToken(token) {
+  runtimeAccessToken = String(token || '').trim();
+}
+
+function clearAccessToken() {
+  runtimeAccessToken = '';
+}
+
+function getAccessToken(config) {
+  if (runtimeAccessToken) {
+    return runtimeAccessToken;
+  }
+  const tokenKey = config.getTokenStorageKey();
+  const storage = getStorage();
+  const session = getSessionStorage();
+  return storage.getItem(tokenKey) || session.getItem(tokenKey) || '';
+}
+
+function writeRefreshedTokens(
+  source,
+  tokenKey,
+  refreshKey,
+  accessToken,
+  refreshToken,
+  local,
+  session,
+  useRefreshCookieAuth
+) {
+  setAccessToken(accessToken);
+
+  if (useRefreshCookieAuth) {
+    local.removeItem(tokenKey);
+    local.removeItem(refreshKey);
+    session.removeItem(tokenKey);
+    session.removeItem(refreshKey);
+    return;
+  }
+
   const primary = source === 'session' ? session : local;
   const secondary = source === 'session' ? local : session;
 
   primary.setItem(tokenKey, accessToken);
-  if (refreshToken) {
+  if (!useRefreshCookieAuth && refreshToken) {
     primary.setItem(refreshKey, refreshToken);
+  } else {
+    primary.removeItem(refreshKey);
   }
 
   secondary.removeItem(tokenKey);
   secondary.removeItem(refreshKey);
+}
+
+function shouldUseRefreshCookieAuth(config) {
+  return Boolean(
+    config &&
+    typeof config.getUseRefreshCookieAuth === 'function' &&
+    config.getUseRefreshCookieAuth() === true
+  );
+}
+
+function getCookie(name) {
+  if (typeof document === 'undefined' || !name) return '';
+  const escaped = String(name).replace(/[-[\]/{}()*+?.\\^$|]/g, '\\$&');
+  const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${escaped}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : '';
 }
 
 /**
@@ -107,6 +230,7 @@ async function tryRefreshToken() {
     const config = getConfig();
     const baseUrl = config.getBaseUrl();
     if (!baseUrl || !baseUrl.trim()) return null;
+    const useRefreshCookieAuth = shouldUseRefreshCookieAuth(config);
 
     const refreshKey = config.getRefreshTokenStorageKey();
     const tokenKey = config.getTokenStorageKey();
@@ -116,10 +240,19 @@ async function tryRefreshToken() {
       local,
       session
     } = readTokenFromAnyStorage(refreshKey);
-    if (!refreshToken) return null;
+    if (!useRefreshCookieAuth && !refreshToken) return null;
 
-    const refreshPath = (typeof window !== 'undefined' && window.API_REFRESH_PATH) || DEFAULT_REFRESH_PATH;
+    const refreshPath =
+      (typeof window !== 'undefined' && window.API_REFRESH_PATH) || DEFAULT_REFRESH_PATH;
     const url = buildUrl(baseUrl, refreshPath);
+    const csrfToken = getCookie('csrftoken');
+    const headers = { 'Content-Type': 'application/json' };
+    if (!useRefreshCookieAuth && refreshToken) {
+      headers['Authorization'] = 'Bearer ' + refreshToken;
+    }
+    if (useRefreshCookieAuth && csrfToken) {
+      headers['X-CSRFToken'] = csrfToken;
+    }
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), config.getDefaultTimeout());
@@ -127,11 +260,11 @@ async function tryRefreshToken() {
     try {
       const res = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + refreshToken
-        },
-        body: JSON.stringify({ refresh_token: refreshToken }),
+        headers,
+        credentials: useRefreshCookieAuth ? 'include' : 'same-origin',
+        body: useRefreshCookieAuth
+          ? JSON.stringify({})
+          : JSON.stringify({ refresh_token: refreshToken }),
         signal: controller.signal
       });
       clearTimeout(timeoutId);
@@ -155,7 +288,8 @@ async function tryRefreshToken() {
           newAccess,
           newRefresh,
           local,
-          session
+          session,
+          useRefreshCookieAuth
         );
         return newAccess;
       }
@@ -183,6 +317,8 @@ function redirectToAuth() {
   const tokenKey = config.getTokenStorageKey();
   const refreshKey = config.getRefreshTokenStorageKey();
 
+  clearAccessToken();
+
   // Clear auth artifacts from both storages to prevent redirect loops.
   local.removeItem(tokenKey);
   local.removeItem(refreshKey);
@@ -195,11 +331,16 @@ function redirectToAuth() {
 
   if (typeof window !== 'undefined' && window.location) {
     const path = window.location.pathname || '';
-    if (path.includes('/src/pages/auth.html') || path.includes('/src/pages/auth-2fa-setup.html') || path.includes('/src/pages/auth-2fa-verify.html')) {
+    if (
+      path.includes('/src/pages/auth.html') ||
+      path.includes('/src/pages/auth-2fa-setup.html') ||
+      path.includes('/src/pages/auth-2fa-verify.html')
+    ) {
       return;
     }
     const returnTo = window.location.pathname + window.location.search;
-    window.location.href = AUTH_PAGE + (returnTo && returnTo !== '/' ? '?return=' + encodeURIComponent(returnTo) : '');
+    window.location.href =
+      AUTH_PAGE + (returnTo && returnTo !== '/' ? '?return=' + encodeURIComponent(returnTo) : '');
   }
 }
 
@@ -212,14 +353,22 @@ function normalizeResponse(res, data, status) {
   }
   let error = 'Ошибка запроса';
   if (data && typeof data === 'object') {
-    error = data.message || data.error || data.detail || (typeof data.detail === 'string' ? data.detail : error);
+    error =
+      data.message ||
+      data.error ||
+      data.detail ||
+      (typeof data.detail === 'string' ? data.detail : error);
     if (Array.isArray(data.detail)) {
-      error = data.detail.map(d => d.msg || d.message || String(d)).join('; ') || error;
+      error = data.detail.map((d) => d.msg || d.message || String(d)).join('; ') || error;
     }
   } else if (typeof data === 'string') {
     error = data;
   }
-  return { ok: false, error: String(error || 'Ошибка запроса'), status: status || (res ? res.status : 0) };
+  return {
+    ok: false,
+    error: String(error || 'Ошибка запроса'),
+    status: status || (res ? res.status : 0)
+  };
 }
 
 /**
@@ -235,23 +384,39 @@ async function request(method, path, options) {
   if (!baseUrl || !baseUrl.trim()) {
     return { ok: false, error: 'API_BASE_URL не задан', status: 0 };
   }
+  const useRefreshCookieAuth = shouldUseRefreshCookieAuth(config);
 
   const opts = options || {};
   const query = opts.query;
   const body = opts.body;
   const skipAuth = opts.skipAuth === true;
   const isHeavy = opts.isHeavy === true;
-  const timeoutMs = opts.timeoutMs != null ? opts.timeoutMs : (isHeavy ? config.getHeavyTimeout() : config.getDefaultTimeout());
+  const timeoutMs =
+    opts.timeoutMs != null
+      ? opts.timeoutMs
+      : isHeavy
+        ? config.getHeavyTimeout()
+        : config.getDefaultTimeout();
 
   const url = buildUrl(baseUrl, path, query);
 
   const headers = {};
   if (!skipAuth) {
-    const storage = getStorage();
-    const sess = getSessionStorage();
-    const tokenKey = config.getTokenStorageKey();
-    let token = storage.getItem(tokenKey) || sess.getItem(tokenKey);
+    let token = getAccessToken(config);
+    // Cookie-режим: при отсутствии токена (после редиректа) сначала refresh,
+    // чтобы не делать первый запрос без токена и не получать 401.
+    if (!token && useRefreshCookieAuth) {
+      const newToken = await tryRefreshToken();
+      if (newToken) {
+        setAccessToken(newToken);
+        token = newToken;
+      }
+    }
     if (token) headers['Authorization'] = 'Bearer ' + token;
+  }
+  if (useRefreshCookieAuth) {
+    const csrfToken = getCookie('csrftoken');
+    if (csrfToken) headers['X-CSRFToken'] = csrfToken;
   }
 
   let fetchBody = undefined;
@@ -276,6 +441,7 @@ async function request(method, path, options) {
       method: method.toUpperCase(),
       headers: Object.keys(headers).length ? headers : undefined,
       body: fetchBody,
+      credentials: useRefreshCookieAuth ? 'include' : 'same-origin',
       signal: controller.signal
     });
   } catch (err) {
@@ -283,7 +449,7 @@ async function request(method, path, options) {
     if (err && err.name === 'AbortError') {
       return { ok: false, error: 'Таймаут запроса', status: 0 };
     }
-    return { ok: false, error: (err && err.message) ? err.message : 'Сетевая ошибка', status: 0 };
+    return { ok: false, error: err && err.message ? err.message : 'Сетевая ошибка', status: 0 };
   }
   clearTimeout(timeoutId);
 
@@ -303,6 +469,7 @@ async function request(method, path, options) {
   if (res.status === 401 && !skipAuth) {
     const newToken = await tryRefreshToken();
     if (newToken) {
+      setAccessToken(newToken);
       return request(method, path, { ...opts, skipAuth: false });
     }
     redirectToAuth();
@@ -323,7 +490,7 @@ async function request(method, path, options) {
  * @param {Object} [options] - { timeoutMs, skipAuth, isHeavy }
  */
 function get(path, query, options) {
-  const opts = (options && typeof options === 'object') ? { ...options } : {};
+  const opts = options && typeof options === 'object' ? { ...options } : {};
   if (query != null) opts.query = query;
   return request('GET', path, opts);
 }
@@ -335,7 +502,7 @@ function get(path, query, options) {
  * @param {Object} [options]
  */
 function post(path, body, options) {
-  const opts = (options && typeof options === 'object') ? { ...options } : {};
+  const opts = options && typeof options === 'object' ? { ...options } : {};
   if (body !== undefined) opts.body = body;
   return request('POST', path, opts);
 }
@@ -344,7 +511,7 @@ function post(path, body, options) {
  * PUT запрос.
  */
 function put(path, body, options) {
-  const opts = (options && typeof options === 'object') ? { ...options } : {};
+  const opts = options && typeof options === 'object' ? { ...options } : {};
   if (body !== undefined) opts.body = body;
   return request('PUT', path, opts);
 }
@@ -353,7 +520,7 @@ function put(path, body, options) {
  * PATCH запрос.
  */
 function patch(path, body, options) {
-  const opts = (options && typeof options === 'object') ? { ...options } : {};
+  const opts = options && typeof options === 'object' ? { ...options } : {};
   if (body !== undefined) opts.body = body;
   return request('PATCH', path, opts);
 }
@@ -366,6 +533,8 @@ function del(path, options) {
 }
 
 const ApiClient = {
+  setAccessToken,
+  clearAccessToken,
   request,
   get,
   post,

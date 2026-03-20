@@ -1,5 +1,6 @@
-from django.db import models
+from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
 
 
 class Technology(models.Model):
@@ -216,3 +217,60 @@ class TechnologyEnterpriseReadiness(models.Model):
 
     def __str__(self) -> str:
         return f"{self.technology} / {self.enterprise}"
+
+
+class TechnologyProposal(models.Model):
+    ACTION_CREATE = "create"
+    ACTION_UPDATE = "update"
+    ACTION_DELETE = "delete"
+
+    ACTION_CHOICES = [
+        (ACTION_CREATE, "Create"),
+        (ACTION_UPDATE, "Update"),
+        (ACTION_DELETE, "Delete"),
+    ]
+
+    STATUS_DRAFT = "draft"
+    STATUS_APPROVED = "approved"
+    STATUS_REJECTED = "rejected"
+
+    STATUS_CHOICES = [
+        (STATUS_DRAFT, "Draft"),
+        (STATUS_APPROVED, "Approved"),
+        (STATUS_REJECTED, "Rejected"),
+    ]
+
+    technology = models.ForeignKey(
+        Technology,
+        on_delete=models.SET_NULL,
+        related_name="proposals",
+        null=True,
+        blank=True,
+    )
+    target_technology_id = models.IntegerField(null=True, blank=True)
+    action = models.CharField(max_length=16, choices=ACTION_CHOICES, default=ACTION_UPDATE)
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default=STATUS_DRAFT)
+    payload = models.JSONField(default=dict, blank=True)
+    comment = models.TextField(blank=True)
+    review_comment = models.TextField(blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="technology_proposals_created",
+    )
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="technology_proposals_reviewed",
+        null=True,
+        blank=True,
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"proposal#{self.id} {self.action} ({self.status})"

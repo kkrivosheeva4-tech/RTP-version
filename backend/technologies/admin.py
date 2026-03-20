@@ -1,10 +1,12 @@
 from django.contrib import admin
+
 from .models import (
     Technology,
     TechnologyBlock,
     TechnologyDirection,
     TechnologyEnterpriseReadiness,
     TechnologyFunctionCoverage,
+    TechnologyProposal,
     TechnologyVendor,
     TechnologyVendorIntegrator,
 )
@@ -16,3 +18,4 @@ admin.site.register(TechnologyDirection)
 admin.site.register(TechnologyVendor)
 admin.site.register(TechnologyVendorIntegrator)
 admin.site.register(TechnologyEnterpriseReadiness)
+admin.site.register(TechnologyProposal)

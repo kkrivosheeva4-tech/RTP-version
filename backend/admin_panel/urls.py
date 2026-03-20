@@ -5,6 +5,7 @@ from admin_panel.views import (
     BackupDetailAPIView,
     BackupDownloadAPIView,
     BackupListCreateAPIView,
+    BackupRestoreAPIView,
     EnterpriseDetailAPIView,
     EnterpriseListCreateAPIView,
     UserDetailAPIView,
@@ -32,8 +33,26 @@ urlpatterns = [
         BackupDownloadAPIView.as_view(),
         name="admin-backups-download",
     ),
-    path("enterprises", EnterpriseListCreateAPIView.as_view(), name="admin-enterprises-list-noslash"),
+    path(
+        "backups/<int:pk>/restore",
+        BackupRestoreAPIView.as_view(),
+        name="admin-backups-restore-noslash",
+    ),
+    path(
+        "backups/<int:pk>/restore/",
+        BackupRestoreAPIView.as_view(),
+        name="admin-backups-restore",
+    ),
+    path(
+        "enterprises", EnterpriseListCreateAPIView.as_view(), name="admin-enterprises-list-noslash"
+    ),
     path("enterprises/", EnterpriseListCreateAPIView.as_view(), name="admin-enterprises-list"),
-    path("enterprises/<int:pk>", EnterpriseDetailAPIView.as_view(), name="admin-enterprises-detail-noslash"),
-    path("enterprises/<int:pk>/", EnterpriseDetailAPIView.as_view(), name="admin-enterprises-detail"),
+    path(
+        "enterprises/<int:pk>",
+        EnterpriseDetailAPIView.as_view(),
+        name="admin-enterprises-detail-noslash",
+    ),
+    path(
+        "enterprises/<int:pk>/", EnterpriseDetailAPIView.as_view(), name="admin-enterprises-detail"
+    ),
 ]

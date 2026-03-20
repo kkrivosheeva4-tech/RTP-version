@@ -1777,7 +1777,8 @@ import { DOMCache } from '../core/dom-utils.js';
             hiddenInputId === "techSector" &&
             typeof window.updateModalBlocksForSectors === "function"
           ) {
-            // TODO: убрать после перевода всех потребителей на state. Синхронизация для обратной совместимости.
+            // Совместимость оставлена осознанно: modal-forms еще использует window-bridge
+            // поверх state и ожидает синхронное обновление зависимых списков.
             window.updateModalBlocksForSectors(selectedValues);
           } else if (
             hiddenInputId === "techBlock" &&

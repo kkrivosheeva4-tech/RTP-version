@@ -230,4 +230,3 @@ if (typeof window !== 'undefined') {
   window.normalizeTechnologyFromNewFormat = normalizeTechnologyFromNewFormat;
   window.buildBlockMaps = buildBlockMaps;
 }
-

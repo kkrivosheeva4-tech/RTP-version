@@ -6,7 +6,6 @@ import os
 import uuid
 from datetime import datetime, timedelta, timezone
 
-
 ALGORITHM = "HS256"
 
 
@@ -25,8 +24,12 @@ def _b64url_decode(data: str) -> bytes:
 
 def encode_jwt(payload: dict, secret: str) -> str:
     header = {"alg": ALGORITHM, "typ": "JWT"}
-    header_segment = _b64url_encode(json.dumps(header, separators=(",", ":"), sort_keys=True).encode("utf-8"))
-    payload_segment = _b64url_encode(json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8"))
+    header_segment = _b64url_encode(
+        json.dumps(header, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    )
+    payload_segment = _b64url_encode(
+        json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    )
     signing_input = f"{header_segment}.{payload_segment}".encode("ascii")
     signature = hmac.new(secret.encode("utf-8"), signing_input, hashlib.sha256).digest()
     signature_segment = _b64url_encode(signature)

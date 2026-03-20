@@ -36,6 +36,18 @@ import { DOMCache } from '../core/dom-utils.js';
     return null;
   }
 
+  function getModerationFlow() {
+    if (typeof window !== 'undefined' && window.ModerationFlow) {
+      return window.ModerationFlow;
+    }
+    return null;
+  }
+
+  function isProposalOnlyMode() {
+    const moderationFlow = getModerationFlow();
+    return Boolean(moderationFlow && typeof moderationFlow.isProposalOnlyMode === 'function' && moderationFlow.isProposalOnlyMode());
+  }
+
   function getPositioning() {
     if (typeof window !== 'undefined' && window.Positioning) {
       return window.Positioning;
@@ -557,11 +569,12 @@ import { DOMCache } from '../core/dom-utils.js';
       if (e.target.closest("#editTechBtn")) {
         if (
           typeof window.getCurrentTech !== "function" ||
-          typeof window.checkArchitectRole !== "function"
+          !window.ModerationFlow ||
+          typeof window.ModerationFlow.canSubmitTechnologyChanges !== "function"
         )
           return;
         const currentTech = window.getCurrentTech();
-        if (!window.checkArchitectRole() || !currentTech) return;
+        if (!window.ModerationFlow.canSubmitTechnologyChanges() || !currentTech) return;
         const f = document.getElementById("editTechForm");
         if (!f) return;
         // Сбрасываем предыдущий snapshot, если он был
@@ -854,11 +867,12 @@ import { DOMCache } from '../core/dom-utils.js';
       if (e.target.closest("#deleteTechBtn")) {
         if (
           typeof window.getCurrentTech !== "function" ||
-          typeof window.checkArchitectRole !== "function"
+          !window.ModerationFlow ||
+          typeof window.ModerationFlow.canSubmitTechnologyChanges !== "function"
         )
           return;
         const currentTech = window.getCurrentTech();
-        if (!window.checkArchitectRole() || !currentTech) return;
+        if (!window.ModerationFlow.canSubmitTechnologyChanges() || !currentTech) return;
         // Показываем модальное окно подтверждения
         const modal = document.getElementById("deleteConfirmModal");
         const messageEl = document.getElementById("deleteConfirmMessage");
@@ -1277,6 +1291,30 @@ import { DOMCache } from '../core/dom-utils.js';
     // Используем форму по умолчанию (круг)
     t.shape = 'circle';
 
+    if (isProposalOnlyMode()) {
+      const moderationFlow = getModerationFlow();
+      try {
+        await moderationFlow.createProposal('create', { tech: t });
+      } catch (err) {
+        if (window.Logger) window.Logger.warn('Не удалось отправить предложение на создание', err);
+        DataLoader.showNotification((err && err.message) ? err.message : 'Не удалось отправить предложение на модерацию', false);
+        return;
+      } finally {
+        setButtonLoading(submitAddBtn, false);
+      }
+
+      if (window.TechTabsManager && typeof window.TechTabsManager.clearFormState === 'function') {
+        window.TechTabsManager.clearFormState();
+      }
+      if (window.TechTabsManager && typeof window.TechTabsManager.resetForm === 'function') {
+        window.TechTabsManager.resetForm();
+      }
+      if (typeof window.hideModal === 'function') {
+        window.hideModal('addTechPanel');
+      }
+      return;
+    }
+
     const blockKeyForLookup = (t.blocks && t.blocks.length) ? (typeof t.blocks[0] === 'string' ? t.blocks[0].trim() : t.blocks[0]) : (typeof t.block === 'string' ? t.block.trim() : t.block);
     t.block = blockKeyForLookup;
     const blocksList = StateAccessors.getBlocksList();
@@ -1562,7 +1600,7 @@ import { DOMCache } from '../core/dom-utils.js';
     await new Promise(function (r) { setTimeout(r, 1500); });
 
     const id = +getFormFieldValue("editId");
-    const technologies = StateAccessors.getTechnologies();
+    const technologies = (StateAccessors.getTechnologies() || []).slice();
     const idx = technologies.findIndex(t => t.id === id);
     if (idx === -1) {
       setButtonLoading(editSubmitBtn, false);
@@ -1888,6 +1926,27 @@ import { DOMCache } from '../core/dom-utils.js';
       if (technologies[idx].companyRatings) {
         delete technologies[idx].companyRatings;
       }
+    }
+
+    if (isProposalOnlyMode()) {
+      const moderationFlow = getModerationFlow();
+      try {
+        await moderationFlow.createProposal('update', {
+          technologyId: id,
+          tech: technologies[idx]
+        });
+      } catch (err) {
+        if (window.Logger) window.Logger.warn('Не удалось отправить предложение на изменение', err);
+        DataLoader.showNotification((err && err.message) ? err.message : 'Не удалось отправить предложение на модерацию', false);
+        return;
+      } finally {
+        setButtonLoading(editSubmitBtn, false);
+      }
+
+      if (typeof window.hideModal === 'function') {
+        window.hideModal('editTechPanel');
+      }
+      return;
     }
 
     // Проверяем, нужно ли пересчитывать координаты

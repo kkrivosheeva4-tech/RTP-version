@@ -1,6 +1,7 @@
 from time import perf_counter
 
 from django.http import JsonResponse
+from django.conf import settings
 
 from config.api_errors import normalize_error_payload
 from config.observability import APP_LOGGER, increment_metric
@@ -19,7 +20,9 @@ class ObservabilityMiddleware:
         except Exception:
             increment_metric("http.responses.500.total")
             increment_metric("http.errors.5xx.total")
-            APP_LOGGER.exception("unhandled_exception path=%s method=%s", request.path, request.method)
+            APP_LOGGER.exception(
+                "unhandled_exception path=%s method=%s", request.path, request.method
+            )
             if request.path.startswith("/api/"):
                 payload = normalize_error_payload(
                     {"detail": "Internal server error."},
@@ -44,4 +47,31 @@ class ObservabilityMiddleware:
             status_code,
             elapsed_ms,
         )
+        return response
+
+
+class ContentSecurityPolicyMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+
+        if not getattr(settings, "CSP_ENABLED", True):
+            return response
+        if response.has_header("Content-Security-Policy") or response.has_header(
+            "Content-Security-Policy-Report-Only"
+        ):
+            return response
+
+        policy = getattr(settings, "CSP_DEFAULT_POLICY", "").strip()
+        if not policy:
+            return response
+
+        header_name = (
+            "Content-Security-Policy-Report-Only"
+            if getattr(settings, "CSP_REPORT_ONLY", False)
+            else "Content-Security-Policy"
+        )
+        response[header_name] = policy
         return response

@@ -4,12 +4,12 @@ from pathlib import Path
 from django.conf import settings
 from django.http import FileResponse, Http404, HttpResponse
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.renderers import JSONOpenAPIRenderer
 from rest_framework.response import Response
 from rest_framework.schemas import get_schema_view
 from rest_framework.views import APIView
+from swagger_ui_bundle import swagger_ui_path
 
 from auth_custom.models import UserProfile
 from auth_custom.permissions import RolePermission
@@ -49,17 +49,19 @@ openapi_schema_view = get_schema_view(
 
 def swagger_ui_view(request):
     schema_url = "/api/v1/openapi.json"
+    css_url = "/api/v1/docs/assets/swagger-ui.css"
+    bundle_url = "/api/v1/docs/assets/swagger-ui-bundle.js"
     html = f"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>RTP-3 API Docs</title>
-  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
+  <link rel="stylesheet" href="{css_url}" />
 </head>
 <body>
   <div id="swagger-ui"></div>
-  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+  <script src="{bundle_url}"></script>
   <script>
     SwaggerUIBundle({{
       url: "{schema_url}",
@@ -73,6 +75,18 @@ def swagger_ui_view(request):
     return HttpResponse(html)
 
 
+def swagger_ui_asset_view(request, asset_path: str):
+    asset_root = Path(swagger_ui_path).resolve()
+    requested = (asset_root / asset_path).resolve(strict=False)
+    if asset_root not in requested.parents or not requested.exists() or not requested.is_file():
+        raise Http404("Swagger UI asset not found")
+
+    content_type = _frontend_content_type(requested)
+    if content_type:
+        return FileResponse(requested.open("rb"), content_type=content_type)
+    return FileResponse(requested.open("rb"))
+
+
 def frontend_dist_view(request, path: str = ""):
     dist_dir = Path(settings.FRONTEND_DIST_DIR).resolve()
     project_root = Path(settings.PROJECT_ROOT).resolve()
@@ -84,10 +98,7 @@ def frontend_dist_view(request, path: str = ""):
 
     relative_path = (path or "").lstrip("/")
     source_candidate = _resolve_frontend_source_path(relative_path)
-    if relative_path.startswith("src/pages/auth") and source_candidate:
-        requested = source_candidate
-    else:
-        requested = dist_dir / (relative_path or "index.html")
+    requested = dist_dir / (relative_path or "index.html")
 
     try:
         resolved = requested.resolve(strict=False)
@@ -98,6 +109,16 @@ def frontend_dist_view(request, path: str = ""):
     in_project_root = project_root in resolved.parents or resolved == project_root
     if not in_dist_dir and not in_project_root:
         raise Http404("Invalid frontend path")
+
+    # In local debug sessions prefer source files for /src and /assets paths
+    # so stale dist copies cannot break interactive pages (auth, admin, etc.).
+    if (
+        settings.DEBUG
+        and source_candidate
+        and source_candidate.exists()
+        and source_candidate.is_file()
+    ):
+        resolved = source_candidate.resolve()
 
     if resolved.is_dir():
         resolved = resolved / "index.html"

@@ -3,3 +3,5 @@ djangorestframework==3.16.1
 django-cors-headers==4.9.0
 python-dotenv==1.2.2
 psycopg[binary]==3.2.12
+pyotp==2.9.0
+swagger-ui-bundle==1.1.0
