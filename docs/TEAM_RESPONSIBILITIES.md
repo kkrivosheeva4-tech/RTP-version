@@ -23,7 +23,7 @@
 
 Отвечает за:
 
-- Vite build, модульный frontend и non-module legacy слой;
+- Django-served frontend, модульный frontend и non-module legacy слой;
 - role-gating в UI, auth screens, onboarding и moderation/admin flow;
 - frontend unit/e2e coverage;
 - совместимость UI с backend API contract.

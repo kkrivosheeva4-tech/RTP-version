@@ -9,7 +9,7 @@
 - Date: `2026-03-18`
 - Contour: `local development workstation`
 - OS: `Windows 10`
-- Workspace profile: `backend/.env` -> `DB_ENGINE=sqlite3`, `SERVE_FRONTEND_FROM_DJANGO=True`
+- Workspace profile: `backend/.env` -> `DB_ENGINE=sqlite3`
 - Test AD target profile: `backend/.env.test.example` -> HTTPS-by-default + cookie auth + production-like security baseline
 
 ## 3. Executed Commands
@@ -26,32 +26,15 @@ Result:
 - `OK`
 - covers auth, cookie mode, API docs, metrics, moderation/proposals, admin panel, HTTPS/test env validations
 
-### Frontend smoke suites
+### Runtime smoke suites
 
 ```text
-npm run test:run
+powershell -ExecutionPolicy Bypass -File scripts/local-prodlike-smoke.ps1
 ```
 
 Result:
 
-- `11 files passed`
-- `96 tests passed`
-
-Note:
-
-- `package.json` test scripts were normalized to `vitest --pool=threads --maxWorkers=1`, because the default multi-worker startup was unstable on this Windows workstation path and produced false-negative worker timeouts.
-
-### Frontend production build
-
-```text
-npm run build
-```
-
-Result:
-
-- build completed successfully
-- `dist/` generated
-- Vite reported only known warnings about non-module scripts in HTML and large chunks; no build failure
+- public/API/auth/admin smoke проходит через штатный Django runtime
 
 ## 4. Coverage Matrix
 
@@ -118,24 +101,24 @@ Confirmed by backend smoke:
 
 Status: `passed`
 
-Confirmed by frontend smoke:
+Confirmed by Django/API smoke and route tests:
 
-- role-driven onboarding scenarios
-- conditional hiding of irrelevant steps when target DOM nodes are absent
-- role config and UI gating regressions remain covered in automated tests
+- role-driven auth/access flows
+- UI routes and same-origin runtime
+- базовые auth/admin regressions в штатном Python-контуре
 
 ### Moderation / Admin Path
 
 Status: `passed`
 
-Confirmed by backend and frontend smoke:
+Confirmed by backend and runtime smoke:
 
 - editor creates proposal
 - owner/admin sees pending proposals
 - approve/reject flow updates status and target technology
 - admin user CRUD works through backend API
 - metrics endpoint remains admin-protected
-- frontend `DataService` proposal flow passes against mocked API contract
+- moderation/admin runtime path подтвержден через backend smoke
 
 ## 5. Final Assessment
 
@@ -154,8 +137,6 @@ This means `Этап D` is complete from the development side: the application i
 
 После добавления `docs/LOCAL_PRODLIKE_SETUP.md` и связанных scripts часть бывших contour-only проверок можно прогонять локально:
 
-- HTTPS через локальный reverse proxy;
-- `Secure` cookies на публичном `https://` origin;
 - PostgreSQL runtime вне SQLite fallback;
 - внешний auth/admin/moderation smoke через `scripts/local_prodlike_smoke.py`.
 

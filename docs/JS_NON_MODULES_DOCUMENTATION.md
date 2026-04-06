@@ -71,7 +71,7 @@
 
 ### `src/js/config/roles-config.js`
 
-- Конфигурация ролей и mock-учеток.
+- Конфигурация ролей и role-based ограничений UI.
 
 ### `src/js/config/api-config-loader.js`
 

@@ -17,15 +17,13 @@
    - `ruff`
    - `black --check`
    - `isort --check-only`
-3. Frontend quality проходит:
-   - `npm run lint:frontend`
-   - `npm run format:check:frontend`
-4. Тестовый минимум проходит:
+3. Тестовый минимум проходит:
    - backend tests
-   - `npm run test:run`
-5. Сборочный минимум проходит:
-   - `npm run build`
-6. Документация не противоречит фактическому коду, CI и API контракту.
+   - production-like smoke
+4. Контейнерный минимум проходит:
+   - `docker build`
+   - `docker compose`
+5. Документация не противоречит фактическому коду, CI и API контракту.
 
 ## Локальная проверка перед PR
 
@@ -33,10 +31,8 @@
 
 ```bash
 pre-commit run --all-files
-npm run quality:frontend
-npm run test:run
-npm run build
-python backend/manage.py test auth_custom references technologies admin_panel config
+python backend/manage.py test auth_custom references technologies admin_panel config --noinput
+powershell -ExecutionPolicy Bypass -File scripts/local-prodlike-smoke.ps1
 ```
 
 Если изменение не затрагивает одну из подсистем, допустимо запускать сокращенный набор проверок, но только если это явно отражено в описании PR.
@@ -47,15 +43,15 @@ python backend/manage.py test auth_custom references technologies admin_panel co
 
 - `lint`
 - `backend-tests`
-- `frontend-unit-tests`
+- `runtime-smoke`
 
-Job `lint` обязан проверять и backend quality, и frontend quality, и frontend build. PR не считается готовым к merge, если любой из этих шагов не проходит.
+Job `lint` обязан проверять backend quality. PR не считается готовым к merge, если любой обязательный runtime/backend шаг не проходит.
 
 ## Release Candidate Flow
 
 1. Убедиться, что ветка содержит только согласованный scope изменений.
 2. Проверить зеленый CI по quality, tests и build.
-3. Сверить изменения с `docs/NEXT_DEVELOPMENT_PLAN.md` и актуальным backlog.
+3. Сверить изменения с `docs/AGREED_STACK_MIGRATION_PLAN.md` и актуальным backlog.
 4. Выполнить smoke-проверки для затронутых сценариев.
 5. Зафиксировать решение `go/no-go`.
 6. Только после этого маркировать build как release candidate.
@@ -66,6 +62,7 @@ Job `lint` обязан проверять и backend quality, и frontend quali
 
 1. `PostgreSQL-only` baseline без SQLite fallback.
 2. `SERVE_FRONTEND_FROM_DJANGO=True` как целевой deployment mode.
+2. Django templates/staticfiles как целевой frontend runtime.
 3. cookie/session-driven auth baseline и отсутствие auth truth в browser storage.
 4. `pyotp` как единственный backend TOTP provider.
 5. `docker build` и `docker compose` baseline.
@@ -80,7 +77,6 @@ Job `lint` обязан проверять и backend quality, и frontend quali
 
 - commit SHA / RC identifier;
 - green `quality.yml`;
-- frontend build artifact evidence;
 - PostgreSQL smoke output;
 - load smoke summary;
 - backup/restore evidence;

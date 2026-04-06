@@ -15,7 +15,7 @@
 | Endpoint                   | Метод | Описание                                                                                                                                              |
 | -------------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/api/v1/auth/login/`      | POST  | Логин: `{ username, password }` -> либо прямые токены, либо `{ requires_2fa: true, session_id, is_2fa_setup }`                                        |
-| `/api/v1/auth/refresh`     | POST  | Обновление access token: в cookie-mode refresh берётся из HttpOnly cookie и требует `X-CSRFToken`; body/Bearer mode остаётся только как rollback path |
+| `/api/v1/auth/refresh`     | POST  | Обновление access token: refresh берётся из `HttpOnly` cookie и требует `X-CSRFToken` |
 | `/api/v1/auth/2fa/setup/`  | POST  | Настройка 2FA -> `{ secret, qr_url }`                                                                                                                 |
 | `/api/v1/auth/2fa/verify/` | POST  | Проверка кода: `{ session_id, code }` -> токены                                                                                                       |
 | `/api/v1/auth/logout/`     | POST  | (опционально) Выход                                                                                                                                   |
@@ -63,20 +63,17 @@
 
 ```javascript
 window.API_BASE_URL = 'http://localhost:8000';
-window.USE_API = true;
 ```
 
 Поведение:
 
-- `API_BASE_URL === ''` -> mock-режим (JSON + VFS).
-- `USE_API` не задан -> вычисляется как `API_BASE_URL !== ''`.
+- runtime использует backend API как единственный источник данных.
 
 ### 2.2 Параметры конфигурации
 
 | Параметр                   | Описание                       | По умолчанию           |
 | -------------------------- | ------------------------------ | ---------------------- |
 | `API_BASE_URL`             | Базовый URL API (без слэша)    | `''`                   |
-| `USE_API`                  | `true` -> API, `false` -> mock | по `API_BASE_URL`      |
 | `DEFAULT_TIMEOUT_MS`       | Таймаут обычных запросов (мс)  | `8000`                 |
 | `HEAVY_REQUEST_TIMEOUT_MS` | Таймаут тяжёлых запросов (мс)  | `30000`                |
 | `API_REFRESH_PATH`         | Endpoint refresh токена        | `/api/v1/auth/refresh` |
@@ -88,8 +85,7 @@ window.USE_API = true;
 ### 3.1 Хранение токенов
 
 - Access token: runtime state на frontend; при необходимости восстанавливается через `refresh -> users/me`.
-- Refresh token: **не хранится в JS storage**, используется HttpOnly cookie `rtp3_refresh_token`.
-- Legacy body/storage mode допускается только как переходный rollback path и не является production baseline.
+- Refresh token: **не хранится в JS storage**, используется `HttpOnly` cookie `rtp3_refresh_token`.
 
 `ApiClient` добавляет заголовок:
 
@@ -115,14 +111,6 @@ Authorization: Bearer <access_token>
 }
 ```
 
-В legacy body-mode дополнительно может приходить:
-
-```json
-{
-  "refresh_token": "eyJ..."
-}
-```
-
 Логин с 2FA:
 
 ```json
@@ -131,8 +119,7 @@ Authorization: Bearer <access_token>
   "session_id": "...",
   "is_2fa_setup": true,
   "username": "owner",
-  "role": "owner",
-  "legacy_role": ""
+  "role": "owner"
 }
 ```
 
@@ -160,14 +147,6 @@ Authorization: Bearer <access_token>
 }
 ```
 
-В legacy режиме дополнительно может приходить:
-
-```json
-{
-  "refresh_token": "eyJ..."
-}
-```
-
 Успешный refresh:
 
 ```json
@@ -176,18 +155,10 @@ Authorization: Bearer <access_token>
 }
 ```
 
-В legacy режиме дополнительно может приходить:
-
-```json
-{
-  "refresh_token": "eyJ..."
-}
-```
-
 ### 3.3 Логика 401/refresh в ApiClient
 
 1. При `401` вызывается `POST /api/v1/auth/refresh`.
-2. В cookie-mode запрос идет с `credentials: include` и заголовком `X-CSRFToken`.
+2. Запрос идет с `credentials: include` и заголовком `X-CSRFToken`.
 3. При успехе обновляется access token и исходный запрос повторяется.
 4. При неуспехе токены очищаются, пользователь перенаправляется на `/src/pages/auth.html?return=<url>`.
 
@@ -198,13 +169,12 @@ Authorization: Bearer <access_token>
 - `CORS_ALLOW_CREDENTIALS=True`
 - `AUTH_REFRESH_REQUIRE_CSRF=True` (production/test baseline)
 
-Целевой cookie-mode контракт:
+Целевой контракт:
 
 1. `login` и `2fa/verify` выставляют refresh-cookie; `2fa/verify` и `refresh` также выставляют CSRF cookie.
-2. `refresh` и `logout` в cookie-mode отправляются с `credentials: include`.
+2. `refresh` и `logout` отправляются с `credentials: include`.
 3. Если у клиента уже есть refresh-cookie и включён `AUTH_REFRESH_REQUIRE_CSRF=True`, запрос обязан передать совпадающий `X-CSRFToken`.
 4. Отсутствие или несовпадение CSRF приводит к `403`.
-5. Body/Bearer refresh допускается только как legacy rollback path и не является production baseline.
 
 ---
 
@@ -233,7 +203,7 @@ Authorization: Bearer <access_token>
 
 - Таймаут: `{ ok: false, error: "Таймаут запроса", status: 0 }`.
 - Ошибка сети: `{ ok: false, error: "<message>", status: 0 }`.
-- `USE_API = true` без `API_BASE_URL`: `{ ok: false, error: "API_BASE_URL не задан", status: 0 }`.
+- runtime без `API_BASE_URL`: `{ ok: false, error: "API_BASE_URL не задан", status: 0 }`.
 
 ---
 
@@ -340,21 +310,21 @@ Authorization: Bearer <access_token>
 
 | Метод DataService                 | API endpoint                             | Mock                          |
 | --------------------------------- | ---------------------------------------- | ----------------------------- |
-| `loadTechnologies(enterpriseId?)` | `GET /api/v1/technologies?enterpriseId=` | `loadJsonPreferVfs + vfsRead` |
-| `loadReference(name)`             | `GET /api/v1/references/{name}`          | `loadJsonPreferVfs + vfsRead` |
-| `createTech(tech)`                | `POST /api/v1/technologies`              | `vfsWrite`                    |
-| `updateTech(id, tech)`            | `PATCH /api/v1/technologies/{id}`        | `vfsWrite`                    |
-| `deleteTech(id)`                  | `DELETE /api/v1/technologies/{id}`       | `vfsWrite`                    |
-| `saveTechnologies(technologies)`  | `PUT /api/v1/technologies/bulk`          | `vfsWrite`                    |
-| `saveReference(name, data)`       | `PUT /api/v1/references/{name}`          | `vfsWrite`                    |
+| `loadTechnologies(enterpriseId?)` | `GET /api/v1/technologies?enterpriseId=` | backend API |
+| `loadReference(name)`             | `GET /api/v1/references/{name}`          | backend API |
+| `createTech(tech)`                | `POST /api/v1/technologies`              | backend API |
+| `updateTech(id, tech)`            | `PATCH /api/v1/technologies/{id}`        | backend API |
+| `deleteTech(id)`                  | `DELETE /api/v1/technologies/{id}`       | backend API |
+| `saveTechnologies(technologies)`  | `PUT /api/v1/technologies/bulk`          | backend API |
+| `saveReference(name, data)`       | `PUT /api/v1/references/{name}`          | backend API |
 
 ---
 
 ## 7. Текущее состояние frontend
 
 - ApiClient готов: Bearer token, 401 + refresh, нормализация ошибок.
-- DataService переключает mock/API через `USE_API` и `API_BASE_URL`.
-- `auth.js` и `auth-2fa.js` поддерживают backend 2FA flow (`login -> 2fa/setup|verify -> tokens`) и mock-flow.
+- DataService использует backend API как единственный runtime-источник данных.
+- `auth.js` и `auth-2fa.js` поддерживают backend 2FA flow (`login -> 2fa/setup|verify -> tokens`).
 
 ---
 
@@ -366,5 +336,5 @@ Authorization: Bearer <access_token>
 | `src/js/config/api-config-loader.js`        | Загрузка `api-config.local.js` до основного конфига |
 | `src/js/config/api-config.js`               | Конфигурация URL/таймаутов/ключей токенов           |
 | `src/js/modules/core/api-client.js`         | HTTP-клиент и логика refresh                        |
-| `src/js/modules/core/data-service.js`       | Слой API/mock                                       |
+| `src/js/modules/core/data-service.js`       | Единый API-слой frontend                            |
 | `src/js/modules/core/data-normalize.js`     | Преобразование API -> формат приложения             |

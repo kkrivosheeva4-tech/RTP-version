@@ -1,119 +1,120 @@
-# Local Production-Like Setup
+﻿# Local Production-Like Setup
 
 ## 1. Purpose
 
-Документ описывает локальный контур, который максимально приближен к будущему deployment profile:
+Документ описывает локальный production-like контур после отказа от `Caddy`.
+
+Текущая схема:
 
 - `PostgreSQL` вместо SQLite;
-- `HTTPS` через локальный reverse proxy;
-- `DEBUG=False` + `ENFORCE_ENV_SECURITY=True`;
-- `Secure` cookies и cookie-based refresh auth;
-- same-origin frontend/backend через `https://rtp3.localhost`.
+- frontend и API отдаются одним Django-приложением;
+- запуск через `Django` и `PostgreSQL`, без отдельного frontend build-контура и без reverse proxy;
+- production-like smoke идёт по `https://127.0.0.1:8443`.
 
 ## 2. What This Contour Looks Like
 
 ```mermaid
 flowchart LR
   Browser[Browser]
-  Caddy[CaddyProxy]
-  Django[DjangoRunserver]
+  Django[Django HTTPS Server]
   Postgres[PostgreSQL]
 
-  Browser -->|"https://rtp3.localhost"| Caddy
-  Caddy -->|"X-Forwarded-Proto=https"| Django
+  Browser -->|"https://127.0.0.1:8443"| Django
   Django --> Postgres
 ```
-
-`rtp3.localhost` выбран как локальный hostname, потому что домен `.localhost` резолвится в loopback и не требует обязательной правки `hosts`.
 
 ## 3. Prerequisites
 
 На машине должны быть доступны:
 
 - Python с backend dependencies;
-- Node.js / npm;
-- PostgreSQL;
-- Caddy в `PATH`.
+- PostgreSQL.
 
-## 4. Bootstrap
+## 4. Quick Start
 
 Из корня репозитория:
 
 ```powershell
-npm run prodlike:setup
+powershell -ExecutionPolicy Bypass -File scripts/local-prodlike-setup.ps1      # первый запуск; если env уже есть — пропустить или использовать -Force
+powershell -ExecutionPolicy Bypass -File scripts/local-prodlike-init.ps1       # migrate + seed для PostgreSQL-only
+# или: powershell -ExecutionPolicy Bypass -File scripts/local-prodlike-postgres.ps1  # если есть backend/db.sqlite3 и нужна миграция
+powershell -ExecutionPolicy Bypass -File scripts/local-prodlike-start.ps1
+powershell -ExecutionPolicy Bypass -File scripts/local-prodlike-smoke.ps1
+```
+
+Остановка:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/local-prodlike-stop.ps1
+```
+
+Кратко по шагам:
+
+- `setup` — создает или пересоздает локальный prodlike env-профиль;
+- `init` — готовит PostgreSQL-only контур через `migrate` и `seed_*`;
+- `postgres` — помогает перейти с локального SQLite-контура на PostgreSQL;
+- `start` — поднимает локальный HTTPS Django runtime;
+- `smoke` — прогоняет внешний runtime smoke;
+- `stop` — штатно останавливает локальный контур.
+
+Рабочий origin:
+
+- `https://127.0.0.1:8443`
+
+## 5. Bootstrap
+
+Из корня репозитория:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/local-prodlike-setup.ps1 -Force
 ```
 
 Команда:
 
-- создает локальный env-файл `backend/.env.prodlike.local`;
-- создает `src/js/config/api-config.local.js` с `USE_API=true` и cookie refresh mode;
+- создаёт локальный env-файл `backend/.env.prodlike.local` под HTTPS-контур;
+- создаёт `src/js/config/api-config.local.js` с `API_BASE_URL` и cookie refresh mode;
 - генерирует безопасный `SECRET_KEY`.
 
-**Если env-файл уже существует:** шаг можно пропустить и перейти к п. 5–6. Либо перезаписать с `-Force`:
+## 6. Prepare PostgreSQL Runtime
+
+### Вариант A: миграция из SQLite
 
 ```powershell
-npm run prodlike:setup -- -Force
+powershell -ExecutionPolicy Bypass -File scripts/local-prodlike-postgres.ps1
 ```
 
-Если нужен другой hostname или другие параметры PostgreSQL:
+### Вариант B: PostgreSQL-only
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/local-prodlike-setup.ps1 `
-  -LocalHost rtp3.localhost `
-  -PostgresHost localhost `
-  -PostgresPort 5432 `
-  -PostgresDb rtp3 `
-  -PostgresUser rtp3 `
-  -PostgresPassword rtp3
+powershell -ExecutionPolicy Bypass -File scripts/local-prodlike-init.ps1
 ```
 
-## 5. Prepare PostgreSQL Runtime
+Скрипт загружает env и выполняет `migrate` и seed-команды.
 
-### Вариант A: Миграция из SQLite (если есть `backend/db.sqlite3`)
-
-```powershell
-npm run prodlike:postgres
-```
-
-Под капотом используется rehearsal script `postgres-dry-run.ps1` (экспорт из SQLite → загрузка в PostgreSQL).
-
-### Вариант B: PostgreSQL-only (без SQLite)
-
-Если SQLite нет, используйте `prodlike:init`:
+## 7. Start the Contour
 
 ```powershell
-npm run prodlike:init
-```
-
-Скрипт загружает env, выполняет migrate и seed (references, technologies, users), при необходимости — smoke.
-
-## 6. Start the Contour
-
-```powershell
-npm run prodlike:start
+powershell -ExecutionPolicy Bypass -File scripts/local-prodlike-start.ps1
 ```
 
 Что делает команда:
 
 1. грузит `backend/.env.prodlike.local`;
-2. собирает frontend (`npm run build`);
+2. принудительно выравнивает локальный security-профиль под HTTPS;
 3. применяет `migrate`;
-4. поднимает Django на `127.0.0.1:8000`;
-5. рендерит `ops/local/Caddyfile.local` из шаблона;
-6. запускает Caddy и открывает origin `https://rtp3.localhost`.
+4. поднимает Django HTTPS server на `127.0.0.1:8443`;
+5. пишет логи в `logs/local-prodlike`.
 
-Если локальный CA Caddy еще не доверен, выполните:
+Рабочий origin:
 
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/local-prodlike-start.ps1 -TrustCaddyCA
-```
+- `https://127.0.0.1:8443`
 
-## 7. Runtime Smoke
+## 8. Runtime Smoke
 
 После старта:
 
 ```powershell
-npm run prodlike:smoke
+powershell -ExecutionPolicy Bypass -File scripts/local-prodlike-smoke.ps1
 ```
 
 Smoke script:
@@ -122,13 +123,12 @@ Smoke script:
 - проверяет `GET /api/v1/openapi.json`;
 - проверяет `GET /api/v1/docs`;
 - проходит login -> 2FA verify -> refresh -> logout в cookie-mode;
-- проверяет `Secure` cookies;
 - проверяет `users/me` и `metrics`;
 - проходит moderation flow: editor create proposal -> owner approve;
-- подтверждает, что approved proposal создает технологию в PostgreSQL runtime.
+- подтверждает, что approved proposal создаёт технологию в PostgreSQL runtime.
 
-## 8. Notes
+## 9. Notes
 
-- Локальный contour intentionally same-origin: frontend отдается Django через `SERVE_FRONTEND_FROM_DJANGO=True`, а Caddy только завершает HTTPS и пробрасывает proxy headers.
-- Если вы хотите отдельный frontend origin для более строгого test AD rehearsal, базой остается `backend/.env.test.example`, но для ежедневной разработки текущая схема проще и стабильнее.
-- Direct access к `http://127.0.0.1:8000` в этом режиме не является пользовательским origin; рабочий адрес только `https://rtp3.localhost`.
+- Контур intentionally same-origin: frontend отдаётся напрямую Django через templates/staticfiles.
+- Контур работает по `https` через локальный self-signed сертификат, без возврата к `Caddy`.
+- Для Linux production/profile c `nginx + gunicorn` нужен отдельный deployment runbook.

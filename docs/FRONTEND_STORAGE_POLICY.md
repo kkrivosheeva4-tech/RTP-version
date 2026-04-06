@@ -22,14 +22,13 @@
 - `username`
 - `userName`
 - `role`
+- `rmk_access_token`
 - `rmk_refresh_token`
-
-`rmk_access_token` допускается только как переходный legacy fallback и не является нормативным storage baseline.
 
 Примечание:
 
-- mock-only сценарии для изолированных UI/tests могут временно использовать legacy storage flags, но это не является production/deployment контрактом.
-- в `USE_API=true` runtime UI должен игнорировать legacy auth flags и опираться на backend session, runtime state и `/api/v1/users/me/`; чтение `isLoggedIn` / `username` / `role` допустимо только в mock/offline path.
+- runtime UI должен опираться на backend session, runtime state и `/api/v1/users/me/`; legacy auth flags не считаются допустимым источником истины.
+- указанные legacy-ключи допускаются только как объекты принудительной очистки при старых сессиях браузера, но не как рабочее хранилище.
 
 ## 3. Что остается в `sessionStorage`
 
@@ -40,6 +39,7 @@
 Назначение:
 
 - хранение временного `session_id` и служебных данных между страницами `auth -> 2fa setup/verify`;
+- кратковременное хранение `access_token` в рамках текущей вкладки до его автоматического обновления через cookie-based refresh;
 - удаляется сразу после успешного verify/logout/abandon flow;
 - не используется как подтверждение факта авторизации.
 
@@ -56,10 +56,9 @@
 
 Также допустимы локальные UI-журналы/кэш, не влияющие на auth truth:
 
-- `adminAuditLogs` — может появляться как локальный журнал/fallback для mock/offline сценариев, но при `USE_API=true` админ-панель читает аудит из backend API, а не из localStorage
-- `adminBackups` — используется только как mock/offline fallback; при `USE_API=true` список backup-ов и операции restore/delete идут через backend API
-- `adminUsers` — используется только как mock/offline fallback; при `USE_API=true` список пользователей и изменение ролей идут через backend API
-- `adminEnterprises` — используется только как mock/offline fallback; при `USE_API=true` список предприятий и CRUD идут через backend API
+- `adminBackups` не должен использоваться как источник истины; список backup-ов и операции restore/delete идут через backend API
+- `adminUsers` не должен использоваться как источник истины; список пользователей и изменение ролей идут через backend API
+- `adminEnterprises` не должен использоваться как источник истины; список предприятий и CRUD идут через backend API
 - `rmk_position_cache`, `rmk_position_cache_version` — кэш позиций технологий на радаре
 - `rtp_functionToBlock_data`, `rtp_functionToBlock_version` — **не используются** (привязка функций к блокам хранится только в памяти сессии, не в localStorage)
 - `rtp_functionWeights` — веса функций (локальные настройки)
@@ -70,8 +69,8 @@
 
 Практическое правило для admin storage:
 
-- в API-режиме допустимо существование legacy/mock ключей в браузере, но они не считаются production source of truth и не должны дублировать фактические admin-данные, загруженные с backend
-- в mock/offline режиме эти ключи остаются разрешённым fallback для локальной разработки и изолированных UI-сценариев
+- наличие legacy-ключей в браузере не считается production source of truth и не должно дублировать фактические admin-данные, загруженные с backend
+- новые сценарии не должны добавлять `localStorage/sessionStorage` как fallback для бизнес-данных или для refresh-механизма
 
 ## 5. Что должно мигрировать из storage
 
@@ -87,6 +86,7 @@
 Из целевого deployment baseline исключаются:
 
 - auth truth в `localStorage`;
+- access-token в JS storage как постоянный storage baseline;
 - refresh-token в JS storage;
 - зависимость UI-gating от legacy auth flags.
 

@@ -114,9 +114,7 @@
 ├── config/               # Конфигурационные файлы
 ├── docs/                 # Документация
 │
-├── node_modules/         # Зависимости (не редактировать)
-├── package.json          # Зависимости проекта
-├── package-lock.json
+├── gunicorn.conf.py      # Production WSGI конфигурация
 ├── start-server.bat       # Скрипт запуска сервера (Windows)
 ├── start-server.sh       # Скрипт запуска сервера (Linux/Mac)
 ├── README.md             # Документация
@@ -127,20 +125,28 @@
 ## 🔧 Требования
 
 - **Веб-браузер**: Chrome, Firefox, Edge, Safari (последние версии)
-- **Backend/запуск приложения**: Python 3.11+ (Django)
-- **Node.js 18+ и npm**: только для сборки фронтенда (`npm run build`)
+- **Backend/запуск приложения**: Python 3.14+ (Django)
 - **Интернет**: требуется для загрузки CDN библиотек (`jsPDF`, `html2canvas`, `Chart.js`)
 
-### Модель запуска: Django, не Node.js
+### Модель запуска: Django runtime
 
-**Приложение в runtime работает на Django.** Node.js используется только для:
+**Приложение в runtime работает на Django.** Основной локальный запуск и backend runtime не требуют отдельной frontend-сборки.
 
-- сборки фронтенда (`npm run build` → Vite);
-- оркестрационных скриптов (`dev-fullstack.mjs`, `prodlike:start` и т.п.).
+Сервер HTTP — это Django (`manage.py runserver` или WSGI в production). Фронтенд отдается через Django templates/staticfiles.
 
-Сервер HTTP — это Django (`manage.py runserver` или WSGI в production). Фронтенд раздаётся из `dist/` через Django при `SERVE_FRONTEND_FROM_DJANGO=True`.
+Production WSGI baseline:
+
+```bash
+gunicorn --config gunicorn.conf.py config.wsgi:application
+```
 
 ## 🚀 Установка и запуск
+
+Актуальные инструкции:
+
+- запуск: [docs/RUN_INSTRUCTIONS.md](/c:/Users/Ксения/OneDrive/Desktop/РМК/РАДАР/РТП-версии/3%20версия/РТП-3/docs/RUN_INSTRUCTIONS.md)
+- ручные проверки: [docs/MANUAL_VERIFICATION_CHECKLIST.md](/c:/Users/Ксения/OneDrive/Desktop/РМК/РАДАР/РТП-версии/3%20версия/РТП-3/docs/MANUAL_VERIFICATION_CHECKLIST.md)
+- Linux deployment: [docs/DEBIAN12_DEPLOY_RUNBOOK.md](/c:/Users/Ксения/OneDrive/Desktop/РМК/РАДАР/РТП-версии/3%20версия/РТП-3/docs/DEBIAN12_DEPLOY_RUNBOOK.md)
 
 ### Вариант 1: Django (основной запуск приложения)
 
@@ -151,20 +157,6 @@ python backend/manage.py runserver 127.0.0.1:8000
 ```
 
 Откройте в браузере: `http://127.0.0.1:8000/`
-
-### Вариант 2: Сборка фронтенда (отдельно)
-
-Node.js используется только для сборки фронтенда:
-
-```bash
-# Установка зависимостей (один раз)
-npm install
-
-# Production build фронтенда
-npm run build
-```
-
-Папка `dist/` после `npm run build` используется Django при `SERVE_FRONTEND_FROM_DJANGO=1`.
 
 > ⚠️ **Важно**: Не открывайте HTML файлы напрямую (двойным кликом) — браузер блокирует загрузку JSON из-за CORS. Всегда используйте локальный веб-сервер.
 
@@ -192,7 +184,7 @@ npm run build
 
 3. При необходимости установите флажок "Запомнить меня"
 4. Нажмите "Войти"
-5. После входа потребуется двухфакторная аутентификация (2FA): при первом входе — настройка через QR-код и код из приложения; при последующих — ввод 6-значного кода. Тестовый код для mock-режима: `123456`
+5. После входа потребуется двухфакторная аутентификация (2FA): при первом входе — настройка через QR-код и код из приложения; при последующих — ввод 6-значного кода.
 
 ### Работа с радаром технологий
 
@@ -288,9 +280,9 @@ npm run build
 - **Frontend**: HTML5, CSS3, JavaScript (ES6+)
 - **Визуализация**: Chart.js (через CDN)
 - **Экспорт**: jsPDF, html2canvas (через CDN)
-- **Хранение данных**: LocalStorage, JSON файлы
-- **Сборка**: Vite 7.x, ES modules
-- **Зависимости**: jsPDF, html2canvas, Chart.js (через CDN для radar); Node.js требуется для разработки и сборки
+- **Хранение данных**: PostgreSQL, Django API, JSON-справочники и Django staticfiles
+- **Runtime**: Python 3.14+, Django 6, gunicorn
+- **Зависимости**: jsPDF, html2canvas, Chart.js (через CDN для radar)
 
 ### Архитектура
 
@@ -408,6 +400,6 @@ npm run build
 ---
 
 **Версия проекта**: РТП-3
-**Версия package.json**: 1.0.0
+**Runtime стек**: Python 3.14 + Django 6 + PostgreSQL 14+
 **Дата обновления документации**: 26.02.2026
 **Разработчик**: РМК‑Диджитал

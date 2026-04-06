@@ -47,7 +47,7 @@
 
 - `backend/.env.prodlike.example` -> шаблон secure local env;
 - `scripts/local-prodlike-postgres.ps1` -> bootstrap PostgreSQL по локальному env;
-- `scripts/local-prodlike-start.ps1` -> локальный HTTPS + reverse proxy contour;
+- `scripts/local-prodlike-start.ps1` -> локальный HTTPS contour на Django runtime;
 - `scripts/local-prodlike-smoke.ps1` -> runtime smoke по публичному `https://` origin.
 
 ## 4. Env baseline для test AD
@@ -142,7 +142,7 @@ python backend/manage.py migrate
 
 Проверить:
 
-- frontend build доступен и совместим с backend API;
+- Django-served UI доступен и совместим с backend API;
 - `/api/v1/openapi.json` отвечает;
 - `/api/v1/docs` открывается;
 - Swagger UI не использует внешний CDN.
@@ -250,7 +250,7 @@ Decision: GO / NO-GO
 2. Остановить rollout.
 3. Вернуть предыдущий env/profile или предыдущий backend build.
 4. Если проблема связана с PostgreSQL cutover, применить rollback из `docs/POSTGRES_MIGRATION_RUNBOOK.md`.
-5. Если проблема связана с cookie auth, использовать rollback steps из `docs/COOKIE_AUTH_MIGRATION_PLAN.md`.
+5. Если проблема связана с cookie auth, зафиксировать инцидент, остановить rollout и устранять причину без возврата к хранению refresh-token в body/storage.
 6. Зафиксировать причину отката и blocker для следующего запуска.
 
 ## 11. Exit Criteria

@@ -7,7 +7,7 @@
 
 ## 1. Архитектурные принципы
 
-- Приложение использует ES modules и Vite.
+- Приложение использует ES modules без обязательной frontend-сборки.
 - Основные страницы (`index.html`, `radar.html`) подключают один модуль: `src/main.js`.
 - `main.js` выполняет статические импорты модулей в фиксированном порядке.
 - Для обратной совместимости часть API экспортируется в `window.*`.
@@ -109,8 +109,8 @@
 - `src/js/modules/core/data-indexing.js` - индексация данных для быстрого доступа.
 - `src/js/modules/core/data-loader.js` - загрузка и первичная подготовка данных.
 - `src/js/modules/core/data-normalize.js` - нормализация схемы технологий.
-- `src/js/modules/core/data-service.js` - единый слой данных (mock/API/VFS).
-- `src/js/modules/core/data-source.js` - низкоуровневые источники JSON/VFS.
+- `src/js/modules/core/data-service.js` - единый слой данных через backend API.
+- `src/js/modules/core/data-source.js` - низкоуровневые загрузчики данных и fetch-cache.
 - `src/js/modules/core/dom-utils.js` - DOMCache/DOMProxy.
 - `src/js/modules/core/error-handler.js` - централизованная обработка ошибок.
 - `src/js/modules/core/escape-utils.js` - escape/безопасная работа со строками.

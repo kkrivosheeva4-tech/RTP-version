@@ -40,18 +40,19 @@
 
 При нарушении возвращается `403`.
 
-## 5. Совместимость и rollout
+## 5. Текущее состояние и rollout
 
-Переход поддерживает оба режима:
+Переход завершен. Текущий baseline проекта:
 
-- legacy: refresh в body/storage;
-- cookie-mode: refresh в HttpOnly cookie.
+- refresh хранится только в `HttpOnly` cookie;
+- frontend не хранит refresh-token в `localStorage/sessionStorage`;
+- `refresh` и `logout` работают только через cookie + `X-CSRFToken`.
 
 Рекомендуемый rollout:
 
-1. Staging/test AD: включить cookie-mode.
+1. Staging/test AD: подтвердить cookie-based flow.
 2. Проверить login/2fa/refresh/logout и 401-retry.
-3. После успешного smoke оставить legacy только как rollback-вариант.
+3. Зафиксировать cookie-based flow как единственный допустимый production baseline.
 
 ## 6. Smoke checklist cookie-mode
 
@@ -61,10 +62,7 @@
 - В local/session storage отсутствует refresh-token и legacy auth-flags не используются как источник истины.
 - При невалидном/просроченном refresh пользователь получает 401 и редирект на auth.
 
-## 7. Rollback
+## 7. Изменение baseline
 
-Если cookie-mode нестабилен:
-
-1. `AUTH_REFRESH_COOKIE_ENABLED=False`
-2. `AUTH_RETURN_REFRESH_TOKEN_IN_BODY=True`
-3. Вернуть legacy refresh в body/storage на frontend.
+Возврат к хранению refresh-token в body/storage не рассматривается как штатный вариант эксплуатации.
+При инцидентах подлежат исправлению причины отказа cookie-based auth, а не возврат к устаревшей схеме хранения.

@@ -50,7 +50,7 @@ powershell -ExecutionPolicy Bypass -File scripts/postgres-dry-run.ps1 `
 2. Переключить env на PostgreSQL профиль.
 3. Выполнить `python backend/manage.py migrate`.
 4. Выполнить загрузку/проверку данных (dry-run шаги без повторного экспорта при необходимости).
-5. Прогнать smoke и ключевые e2e.
+5. Прогнать smoke и ключевые backend/runtime проверки.
 6. Зафиксировать go/no-go решение.
 
 ## 6. Rollback
@@ -78,12 +78,6 @@ powershell -ExecutionPolicy Bypass -File scripts/postgres-dry-run.ps1 `
 
 Для локального production-like contour не нужно вручную собирать все параметры PostgreSQL.
 Можно использовать обертку:
-
-```powershell
-npm run prodlike:postgres
-```
-
-или:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/local-prodlike-postgres.ps1 `

@@ -5,8 +5,8 @@
 
 ## 1) Обязательный doc-set (must-have)
 
-- `docs/NEXT_DEVELOPMENT_PLAN.md`  
-  Единый план реализации, этапы, статусы и roadmap.
+- `docs/AGREED_STACK_MIGRATION_PLAN.md`  
+  Единый план миграции на согласованный стек, этапы и статусы.
 - `docs/BACKEND_API_SPEC.md`  
   Контракт backend API и auth-flow.
 - `docs/openapi.json`  
@@ -19,6 +19,10 @@
   Карта модульной архитектуры frontend.
 - `docs/RELEASE_PROCESS.md`  
   Release flow, quality gates, versioning и критерии go/no-go.
+- `docs/RUN_INSTRUCTIONS.md`  
+  Короткая актуальная инструкция локального и production-like запуска.
+- `docs/MANUAL_VERIFICATION_CHECKLIST.md`  
+  Ручной чек-лист проверки после миграции и перед приемкой.
 - `docs/TEAM_RESPONSIBILITIES.md`  
   Матрица ответственности по backend/frontend/devops/docs/release.
 
@@ -49,10 +53,10 @@
 ## 4) Источники правды вместо архивированных файлов
 
 - Роли и права: `backend/auth_custom/*`, `backend/technologies/*`, `src/js/config/*`, `src/js/modules/ui/*`.
-- CI/quality gates: `.github/workflows/*`, `.pre-commit-config.yaml`, `backend/pyproject.toml`, `package.json`.
+- CI/quality gates: `.github/workflows/*`, `.pre-commit-config.yaml`, `backend/pyproject.toml`.
 - Auth и security-настройки: `backend/config/settings.py`, `backend/auth_custom/*`, `src/js/modules/core/api-client.js`, `src/js/auth*.js`.
 - PostgreSQL / deployment / runtime mode: `backend/config/settings.py`, `backend/config/urls.py`, `backend/config/views.py`, `backend/.env*.example`, `docs/POSTGRES_MIGRATION_RUNBOOK.md`.
-- План релиза и следующая разработка: `docs/NEXT_DEVELOPMENT_PLAN.md`.
+- План миграции и актуальная архитектура: `docs/AGREED_STACK_MIGRATION_PLAN.md`.
 
 ## 5) Политика минимализма docs
 

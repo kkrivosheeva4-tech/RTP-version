@@ -6,7 +6,7 @@
 
 ## 1. Общий принцип
 
-- Проект запускается через локальный сервер (`vite`, `preview` или любой static server).
+- Проект запускается через Django (`python backend/manage.py runserver`) или через production WSGI (`gunicorn`).
 - Корневой `index.html` выполняет редирект на `src/pages/index.html`.
 - Основные страницы радара (`index.html`, `radar.html`) используют единый entrypoint: `src/main.js`.
 - В проекте одновременно используются:
@@ -59,7 +59,7 @@
 
 ### `src/pages/auth.html`
 
-Назначение: вход в систему (mock/API flow).
+Назначение: вход в систему через backend API flow.
 
 Подключает CSS:
 

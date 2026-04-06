@@ -1,167 +1,123 @@
-# 🚀 Запуск проекта без Node.js
+# Запуск проекта на согласованном стеке
 
-Этот проект может работать **полностью без Node.js**! Все зависимости загружаются через CDN (Content Delivery Network), а данные хранятся в JSON файлах.
+Этот файл сохранен по историческому имени, но описывает актуальный способ запуска проекта на стеке:
 
-## 📋 Быстрый старт
+- `HTML5`, `CSS3`, `JavaScript ES6+`
+- `Python 3.14+`
+- `Django 6`
+- `PostgreSQL 14+`
 
-### Вариант 1: Автоматический запуск (Windows)
+Приложение работает через Django runtime. Отдельный frontend toolchain и локальная JS-сборка для штатного запуска не требуются.
 
-1. Дважды кликните на файл `start-server.bat`
-2. Выберите способ запуска (рекомендуется Python)
-3. Откройте браузер и перейдите на `http://localhost:8000`
+## Быстрый старт
 
-### Вариант 2: Автоматический запуск (Linux/Mac)
+### Локальный запуск по HTTPS
 
-1. Откройте терминал в папке проекта
-2. Выполните:
-   ```bash
-   chmod +x start-server.sh
-   ./start-server.sh
-   ```
-3. Выберите способ запуска
-4. Откройте браузер и перейдите на `http://localhost:8000`
-
-### Вариант 3: Ручной запуск
-
-#### Python (рекомендуется)
-
-**Windows:**
-
-```bash
-python -m http.server 8000
-```
-
-**Linux/Mac:**
-
-```bash
-python3 -m http.server 8000
-```
-
-#### PHP
-
-```bash
-php -S localhost:8000
-```
-
-#### PowerShell (только Windows)
+1. Создайте виртуальное окружение:
 
 ```powershell
-# Запустите PowerShell в папке проекта и выполните:
-$listener = New-Object System.Net.HttpListener
-$listener.Prefixes.Add('http://localhost:8000/')
-$listener.Start()
-Write-Host 'Сервер запущен на http://localhost:8000' -ForegroundColor Green
-
-while ($listener.IsListening) {
-    $context = $listener.GetContext()
-    $request = $context.Request
-    $response = $context.Response
-
-    $localPath = $request.Url.LocalPath
-    if ($localPath -eq '/') { $localPath = '/index.html' }
-
-    $filePath = Join-Path $PWD $localPath.TrimStart('/')
-
-    if (Test-Path $filePath -PathType Leaf) {
-        $content = [System.IO.File]::ReadAllBytes($filePath)
-        $response.ContentLength64 = $content.Length
-        $response.ContentType = [System.Web.MimeMapping]::GetMimeMapping($filePath)
-        $response.OutputStream.Write($content, 0, $content.Length)
-    } else {
-        $response.StatusCode = 404
-        $buffer = [System.Text.Encoding]::UTF8.GetBytes('404 Not Found')
-        $response.ContentLength64 = $buffer.Length
-        $response.OutputStream.Write($buffer, 0, $buffer.Length)
-    }
-
-    $response.Close()
-}
+py -3.14 -m venv backend/.venv
 ```
 
-## ⚠️ Важно!
+2. Установите зависимости:
 
-**НЕ открывайте HTML файлы напрямую** (двойным кликом), так как:
+```powershell
+backend/.venv/Scripts/python -m pip install --upgrade pip
+backend/.venv/Scripts/python -m pip install -r backend/requirements.txt
+```
 
-- Браузер блокирует загрузку JSON файлов из-за политики безопасности CORS
-- Некоторые функции могут не работать
+3. Создайте локальный env-файл:
 
-**Всегда используйте локальный веб-сервер!**
+```powershell
+Copy-Item backend/.env.example backend/.env
+```
 
-## 📦 Что не требуется
+4. Заполните в `backend/.env` как минимум:
 
-- ❌ Node.js
-- ❌ npm
-- ❌ Установка зависимостей
-- ❌ node_modules
+- `SECRET_KEY`
+- `DB_NAME`
+- `DB_USER`
+- `DB_PASSWORD`
+- `DB_HOST`
+- `DB_PORT`
 
-## ✅ Что используется
+5. Инициализируйте базу и статические файлы:
 
-- ✅ CDN для всех библиотек (jsPDF, html2canvas, Chart.js)
-- ✅ JSON файлы для данных
-- ✅ LocalStorage для хранения настроек
-- ✅ Обычный веб-сервер (Python/PHP/PowerShell)
+```powershell
+backend/.venv/Scripts/python backend/manage.py migrate
+backend/.venv/Scripts/python backend/manage.py seed_references
+backend/.venv/Scripts/python backend/manage.py seed_technologies
+backend/.venv/Scripts/python backend/manage.py seed_users
+backend/.venv/Scripts/python backend/manage.py collectstatic --noinput
+```
 
-## 🔧 Используемые CDN библиотеки
+6. Запустите локальный HTTPS-сервер:
 
-Проект автоматически загружает следующие библиотеки через CDN:
+```powershell
+backend/.venv/Scripts/python scripts/dev_https_server.py --bind 127.0.0.1:8443
+```
 
-- **jsPDF** (v2.5.1) - для экспорта в PDF
-- **jsPDF AutoTable** (v3.5.28) - для таблиц в PDF
-- **html2canvas** (v1.4.1) - для конвертации HTML в изображения
-- **Chart.js** - для графиков (только на странице аналитики)
+7. Откройте:
 
-## 📁 Структура данных
+- `https://127.0.0.1:8443/`
 
-Все данные хранятся в папке `data/ru/`:
+## Local production-like
 
-- `enterpriseData.json` - данные о технологиях
-- `blocks.json` - функциональные блоки
-- `functions.json` - функции
-- `blockToQuadrant.json` - соответствие блоков квадрантам
-- `functionToBlock.json` - соответствие функций блокам
-- `sector.json` - секторы
-- `status.json` - статусы
-- `techTypes.json` - типы технологий
+Если нужен локальный контур, близкий к целевому deployment-профилю:
 
-## 🌐 Требования к браузеру
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/local-prodlike-setup.ps1
+powershell -ExecutionPolicy Bypass -File scripts/local-prodlike-init.ps1
+powershell -ExecutionPolicy Bypass -File scripts/local-prodlike-start.ps1
+```
 
-- Современный браузер (Chrome, Firefox, Edge, Safari)
-- Подключение к интернету (для загрузки CDN библиотек)
-- JavaScript включен
+Smoke-проверка:
 
-## 🐛 Решение проблем
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/local-prodlike-smoke.ps1
+```
 
-### Проблема: "Не загружаются данные"
+Остановка:
 
-**Решение:**
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/local-prodlike-stop.ps1
+```
 
-1. Убедитесь, что вы используете локальный сервер (не открывайте файлы напрямую)
-2. Проверьте, что все файлы в папке `data/ru/` на месте
-3. Откройте консоль браузера (F12) и проверьте ошибки
+## Production / Linux
 
-### Проблема: "Библиотеки не загружаются"
+Целевой production entrypoint:
 
-**Решение:**
+```bash
+gunicorn --config gunicorn.conf.py config.wsgi:application
+```
 
-1. Проверьте подключение к интернету
-2. Проверьте, что CDN доступен (откройте ссылку в браузере)
-3. Попробуйте другой браузер
+Подробный Linux-runbook:
 
-### Проблема: "Сервер не запускается"
+- `docs/DEBIAN12_DEPLOY_RUNBOOK.md`
 
-**Решение:**
+## Что не требуется
 
-1. Убедитесь, что порт 8000 свободен
-2. Попробуйте другой порт: `python -m http.server 8080`
-3. Проверьте, что Python/PHP установлен и доступен в PATH
+- отдельный frontend toolchain
+- локальная JS-сборка для штатного запуска
+- `node_modules`
+- установка JS-зависимостей и отдельная frontend-сборка как обязательный шаг запуска
 
-## 📝 Примечания
+## Что используется
 
-- Проект полностью работает без Node.js
-- Все зависимости загружаются автоматически через CDN
-- Данные хранятся локально в JSON файлах
-- Для работы требуется только веб-сервер (Python/PHP/PowerShell)
+- Django templates и staticfiles
+- PostgreSQL как основная СУБД
+- Python management commands для bootstrap и smoke
+- CDN-подключения для части клиентских библиотек
 
----
+## Важно
 
-**Готово!** Теперь вы можете запускать проект на любом компьютере без установки Node.js! 🎉
+- основной локальный запуск сейчас идет через Django-контур, а не через раздачу статических HTML-файлов
+- для локального HTTPS используются сертификаты в `backend/.certs/`
+- браузер может показать предупреждение из-за self-signed сертификата при первом открытии
+
+## Полезные документы
+
+- `docs/RUN_INSTRUCTIONS.md`
+- `docs/LOCAL_PRODLIKE_SETUP.md`
+- `docs/LOCAL_PRODLIKE_QUICKSTART.md`
+- `docs/DEBIAN12_DEPLOY_RUNBOOK.md`
