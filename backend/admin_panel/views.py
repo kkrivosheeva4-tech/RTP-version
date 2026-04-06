@@ -29,10 +29,29 @@ from auth_custom.models import UserProfile
 from auth_custom.permissions import RolePermission
 from config.api_errors import error_response
 from config.observability import audit_log
-from references.models import Enterprise, EnterpriseBlockMapping, FunctionalBlock
+from references.models import (
+    DigitalDirection,
+    Enterprise,
+    EnterpriseBlockMapping,
+    FunctionalBlock,
+    FunctionReference,
+    Integrator,
+    Vendor,
+)
+from technologies.models import (
+    Technology,
+    TechnologyBlock,
+    TechnologyDirection,
+    TechnologyEnterpriseReadiness,
+    TechnologyFunctionCoverage,
+    TechnologyProposal,
+    TechnologyVendor,
+    TechnologyVendorIntegrator,
+)
 
 User = get_user_model()
 ADMIN_ONLY = {UserProfile.ROLE_ADMIN}
+BACKUP_SCHEMA_VERSION = 2
 
 
 def _parse_dt(value: str, *, end_of_day: bool = False):
@@ -63,6 +82,10 @@ def _safe_backup_file_name(name: str):
     return cleaned.strip("._") or "backup"
 
 
+def _values_list(queryset, *fields):
+    return list(queryset.order_by("id").values(*fields))
+
+
 def _build_backup_payload():
     users = []
     for user in User.objects.select_related("profile").order_by("id"):
@@ -72,9 +95,26 @@ def _build_backup_payload():
                 "id": user.id,
                 "username": user.username,
                 "email": user.email or "",
+                "password": user.password,
                 "is_active": user.is_active,
+                "is_staff": user.is_staff,
+                "is_superuser": user.is_superuser,
                 "role": profile.role,
+                "legacy_role": profile.legacy_role or "",
                 "is_2fa_enabled": profile.is_2fa_enabled,
+                "must_setup_2fa": profile.must_setup_2fa,
+                "must_change_password": profile.must_change_password,
+                "password_changed_at": profile.password_changed_at.isoformat()
+                if profile.password_changed_at
+                else "",
+                "failed_login_attempts": profile.failed_login_attempts,
+                "locked_at": profile.locked_at.isoformat() if profile.locked_at else "",
+                "totp_secret": profile.totp_secret or "",
+                "password_history": list(
+                    user.password_history.order_by("-created_at").values(
+                        "password_hash", "created_at"
+                    )
+                ),
             }
         )
 
@@ -96,26 +136,79 @@ def _build_backup_payload():
         )
     )
 
-    enterprises = []
-    for enterprise in Enterprise.objects.order_by("id"):
-        block_ids = list(
-            enterprise.block_mappings.order_by("block_id").values_list("block_id", flat=True)
-        )
-        enterprises.append(
-            {
-                "id": enterprise.id,
-                "name": enterprise.name,
-                "code": enterprise.code or "",
-                "description": enterprise.description or "",
-                "block_ids": block_ids,
-            }
-        )
+    references = {
+        "functional_blocks": _values_list(FunctionalBlock.objects, "id", "name"),
+        "functions": _values_list(FunctionReference.objects, "id", "name", "block_id"),
+        "digital_directions": _values_list(DigitalDirection.objects, "id", "name", "quadrant"),
+        "vendors": _values_list(Vendor.objects, "id", "name"),
+        "integrators": _values_list(Integrator.objects, "id", "name"),
+        "enterprises": _values_list(
+            Enterprise.objects, "id", "name", "code", "description"
+        ),
+        "enterprise_block_mappings": _values_list(
+            EnterpriseBlockMapping.objects, "id", "enterprise_id", "block_id"
+        ),
+    }
+
+    technologies = {
+        "technologies": _values_list(
+            Technology.objects,
+            "id",
+            "name",
+            "description",
+            "primary_block_id",
+            "legacy_function",
+            "trl_stage",
+            "status",
+            "market_examples",
+            "documentation_files",
+        ),
+        "technology_blocks": _values_list(TechnologyBlock.objects, "id", "technology_id", "block_id"),
+        "technology_function_coverage": _values_list(
+            TechnologyFunctionCoverage.objects, "id", "technology_id", "function_id"
+        ),
+        "technology_directions": _values_list(
+            TechnologyDirection.objects, "id", "technology_id", "direction_id"
+        ),
+        "technology_vendors": _values_list(
+            TechnologyVendor.objects, "id", "technology_id", "vendor_id"
+        ),
+        "technology_vendor_integrators": _values_list(
+            TechnologyVendorIntegrator.objects, "id", "technology_vendor_id", "integrator_id"
+        ),
+        "technology_enterprise_readiness": _values_list(
+            TechnologyEnterpriseReadiness.objects,
+            "id",
+            "technology_id",
+            "enterprise_id",
+            "technological_readiness",
+            "organizational_readiness",
+            "status",
+        ),
+        "technology_proposals": _values_list(
+            TechnologyProposal.objects,
+            "id",
+            "technology_id",
+            "target_technology_id",
+            "action",
+            "status",
+            "payload",
+            "comment",
+            "review_comment",
+            "hidden_from_creator_history",
+            "created_by_id",
+            "reviewed_by_id",
+            "reviewed_at",
+        ),
+    }
 
     return {
+        "schema_version": BACKUP_SCHEMA_VERSION,
         "created_at": timezone.now().isoformat(),
         "users": users,
+        "references": references,
+        "technologies": technologies,
         "audit_logs": audits,
-        "enterprises": enterprises,
     }
 
 
@@ -130,18 +223,64 @@ def _load_backup_payload(backup) -> dict:
 
 
 def _backup_counts(payload: dict) -> dict[str, int]:
+    references = payload.get("references") or {}
+    legacy_enterprises = payload.get("enterprises") or []
+    technologies = payload.get("technologies") or {}
     return {
         "users": len(payload.get("users", []) or []),
+        "functional_blocks": len(references.get("functional_blocks", []) or []),
+        "functions": len(references.get("functions", []) or []),
+        "digital_directions": len(references.get("digital_directions", []) or []),
+        "vendors": len(references.get("vendors", []) or []),
+        "integrators": len(references.get("integrators", []) or []),
+        "enterprises": len((references.get("enterprises", []) or legacy_enterprises) or []),
+        "enterprise_block_mappings": len(references.get("enterprise_block_mappings", []) or []),
+        "technologies": len(technologies.get("technologies", []) or []),
+        "technology_blocks": len(technologies.get("technology_blocks", []) or []),
+        "technology_function_coverage": len(
+            technologies.get("technology_function_coverage", []) or []
+        ),
+        "technology_directions": len(technologies.get("technology_directions", []) or []),
+        "technology_vendors": len(technologies.get("technology_vendors", []) or []),
+        "technology_vendor_integrators": len(
+            technologies.get("technology_vendor_integrators", []) or []
+        ),
+        "technology_enterprise_readiness": len(
+            technologies.get("technology_enterprise_readiness", []) or []
+        ),
+        "technology_proposals": len(technologies.get("technology_proposals", []) or []),
         "audit_logs": len(payload.get("audit_logs", []) or []),
-        "enterprises": len(payload.get("enterprises", []) or []),
     }
 
 
 def _restore_backup_payload(payload: dict) -> dict[str, int]:
     restored_users = 0
+    restored_references = 0
+    restored_technologies = 0
     restored_audits = 0
-    restored_enterprises = 0
     user_id_map: dict[int, int] = {}
+    references_payload = payload.get("references") or {}
+    if not references_payload and payload.get("enterprises"):
+        legacy_mappings = []
+        mapping_id = 1
+        for row in payload.get("enterprises") or []:
+            enterprise_id = row.get("id")
+            if enterprise_id in (None, ""):
+                continue
+            for block_id in row.get("block_ids", []) or []:
+                legacy_mappings.append(
+                    {
+                        "id": mapping_id,
+                        "enterprise_id": enterprise_id,
+                        "block_id": block_id,
+                    }
+                )
+                mapping_id += 1
+        references_payload = {
+            "enterprises": payload.get("enterprises") or [],
+            "enterprise_block_mappings": legacy_mappings,
+        }
+    technologies_payload = payload.get("technologies") or {}
 
     for raw_user in payload.get("users", []) or []:
         username = str(raw_user.get("username", "")).strip()
@@ -159,47 +298,194 @@ def _restore_backup_payload(payload: dict) -> dict[str, int]:
             user.set_unusable_password()
 
         user.email = str(raw_user.get("email", "") or "").strip()
+        password_hash = str(raw_user.get("password", "") or "").strip()
+        if password_hash:
+            user.password = password_hash
         user.is_active = bool(raw_user.get("is_active", True))
+        user.is_staff = bool(raw_user.get("is_staff", False))
+        user.is_superuser = bool(raw_user.get("is_superuser", False))
         user.save()
 
         profile, _ = UserProfile.objects.get_or_create(user=user)
         profile.role = str(raw_user.get("role") or UserProfile.ROLE_GUEST).strip() or UserProfile.ROLE_GUEST
+        profile.legacy_role = str(raw_user.get("legacy_role") or "").strip()
         profile.is_2fa_enabled = bool(raw_user.get("is_2fa_enabled", False))
+        profile.must_setup_2fa = bool(raw_user.get("must_setup_2fa", False))
+        profile.must_change_password = bool(raw_user.get("must_change_password", False))
+        profile.password_changed_at = _parse_dt(
+            str(raw_user.get("password_changed_at") or "")
+        ) or timezone.now()
+        profile.failed_login_attempts = int(raw_user.get("failed_login_attempts", 0) or 0)
+        profile.locked_at = _parse_dt(str(raw_user.get("locked_at") or ""))
+        profile.totp_secret = str(raw_user.get("totp_secret") or "").strip()
         if not profile.is_2fa_enabled:
             profile.totp_secret = ""
-        profile.save(update_fields=["role", "is_2fa_enabled", "totp_secret", "updated_at"])
+        profile.save(
+            update_fields=[
+                "role",
+                "legacy_role",
+                "is_2fa_enabled",
+                "must_setup_2fa",
+                "must_change_password",
+                "password_changed_at",
+                "failed_login_attempts",
+                "locked_at",
+                "totp_secret",
+                "updated_at",
+            ]
+        )
+        user.password_history.all().delete()
+        for history_row in raw_user.get("password_history", []) or []:
+            user.password_history.create(
+                password_hash=str(history_row.get("password_hash") or ""),
+            )
 
         if source_user_id:
             user_id_map[int(source_user_id)] = user.id
         restored_users += 1
 
-    for raw_enterprise in payload.get("enterprises", []) or []:
-        enterprise = None
-        source_enterprise_id = raw_enterprise.get("id")
-        code = str(raw_enterprise.get("code", "") or "").strip()
-        name = str(raw_enterprise.get("name", "") or "").strip()
+    TechnologyProposal.objects.all().delete()
+    Technology.objects.all().delete()
+    EnterpriseBlockMapping.objects.all().delete()
+    FunctionReference.objects.all().delete()
+    DigitalDirection.objects.all().delete()
+    Vendor.objects.all().delete()
+    Integrator.objects.all().delete()
+    Enterprise.objects.all().delete()
+    FunctionalBlock.objects.all().delete()
 
-        if source_enterprise_id:
-            enterprise = Enterprise.objects.filter(id=source_enterprise_id).first()
-        if enterprise is None and code:
-            enterprise = Enterprise.objects.filter(code=code).first()
-        if enterprise is None and name:
-            enterprise = Enterprise.objects.filter(name=name).first()
-        if enterprise is None:
-            enterprise = Enterprise(id=source_enterprise_id or None)
+    for row in references_payload.get("functional_blocks", []) or []:
+        FunctionalBlock.objects.create(id=row["id"], name=str(row.get("name") or "").strip())
+        restored_references += 1
 
-        enterprise.name = name
-        enterprise.code = code
-        enterprise.description = str(raw_enterprise.get("description", "") or "").strip()
-        enterprise.save()
+    for row in references_payload.get("functions", []) or []:
+        FunctionReference.objects.create(
+            id=row["id"],
+            name=str(row.get("name") or "").strip(),
+            block_id=row.get("block_id"),
+        )
+        restored_references += 1
 
-        EnterpriseBlockMapping.objects.filter(enterprise=enterprise).delete()
-        for block_id in raw_enterprise.get("block_ids", []) or []:
-            block = FunctionalBlock.objects.filter(id=block_id).first()
-            if block is not None:
-                EnterpriseBlockMapping.objects.get_or_create(enterprise=enterprise, block=block)
+    for row in references_payload.get("digital_directions", []) or []:
+        DigitalDirection.objects.create(
+            id=row["id"],
+            name=str(row.get("name") or "").strip(),
+            quadrant=row.get("quadrant"),
+        )
+        restored_references += 1
 
-        restored_enterprises += 1
+    for row in references_payload.get("vendors", []) or []:
+        Vendor.objects.create(id=row["id"], name=str(row.get("name") or "").strip())
+        restored_references += 1
+
+    for row in references_payload.get("integrators", []) or []:
+        Integrator.objects.create(id=row["id"], name=str(row.get("name") or "").strip())
+        restored_references += 1
+
+    for row in references_payload.get("enterprises", []) or []:
+        Enterprise.objects.create(
+            id=row["id"],
+            name=str(row.get("name") or "").strip(),
+            code=str(row.get("code") or "").strip() or None,
+            description=str(row.get("description") or "").strip(),
+        )
+        restored_references += 1
+
+    for row in references_payload.get("enterprise_block_mappings", []) or []:
+        EnterpriseBlockMapping.objects.create(
+            id=row["id"],
+            enterprise_id=row["enterprise_id"],
+            block_id=row["block_id"],
+        )
+        restored_references += 1
+
+    for row in technologies_payload.get("technologies", []) or []:
+        Technology.objects.create(
+            id=row["id"],
+            name=str(row.get("name") or "").strip(),
+            description=str(row.get("description") or ""),
+            primary_block_id=row.get("primary_block_id"),
+            legacy_function=str(row.get("legacy_function") or ""),
+            trl_stage=row.get("trl_stage") or 1,
+            status=str(row.get("status") or "planned"),
+            market_examples=row.get("market_examples") or [],
+            documentation_files=row.get("documentation_files") or [],
+        )
+        restored_technologies += 1
+
+    for row in technologies_payload.get("technology_blocks", []) or []:
+        TechnologyBlock.objects.create(
+            id=row["id"], technology_id=row["technology_id"], block_id=row["block_id"]
+        )
+        restored_technologies += 1
+
+    for row in technologies_payload.get("technology_function_coverage", []) or []:
+        TechnologyFunctionCoverage.objects.create(
+            id=row["id"],
+            technology_id=row["technology_id"],
+            function_id=row["function_id"],
+        )
+        restored_technologies += 1
+
+    for row in technologies_payload.get("technology_directions", []) or []:
+        TechnologyDirection.objects.create(
+            id=row["id"],
+            technology_id=row["technology_id"],
+            direction_id=row["direction_id"],
+        )
+        restored_technologies += 1
+
+    for row in technologies_payload.get("technology_vendors", []) or []:
+        TechnologyVendor.objects.create(
+            id=row["id"],
+            technology_id=row["technology_id"],
+            vendor_id=row["vendor_id"],
+        )
+        restored_technologies += 1
+
+    for row in technologies_payload.get("technology_vendor_integrators", []) or []:
+        TechnologyVendorIntegrator.objects.create(
+            id=row["id"],
+            technology_vendor_id=row["technology_vendor_id"],
+            integrator_id=row["integrator_id"],
+        )
+        restored_technologies += 1
+
+    for row in technologies_payload.get("technology_enterprise_readiness", []) or []:
+        TechnologyEnterpriseReadiness.objects.create(
+            id=row["id"],
+            technology_id=row["technology_id"],
+            enterprise_id=row["enterprise_id"],
+            technological_readiness=row.get("technological_readiness"),
+            organizational_readiness=row.get("organizational_readiness"),
+            status=str(row.get("status") or "planned"),
+        )
+        restored_technologies += 1
+
+    for row in technologies_payload.get("technology_proposals", []) or []:
+        created_by_id = row.get("created_by_id")
+        reviewed_by_id = row.get("reviewed_by_id")
+        TechnologyProposal.objects.create(
+            id=row["id"],
+            technology_id=row.get("technology_id"),
+            target_technology_id=row.get("target_technology_id"),
+            action=str(row.get("action") or TechnologyProposal.ACTION_UPDATE),
+            status=str(row.get("status") or TechnologyProposal.STATUS_DRAFT),
+            payload=row.get("payload") or {},
+            comment=str(row.get("comment") or ""),
+            review_comment=str(row.get("review_comment") or ""),
+            hidden_from_creator_history=bool(row.get("hidden_from_creator_history", False)),
+            created_by_id=user_id_map.get(int(created_by_id), int(created_by_id))
+            if created_by_id not in (None, "")
+            else None,
+            reviewed_by_id=user_id_map.get(int(reviewed_by_id), int(reviewed_by_id))
+            if reviewed_by_id not in (None, "")
+            else None,
+            reviewed_at=_parse_dt(str(row.get("reviewed_at")), end_of_day=False)
+            if row.get("reviewed_at")
+            else None,
+        )
+        restored_technologies += 1
 
     for raw_audit in payload.get("audit_logs", []) or []:
         source_audit_id = raw_audit.get("id")
@@ -234,8 +520,9 @@ def _restore_backup_payload(payload: dict) -> dict[str, int]:
 
     return {
         "users": restored_users,
+        "references": restored_references,
+        "technologies": restored_technologies,
         "audit_logs": restored_audits,
-        "enterprises": restored_enterprises,
     }
 
 
@@ -561,13 +848,7 @@ class BackupListCreateAPIView(APIView):
             storage_path=str(storage_path),
             checksum=checksum,
             size_bytes=len(payload_bytes),
-            metadata={
-                "counts": {
-                    "users": len(payload.get("users", [])),
-                    "audit_logs": len(payload.get("audit_logs", [])),
-                    "enterprises": len(payload.get("enterprises", [])),
-                }
-            },
+            metadata={"schema_version": payload.get("schema_version"), "counts": _backup_counts(payload)},
             created_by=request.user,
             is_restorable=True,
         )

@@ -1,10 +1,11 @@
 /**
- * Раздел «Пользователи» админ-панели: backend-driven список, редактирование роли и удаление.
+ * Раздел "Пользователи" админ-панели: backend-driven список, создание, редактирование и удаление.
  */
 (function () {
   'use strict';
 
   var USERS_API_PATH = '/api/v1/admin-panel/users';
+  var USER_FORM_TIMEOUT_MS = 30000;
 
   function getCommon() {
     return window.AdminCommon;
@@ -38,6 +39,7 @@
       role: normalizedRole || 'guest',
       status: user && user.is_active === false ? 'inactive' : 'active',
       is2faEnabled: Boolean(user && user.is_2fa_enabled),
+      mustChangePassword: Boolean(user && user.must_change_password),
       createdAt: user && user.created_at ? user.created_at : common.ensureInstallDate()
     };
   }
@@ -55,12 +57,26 @@
     return normalizeUsers(users);
   }
 
+  async function createUserViaApi(payload) {
+    var client = getApiClient();
+    if (!client || typeof client.post !== 'function') {
+      throw new Error('ApiClient недоступен для создания пользователя');
+    }
+    var response = await client.post(USERS_API_PATH, payload, { timeoutMs: USER_FORM_TIMEOUT_MS });
+    if (!response || response.ok === false) {
+      throw new Error((response && response.error) || 'Не удалось создать пользователя');
+    }
+    return mapApiUserToState(response.data || {});
+  }
+
   async function updateUserViaApi(userId, payload) {
     var client = getApiClient();
     if (!client || typeof client.patch !== 'function') {
       throw new Error('ApiClient недоступен для обновления пользователя');
     }
-    var response = await client.patch(USERS_API_PATH + '/' + userId, payload);
+    var response = await client.patch(USERS_API_PATH + '/' + userId, payload, {
+      timeoutMs: USER_FORM_TIMEOUT_MS
+    });
     if (!response || response.ok === false) {
       throw new Error((response && response.error) || 'Не удалось обновить пользователя');
     }
@@ -96,7 +112,6 @@
   }
 
   async function refreshUsersFromApi() {
-    var common = getCommon();
     var state = getState();
     state.users = await fetchUsersFromApi();
     loadUsers();
@@ -106,20 +121,176 @@
     return state.users;
   }
 
+  function getField(id) {
+    return document.getElementById(id);
+  }
+
+  function setFieldValue(id, value) {
+    var field = getField(id);
+    if (field) {
+      field.value = value == null ? '' : String(value);
+    }
+  }
+
+  function setFieldText(id, value) {
+    var field = getField(id);
+    if (field) {
+      field.textContent = value || '';
+    }
+  }
+
+  function setFieldRequired(id, required) {
+    var field = getField(id);
+    if (!field) return;
+    if (required) {
+      field.setAttribute('required', 'required');
+    } else {
+      field.removeAttribute('required');
+    }
+  }
+
+  function getSubmitButton() {
+    var form = getField('userForm');
+    return form ? form.querySelector('button[type="submit"]') : null;
+  }
+
+  function setSubmitButtonText(value) {
+    var button = getSubmitButton();
+    if (button) {
+      button.textContent = value;
+    }
+  }
+
+  function resetUserForm() {
+    setFieldValue('userName', '');
+    setFieldValue('userEmail', '');
+    setFieldValue('userRole', 'guest');
+    setFieldValue('userPassword', '');
+    setPasswordFieldVisibility(false);
+  }
+
+  function setPasswordFieldVisibility(isVisible) {
+    var passwordField = getField('userPassword');
+    var toggleButton = getField('toggleUserPasswordBtn');
+    if (!passwordField || !toggleButton) return;
+    var shouldShow = isVisible === true;
+    passwordField.setAttribute('type', shouldShow ? 'text' : 'password');
+    toggleButton.classList.toggle('is-visible', shouldShow);
+    toggleButton.setAttribute('aria-pressed', shouldShow ? 'true' : 'false');
+    toggleButton.setAttribute('aria-label', shouldShow ? 'Скрыть пароль' : 'Показать пароль');
+    toggleButton.setAttribute('data-tooltip', shouldShow ? 'Скрыть пароль' : 'Показать пароль');
+  }
+
+  function configureUserFormForCreate() {
+    setFieldText('userModalTitle', 'Добавить пользователя');
+    setFieldText('userPasswordLabel', 'Временный пароль');
+    setFieldText(
+      'userPasswordHelp',
+      'При первом входе пользователь должен будет его сменить.'
+    );
+    setFieldRequired('userPassword', true);
+    setSubmitButtonText('Создать');
+  }
+
+  function configureUserFormForEdit() {
+    setFieldText('userModalTitle', 'Редактировать пользователя');
+    setFieldText('userPasswordLabel', 'Новый временный пароль');
+    setFieldText(
+      'userPasswordHelp',
+      'Оставьте поле пустым, если пароль менять не нужно. Если задать новый пароль, пользователь будет обязан сменить его при следующем входе.'
+    );
+    setFieldRequired('userPassword', false);
+    setSubmitButtonText('Сохранить');
+  }
+
+  function getRandomValues(length) {
+    var cryptoApi = typeof window !== 'undefined' ? (window.crypto || window.msCrypto || null) : null;
+    if (cryptoApi && typeof cryptoApi.getRandomValues === 'function') {
+      var typed = new Uint32Array(length);
+      cryptoApi.getRandomValues(typed);
+      return Array.prototype.slice.call(typed);
+    }
+    var fallback = [];
+    for (var index = 0; index < length; index += 1) {
+      fallback.push(Math.floor(Math.random() * 4294967296));
+    }
+    return fallback;
+  }
+
+  function pickRandomCharacter(charset, randomValue) {
+    return charset.charAt(randomValue % charset.length);
+  }
+
+  function shuffleCharacters(characters) {
+    var shuffled = characters.slice();
+    var randomValues = getRandomValues(shuffled.length || 1);
+    for (var index = shuffled.length - 1; index > 0; index -= 1) {
+      var swapIndex = randomValues[index] % (index + 1);
+      var temp = shuffled[index];
+      shuffled[index] = shuffled[swapIndex];
+      shuffled[swapIndex] = temp;
+    }
+    return shuffled;
+  }
+
+  function generateTemporaryPassword() {
+    var uppercase = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    var lowercase = 'abcdefghijkmnopqrstuvwxyz';
+    var digits = '23456789';
+    var specials = '!@#$%^&*()-_+=~[]{}';
+    var combined = uppercase + lowercase + digits + specials;
+    var required = [
+      pickRandomCharacter(uppercase, getRandomValues(1)[0]),
+      pickRandomCharacter(lowercase, getRandomValues(1)[0]),
+      pickRandomCharacter(digits, getRandomValues(1)[0]),
+      pickRandomCharacter(specials, getRandomValues(1)[0])
+    ];
+    var passwordCharacters = required.slice();
+    var targetLength = 12;
+    var extraRandom = getRandomValues(targetLength - passwordCharacters.length);
+    for (var extraIndex = 0; extraIndex < extraRandom.length; extraIndex += 1) {
+      passwordCharacters.push(pickRandomCharacter(combined, extraRandom[extraIndex]));
+    }
+    return shuffleCharacters(passwordCharacters).join('');
+  }
+
+  function handleGeneratePassword() {
+    var passwordField = getField('userPassword');
+    var generatorButton = getField('generateUserPasswordBtn');
+    if (!passwordField) return;
+    passwordField.value = generateTemporaryPassword();
+    passwordField.dispatchEvent(new Event('input', { bubbles: true }));
+    passwordField.focus();
+    passwordField.select();
+    if (generatorButton) {
+      generatorButton.classList.remove('is-rolling');
+      void generatorButton.offsetWidth;
+      generatorButton.classList.add('is-rolling');
+      window.setTimeout(function () {
+        generatorButton.classList.remove('is-rolling');
+      }, 600);
+    }
+  }
+
+  function toggleUserPasswordVisibility() {
+    var passwordField = getField('userPassword');
+    if (!passwordField) return;
+    setPasswordFieldVisibility(passwordField.getAttribute('type') === 'password');
+    passwordField.focus();
+  }
+
   function loadUsers() {
     var state = getState();
     var common = getCommon();
-    var tbody = document.getElementById('usersTableBody');
+    var tbody = getField('usersTableBody');
     if (!tbody) return;
     tbody.innerHTML = '';
-    var search =
-      document.getElementById('userSearch') && document.getElementById('userSearch').value
-        ? document.getElementById('userSearch').value.toLowerCase()
-        : '';
-    var roleFilter =
-      document.getElementById('roleFilter') && document.getElementById('roleFilter').value
-        ? document.getElementById('roleFilter').value
-        : '';
+    var search = getField('userSearch') && getField('userSearch').value
+      ? getField('userSearch').value.toLowerCase()
+      : '';
+    var roleFilter = getField('roleFilter') && getField('roleFilter').value
+      ? getField('roleFilter').value
+      : '';
     var users = state.users || [];
     var filteredUsers = users.filter(function (user) {
       var matchesSearch =
@@ -134,24 +305,30 @@
     });
     filteredUsers.forEach(function (user) {
       var row = document.createElement('tr');
+
       var tdId = document.createElement('td');
       tdId.textContent = user.id;
       row.appendChild(tdId);
+
       var tdName = document.createElement('td');
       tdName.textContent = user.name;
       row.appendChild(tdName);
+
       var tdEmail = document.createElement('td');
       tdEmail.textContent = user.email;
       row.appendChild(tdEmail);
+
       var tdRole = document.createElement('td');
       var roleBadge = document.createElement('span');
       roleBadge.className = 'status-badge ' + common.getRoleClass(user.role);
       roleBadge.textContent = common.getRoleName(user.role);
       tdRole.appendChild(roleBadge);
       row.appendChild(tdRole);
+
       var tdDate = document.createElement('td');
       tdDate.textContent = common.formatDate(user.createdAt);
       row.appendChild(tdDate);
+
       var tdStatus = document.createElement('td');
       var statusBadge = document.createElement('span');
       statusBadge.className =
@@ -159,11 +336,14 @@
       statusBadge.textContent = user.status === 'active' ? 'Активен' : 'Неактивен';
       tdStatus.appendChild(statusBadge);
       row.appendChild(tdStatus);
+
       var tdActions = document.createElement('td');
       var actionsDiv = document.createElement('div');
       actionsDiv.className = 'action-buttons';
+
       var editBtn = document.createElement('button');
       editBtn.className = 'action-btn edit-btn';
+      editBtn.setAttribute('type', 'button');
       editBtn.setAttribute('data-tooltip', 'Редактировать');
       editBtn.setAttribute('data-user-id', user.id);
       editBtn.innerHTML =
@@ -172,8 +352,10 @@
         editUser(user.id);
       });
       actionsDiv.appendChild(editBtn);
+
       var deleteBtn = document.createElement('button');
       deleteBtn.className = 'action-btn delete-btn';
+      deleteBtn.setAttribute('type', 'button');
       deleteBtn.setAttribute('data-tooltip', 'Удалить');
       deleteBtn.setAttribute('data-user-id', user.id);
       deleteBtn.innerHTML =
@@ -182,6 +364,7 @@
         deleteUser(user.id);
       });
       actionsDiv.appendChild(deleteBtn);
+
       tdActions.appendChild(actionsDiv);
       row.appendChild(tdActions);
       tbody.appendChild(row);
@@ -190,6 +373,15 @@
 
   function filterUsers() {
     loadUsers();
+  }
+
+  function openCreateUserModal() {
+    var state = getState();
+    var common = getCommon();
+    state.currentUserId = null;
+    resetUserForm();
+    configureUserFormForCreate();
+    common.showModal('userModal');
   }
 
   function editUser(userId) {
@@ -201,10 +393,11 @@
     })[0];
     if (!user) return;
     state.currentUserId = userId;
-    document.getElementById('userModalTitle').textContent = 'Редактировать пользователя';
-    document.getElementById('userName').value = user.name;
-    document.getElementById('userEmail').value = user.email;
-    document.getElementById('userRole').value = user.role;
+    setFieldValue('userName', user.name);
+    setFieldValue('userEmail', user.email);
+    setFieldValue('userRole', user.role);
+    setFieldValue('userPassword', '');
+    configureUserFormForEdit();
     common.showModal('userModal');
   }
 
@@ -246,41 +439,88 @@
     );
   }
 
+  function buildUpdatePayload(currentUser, formData) {
+    var payload = {};
+    if (formData.name !== currentUser.name) {
+      payload.username = formData.name;
+    }
+    if (formData.email !== currentUser.email) {
+      payload.email = formData.email;
+    }
+    if (formData.role !== currentUser.role) {
+      payload.role = formData.role;
+    }
+    if (formData.password) {
+      payload.password = formData.password;
+    }
+    return payload;
+  }
+
   async function handleUserSubmit(e) {
     e.preventDefault();
     var state = getState();
     var common = getCommon();
     var users = state.users || [];
     var formData = {
-      name: document.getElementById('userName').value,
-      email: document.getElementById('userEmail').value,
-      role: document.getElementById('userRole').value
+      name: (getField('userName').value || '').trim(),
+      email: (getField('userEmail').value || '').trim(),
+      role: getField('userRole').value,
+      password: getField('userPassword').value || ''
     };
+
     if (!formData.name || !formData.role) {
       common.showNotification('Ошибка', 'Заполните все обязательные поля', 'error');
       return;
     }
+    if (!state.currentUserId && !formData.password) {
+      common.showNotification('Ошибка', 'Укажите временный пароль для нового пользователя', 'error');
+      return;
+    }
+    if (formData.password && formData.password.length < 6) {
+      common.showNotification(
+        'Ошибка',
+        'Пароль должен содержать не менее 6 символов',
+        'error'
+      );
+      return;
+    }
+
     if (state.currentUserId) {
       var userIndex = users.findIndex(function (u) {
         return u.id === state.currentUserId;
       });
       if (userIndex === -1) return;
-      var oldRole = users[userIndex].role;
+      var currentUser = users[userIndex];
+      var payload = buildUpdatePayload(currentUser, formData);
+      if (!Object.keys(payload).length) {
+        common.showNotification('Информация', 'Изменений для сохранения нет', 'info');
+        state.currentUserId = null;
+        resetUserForm();
+        common.hideModal('userModal');
+        return;
+      }
       try {
-        var updatedUser = await updateUserViaApi(state.currentUserId, { role: formData.role });
+        var updatedUser = await updateUserViaApi(state.currentUserId, payload);
         users[userIndex] = updatedUser;
         loadUsers();
+        var changes = [];
+        if (payload.username) changes.push('логин');
+        if (Object.prototype.hasOwnProperty.call(payload, 'email')) changes.push('email');
+        if (payload.role) changes.push('роль');
+        if (payload.password) changes.push('временный пароль');
         addAuditLog(
           'update',
-          'Изменена роль пользователя: ' +
+          'Обновлен пользователь ' +
             updatedUser.name +
-            ' (' +
-            oldRole +
-            ' -> ' +
-            formData.role +
-            ')'
+            (changes.length ? ' (' + changes.join(', ') + ')' : '')
         );
-        common.showNotification('Успешно', 'Роль пользователя обновлена', 'success');
+        common.showNotification(
+          'Успешно',
+          payload.password
+            ? 'Пользователь обновлен, временный пароль сброшен'
+            : 'Данные пользователя обновлены',
+          'success'
+        );
       } catch (error) {
         common.showNotification(
           'Ошибка',
@@ -291,14 +531,37 @@
         return;
       }
     } else {
-      common.showNotification(
-        'Ограничение UI',
-        'Создание пользователей из админского UI пока не включено. Для этого сценария нужен отдельный backend-driven form.',
-        'info',
-        true
-      );
-      return;
+      try {
+        var createdUser = await createUserViaApi({
+          username: formData.name,
+          email: formData.email,
+          password: formData.password,
+          role: formData.role
+        });
+        users.push(createdUser);
+        loadUsers();
+        addAuditLog(
+          'create',
+          'Создан пользователь ' + createdUser.name + ' с ролью ' + createdUser.role
+        );
+        common.showNotification(
+          'Успешно',
+          'Пользователь создан. При первом входе потребуется смена пароля.',
+          'success'
+        );
+      } catch (error) {
+        common.showNotification(
+          'Ошибка',
+          error && error.message ? error.message : 'Не удалось создать пользователя',
+          'error',
+          true
+        );
+        return;
+      }
     }
+
+    state.currentUserId = null;
+    resetUserForm();
     common.hideModal('userModal');
     loadUsers();
     if (window.AdminDashboard && typeof window.AdminDashboard.updateDashboardStats === 'function') {
@@ -307,24 +570,49 @@
   }
 
   function init() {
+    var state = getState();
     var common = getCommon();
-    var userSearch = document.getElementById('userSearch');
-    var roleFilter = document.getElementById('roleFilter');
-    if (userSearch)
+    var userSearch = getField('userSearch');
+    var roleFilter = getField('roleFilter');
+    var userForm = getField('userForm');
+    var cancelUser = getField('cancelUser');
+    var addUserBtn = getField('addUserBtn');
+    var generateUserPasswordBtn = getField('generateUserPasswordBtn');
+    var toggleUserPasswordBtn = getField('toggleUserPasswordBtn');
+
+    if (userSearch) {
       userSearch.addEventListener('input', function () {
         filterUsers();
       });
-    if (roleFilter)
+    }
+    if (roleFilter) {
       roleFilter.addEventListener('change', function () {
         filterUsers();
       });
-    var userForm = document.getElementById('userForm');
-    var cancelUser = document.getElementById('cancelUser');
-    if (userForm) userForm.addEventListener('submit', handleUserSubmit);
-    if (cancelUser)
+    }
+    if (userForm) {
+      userForm.addEventListener('submit', handleUserSubmit);
+    }
+    if (addUserBtn) {
+      addUserBtn.addEventListener('click', function () {
+        openCreateUserModal();
+      });
+    }
+    if (generateUserPasswordBtn) {
+      generateUserPasswordBtn.addEventListener('click', handleGeneratePassword);
+    }
+    if (toggleUserPasswordBtn) {
+      toggleUserPasswordBtn.addEventListener('click', toggleUserPasswordVisibility);
+    }
+    if (cancelUser) {
       cancelUser.addEventListener('click', function () {
+        state.currentUserId = null;
+        resetUserForm();
         common.hideModal('userModal');
       });
+    }
+
+    configureUserFormForCreate();
     loadUsers();
   }
 
@@ -333,6 +621,7 @@
     loadUsers: loadUsers,
     normalizeUsers: normalizeUsers,
     fetchUsersFromApi: fetchUsersFromApi,
-    refreshUsersFromApi: refreshUsersFromApi
+    refreshUsersFromApi: refreshUsersFromApi,
+    openCreateUserModal: openCreateUserModal
   };
 })();

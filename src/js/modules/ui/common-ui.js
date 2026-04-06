@@ -36,26 +36,29 @@ function getRoleApi() {
   return window.RoleCapabilities || window.RolesConfig || null;
 }
 
-function isMockAuthFallbackAllowed() {
-  const apiConfig = typeof window !== 'undefined' ? window.ApiConfig || null : null;
-  if (apiConfig && typeof apiConfig.getUseApi === 'function') {
-    return apiConfig.getUseApi() !== true;
-  }
-  return true;
-}
-
 function getNormalizedRole() {
   if (window.AuthModule && typeof window.AuthModule.getCurrentRole === 'function') {
     return window.AuthModule.getCurrentRole();
   }
   const roleApi = getRoleApi();
   if (roleApi && typeof roleApi.getCurrentRole === 'function') return roleApi.getCurrentRole();
-  if (!isMockAuthFallbackAllowed()) return '';
-  if (roleApi && typeof roleApi.normalizeRole === 'function')
-    return roleApi.normalizeRole(localStorage.getItem('role'));
-  return String(localStorage.getItem('role') || '')
-    .trim()
-    .toLowerCase();
+  return '';
+}
+
+function getCurrentUsername() {
+  if (window.AuthModule && typeof window.AuthModule.getCurrentUsername === 'function') {
+    return String(window.AuthModule.getCurrentUsername() || '').trim();
+  }
+  return '';
+}
+
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function checkArchitectRole() {
@@ -65,6 +68,15 @@ function checkArchitectRole() {
   if (roleApi && typeof roleApi.hasCapability === 'function')
     return roleApi.hasCapability('manage_technologies');
   return false;
+}
+
+function isPublicLandingPage() {
+  if (typeof window === 'undefined' || !window.location) {
+    return false;
+  }
+
+  const pathname = String(window.location.pathname || '');
+  return pathname === '/' || pathname === '/src/pages/index.html';
 }
 
 function renderAuth() {
@@ -84,13 +96,10 @@ function renderAuth() {
 
     const roleApi = getRoleApi();
     const role = getNormalizedRole();
-    const allowMockAuthFallback = isMockAuthFallbackAllowed();
     const isAuthenticated =
       window.AuthModule && typeof window.AuthModule.isAuthenticated === 'function'
         ? window.AuthModule.isAuthenticated()
-        : allowMockAuthFallback &&
-          (localStorage.getItem('isLoggedIn') === 'true' ||
-            !!(localStorage.getItem('username') || localStorage.getItem('userName') || '').trim());
+        : false;
     const canManageTechnologies =
       roleApi && typeof roleApi.hasCapability === 'function'
         ? roleApi.hasCapability('manage_technologies', role)
@@ -112,8 +121,11 @@ function renderAuth() {
         ? roleApi.hasCapability('create_proposals', role) ||
           roleApi.hasCapability('review_proposals', role)
         : false;
+    const username = getCurrentUsername();
     const roleLabel =
       roleApi && typeof roleApi.getRoleLabel === 'function' ? roleApi.getRoleLabel(role) : role;
+    const escapedUsername = escapeHtml(username || roleLabel || '');
+    const escapedRoleLabel = escapeHtml(roleLabel || '');
     const exportPdfBtn = document.getElementById('exportPdfBtn');
     const editBtn = document.getElementById('editTechBtn');
     const deleteBtn = document.getElementById('deleteTechBtn');
@@ -146,8 +158,8 @@ function renderAuth() {
 
     document.body.classList.remove('not-authorized');
 
-    if (canManageTechnologies && role !== 'admin') {
-      authInfo.innerHTML = `<div class="user-role architect-role">${roleLabel}</div>`;
+    if (isAuthenticated && canManageTechnologies && role !== 'admin') {
+      authInfo.innerHTML = `<div class="user-role architect-role" data-tooltip="${escapedRoleLabel}" title="${escapedRoleLabel}">${escapedUsername}</div>`;
       logoutContainer.innerHTML = `<button class="logout" data-tooltip="Выйти" aria-label="Выйти">
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -156,12 +168,14 @@ function renderAuth() {
     </svg>
   </button>`;
       setButtonsVisibility(canSubmitTechnologyChanges);
-      logoutContainer.querySelector('.logout').onclick = async () => {
+      logoutContainer.querySelector('.logout').onclick = async (event) => {
+        event?.preventDefault?.();
+        event?.stopPropagation?.();
         await safeLogout();
-        window.location.href = '/src/pages/auth.html';
+        window.location.href = '/';
       };
-    } else if (canAccessAdminPanel) {
-      authInfo.innerHTML = `<div class="user-role admin-role" data-tooltip="Перейти в админ-панель" style="cursor: pointer;">Администратор</div>`;
+    } else if (isAuthenticated && canAccessAdminPanel) {
+      authInfo.innerHTML = `<div class="user-role admin-role" data-tooltip="${escapedRoleLabel}" title="${escapedRoleLabel}" style="cursor: pointer;">${escapedUsername}</div>`;
       logoutContainer.innerHTML = `<button class="logout" data-tooltip="Выйти" aria-label="Выйти">
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -176,15 +190,17 @@ function renderAuth() {
           try {
             sessionStorage.setItem('rmk_admin_nav_ts', String(Date.now()));
           } catch (_) {}
-          window.location.href = '/src/pages/admin.html';
+          window.location.href = '/admin-panel/';
         };
       }
-      logoutContainer.querySelector('.logout').onclick = async () => {
+      logoutContainer.querySelector('.logout').onclick = async (event) => {
+        event?.preventDefault?.();
+        event?.stopPropagation?.();
         await safeLogout();
-        location.reload();
+        window.location.href = '/';
       };
     } else if (isAuthenticated && (role === 'editor' || role === 'guest')) {
-      authInfo.innerHTML = `<div class="user-role">${roleLabel}</div>`;
+      authInfo.innerHTML = `<div class="user-role" data-tooltip="${escapedRoleLabel}" title="${escapedRoleLabel}">${escapedUsername}</div>`;
       logoutContainer.innerHTML = `<button class="logout" data-tooltip="Выйти" aria-label="Выйти">
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -193,9 +209,11 @@ function renderAuth() {
     </svg>
   </button>`;
       setButtonsVisibility(canSubmitTechnologyChanges);
-      logoutContainer.querySelector('.logout').onclick = async () => {
+      logoutContainer.querySelector('.logout').onclick = async (event) => {
+        event?.preventDefault?.();
+        event?.stopPropagation?.();
         await safeLogout();
-        location.reload();
+        window.location.href = '/';
       };
     } else {
       authInfo.innerHTML = ``;
@@ -209,7 +227,7 @@ function renderAuth() {
       setButtonsVisibility(false);
       document.body.classList.add('not-authorized');
       logoutContainer.querySelector('.login').onclick = () => {
-        window.location.href = '/src/pages/auth.html';
+        window.location.href = '/auth/login/';
       };
     }
     if (window.ModerationFlow && typeof window.ModerationFlow.syncUiState === 'function') {
@@ -279,7 +297,10 @@ function initTheme() {
 function showHelpMenu(button) {
   // Проверяем, находимся ли мы на странице радара (radar.html)
   const isRMKPage =
-    window.location.pathname.includes('radar.html') || window.location.href.includes('radar.html');
+    window.location.pathname === '/radar/' ||
+    window.location.pathname === '/radar' ||
+    window.location.pathname.includes('radar.html') ||
+    window.location.href.includes('radar.html');
 
   // Удаляем существующее меню, если есть
   const existingMenu = document.querySelector('.help-menu');
@@ -348,7 +369,7 @@ function showHelpMenu(button) {
   }
 
   const helpLink = document.createElement('a');
-  helpLink.href = 'help.html';
+  helpLink.href = '/help/';
   helpLink.className = 'help-menu-item';
   helpLink.setAttribute('role', 'menuitem');
 

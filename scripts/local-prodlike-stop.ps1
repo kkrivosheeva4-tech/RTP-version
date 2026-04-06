@@ -1,5 +1,5 @@
 param(
-    [int[]]$Ports = @(443, 8000, 2019)
+    [int[]]$Ports = @(8000)
 )
 
 . (Join-Path $PSScriptRoot "local-prodlike-common.ps1")

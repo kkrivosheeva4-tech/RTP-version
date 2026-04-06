@@ -47,7 +47,6 @@ services:
       AUTH_REFRESH_COOKIE_SAMESITE: Lax
       AUTH_REFRESH_COOKIE_PATH: /api/v1/auth/
       AUTH_REFRESH_REQUIRE_CSRF: "True"
-      SERVE_FRONTEND_FROM_DJANGO: "True"
       DB_ENGINE: postgresql
       DB_NAME: rtp3
       DB_USER: rtp3
@@ -64,11 +63,12 @@ services:
     ports:
       - "8000:8000"
     command: >
-      sh -c "python backend/manage.py migrate &&
+      sh -c "python backend/manage.py collectstatic --noinput &&
+             python backend/manage.py migrate &&
              python backend/manage.py seed_references &&
              python backend/manage.py seed_technologies &&
              python backend/manage.py seed_users &&
-             python backend/manage.py runserver 0.0.0.0:8000"
+             gunicorn --config gunicorn.conf.py config.wsgi:application"
 
 volumes:
   postgres-data:

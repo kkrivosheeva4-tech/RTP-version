@@ -6,6 +6,7 @@ import Logger from '../core/logger.js';
 
 
   const STORAGE_KEY = 'tech_notifications';
+  const READ_STATE_KEY_PREFIX = 'tech_notifications_read';
   const MAX_NOTIFICATIONS = 100; // Максимальное количество уведомлений
 
   // Типы уведомлений
@@ -16,10 +17,24 @@ import Logger from '../core/logger.js';
     PROPOSAL: 'proposal'
   };
 
+  function getCurrentNotificationScope() {
+    try {
+      if (window.AuthModule && typeof window.AuthModule.getCurrentUsername === 'function') {
+        const username = String(window.AuthModule.getCurrentUsername() || '').trim().toLowerCase();
+        if (username) return username;
+      }
+    } catch (_) {}
+    return 'anonymous';
+  }
+
+  function getReadStateStorageKey() {
+    return `${READ_STATE_KEY_PREFIX}:${getCurrentNotificationScope()}`;
+  }
+
   /**
-   * Получить все уведомления из localStorage
+   * Получить общий список уведомлений из localStorage
    */
-  function getNotifications() {
+  function getStoredNotifications() {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
@@ -32,9 +47,9 @@ import Logger from '../core/logger.js';
   }
 
   /**
-   * Сохранить уведомления в localStorage
+   * Сохранить общий список уведомлений в localStorage
    */
-  function saveNotifications(notifications) {
+  function saveStoredNotifications(notifications) {
     try {
       // Ограничиваем количество уведомлений
       const limited = notifications.slice(-MAX_NOTIFICATIONS);
@@ -44,6 +59,49 @@ import Logger from '../core/logger.js';
       Logger.warn('Ошибка при сохранении уведомлений в localStorage', e);
       return notifications;
     }
+  }
+
+  function getReadState() {
+    try {
+      const stored = localStorage.getItem(getReadStateStorageKey());
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return Array.isArray(parsed) ? parsed : [];
+      }
+    } catch (e) {
+      Logger.warn('Ошибка при чтении статуса прочтения уведомлений', e);
+    }
+    return [];
+  }
+
+  function saveReadState(ids) {
+    try {
+      const normalized = Array.isArray(ids)
+        ? Array.from(new Set(ids.map(id => String(id)).filter(Boolean)))
+        : [];
+      localStorage.setItem(getReadStateStorageKey(), JSON.stringify(normalized));
+      return normalized;
+    } catch (e) {
+      Logger.warn('Ошибка при сохранении статуса прочтения уведомлений', e);
+      return Array.isArray(ids) ? ids : [];
+    }
+  }
+
+  function getNotifications() {
+    const readIds = new Set(getReadState().map(id => String(id)));
+    return getStoredNotifications().map(notification => ({
+      ...notification,
+      read: readIds.has(String(notification.id))
+    }));
+  }
+
+  function isAuthenticatedForNotifications() {
+    try {
+      if (window.AuthModule && typeof window.AuthModule.isAuthenticated === 'function') {
+        return window.AuthModule.isAuthenticated() === true;
+      }
+    } catch (_) {}
+    return false;
   }
 
   /**
@@ -79,7 +137,7 @@ import Logger from '../core/logger.js';
         initNotifications();
       }
 
-      const notifications = getNotifications();
+      const notifications = getStoredNotifications();
       const timestamp = new Date().toISOString();
 
       let message = '';
@@ -125,7 +183,7 @@ import Logger from '../core/logger.js';
       };
 
       notifications.push(notification);
-      const saved = saveNotifications(notifications);
+      const saved = saveStoredNotifications(notifications);
 
       // Логируем для отладки
       // Уведомление добавлено в localStorage
@@ -152,11 +210,12 @@ import Logger from '../core/logger.js';
    * Отметить уведомление как прочитанное
    */
   function markAsRead(notificationId) {
-    const notifications = getNotifications();
+    const notifications = getStoredNotifications();
     const notification = notifications.find(n => n.id === notificationId);
     if (notification) {
-      notification.read = true;
-      saveNotifications(notifications);
+      const readIds = new Set(getReadState().map(id => String(id)));
+      readIds.add(String(notificationId));
+      saveReadState(Array.from(readIds));
       updateNotificationUI();
     }
   }
@@ -165,9 +224,8 @@ import Logger from '../core/logger.js';
    * Отметить все уведомления как прочитанные
    */
   function markAllAsRead() {
-    const notifications = getNotifications();
-    notifications.forEach(n => n.read = true);
-    saveNotifications(notifications);
+    const notifications = getStoredNotifications();
+    saveReadState(notifications.map(n => String(n.id)));
     updateNotificationUI();
   }
 
@@ -175,9 +233,10 @@ import Logger from '../core/logger.js';
    * Удалить уведомление
    */
   function removeNotification(notificationId) {
-    const notifications = getNotifications();
+    const notifications = getStoredNotifications();
     const filtered = notifications.filter(n => n.id !== notificationId);
-    saveNotifications(filtered);
+    saveStoredNotifications(filtered);
+    saveReadState(getReadState().filter(id => String(id) !== String(notificationId)));
     updateNotificationUI();
   }
 
@@ -311,7 +370,8 @@ import Logger from '../core/logger.js';
    * Удалить все уведомления
    */
   function clearAllNotifications() {
-    saveNotifications([]);
+    saveStoredNotifications([]);
+    saveReadState([]);
     updateNotificationUI();
   }
 
@@ -319,6 +379,9 @@ import Logger from '../core/logger.js';
    * Получить количество непрочитанных уведомлений
    */
   function getUnreadCount() {
+    if (!isAuthenticatedForNotifications()) {
+      return 0;
+    }
     const notifications = getNotifications();
     return notifications.filter(n => !n.read).length;
   }
@@ -674,7 +737,7 @@ import Logger from '../core/logger.js';
       }
 
       const unreadCount = getUnreadCount();
-      const notifications = getNotifications();
+      const notifications = isAuthenticatedForNotifications() ? getNotifications() : [];
 
       // Обновление UI уведомлений
 
@@ -958,6 +1021,9 @@ import Logger from '../core/logger.js';
   if (typeof window !== 'undefined' && window.addEventListener) {
     window.addEventListener('load', () => {
       if (!document.getElementById('notificationsPanel')) initNotifications();
+      updateNotificationUI();
+    });
+    window.addEventListener('rmk-auth-changed', () => {
       updateNotificationUI();
     });
   }

@@ -41,34 +41,6 @@ function Test-CommandAvailable {
     return $null -ne (Get-Command $CommandName -ErrorAction SilentlyContinue)
 }
 
-function Get-CaddyCommand {
-    if (Test-CommandAvailable -CommandName "caddy") {
-        return "caddy"
-    }
-
-    $wingetPackageDir = $null
-    $wingetPackagesRoot = Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Packages"
-    if (Test-Path -LiteralPath $wingetPackagesRoot) {
-        $wingetPackageDir = Get-ChildItem -Path $wingetPackagesRoot -Directory -Filter "CaddyServer.Caddy*" -ErrorAction SilentlyContinue |
-            Select-Object -First 1 -ExpandProperty FullName
-    }
-
-    $candidates = @(
-        (Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Links\caddy.exe"),
-        $(if ($wingetPackageDir) { Join-Path $wingetPackageDir "caddy.exe" }),
-        (Join-Path $env:ProgramFiles "Caddy\caddy.exe"),
-        (Join-Path ${env:ProgramFiles(x86)} "Caddy\caddy.exe")
-    ) | Where-Object { $_ }
-
-    foreach ($candidate in $candidates) {
-        if (Test-Path -LiteralPath $candidate) {
-            return (Format-ExecutableCandidate -Value $candidate)
-        }
-    }
-
-    throw "Caddy is not available in PATH and no local installation path was detected."
-}
-
 function Format-ExecutableCandidate {
     param([Parameter(Mandatory = $true)][string]$Value)
 

@@ -4,20 +4,14 @@
  * ИНСТРУКЦИЯ:
  * 1. Скопируйте этот файл в api-config.local.js
  * 2. Измените API_BASE_URL на адрес вашего backend
- * 3. При необходимости установите USE_API (true = использовать API, false = mock)
+ * 3. При необходимости настройте cookie-auth и таймауты запросов
  *
  * Файл api-config.local.js добавлен в .gitignore — локальные настройки не попадут в репозиторий.
  */
 
 if (typeof window !== 'undefined') {
-  /** Базовый URL backend API (без слэша в конце). Пусто — mock-режим. */
+  /** Базовый URL backend API (без слэша в конце). */
   window.API_BASE_URL = 'http://localhost:8000'; // например: 'http://localhost:8000'
-
-  /**
-   * Флаг источника данных: true — API, false — mock (JSON + VFS).
-   * Если не задан, определяется по API_BASE_URL (не пустой → true).
-   */
-  // window.USE_API = true;
 
   /** Опционально: таймаут запросов (мс) */
   // window.DEFAULT_TIMEOUT_MS = 8000;

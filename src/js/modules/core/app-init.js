@@ -39,6 +39,23 @@
     throw new Error('DOMProxy не загружен');
   }
 
+  function rebuildEnterpriseDataMap(technologies) {
+    return (Array.isArray(technologies) ? technologies : []).reduce((acc, technology) => {
+      const companies = Array.isArray(technology && technology.company)
+        ? technology.company
+        : (technology && technology.company ? [technology.company] : []);
+      companies.forEach((company) => {
+        const name = String(company || '').trim();
+        if (!name) return;
+        if (!acc[name]) {
+          acc[name] = [];
+        }
+        acc[name].push(technology);
+      });
+      return acc;
+    }, {});
+  }
+
   function isApiModeEnabled() {
     try {
       return !!(
@@ -52,20 +69,130 @@
     }
   }
 
-  function redirectToAuthIfNeeded() {
-    if (typeof window === 'undefined' || !window.location) return;
-
-    const pathname = String(window.location.pathname || '');
-    if (
-      pathname.includes('/src/pages/auth.html') ||
-      pathname.includes('/src/pages/auth-2fa-setup.html') ||
-      pathname.includes('/src/pages/auth-2fa-verify.html')
-    ) {
-      return;
+  function isPublicLandingPage() {
+    if (typeof window === 'undefined' || !window.location) {
+      return false;
     }
 
-    const returnPath = `${window.location.pathname || ''}${window.location.search || ''}`;
-    window.location.href = `/src/pages/auth.html${returnPath && returnPath !== '/' ? `?return=${encodeURIComponent(returnPath)}` : ''}`;
+    const pathname = String(window.location.pathname || '');
+    return pathname === '/' || pathname === '/src/pages/index.html';
+  }
+
+  async function loadPublicLandingPreview(StateAccessors, StateManager) {
+    const loadJsonPreferVfs = typeof window !== 'undefined' ? window.loadJsonPreferVfs : null;
+    const buildBlockMaps = typeof window !== 'undefined' ? window.buildBlockMaps : null;
+    const normalizeTechnologyFromNewFormat =
+      typeof window !== 'undefined' ? window.normalizeTechnologyFromNewFormat : null;
+    const buildEnterpriseDataFromTechnologies =
+      typeof window !== 'undefined' ? window.buildEnterpriseDataFromTechnologies : null;
+
+    if (
+      typeof loadJsonPreferVfs !== 'function' ||
+      typeof buildBlockMaps !== 'function' ||
+      typeof normalizeTechnologyFromNewFormat !== 'function' ||
+      typeof buildEnterpriseDataFromTechnologies !== 'function'
+    ) {
+      return false;
+    }
+
+    const [blocksLoaded, enterprisesLoaded, directionsLoaded, directionMapLoaded, functionsLoaded, functionToBlockLoaded, technologiesLoaded] =
+      await Promise.all([
+        loadJsonPreferVfs('blocks.json'),
+        loadJsonPreferVfs('enterprises.json'),
+        loadJsonPreferVfs('digitalDirections.json'),
+        loadJsonPreferVfs('directionToQuadrant.json'),
+        loadJsonPreferVfs('functions.json'),
+        loadJsonPreferVfs('functionToBlock.json'),
+        loadJsonPreferVfs('technologies.json')
+      ]);
+
+    const blocks = Array.isArray(blocksLoaded?.data) ? blocksLoaded.data : [];
+    const enterprises = Array.isArray(enterprisesLoaded?.data) ? enterprisesLoaded.data : [];
+    const digitalDirections = Array.isArray(directionsLoaded?.data) ? directionsLoaded.data : [];
+    const directionToQuadrant =
+      directionMapLoaded?.data && typeof directionMapLoaded.data === 'object'
+        ? directionMapLoaded.data
+        : {};
+    const functionsData = Array.isArray(functionsLoaded?.data) ? functionsLoaded.data : [];
+    const functionToBlockMap =
+      functionToBlockLoaded?.data && typeof functionToBlockLoaded.data === 'object'
+        ? functionToBlockLoaded.data
+        : {};
+    const rawTechnologies = Array.isArray(technologiesLoaded?.data) ? technologiesLoaded.data : [];
+
+    const { blockIdToName, nameToBlockId, blocksList } = buildBlockMaps(blocks);
+    const technologies = rawTechnologies.map((tech) =>
+      normalizeTechnologyFromNewFormat(tech, blockIdToName, enterprises)
+    );
+    const enterpriseData = buildEnterpriseDataFromTechnologies(technologies);
+    const enterpriseList = enterprises
+      .map((ent) => (typeof ent === 'string' ? ent : ent?.name))
+      .filter(Boolean);
+
+    StateManager.set('nameToBlockId', nameToBlockId);
+    StateManager.set('blocksList', blocksList);
+    StateManager.set(
+      'functions',
+      functionsData
+        .map((item) => (item && typeof item === 'object' ? item.name : item))
+        .filter(Boolean)
+    );
+    StateManager.set('functionToBlockMap', functionToBlockMap);
+    StateManager.set('digitalDirections', digitalDirections);
+    StateManager.set('directionToQuadrant', directionToQuadrant);
+    StateManager.set('enterprisesList', enterprises);
+    StateManager.set('enterpriseList', enterpriseList);
+    StateManager.set('technologies', technologies);
+    StateManager.set('enterpriseData', enterpriseData);
+
+    window.blockIdToName = blockIdToName;
+    window.digitalDirections = digitalDirections;
+    window.directionToQuadrant = directionToQuadrant;
+    window.techTypes = Object.keys(window.TECHTYPE_TO_SHAPE || {});
+
+    const rings = ['Используемые', 'Внедряемые', 'Перспективные'];
+    window.RINGS = rings;
+    const levelToRing = {};
+    rings.forEach((ringName, idx) => {
+      levelToRing[ringName] = idx;
+      if (typeof ringName === 'string' && ringName.endsWith('ые')) {
+        levelToRing[ringName.slice(0, -2) + 'ая'] = idx;
+      }
+    });
+    window.levelToRing = levelToRing;
+
+    window.QUADRANTS =
+      digitalDirections.length > 0
+        ? digitalDirections
+            .slice()
+            .sort((a, b) => Number(a?.id || 0) - Number(b?.id || 0))
+            .map((direction) => ({
+              id: Number(direction?.id || 0),
+              name: String(direction?.name || '').trim() || `Направление ${direction?.id || ''}`,
+              startAngle: (Number(direction?.id || 1) - 1) * 90
+            }))
+        : [
+            { id: 1, name: 'Корпоративное управление и администрация', startAngle: 0 },
+            { id: 2, name: 'Основное производство', startAngle: 90 },
+            { id: 3, name: 'Производственная поддержка и безопасность', startAngle: 180 },
+            { id: 4, name: 'Внешние бизнесы', startAngle: 270 }
+          ];
+
+    const selectedEnterprise = localStorage.getItem('selectedEnterprise') || 'РМК';
+    const enterpriseToSwitch = enterpriseList.includes(selectedEnterprise)
+      ? selectedEnterprise
+      : (enterpriseList[0] || 'РМК');
+    if (StateAccessors && typeof StateAccessors.setCurrentEnterprise === 'function') {
+      StateAccessors.setCurrentEnterprise(enterpriseToSwitch);
+    }
+
+    if (typeof window.rebuildTechnologiesIndex === 'function') {
+      window.rebuildTechnologiesIndex();
+    } else if (window.DataIndex && typeof window.DataIndex.build === 'function') {
+      window.DataIndex.build(technologies);
+    }
+
+    return technologies.length > 0;
   }
 
   // Инициализация приложения
@@ -123,19 +250,23 @@
     if (isApiModeEnabled() && window.AuthModule && typeof window.AuthModule.bootstrapAuthSession === 'function') {
       await window.AuthModule.bootstrapAuthSession(true);
     }
-    if (typeof window.renderAuth === 'function') {
+    if (window.AuthModule && typeof window.AuthModule.renderAuth === 'function') {
+      window.AuthModule.renderAuth();
+    } else if (typeof window.renderAuth === 'function') {
       window.renderAuth();
     }
     if (
-      isApiModeEnabled() &&
+      isPublicLandingPage() &&
       window.AuthModule &&
       typeof window.AuthModule.isAuthenticated === 'function' &&
       !window.AuthModule.isAuthenticated()
     ) {
-      redirectToAuthIfNeeded();
+      await loadPublicLandingPreview(StateAccessors, StateManager);
+      if (typeof window.renderRadarBackground === 'function') {
+        window.renderRadarBackground({ showSectorLabels: false });
+      }
       return;
     }
-
     // Загрузка данных
     await DataLoader.loadData();
 
@@ -170,10 +301,15 @@
     StateManager.set('nextId', nextId);
 
     // Рендер радара: полный радар с технологиями только на radar.html; на главной — только фон
-    const isRadarPage = window.location.pathname.includes('radar.html') || window.location.href.includes('radar.html');
-    if (isRadarPage && typeof window.renderRadar === 'function') {
+    const isRadarPage =
+      window.location.pathname === '/radar/' ||
+      window.location.pathname === '/radar' ||
+      window.location.pathname.includes('radar.html') ||
+      window.location.href.includes('radar.html');
+    const hasRadarCanvas = !!document.getElementById('techRadar');
+    if (isRadarPage && hasRadarCanvas && typeof window.renderRadar === 'function') {
       window.renderRadar();
-    } else if (!isRadarPage && typeof window.renderRadarBackground === 'function') {
+    } else if (hasRadarCanvas && typeof window.renderRadarBackground === 'function') {
       window.renderRadarBackground({ showSectorLabels: false });
     }
 
@@ -254,7 +390,11 @@
    */
   function showHelpMenu(button) {
     // Проверяем, находимся ли мы на странице радара (radar.html)
-    const isRMKPage = window.location.pathname.includes('radar.html') || window.location.href.includes('radar.html');
+    const isRMKPage =
+      window.location.pathname === '/radar/' ||
+      window.location.pathname === '/radar' ||
+      window.location.pathname.includes('radar.html') ||
+      window.location.href.includes('radar.html');
 
     // Создаем выпадающее меню
     const menu = document.createElement('div');
@@ -275,7 +415,7 @@
       `;
     }
     menuHTML += `
-      <a href="/src/pages/help.html" class="help-menu-item" role="menuitem">
+      <a href="/help/" class="help-menu-item" role="menuitem">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
           <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
@@ -419,11 +559,8 @@
         }
 
         try {
-          const enterpriseData = StateAccessors.getEnterpriseData();
-          const currentEnterprise = StateAccessors.getCurrentEnterprise();
           const technologies = StateAccessors.getTechnologies();
-          enterpriseData[currentEnterprise] = [...technologies];
-          StateAccessors.setEnterpriseData({ ...enterpriseData });
+          StateAccessors.setEnterpriseData(rebuildEnterpriseDataMap(technologies));
         } catch (err) { if (window.Logger) window.Logger.warn('Не удалось обновить enterpriseData после удаления', err); }
 
         DataLoader.showNotification('Технология удалена!', true);
@@ -441,35 +578,8 @@
         // Логируем удаление технологии (важное действие → должно попадать в журнал аудита)
         try {
           const details = `Удалена технология: "${currentTech.name}" (ID: ${currentTech.id})`;
-          // Основной путь — через централизованный логгер
-          let ok = false;
           if (typeof window.appendAdminAudit === 'function') {
-            ok = !!window.appendAdminAudit('delete', details);
-          }
-          // Fallback: прямое логирование в localStorage, если по какой-то причине appendAdminAudit не сработал
-          if (!ok) {
-            const key = 'adminAuditLogs';
-            const raw = localStorage.getItem(key);
-            const list = raw ? (JSON.parse(raw) || []) : [];
-            const arr = Array.isArray(list) ? list : [];
-            let username = 'system';
-            if (window.AuthModule && typeof window.AuthModule.getCurrentUsername === 'function') {
-              username = (window.AuthModule.getCurrentUsername() || 'system').trim() || 'system';
-            }
-            const now = (typeof window.getAuditTimestamp === 'function')
-              ? window.getAuditTimestamp()
-              : new Date().toISOString().slice(0, 19).replace('T', ' ');
-            const nextId = arr.length > 0 ? (Math.max(...arr.map(x => Number(x && x.id) || 0)) + 1) : 1;
-            arr.unshift({
-              id: nextId,
-              date: now,
-              user: username,
-              action: 'delete',
-              details,
-              tz: 'local',
-              ip: 'local'
-            });
-            localStorage.setItem(key, JSON.stringify(arr));
+            window.appendAdminAudit('delete', details);
           }
         } catch (e) {
           // silent

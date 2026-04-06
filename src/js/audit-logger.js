@@ -1,6 +1,6 @@
 // audit-logger.js
-// Централизованное логирование важных действий в журнал аудита (localStorage: adminAuditLogs).
-// Должен быть подключен на ВСЕХ страницах (auth / RMK / admin).
+// Совместимость для старого window.appendAdminAudit.
+// Канонический журнал аудита теперь ведется только на backend.
 // ES module (шаг 7.5): side-effect only, экспорт в window для обратной совместимости.
 
 const STORAGE_KEY = 'adminAuditLogs';
@@ -16,22 +16,12 @@ const STORAGE_KEY = 'adminAuditLogs';
   }
 
   function readLogs() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      const parsed = safeJsonParse(raw, []);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch (_) {
-      return [];
-    }
+    return [];
   }
 
   function writeLogs(list) {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-      return true;
-    } catch (_) {
-      return false;
-    }
+    void list;
+    return false;
   }
 
   function pad2(n) {
@@ -71,31 +61,11 @@ const STORAGE_KEY = 'adminAuditLogs';
   }
 
   function migrateLogsIfNeeded() {
-    const list = readLogs();
-    if (!list.length) return;
-
-    let changed = false;
-    const migrated = list.map((l) => {
-      if (!l || typeof l !== 'object') return l;
-      if (l.tz === 'local') return l;
-      if (!('tz' in l)) {
-        const next = Object.assign({}, l);
-        const migratedDate = normalizeLegacyDate(next.date, next.tz);
-        if (migratedDate && migratedDate !== next.date) {
-          next.date = migratedDate;
-          changed = true;
-        }
-        next.tz = 'local';
-        changed = true;
-        return next;
-      }
-      // Если tz есть, но не local — тоже приводим к local (без конвертации, т.к. неизвестно)
-      const next = Object.assign({}, l, { tz: 'local' });
-      changed = true;
-      return next;
-    });
-
-    if (changed) writeLogs(migrated);
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (_) {
+      // noop
+    }
   }
 
   function getUsernameFromStorage() {
@@ -103,23 +73,14 @@ const STORAGE_KEY = 'adminAuditLogs';
       const username = window.AuthModule.getCurrentUsername();
       if (username) return username;
     }
-    try {
-      const u = localStorage.getItem('username') || localStorage.getItem('userName') || '';
-      return String(u).trim() || 'system';
-    } catch (_) {
-      return 'system';
-    }
+    return 'system';
   }
 
   function getRoleFromStorage() {
     if (window.AuthModule && typeof window.AuthModule.getCurrentRole === 'function') {
       return String(window.AuthModule.getCurrentRole() || '').trim();
     }
-    try {
-      return String(localStorage.getItem('role') || '').trim() || '';
-    } catch (_) {
-      return '';
-    }
+    return '';
   }
 
   function nextId(list) {
@@ -142,29 +103,10 @@ const STORAGE_KEY = 'adminAuditLogs';
    * @returns {object|null} created log entry
    */
   function append(action, details, meta) {
-    try {
-      migrateLogsIfNeeded();
-      const list = readLogs();
-      const entry = {
-        id: nextId(list),
-        date: getTimestampLocal(),
-        user: (meta && meta.user) ? String(meta.user).trim() : getUsernameFromStorage(),
-        action: String(action || '').trim() || 'update',
-        details: (details != null ? String(details) : '').trim(),
-        tz: 'local',
-        ip: (meta && meta.ip) ? String(meta.ip).trim() : 'local'
-      };
-
-      // role пишем только если передали или есть в storage (для диагностики)
-      const role = (meta && meta.role) ? String(meta.role).trim() : getRoleFromStorage();
-      if (role) entry.role = role;
-
-      list.unshift(entry);
-      if (!writeLogs(list)) return null;
-      return entry;
-    } catch (_) {
-      return null;
-    }
+    void action;
+    void details;
+    void meta;
+    return null;
   }
 
   // Экспорт API и миграция при загрузке

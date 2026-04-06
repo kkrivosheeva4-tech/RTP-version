@@ -13,7 +13,7 @@ Import-EnvFile -Path $envPath
 
 $python = Get-BackendPython
 if (-not $BaseUrl) {
-    $BaseUrl = Get-EnvOrDefault -Name "LOCAL_PRODLIKE_ORIGIN" -DefaultValue "https://rtp3.localhost"
+    $BaseUrl = Get-EnvOrDefault -Name "LOCAL_PRODLIKE_ORIGIN" -DefaultValue "https://127.0.0.1:8443"
 }
 
 $command = "& $python scripts/local_prodlike_smoke.py --base-url `"$BaseUrl`""

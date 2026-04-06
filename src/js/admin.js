@@ -36,9 +36,7 @@
         && window.AuthModule.isAuthenticated();
       var cfg = window.ApiConfig;
       var useApi = cfg && typeof cfg.getUseApi === 'function' && cfg.getUseApi();
-      var redirectUrl = (!isAuthenticated && useApi)
-        ? '/src/pages/auth.html?return=' + encodeURIComponent('/src/pages/admin.html')
-        : '/src/pages/index.html';
+      var redirectUrl = '/';
       setTimeout(function () {
         window.location.href = redirectUrl;
       }, 2000);
@@ -107,11 +105,6 @@
       targetSection.classList.add('active');
       getState().currentSection = sectionId;
       if (sectionId === 'audit' && window.AdminAudit) {
-        if (!(window.AdminAudit.isApiMode && window.AdminAudit.isApiMode())) {
-          getState().auditLogs = window.AdminAudit.normalizeAuditLogs(
-            getCommon().readStorageJson(getCommon().ADMIN_STORAGE.AUDIT, [])
-          );
-        }
         window.AdminAudit.loadAuditLogs();
       }
       if (sectionId === 'users' && window.AdminUsers) {
@@ -141,6 +134,25 @@
         item.setAttribute('aria-current', 'page');
         common.updatePageTitle(section);
       });
+    });
+  }
+
+  function normalizeEnterprisesSafely(rawEnterprises) {
+    if (
+      window.AdminEnterprises &&
+      typeof window.AdminEnterprises.normalizeEnterprises === 'function'
+    ) {
+      return window.AdminEnterprises.normalizeEnterprises(rawEnterprises);
+    }
+
+    if (!Array.isArray(rawEnterprises)) return [];
+    return rawEnterprises.filter(Boolean).map(function (item) {
+      return {
+        id: item && item.id ? Number(item.id) : 0,
+        name: (item && item.name != null ? String(item.name) : '').trim(),
+        code: (item && item.code != null ? String(item.code) : '').trim(),
+        description: (item && item.description != null ? String(item.description) : '').trim()
+      };
     });
   }
 
@@ -180,9 +192,7 @@
         state.auditLogs = [];
       }
     } else {
-      state.auditLogs = window.AdminAudit.normalizeAuditLogs(
-        common.readStorageJson(common.ADMIN_STORAGE.AUDIT, [])
-      );
+      state.auditLogs = [];
     }
     if (window.AdminBackups.isApiMode && window.AdminBackups.isApiMode()) {
       try {
@@ -206,7 +216,7 @@
         state.enterprises = [];
       }
     } else {
-      state.enterprises = window.AdminEnterprises.normalizeEnterprises(
+      state.enterprises = normalizeEnterprisesSafely(
         common.readStorageJson(common.ADMIN_STORAGE.ENTERPRISES, null)
       );
       if (!state.enterprises.length) {
@@ -216,36 +226,18 @@
   }
 
   function addAdminAuditLog(action, details) {
-    var common = getCommon();
+    void action;
+    void details;
     if (typeof window.appendAdminAudit === 'function') {
       window.appendAdminAudit(action, details);
-    } else if (window.AdminAudit && window.AdminAudit.isApiMode && window.AdminAudit.isApiMode()) {
+    }
+    if (window.AdminAudit && window.AdminAudit.isApiMode && window.AdminAudit.isApiMode()) {
       if (getState().currentSection === 'audit' && window.AdminAudit) {
         window.AdminAudit.loadAuditLogs();
       }
       if (window.AdminDashboard && typeof window.AdminDashboard.updateDashboardStats === 'function') {
         window.AdminDashboard.updateDashboardStats();
       }
-    } else {
-      var state = getState();
-      var currentUser = common.getLoggedInUserName();
-      var ts = new Date().toISOString().slice(0, 19).replace('T', ' ');
-      state.auditLogs.unshift({
-        id: state.auditLogs.length + 1,
-        date: ts,
-        user: currentUser,
-        action: action,
-        details: details,
-        ip: 'local'
-      });
-      common.persistAuditLogs();
-      getState().auditLogs = window.AdminAudit.normalizeAuditLogs(
-        common.readStorageJson(common.ADMIN_STORAGE.AUDIT, [])
-      );
-      if (getState().currentSection === 'audit' && window.AdminAudit)
-        window.AdminAudit.loadAuditLogs();
-      if (window.AdminDashboard && typeof window.AdminDashboard.updateDashboardStats === 'function')
-        window.AdminDashboard.updateDashboardStats();
     }
   }
 
@@ -280,7 +272,7 @@
         window.AdminCommon.showNotification('Ошибка', 'Модуль авторизации не загружен', 'error');
       }
       setTimeout(function () {
-        window.location.href = '/src/pages/index.html';
+        window.location.href = '/';
       }, 2000);
       return;
     }
@@ -327,15 +319,13 @@
     await loadAdminData();
     window.addAdminAuditLog = addAdminAuditLog;
     if (typeof window.appendAdminAudit === 'function') {
-      var originalAppendAdminAudit = window.appendAdminAudit;
       window.appendAdminAudit = function (action, details) {
-        originalAppendAdminAudit(action, details);
-        getState().auditLogs = window.AdminAudit.normalizeAuditLogs(
-          common.readStorageJson(common.ADMIN_STORAGE.AUDIT, [])
-        );
+        action = String(action || '').trim();
+        details = String(details || '').trim();
         if (getState().currentSection === 'audit' && window.AdminAudit)
           window.AdminAudit.loadAuditLogs();
         if (window.AdminDashboard) window.AdminDashboard.updateDashboardStats();
+        return null;
       };
     }
     if (window.AdminDashboard) window.AdminDashboard.init();
@@ -344,8 +334,8 @@
     if (window.AdminExport) window.AdminExport.init();
     if (window.AdminBackups) window.AdminBackups.init();
     if (window.AdminEnterprises) window.AdminEnterprises.init();
-    showSection('dashboard');
-    common.updatePageTitle('dashboard');
+    showSection('users');
+    common.updatePageTitle('users');
   }
 
   document.addEventListener('DOMContentLoaded', function () {

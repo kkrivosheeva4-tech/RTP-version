@@ -1,15 +1,14 @@
 /**
- * DataService — слой абстракции для переключения между mock (JSON + VFS) и API.
- * Этап 9.3: реализация переключения mock / API.
+ * DataService вЂ” РµРґРёРЅС‹Р№ API-СЃР»РѕР№ РґРѕСЃС‚СѓРїР° Рє РґР°РЅРЅС‹Рј.
  *
  * @module data-service
  */
 
-import { vfsRead, vfsWrite, loadJsonPreferVfs, clearFetchCache as clearDataSourceCache } from './data-source.js';
+import { clearFetchCache as clearDataSourceCache } from './data-source.js';
 import { buildBlockMaps, normalizeTechnologyFromNewFormat, buildEnterpriseDataFromTechnologies } from './data-normalize.js';
 import Logger from './logger.js';
 
-/** Имена справочников, доступных через loadReference */
+/** РРјРµРЅР° СЃРїСЂР°РІРѕС‡РЅРёРєРѕРІ, РґРѕСЃС‚СѓРїРЅС‹С… С‡РµСЂРµР· loadReference */
 export const REFERENCE_NAMES = [
   'blocks',
   'functions',
@@ -22,25 +21,6 @@ export const REFERENCE_NAMES = [
   'enterprisesBlocksMapping'
 ];
 
-/** Маппинг имён справочников на имена файлов */
-const REFERENCE_TO_FILE = {
-  blocks: 'blocks.json',
-  functions: 'functions.json',
-  functionToBlock: 'functionToBlock.json',
-  digitalDirections: 'digitalDirections.json',
-  directionToQuadrant: 'directionToQuadrant.json',
-  vendors: 'vendors.json',
-  integrators: 'integrators.json',
-  enterprises: 'enterprises.json',
-  enterprisesBlocksMapping: 'enterprises-blocks-mapping.json'
-};
-
-function getUseApi() {
-  if (typeof window !== 'undefined' && window.ApiConfig && typeof window.ApiConfig.getUseApi === 'function') {
-    return window.ApiConfig.getUseApi();
-  }
-  return false;
-}
 
 function getApiClient() {
   if (typeof window !== 'undefined' && window.ApiClient) {
@@ -50,7 +30,7 @@ function getApiClient() {
 }
 
 /**
- * Унифицированная обработка ошибок API.
+ * РЈРЅРёС„РёС†РёСЂРѕРІР°РЅРЅР°СЏ РѕР±СЂР°Р±РѕС‚РєР° РѕС€РёР±РѕРє API.
  * @param {Error|{ ok?: boolean, error?: string, status?: number }} err
  * @returns {never}
  */
@@ -61,7 +41,7 @@ function wrapApiError(err) {
   if (err instanceof Error) {
     throw err;
   }
-  throw new Error(String(err || 'Неизвестная ошибка'));
+  throw new Error(String(err || 'РќРµРёР·РІРµСЃС‚РЅР°СЏ РѕС€РёР±РєР°'));
 }
 
 function getStateValue(key, fallback = null) {
@@ -71,7 +51,7 @@ function getStateValue(key, fallback = null) {
       return value == null ? fallback : value;
     }
   } catch (e) {
-    Logger.warn(`DataService: ошибка чтения state "${key}"`, e);
+    Logger.warn(`DataService: РѕС€РёР±РєР° С‡С‚РµРЅРёСЏ state "${key}"`, e);
   }
   return fallback;
 }
@@ -100,12 +80,12 @@ function normalizeEnterpriseReadinessToBackend(value) {
 function normalizeStatusToBackend(value, isImplemented) {
   const raw = String(value || '').trim();
   const norm = raw.toLowerCase();
-  if (isImplemented === true) return 'Внедрена';
-  if (isImplemented === false) return 'Невнедренна';
-  if (norm === 'внедрена' || norm === 'внедренна') return 'Внедрена';
-  if (norm === 'невнедрена' || norm === 'невнедренна') return 'Невнедренна';
-  if (norm === 'используемые') return 'Внедрена';
-  if (norm === 'внедряемые' || norm === 'перспективные') return 'Невнедренна';
+  if (isImplemented === true) return 'Р’РЅРµРґСЂРµРЅР°';
+  if (isImplemented === false) return 'РќРµРІРЅРµРґСЂРµРЅРЅР°';
+  if (norm === 'РІРЅРµРґСЂРµРЅР°' || norm === 'РІРЅРµРґСЂРµРЅРЅР°') return 'Р’РЅРµРґСЂРµРЅР°';
+  if (norm === 'РЅРµРІРЅРµРґСЂРµРЅР°' || norm === 'РЅРµРІРЅРµРґСЂРµРЅРЅР°') return 'РќРµРІРЅРµРґСЂРµРЅРЅР°';
+  if (norm === 'РёСЃРїРѕР»СЊР·СѓРµРјС‹Рµ') return 'Р’РЅРµРґСЂРµРЅР°';
+  if (norm === 'РІРЅРµРґСЂСЏРµРјС‹Рµ' || norm === 'РїРµСЂСЃРїРµРєС‚РёРІРЅС‹Рµ') return 'РќРµРІРЅРµРґСЂРµРЅРЅР°';
   return raw || 'planned';
 }
 
@@ -309,152 +289,17 @@ function toApiTechnologyPayload(tech) {
   return payload;
 }
 
-// ========== MOCK-РЕЖИМ (USE_API === false) ==========
-
-async function mockLoadReference(name) {
-  const filename = REFERENCE_TO_FILE[name] || `${name}.json`;
-  if (name === 'enterprisesBlocksMapping') {
-    const fromVfs = vfsRead(filename);
-    if (fromVfs !== null && fromVfs !== undefined && typeof fromVfs === 'object') {
-      return fromVfs;
-    }
-  }
-  const result = await loadJsonPreferVfs(filename, true);
-  if (result && result.data !== null && result.data !== undefined) {
-    return result.data;
-  }
-  const fromVfs = vfsRead(filename);
-  if (fromVfs !== null) {
-    return fromVfs;
-  }
-  if (name === 'technologies' || filename === 'technologies.json') {
-    return [];
-  }
-  if (['functionToBlock', 'directionToQuadrant'].includes(name)) {
-    return {};
-  }
-  return [];
-}
-
-async function mockLoadTechnologies(enterpriseId) {
-  const [blocksData, enterprisesData] = await Promise.all([
-    mockLoadReference('blocks'),
-    mockLoadReference('enterprises')
-  ]);
-
-  const blocks = Array.isArray(blocksData) ? blocksData : (blocksData && typeof blocksData === 'object' ? [] : []);
-  const { blockIdToName } = buildBlockMaps(blocks);
-  const enterprises = Array.isArray(enterprisesData) ? enterprisesData : [];
-
-  const techResult = await loadJsonPreferVfs('technologies.json', true);
-  let rawTechs = (techResult && techResult.data && Array.isArray(techResult.data)) ? techResult.data : null;
-  let fromFile = !!(rawTechs && rawTechs.length > 0);
-
-  if (!rawTechs || rawTechs.length === 0) {
-    rawTechs = vfsRead('technologies.json');
-    if (!Array.isArray(rawTechs)) rawTechs = [];
-  }
-
-  const normalizeTech = normalizeTechnologyFromNewFormat;
-  let allTechnologies = fromFile
-    ? rawTechs.map(tech => normalizeTech(tech, blockIdToName, enterprises))
-    : rawTechs;
-
-  if (enterpriseId != null && enterpriseId !== '') {
-    const eId = Number(enterpriseId);
-    const enterprise = enterprises.find(e => (e && (e.id === eId || e.id === enterpriseId)));
-    const companyName = enterprise ? (enterprise.name || enterprise) : null;
-    if (companyName) {
-      allTechnologies = allTechnologies.filter(t => {
-        const companies = Array.isArray(t.company) ? t.company : (t.company ? [t.company] : []);
-        return companies.includes(companyName);
-      });
-    }
-  }
-
-  return allTechnologies;
-}
-
-async function mockLoadEnterprises() {
-  return mockLoadReference('enterprises');
-}
-
-async function mockLoadEnterpriseData() {
-  const techs = await mockLoadTechnologies();
-  return buildEnterpriseDataFromTechnologies(techs);
-}
-
-async function mockCreateTech(tech) {
-  const raw = vfsRead('technologies.json');
-  const technologies = Array.isArray(raw) ? raw : [];
-  const maxId = technologies.length > 0 ? Math.max(...technologies.map(t => Number(t.id) || 0)) : 0;
-  const newTech = { ...tech, id: tech.id != null ? tech.id : maxId + 1 };
-  technologies.push(newTech);
-  if (!vfsWrite('technologies.json', technologies)) {
-    throw new Error('Не удалось сохранить технологии в VFS');
-  }
-  Logger.debug('DataService.mockCreateTech: создана технология', newTech.id);
-  return newTech;
-}
-
-async function mockUpdateTech(id, tech) {
-  const raw = vfsRead('technologies.json');
-  const technologies = Array.isArray(raw) ? [...raw] : [];
-  const idx = technologies.findIndex(t => String(t.id) === String(id));
-  if (idx < 0) {
-    throw new Error(`Технология с id=${id} не найдена`);
-  }
-  const updated = { ...technologies[idx], ...tech, id: technologies[idx].id };
-  technologies[idx] = updated;
-  if (!vfsWrite('technologies.json', technologies)) {
-    throw new Error('Не удалось сохранить технологии в VFS');
-  }
-  Logger.debug('DataService.mockUpdateTech: обновлена технология', id);
-  return updated;
-}
-
-async function mockDeleteTech(id) {
-  const raw = vfsRead('technologies.json');
-  const technologies = Array.isArray(raw) ? raw : [];
-  const filtered = technologies.filter(t => String(t.id) !== String(id));
-  if (filtered.length === technologies.length) {
-    throw new Error(`Технология с id=${id} не найдена`);
-  }
-  if (!vfsWrite('technologies.json', filtered)) {
-    throw new Error('Не удалось сохранить технологии в VFS');
-  }
-  Logger.debug('DataService.mockDeleteTech: удалена технология', id);
-}
-
-async function mockSaveReference(name, data) {
-  const filename = REFERENCE_TO_FILE[name] || `${name}.json`;
-  if (!vfsWrite(filename, data)) {
-    throw new Error(`Не удалось сохранить ${filename} в VFS`);
-  }
-  Logger.debug('DataService.mockSaveReference:', filename);
-}
-
-async function mockSaveTechnologies(technologies) {
-  if (!Array.isArray(technologies)) {
-    throw new Error('saveTechnologies: ожидается массив технологий');
-  }
-  if (!vfsWrite('technologies.json', technologies)) {
-    throw new Error('Не удалось сохранить технологии в VFS');
-  }
-  Logger.debug('DataService.mockSaveTechnologies: сохранено', technologies.length, 'технологий');
-}
-
-// ========== API-РЕЖИМ (USE_API === true) ==========
+// ========== API-СЃР»РѕР№ ==========
 
 async function apiLoadReference(name) {
   const client = getApiClient();
   if (!client || typeof client.get !== 'function') {
-    throw new Error('ApiClient недоступен');
+    throw new Error('ApiClient РЅРµРґРѕСЃС‚СѓРїРµРЅ');
   }
   const path = `/api/v1/references/${name}`;
   const res = await client.get(path);
   if (!res || res.ok === false) {
-    wrapApiError(res || { error: 'Ошибка загрузки справочника' });
+    wrapApiError(res || { error: 'РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё СЃРїСЂР°РІРѕС‡РЅРёРєР°' });
   }
   return res && res.data != null ? res.data : (Array.isArray(res) ? res : []);
 }
@@ -462,13 +307,13 @@ async function apiLoadReference(name) {
 async function apiLoadTechnologies(enterpriseId) {
   const client = getApiClient();
   if (!client || typeof client.get !== 'function') {
-    throw new Error('ApiClient недоступен');
+    throw new Error('ApiClient РЅРµРґРѕСЃС‚СѓРїРµРЅ');
   }
   let path = '/api/v1/technologies';
   const query = enterpriseId != null && enterpriseId !== '' ? { enterpriseId } : {};
   const res = await client.get(path, Object.keys(query).length ? query : undefined);
   if (!res || res.ok === false) {
-    wrapApiError(res || { error: 'Ошибка загрузки технологий' });
+    wrapApiError(res || { error: 'РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё С‚РµС…РЅРѕР»РѕРіРёР№' });
   }
   let items = res && res.data != null ? res.data : (Array.isArray(res) ? res : []);
   if (!Array.isArray(items)) items = [];
@@ -497,13 +342,13 @@ async function apiLoadEnterpriseData() {
 async function apiCreateTech(tech) {
   const client = getApiClient();
   if (!client || typeof client.post !== 'function') {
-    throw new Error('ApiClient недоступен');
+    throw new Error('ApiClient РЅРµРґРѕСЃС‚СѓРїРµРЅ');
   }
   const payload = toApiTechnologyPayload(tech);
   delete payload.id;
   const res = await client.post('/api/v1/technologies', payload);
   if (!res || res.ok === false) {
-    wrapApiError(res || { error: 'Ошибка создания технологии' });
+    wrapApiError(res || { error: 'РћС€РёР±РєР° СЃРѕР·РґР°РЅРёСЏ С‚РµС…РЅРѕР»РѕРіРёРё' });
   }
   const created = res && res.data != null ? res.data : res;
   const [blocksData, enterprisesData] = await Promise.all([
@@ -519,13 +364,13 @@ async function apiCreateTech(tech) {
 async function apiUpdateTech(id, tech) {
   const client = getApiClient();
   if (!client || (typeof client.put !== 'function' && typeof client.patch !== 'function')) {
-    throw new Error('ApiClient недоступен');
+    throw new Error('ApiClient РЅРµРґРѕСЃС‚СѓРїРµРЅ');
   }
   const method = client.patch || client.put;
   const payload = toApiTechnologyPayload({ ...tech, id });
   const res = await method(`/api/v1/technologies/${id}`, payload);
   if (!res || res.ok === false) {
-    wrapApiError(res || { error: 'Ошибка обновления технологии' });
+    wrapApiError(res || { error: 'РћС€РёР±РєР° РѕР±РЅРѕРІР»РµРЅРёСЏ С‚РµС…РЅРѕР»РѕРіРёРё' });
   }
   const updated = res && res.data != null ? res.data : res;
   const [blocksData, enterprisesData] = await Promise.all([
@@ -541,18 +386,18 @@ async function apiUpdateTech(id, tech) {
 async function apiDeleteTech(id) {
   const client = getApiClient();
   if (!client || typeof client.delete !== 'function') {
-    throw new Error('ApiClient недоступен');
+    throw new Error('ApiClient РЅРµРґРѕСЃС‚СѓРїРµРЅ');
   }
   const res = await client.delete(`/api/v1/technologies/${id}`);
   if (!res || res.ok === false) {
-    wrapApiError(res || { error: 'Ошибка удаления технологии' });
+    wrapApiError(res || { error: 'РћС€РёР±РєР° СѓРґР°Р»РµРЅРёСЏ С‚РµС…РЅРѕР»РѕРіРёРё' });
   }
 }
 
 async function apiCreateTechnologyProposal(action, options) {
   const client = getApiClient();
   if (!client || typeof client.post !== 'function') {
-    throw new Error('ApiClient недоступен');
+    throw new Error('ApiClient РЅРµРґРѕСЃС‚СѓРїРµРЅ');
   }
   const normalizedAction = String(action || '').trim().toLowerCase();
   const payload = {
@@ -561,6 +406,9 @@ async function apiCreateTechnologyProposal(action, options) {
   const technologyId = options && options.technologyId != null ? Number(options.technologyId) : null;
   if (Number.isInteger(technologyId) && technologyId > 0) {
     payload.technologyId = technologyId;
+  }
+  if (options && options.payload && typeof options.payload === 'object') {
+    payload.payload = options.payload;
   }
   if (options && options.tech) {
     payload.payload = toApiTechnologyPayload(options.tech);
@@ -571,7 +419,7 @@ async function apiCreateTechnologyProposal(action, options) {
   }
   const res = await client.post('/api/v1/technology-proposals', payload);
   if (!res || res.ok === false) {
-    wrapApiError(res || { error: 'Ошибка создания предложения' });
+    wrapApiError(res || { error: 'РћС€РёР±РєР° СЃРѕР·РґР°РЅРёСЏ РїСЂРµРґР»РѕР¶РµРЅРёСЏ' });
   }
   return res && res.data != null ? res.data : res;
 }
@@ -579,11 +427,23 @@ async function apiCreateTechnologyProposal(action, options) {
 async function apiLoadMyTechnologyProposals() {
   const client = getApiClient();
   if (!client || typeof client.get !== 'function') {
-    throw new Error('ApiClient недоступен');
+    throw new Error('ApiClient РЅРµРґРѕСЃС‚СѓРїРµРЅ');
   }
   const res = await client.get('/api/v1/technology-proposals/mine');
   if (!res || res.ok === false) {
-    wrapApiError(res || { error: 'Ошибка загрузки моих предложений' });
+    wrapApiError(res || { error: 'РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё РјРѕРёС… РїСЂРµРґР»РѕР¶РµРЅРёР№' });
+  }
+  return Array.isArray(res && res.data) ? res.data : [];
+}
+
+async function apiLoadMyTechnologyProposalHistory() {
+  const client = getApiClient();
+  if (!client || typeof client.get !== 'function') {
+    throw new Error('ApiClient Р Р…Р ВµР Т‘Р С•РЎРѓРЎвЂљРЎС“Р С—Р ВµР Р…');
+  }
+  const res = await client.get('/api/v1/technology-proposals/mine/history');
+  if (!res || res.ok === false) {
+    wrapApiError(res || { error: 'Р С›РЎв‚¬Р С‘Р В±Р С”Р В° Р В·Р В°Р С–РЎР‚РЎС“Р В·Р С”Р С‘ Р С‘РЎРѓРЎвЂљР С•РЎР‚Р С‘Р С‘ Р СР С•Р С‘РЎвЂ¦ Р С—РЎР‚Р ВµР Т‘Р В»Р С•Р В¶Р ВµР Р…Р С‘Р в„–' });
   }
   return Array.isArray(res && res.data) ? res.data : [];
 }
@@ -591,11 +451,23 @@ async function apiLoadMyTechnologyProposals() {
 async function apiLoadPendingTechnologyProposals() {
   const client = getApiClient();
   if (!client || typeof client.get !== 'function') {
-    throw new Error('ApiClient недоступен');
+    throw new Error('ApiClient РЅРµРґРѕСЃС‚СѓРїРµРЅ');
   }
   const res = await client.get('/api/v1/technology-proposals/pending');
   if (!res || res.ok === false) {
-    wrapApiError(res || { error: 'Ошибка загрузки предложений на ревью' });
+    wrapApiError(res || { error: 'РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё РїСЂРµРґР»РѕР¶РµРЅРёР№ РЅР° СЂРµРІСЊСЋ' });
+  }
+  return Array.isArray(res && res.data) ? res.data : [];
+}
+
+async function apiLoadTechnologyProposalHistory() {
+  const client = getApiClient();
+  if (!client || typeof client.get !== 'function') {
+    throw new Error('ApiClient Р Р…Р ВµР Т‘Р С•РЎРѓРЎвЂљРЎС“Р С—Р ВµР Р…');
+  }
+  const res = await client.get('/api/v1/technology-proposals/history');
+  if (!res || res.ok === false) {
+    wrapApiError(res || { error: 'Р С›РЎв‚¬Р С‘Р В±Р С”Р В° Р В·Р В°Р С–РЎР‚РЎС“Р В·Р С”Р С‘ Р С‘РЎРѓРЎвЂљР С•РЎР‚Р С‘Р С‘ Р С—РЎР‚Р ВµР Т‘Р В»Р С•Р В¶Р ВµР Р…Р С‘Р в„–' });
   }
   return Array.isArray(res && res.data) ? res.data : [];
 }
@@ -603,14 +475,30 @@ async function apiLoadPendingTechnologyProposals() {
 async function apiReviewTechnologyProposal(id, decision, reviewComment) {
   const client = getApiClient();
   if (!client || typeof client.post !== 'function') {
-    throw new Error('ApiClient недоступен');
+    throw new Error('ApiClient РЅРµРґРѕСЃС‚СѓРїРµРЅ');
   }
   const normalizedDecision = String(decision || '').trim().toLowerCase();
   const res = await client.post(`/api/v1/technology-proposals/${id}/${normalizedDecision}`, {
     review_comment: typeof reviewComment === 'string' ? reviewComment.trim() : ''
   });
   if (!res || res.ok === false) {
-    wrapApiError(res || { error: 'Ошибка обработки предложения' });
+    wrapApiError(res || { error: 'РћС€РёР±РєР° РѕР±СЂР°Р±РѕС‚РєРё РїСЂРµРґР»РѕР¶РµРЅРёСЏ' });
+  }
+  return res && res.data != null ? res.data : res;
+}
+
+async function apiClearMyTechnologyProposalHistory(ids) {
+  const client = getApiClient();
+  if (!client || typeof client.delete !== 'function') {
+    throw new Error('ApiClient РЅРµРґРѕСЃС‚СѓРїРµРЅ');
+  }
+  const normalizedIds = Array.isArray(ids)
+    ? ids.map((value) => Number(value)).filter((value) => Number.isInteger(value) && value > 0)
+    : [];
+  const requestOptions = normalizedIds.length > 0 ? { body: { ids: normalizedIds } } : {};
+  const res = await client.delete('/api/v1/technology-proposals/mine/history', requestOptions);
+  if (!res || res.ok === false) {
+    wrapApiError(res || { error: 'РћС€РёР±РєР° РѕС‡РёСЃС‚РєРё РёСЃС‚РѕСЂРёРё РїСЂРµРґР»РѕР¶РµРЅРёР№' });
   }
   return res && res.data != null ? res.data : res;
 }
@@ -618,186 +506,198 @@ async function apiReviewTechnologyProposal(id, decision, reviewComment) {
 async function apiSaveTechnologies(technologies) {
   const client = getApiClient();
   if (!client || typeof client.put !== 'function') {
-    throw new Error('ApiClient недоступен');
+    throw new Error('ApiClient РЅРµРґРѕСЃС‚СѓРїРµРЅ');
   }
   const payload = Array.isArray(technologies)
     ? technologies.map((t) => toApiTechnologyPayload(t)).filter((t) => t && t.name)
     : [];
   const res = await client.put('/api/v1/technologies/bulk', payload);
   if (!res || res.ok === false) {
-    wrapApiError(res || { error: 'Ошибка массового сохранения технологий' });
+    wrapApiError(res || { error: 'РћС€РёР±РєР° РјР°СЃСЃРѕРІРѕРіРѕ СЃРѕС…СЂР°РЅРµРЅРёСЏ С‚РµС…РЅРѕР»РѕРіРёР№' });
   }
-  Logger.debug('DataService.apiSaveTechnologies: сохранено', technologies?.length, 'технологий');
+  Logger.debug('DataService.apiSaveTechnologies: СЃРѕС…СЂР°РЅРµРЅРѕ', technologies?.length, 'С‚РµС…РЅРѕР»РѕРіРёР№');
+}
+
+async function apiLoadProposalNotifications() {
+  const client = getApiClient();
+  if (!client || typeof client.get !== 'function') {
+    throw new Error('ApiClient РЅРµРґРѕСЃС‚СѓРїРµРЅ');
+  }
+  const res = await client.get('/api/v1/proposal-notifications');
+  if (!res || res.ok === false) {
+    wrapApiError(res || { error: 'РћС€РёР±РєР° РіРѕС€РёС'Р°СЏС Р° СѓРІРµРґРѕРјР»РµРЅРёС' СЂРµРґР°РєС‚РѕСЂСѓ' });
+  }
+  return (res && res.data != null ? res.data : res) || [];
+}
+
+async function apiMarkProposalNotificationAsRead(notificationId, markAsRead = true) {
+  const client = getApiClient();
+  if (!client || typeof client.patch !== 'function') {
+    throw new Error('ApiClient РЅРµРґРѕСЃС‚СѓРїРµРЅ');
+  }
+  const res = await client.patch('/api/v1/proposal-notifications', {
+    notification_id: notificationId,
+    mark_as_read: markAsRead
+  });
+  if (!res || res.ok === false) {
+    wrapApiError(res || { error: 'РћС€РёР±РєР° РѕР±РЅРѕРІР»РµРЅРёСЏ СЃС‚Р°С‚СѓСЃР° РґРѕРї СѓРІРµРґРѕРјР»РµРЅРёСЏ' });
+  }
+  return res && res.data != null ? res.data : res;
 }
 
 // ========== DataService ==========
 
 /**
- * DataService — единая точка доступа к данным (mock или API).
+ * DataService вЂ” РµРґРёРЅР°СЏ С‚РѕС‡РєР° РґРѕСЃС‚СѓРїР° Рє РґР°РЅРЅС‹Рј С‡РµСЂРµР· backend API.
  */
 const DataService = {
   /**
-   * Загружает список технологий.
-   * @param {number|string} [enterpriseId] — опционально: фильтр по ID предприятия
-   * @returns {Promise<Array>} массив технологий в нормализованном формате
+   * Р—Р°РіСЂСѓР¶Р°РµС‚ СЃРїРёСЃРѕРє С‚РµС…РЅРѕР»РѕРіРёР№.
+   * @param {number|string} [enterpriseId] вЂ” РѕРїС†РёРѕРЅР°Р»СЊРЅРѕ: С„РёР»СЊС‚СЂ РїРѕ ID РїСЂРµРґРїСЂРёСЏС‚РёСЏ
+   * @returns {Promise<Array>} РјР°СЃСЃРёРІ С‚РµС…РЅРѕР»РѕРіРёР№ РІ РЅРѕСЂРјР°Р»РёР·РѕРІР°РЅРЅРѕРј С„РѕСЂРјР°С‚Рµ
    */
   async loadTechnologies(enterpriseId) {
-    if (getUseApi()) {
-      return apiLoadTechnologies(enterpriseId);
-    }
-    return mockLoadTechnologies(enterpriseId);
+    return apiLoadTechnologies(enterpriseId);
   },
 
   /**
-   * Загружает справочник по имени.
-   * @param {string} name — имя справочника: blocks, functions, vendors, integrators, enterprises, digitalDirections, directionToQuadrant, functionToBlock
-   * @returns {Promise<Array|Object>} данные справочника (массив или объект)
+   * Р—Р°РіСЂСѓР¶Р°РµС‚ СЃРїСЂР°РІРѕС‡РЅРёРє РїРѕ РёРјРµРЅРё.
+   * @param {string} name вЂ” РёРјСЏ СЃРїСЂР°РІРѕС‡РЅРёРєР°: blocks, functions, vendors, integrators, enterprises, digitalDirections, directionToQuadrant, functionToBlock
+   * @returns {Promise<Array|Object>} РґР°РЅРЅС‹Рµ СЃРїСЂР°РІРѕС‡РЅРёРєР° (РјР°СЃСЃРёРІ РёР»Рё РѕР±СЉРµРєС‚)
    */
   async loadReference(name) {
     if (!REFERENCE_NAMES.includes(name)) {
-      return Promise.reject(new Error(`DataService.loadReference: неизвестный справочник "${name}"`));
+      return Promise.reject(new Error(`DataService.loadReference: РЅРµРёР·РІРµСЃС‚РЅС‹Р№ СЃРїСЂР°РІРѕС‡РЅРёРє "${name}"`));
     }
-    if (getUseApi()) {
-      return apiLoadReference(name);
-    }
-    return mockLoadReference(name);
+    return apiLoadReference(name);
   },
 
   /**
-   * Создаёт новую технологию.
-   * @param {Object} tech — данные технологии
-   * @returns {Promise<Object>} созданная технология в нормализованном формате
+   * РЎРѕР·РґР°С‘С‚ РЅРѕРІСѓСЋ С‚РµС…РЅРѕР»РѕРіРёСЋ.
+   * @param {Object} tech вЂ” РґР°РЅРЅС‹Рµ С‚РµС…РЅРѕР»РѕРіРёРё
+   * @returns {Promise<Object>} СЃРѕР·РґР°РЅРЅР°СЏ С‚РµС…РЅРѕР»РѕРіРёСЏ РІ РЅРѕСЂРјР°Р»РёР·РѕРІР°РЅРЅРѕРј С„РѕСЂРјР°С‚Рµ
    */
   async createTech(tech) {
-    if (getUseApi()) {
-      return apiCreateTech(tech);
-    }
-    return mockCreateTech(tech);
+    return apiCreateTech(tech);
   },
 
   /**
-   * Обновляет технологию по ID.
-   * @param {number|string} id — ID технологии
-   * @param {Object} tech — данные для обновления
-   * @returns {Promise<Object>} обновлённая технология
+   * РћР±РЅРѕРІР»СЏРµС‚ С‚РµС…РЅРѕР»РѕРіРёСЋ РїРѕ ID.
+   * @param {number|string} id вЂ” ID С‚РµС…РЅРѕР»РѕРіРёРё
+   * @param {Object} tech вЂ” РґР°РЅРЅС‹Рµ РґР»СЏ РѕР±РЅРѕРІР»РµРЅРёСЏ
+   * @returns {Promise<Object>} РѕР±РЅРѕРІР»С‘РЅРЅР°СЏ С‚РµС…РЅРѕР»РѕРіРёСЏ
    */
   async updateTech(id, tech) {
-    if (getUseApi()) {
-      return apiUpdateTech(id, tech);
-    }
-    return mockUpdateTech(id, tech);
+    return apiUpdateTech(id, tech);
   },
 
   /**
-   * Удаляет технологию по ID.
-   * @param {number|string} id — ID технологии
+   * РЈРґР°Р»СЏРµС‚ С‚РµС…РЅРѕР»РѕРіРёСЋ РїРѕ ID.
+   * @param {number|string} id вЂ” ID С‚РµС…РЅРѕР»РѕРіРёРё
    * @returns {Promise<void>}
    */
   async deleteTech(id) {
-    if (getUseApi()) {
-      return apiDeleteTech(id);
-    }
-    return mockDeleteTech(id);
+    return apiDeleteTech(id);
   },
 
   async createTechnologyProposal(action, options) {
-    if (getUseApi()) {
-      return apiCreateTechnologyProposal(action, options);
-    }
-    return Promise.reject(new Error('Moderation flow доступен только в API режиме'));
+    return apiCreateTechnologyProposal(action, options);
   },
 
   async loadMyTechnologyProposals() {
-    if (getUseApi()) {
-      return apiLoadMyTechnologyProposals();
-    }
-    return Promise.resolve([]);
+    return apiLoadMyTechnologyProposals();
+  },
+
+  async loadMyTechnologyProposalHistory() {
+    return apiLoadMyTechnologyProposalHistory();
   },
 
   async loadPendingTechnologyProposals() {
-    if (getUseApi()) {
-      return apiLoadPendingTechnologyProposals();
-    }
-    return Promise.resolve([]);
+    return apiLoadPendingTechnologyProposals();
+  },
+
+  async loadTechnologyProposalHistory() {
+    return apiLoadTechnologyProposalHistory();
   },
 
   async approveTechnologyProposal(id, reviewComment) {
-    if (getUseApi()) {
-      return apiReviewTechnologyProposal(id, 'approve', reviewComment);
-    }
-    return Promise.reject(new Error('Moderation flow доступен только в API режиме'));
+    return apiReviewTechnologyProposal(id, 'approve', reviewComment);
   },
 
   async rejectTechnologyProposal(id, reviewComment) {
-    if (getUseApi()) {
-      return apiReviewTechnologyProposal(id, 'reject', reviewComment);
-    }
-    return Promise.reject(new Error('Moderation flow доступен только в API режиме'));
+    return apiReviewTechnologyProposal(id, 'reject', reviewComment);
+  },
+
+  async postponeTechnologyProposal(id, reviewComment) {
+    return apiReviewTechnologyProposal(id, 'postpone', reviewComment);
+  },
+
+  async clearMyTechnologyProposalHistory(ids) {
+    return apiClearMyTechnologyProposalHistory(ids);
+  },
+
+  async loadProposalNotifications() {
+    return apiLoadProposalNotifications();
+  },
+
+  async markProposalNotificationAsRead(notificationId, markAsRead = true) {
+    return apiMarkProposalNotificationAsRead(notificationId, markAsRead);
   },
 
   /**
-   * Загружает список предприятий.
-   * @returns {Promise<Array>} массив предприятий
+   * Р—Р°РіСЂСѓР¶Р°РµС‚ СЃРїРёСЃРѕРє РїСЂРµРґРїСЂРёСЏС‚РёР№.
+   * @returns {Promise<Array>} РјР°СЃСЃРёРІ РїСЂРµРґРїСЂРёСЏС‚РёР№
    */
   async loadEnterprises() {
-    if (getUseApi()) {
-      return apiLoadEnterprises();
-    }
-    return mockLoadEnterprises();
+    return apiLoadEnterprises();
   },
 
   /**
-   * Загружает данные по предприятиям (enterpriseData: { [companyName]: technology[] }).
+   * Р—Р°РіСЂСѓР¶Р°РµС‚ РґР°РЅРЅС‹Рµ РїРѕ РїСЂРµРґРїСЂРёСЏС‚РёСЏРј (enterpriseData: { [companyName]: technology[] }).
    * @returns {Promise<Object>}
    */
   async loadEnterpriseData() {
-    if (getUseApi()) {
-      return apiLoadEnterpriseData();
-    }
-    return mockLoadEnterpriseData();
+    return apiLoadEnterpriseData();
   },
 
   /**
-   * Очищает кэш fetch (для mock-режима; вызывается при принудительной перезагрузке).
+   * РћС‡РёС‰Р°РµС‚ РєСЌС€ fetch.
    */
   clearFetchCache() {
     clearDataSourceCache();
   },
 
   /**
-   * Сохраняет справочник (mock: vfsWrite; API: PUT).
-   * @param {string} name — blocks, functions, functionToBlock и т.д.
-   * @param {Array|Object} data — данные для сохранения
+   * РЎРѕС…СЂР°РЅСЏРµС‚ СЃРїСЂР°РІРѕС‡РЅРёРє С‡РµСЂРµР· API.
+   * @param {string} name вЂ” blocks, functions, functionToBlock Рё С‚.Рґ.
+   * @param {Array|Object} data вЂ” РґР°РЅРЅС‹Рµ РґР»СЏ СЃРѕС…СЂР°РЅРµРЅРёСЏ
    * @returns {Promise<void>}
    */
   /**
-   * Сохраняет весь массив технологий (для массовых операций: переименование вендора и т.д.).
-   * @param {Array} technologies — массив технологий в формате приложения
+   * РЎРѕС…СЂР°РЅСЏРµС‚ РІРµСЃСЊ РјР°СЃСЃРёРІ С‚РµС…РЅРѕР»РѕРіРёР№ (РґР»СЏ РјР°СЃСЃРѕРІС‹С… РѕРїРµСЂР°С†РёР№: РїРµСЂРµРёРјРµРЅРѕРІР°РЅРёРµ РІРµРЅРґРѕСЂР° Рё С‚.Рґ.).
+   * @param {Array} technologies вЂ” РјР°СЃСЃРёРІ С‚РµС…РЅРѕР»РѕРіРёР№ РІ С„РѕСЂРјР°С‚Рµ РїСЂРёР»РѕР¶РµРЅРёСЏ
    * @returns {Promise<void>}
    */
   async saveTechnologies(technologies) {
-    if (getUseApi()) {
-      return apiSaveTechnologies(technologies);
-    }
-    return mockSaveTechnologies(technologies);
+    return apiSaveTechnologies(technologies);
   },
 
   async saveReference(name, data) {
     if (!REFERENCE_NAMES.includes(name)) {
-      return Promise.reject(new Error(`DataService.saveReference: неизвестный справочник "${name}"`));
+      return Promise.reject(new Error(`DataService.saveReference: РЅРµРёР·РІРµСЃС‚РЅС‹Р№ СЃРїСЂР°РІРѕС‡РЅРёРє "${name}"`));
     }
     if (getUseApi()) {
       const client = getApiClient();
       if (!client || typeof client.put !== 'function') {
-        throw new Error('ApiClient недоступен');
+        throw new Error('ApiClient РЅРµРґРѕСЃС‚СѓРїРµРЅ');
       }
       const res = await client.put(`/api/v1/references/${name}`, data);
       if (!res || res.ok === false) {
-        wrapApiError(res || { error: `Ошибка сохранения справочника ${name}` });
+        wrapApiError(res || { error: `РћС€РёР±РєР° СЃРѕС…СЂР°РЅРµРЅРёСЏ СЃРїСЂР°РІРѕС‡РЅРёРєР° ${name}` });
       }
       return;
     }
-    return mockSaveReference(name, data);
+    return;
   }
 };
 

@@ -1,0 +1,59 @@
+server {
+    listen 80;
+    listen [::]:80;
+    server_name rtp3.example.com;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name rtp3.example.com;
+
+    client_max_body_size 20m;
+
+    ssl_certificate /etc/letsencrypt/live/rtp3.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/rtp3.example.com/privkey.pem;
+    ssl_session_timeout 1d;
+    ssl_session_cache shared:RTP3SSL:10m;
+    ssl_session_tickets off;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "same-origin" always;
+
+    access_log /var/log/nginx/rtp3.access.log;
+    error_log /var/log/nginx/rtp3.error.log warn;
+
+    location /static/ {
+        alias /opt/rtp3/backend/staticfiles/;
+        expires 1h;
+        add_header Cache-Control "public, max-age=3600";
+        access_log off;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_redirect off;
+        proxy_read_timeout 300;
+        proxy_connect_timeout 60;
+        proxy_send_timeout 300;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port 443;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+}

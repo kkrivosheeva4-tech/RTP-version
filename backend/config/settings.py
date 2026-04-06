@@ -2,6 +2,8 @@
 
 import os
 import sys
+from base64 import urlsafe_b64encode
+from hashlib import sha256
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
@@ -21,6 +23,18 @@ def env_list(name: str, default: str = "") -> list[str]:
     return [item.strip() for item in os.getenv(name, default).split(",") if item.strip()]
 
 
+def _unique_ordered(items: list[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for item in items:
+        normalized = str(item or "").strip()
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        result.append(normalized)
+    return result
+
+
 def env_rate(name: str, default: str) -> str:
     raw_value = os.getenv(name, "").strip()
     if raw_value:
@@ -34,6 +48,69 @@ def _all_origins_use_https(origins: list[str]) -> bool:
     if not origins:
         return False
     return all(origin.lower().startswith("https://") for origin in origins)
+
+
+def _all_csp_sources_are_secure(sources: list[str]) -> bool:
+    insecure_prefixes = ("http://", "ws://")
+    for source in sources:
+        normalized = str(source or "").strip().lower()
+        if normalized.startswith(insecure_prefixes):
+            return False
+    return True
+
+
+def _build_default_csp_policy(enforce_security: bool) -> str:
+    script_sources = _unique_ordered(
+        ["'self'", "'unsafe-inline'"] + env_list(
+            "CSP_SCRIPT_SRC_EXTRA",
+            "https://cdn.jsdelivr.net,https://cdnjs.cloudflare.com",
+        )
+    )
+    style_sources = _unique_ordered(
+        ["'self'", "'unsafe-inline'"] + env_list("CSP_STYLE_SRC_EXTRA", "")
+    )
+    img_sources = _unique_ordered(["'self'", "data:"] + env_list("CSP_IMG_SRC_EXTRA", ""))
+    font_sources = _unique_ordered(["'self'", "data:"] + env_list("CSP_FONT_SRC_EXTRA", ""))
+    connect_sources = _unique_ordered(["'self'"] + env_list("CSP_CONNECT_SRC_EXTRA", ""))
+    worker_sources = _unique_ordered(["'self'", "blob:"] + env_list("CSP_WORKER_SRC_EXTRA", ""))
+    manifest_sources = _unique_ordered(["'self'"] + env_list("CSP_MANIFEST_SRC_EXTRA", ""))
+    media_sources = _unique_ordered(["'self'"] + env_list("CSP_MEDIA_SRC_EXTRA", ""))
+
+    if enforce_security:
+        for sources_name, sources in (
+            ("CSP_SCRIPT_SRC_EXTRA", script_sources),
+            ("CSP_STYLE_SRC_EXTRA", style_sources),
+            ("CSP_IMG_SRC_EXTRA", img_sources),
+            ("CSP_FONT_SRC_EXTRA", font_sources),
+            ("CSP_CONNECT_SRC_EXTRA", connect_sources),
+            ("CSP_WORKER_SRC_EXTRA", worker_sources),
+            ("CSP_MANIFEST_SRC_EXTRA", manifest_sources),
+            ("CSP_MEDIA_SRC_EXTRA", media_sources),
+        ):
+            if not _all_csp_sources_are_secure(sources):
+                raise ImproperlyConfigured(
+                    f"{sources_name} must not contain insecure http:// or ws:// sources when DEBUG=False"
+                )
+
+    directives = [
+        "default-src 'self'",
+        "base-uri 'self'",
+        "form-action 'self'",
+        "frame-ancestors 'none'",
+        "frame-src 'none'",
+        "object-src 'none'",
+        f"script-src {' '.join(script_sources)}",
+        f"style-src {' '.join(style_sources)}",
+        f"img-src {' '.join(img_sources)}",
+        f"font-src {' '.join(font_sources)}",
+        f"connect-src {' '.join(connect_sources)}",
+        f"worker-src {' '.join(worker_sources)}",
+        f"manifest-src {' '.join(manifest_sources)}",
+        f"media-src {' '.join(media_sources)}",
+    ]
+    if env_bool("CSP_INCLUDE_UPGRADE_INSECURE_REQUESTS", enforce_security):
+        directives.append("upgrade-insecure-requests")
+    return "; ".join(directives)
 
 
 DEBUG = env_bool("DEBUG", True)
@@ -81,6 +158,11 @@ CSRF_COOKIE_SECURE = env_bool("CSRF_COOKIE_SECURE", ENFORCE_ENV_SECURITY)
 USE_X_FORWARDED_HOST = env_bool("USE_X_FORWARDED_HOST", ENFORCE_ENV_SECURITY)
 USE_X_FORWARDED_PORT = env_bool("USE_X_FORWARDED_PORT", ENFORCE_ENV_SECURITY)
 SECURE_PROXY_SSL_HEADER_ENABLED = env_bool("SECURE_PROXY_SSL_HEADER_ENABLED", ENFORCE_ENV_SECURITY)
+if RUNNING_TESTS:
+    # The Django test client issues plain HTTP requests by default.
+    # Disable automatic HTTPS redirects for test runtime so response assertions
+    # validate the application behavior instead of transport redirection.
+    SECURE_SSL_REDIRECT = False
 if SECURE_PROXY_SSL_HEADER_ENABLED:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "31536000" if not DEBUG else "0"))
@@ -90,20 +172,17 @@ CSP_ENABLED = env_bool("CSP_ENABLED", True)
 CSP_REPORT_ONLY = env_bool("CSP_REPORT_ONLY", False)
 CSP_DEFAULT_POLICY = os.getenv(
     "CSP_DEFAULT_POLICY",
-    "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; "
-    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
-    "style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; "
-    "connect-src 'self'; worker-src 'self' blob:",
+    "",
 ).strip()
+if not CSP_DEFAULT_POLICY:
+    CSP_DEFAULT_POLICY = _build_default_csp_policy(ENFORCE_ENV_SECURITY)
 
 AUTH_LOGIN_RATE = env_rate("AUTH_LOGIN_RATE", "20/min")
 AUTH_2FA_RATE = env_rate("AUTH_2FA_RATE", "30/min")
 AUTH_REFRESH_RATE = env_rate("AUTH_REFRESH_RATE", "30/min")
 AUTH_LOGOUT_RATE = env_rate("AUTH_LOGOUT_RATE", "60/min")
-AUTH_REFRESH_COOKIE_ENABLED = env_bool("AUTH_REFRESH_COOKIE_ENABLED", False)
-AUTH_RETURN_REFRESH_TOKEN_IN_BODY = env_bool(
-    "AUTH_RETURN_REFRESH_TOKEN_IN_BODY", not AUTH_REFRESH_COOKIE_ENABLED
-)
+AUTH_REFRESH_COOKIE_ENABLED = True
+AUTH_RETURN_REFRESH_TOKEN_IN_BODY = False
 AUTH_REFRESH_COOKIE_NAME = os.getenv("AUTH_REFRESH_COOKIE_NAME", "rtp3_refresh_token").strip()
 if not AUTH_REFRESH_COOKIE_NAME:
     AUTH_REFRESH_COOKIE_NAME = "rtp3_refresh_token"
@@ -121,11 +200,18 @@ if not AUTH_REFRESH_COOKIE_PATH:
     AUTH_REFRESH_COOKIE_PATH = "/api/v1/auth/"
 AUTH_REFRESH_COOKIE_DOMAIN = os.getenv("AUTH_REFRESH_COOKIE_DOMAIN", "").strip() or None
 AUTH_REFRESH_COOKIE_MAX_AGE = int(os.getenv("REFRESH_TOKEN_LIFETIME_DAYS", "7")) * 24 * 60 * 60
-AUTH_REFRESH_REQUIRE_CSRF = env_bool("AUTH_REFRESH_REQUIRE_CSRF", AUTH_REFRESH_COOKIE_ENABLED)
+AUTH_REFRESH_REQUIRE_CSRF = env_bool("AUTH_REFRESH_REQUIRE_CSRF", True)
+TOTP_SECRET_ENCRYPTION_KEY = os.getenv("TOTP_SECRET_ENCRYPTION_KEY", "").strip()
+if not TOTP_SECRET_ENCRYPTION_KEY and (DEBUG or RUNNING_TESTS):
+    TOTP_SECRET_ENCRYPTION_KEY = urlsafe_b64encode(
+        sha256(f"rtp3-totp:{SECRET_KEY}".encode("utf-8")).digest()
+    ).decode("ascii")
 if ENFORCE_ENV_SECURITY and AUTH_REFRESH_COOKIE_ENABLED and not CORS_ALLOW_CREDENTIALS:
     raise ImproperlyConfigured(
         "CORS_ALLOW_CREDENTIALS must be enabled when AUTH_REFRESH_COOKIE_ENABLED=True"
     )
+if ENFORCE_ENV_SECURITY and not TOTP_SECRET_ENCRYPTION_KEY:
+    raise ImproperlyConfigured("TOTP_SECRET_ENCRYPTION_KEY must be set when DEBUG=False")
 if ENFORCE_ENV_SECURITY and not SECURE_SSL_REDIRECT:
     raise ImproperlyConfigured("SECURE_SSL_REDIRECT must be enabled when DEBUG=False")
 if ENFORCE_ENV_SECURITY and not SESSION_COOKIE_SECURE:
@@ -141,14 +227,6 @@ if ENFORCE_ENV_SECURITY and not _all_origins_use_https(CSRF_TRUSTED_ORIGINS):
 if ENFORCE_ENV_SECURITY and AUTH_REFRESH_COOKIE_ENABLED and not AUTH_REFRESH_COOKIE_SECURE:
     raise ImproperlyConfigured("AUTH_REFRESH_COOKIE_SECURE must be enabled when DEBUG=False")
 PROJECT_ROOT = BASE_DIR.parent
-_frontend_dist_raw = os.getenv("FRONTEND_DIST_DIR", str(PROJECT_ROOT / "dist")).strip()
-_frontend_dist_candidate = Path(_frontend_dist_raw)
-if _frontend_dist_candidate.is_absolute():
-    FRONTEND_DIST_DIR = _frontend_dist_candidate.resolve()
-else:
-    # Resolve relative paths against backend directory, where .env is loaded from.
-    FRONTEND_DIST_DIR = (BASE_DIR / _frontend_dist_candidate).resolve()
-SERVE_FRONTEND_FROM_DJANGO = env_bool("SERVE_FRONTEND_FROM_DJANGO", True)
 
 
 # Application definition
@@ -186,7 +264,10 @@ ROOT_URLCONF = "config.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [
+            BASE_DIR / "templates",
+            PROJECT_ROOT / "src" / "pages",
+        ],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -202,8 +283,12 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 
 DB_ENGINE = os.getenv("DB_ENGINE", "postgresql").strip().lower()
-if DB_ENGINE not in {"postgres", "postgresql"}:
-    raise ImproperlyConfigured("DB_ENGINE must be postgresql. SQLite fallback is no longer supported.")
+ALLOW_SQLITE_MIGRATION_EXPORT = env_bool("ALLOW_SQLITE_MIGRATION_EXPORT", False)
+if DB_ENGINE in {"sqlite", "sqlite3"}:
+    if not ALLOW_SQLITE_MIGRATION_EXPORT:
+        raise ImproperlyConfigured("DB_ENGINE must be postgresql. SQLite fallback is no longer supported.")
+elif DB_ENGINE not in {"postgres", "postgresql"}:
+    raise ImproperlyConfigured("DB_ENGINE must be postgresql.")
 
 db_conn_max_age = int(os.getenv("DB_CONN_MAX_AGE", "0"))
 db_connect_timeout = int(os.getenv("DB_CONNECT_TIMEOUT", "10"))
@@ -222,18 +307,30 @@ if db_sslcert:
 if db_sslkey:
     postgres_options["sslkey"] = db_sslkey
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("DB_NAME", "rtp3"),
-        "USER": os.getenv("DB_USER", "rtp3"),
-        "PASSWORD": os.getenv("DB_PASSWORD", "rtp3"),
-        "HOST": os.getenv("DB_HOST", "localhost"),
-        "PORT": os.getenv("DB_PORT", "5432"),
-        "CONN_MAX_AGE": db_conn_max_age,
-        "OPTIONS": postgres_options,
+if DB_ENGINE in {"sqlite", "sqlite3"}:
+    sqlite_name = os.getenv("DB_NAME", "db.sqlite3").strip() or "db.sqlite3"
+    sqlite_path = Path(sqlite_name)
+    if not sqlite_path.is_absolute():
+        sqlite_path = (BASE_DIR / sqlite_path).resolve()
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": str(sqlite_path),
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.getenv("DB_NAME", "rtp3"),
+            "USER": os.getenv("DB_USER", "rtp3"),
+            "PASSWORD": os.getenv("DB_PASSWORD", "rtp3"),
+            "HOST": os.getenv("DB_HOST", "localhost"),
+            "PORT": os.getenv("DB_PORT", "5432"),
+            "CONN_MAX_AGE": db_conn_max_age,
+            "OPTIONS": postgres_options,
+        }
+    }
 
 
 # Password validation
@@ -271,6 +368,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+]
 
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "config.schema.RTPAutoSchema",

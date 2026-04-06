@@ -267,25 +267,10 @@
             });
           return;
         }
-        state.auditLogs = normalizeAuditLogs(getCommon().readStorageJson(getCommon().ADMIN_STORAGE.AUDIT, []));
-        var before = state.auditLogs.length;
-        var kept = state.auditLogs.filter(function (log) {
-          var logTime = parseAuditDateToTime(log.date);
-          if (!Number.isFinite(logTime)) return true;
-          if (lowerTime != null && logTime < lowerTime) return true;
-          if (upperTime != null && logTime > upperTime) return true;
-          return false;
-        });
-        var removed = before - kept.length;
-        state.auditLogs = kept;
-        getCommon().persistAuditLogs();
+        state.auditLogs = [];
         state.auditCurrentPage = 1;
-        addAuditLog('delete', 'Очищен журнал аудита за период ' + periodLabel + '. Удалено записей: ' + removed);
-        common.showNotification('Очистка', 'Удалено записей: ' + removed, 'success');
-        loadAuditLogs();
-        if (window.AdminDashboard && typeof window.AdminDashboard.updateDashboardStats === 'function') {
-          window.AdminDashboard.updateDashboardStats();
-        }
+        renderAuditTable([]);
+        common.showNotification('Очистка', 'Локальный журнал аудита больше не поддерживается.', 'info');
       }
     );
   }
@@ -356,16 +341,8 @@
         });
       return;
     }
-    var raw = common.readStorageJson(common.ADMIN_STORAGE.AUDIT, []);
-    var normalized = normalizeAuditLogs(raw);
-    state.auditLogs = normalized;
-    try {
-      if (Array.isArray(raw) && raw.some(function (l) { return l && !('tz' in l); })) {
-        common.persistAuditLogs();
-      }
-    } catch (_) { }
-    var filteredLogs = getFilteredAuditLogs();
-    renderAuditTable(filteredLogs);
+    state.auditLogs = [];
+    renderAuditTable([]);
   }
 
   function init() {

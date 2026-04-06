@@ -32,10 +32,7 @@ function getConfig() {
           if (typeof window.ApiConfig.getUseApi === 'function') {
             return window.ApiConfig.getUseApi();
           }
-          if (typeof window.USE_API === 'boolean') {
-            return window.USE_API;
-          }
-          return fallbackBaseUrl !== '';
+          return true;
         },
         getDefaultTimeout: () =>
           typeof window.ApiConfig.getDefaultTimeout === 'function'
@@ -56,19 +53,19 @@ function getConfig() {
         getUseRefreshCookieAuth: () =>
           typeof window.ApiConfig.getUseRefreshCookieAuth === 'function'
             ? window.ApiConfig.getUseRefreshCookieAuth()
-            : false
+            : true
       };
     }
 
     if (fallbackBaseUrl) {
       return {
         getBaseUrl: () => fallbackBaseUrl,
-        getUseApi: () => (typeof window.USE_API === 'boolean' ? window.USE_API : true),
+        getUseApi: () => true,
         getDefaultTimeout: () => 8000,
         getHeavyTimeout: () => 30000,
         getTokenStorageKey: () => 'rmk_access_token',
         getRefreshTokenStorageKey: () => 'rmk_refresh_token',
-        getUseRefreshCookieAuth: () => false
+        getUseRefreshCookieAuth: () => true
       };
     }
   }
@@ -78,17 +75,37 @@ function getConfig() {
     getHeavyTimeout: () => 30000,
     getTokenStorageKey: () => 'rmk_access_token',
     getRefreshTokenStorageKey: () => 'rmk_refresh_token',
-    getUseRefreshCookieAuth: () => false
+    getUseRefreshCookieAuth: () => true
   };
 }
 
 /** Путь для refresh токена (может быть переопределён через window.API_REFRESH_PATH) */
 const DEFAULT_REFRESH_PATH = '/api/v1/auth/refresh';
 
-/** URL для редиректа при 401 после неудачного refresh */
-const AUTH_PAGE = '/src/pages/auth.html';
+/** Публичная точка входа для возврата после потери сессии */
+const HOME_PAGE = '/';
 let refreshInFlightPromise = null;
 let runtimeAccessToken = '';
+let logoutInProgress = false;
+let refreshAbortController = null;
+
+function isPublicLandingPage() {
+  if (typeof window === 'undefined' || !window.location) return false;
+
+  const path = String(window.location.pathname || '');
+  return path === '/' || path === '/src/pages/index.html';
+}
+
+function isAuthFlowPage() {
+  if (typeof window === 'undefined' || !window.location) return false;
+
+  const path = String(window.location.pathname || '');
+  return (
+    path.includes('/auth/login/') ||
+    path.includes('/auth/2fa/setup/') ||
+    path.includes('/auth/2fa/verify/')
+  );
+}
 
 function getStorage() {
   if (typeof window === 'undefined')
@@ -105,22 +122,18 @@ function getSessionStorage() {
   try {
     return sessionStorage;
   } catch (_) {
-    return { getItem: () => null, removeItem: () => {} };
+    return { getItem: () => null, setItem: () => {}, removeItem: () => {} };
   }
 }
 
-function readTokenFromAnyStorage(key) {
+function readSessionToken(key) {
   const local = getStorage();
   const session = getSessionStorage();
-  const localValue = local.getItem(key);
-  if (localValue) {
-    return { token: localValue, source: 'local', local, session };
-  }
   const sessionValue = session.getItem(key);
   if (sessionValue) {
-    return { token: sessionValue, source: 'session', local, session };
+    return { token: sessionValue, local, session };
   }
-  return { token: null, source: null, local, session };
+  return { token: null, local, session };
 }
 
 function clearAuthTokensEverywhere(tokenKey, refreshKey, local, session) {
@@ -139,48 +152,34 @@ function clearAccessToken() {
   runtimeAccessToken = '';
 }
 
+function setLogoutInProgress(value) {
+  logoutInProgress = value === true;
+  if (logoutInProgress && refreshAbortController) {
+    try {
+      refreshAbortController.abort();
+    } catch (_) {}
+  }
+}
+
 function getAccessToken(config) {
   if (runtimeAccessToken) {
     return runtimeAccessToken;
   }
   const tokenKey = config.getTokenStorageKey();
-  const storage = getStorage();
   const session = getSessionStorage();
-  return storage.getItem(tokenKey) || session.getItem(tokenKey) || '';
+  return session.getItem(tokenKey) || '';
 }
 
 function writeRefreshedTokens(
-  source,
   tokenKey,
-  refreshKey,
   accessToken,
-  refreshToken,
   local,
-  session,
-  useRefreshCookieAuth
+  session
 ) {
   setAccessToken(accessToken);
 
-  if (useRefreshCookieAuth) {
-    local.removeItem(tokenKey);
-    local.removeItem(refreshKey);
-    session.removeItem(tokenKey);
-    session.removeItem(refreshKey);
-    return;
-  }
-
-  const primary = source === 'session' ? session : local;
-  const secondary = source === 'session' ? local : session;
-
-  primary.setItem(tokenKey, accessToken);
-  if (!useRefreshCookieAuth && refreshToken) {
-    primary.setItem(refreshKey, refreshToken);
-  } else {
-    primary.removeItem(refreshKey);
-  }
-
-  secondary.removeItem(tokenKey);
-  secondary.removeItem(refreshKey);
+  session.setItem(tokenKey, accessToken);
+  local.removeItem(tokenKey);
 }
 
 function shouldUseRefreshCookieAuth(config) {
@@ -222,6 +221,9 @@ function buildUrl(baseUrl, path, query) {
  * @returns {Promise<string|null>} новый access-токен или null
  */
 async function tryRefreshToken() {
+  if (logoutInProgress) {
+    return null;
+  }
   if (refreshInFlightPromise) {
     return refreshInFlightPromise;
   }
@@ -230,44 +232,36 @@ async function tryRefreshToken() {
     const config = getConfig();
     const baseUrl = config.getBaseUrl();
     if (!baseUrl || !baseUrl.trim()) return null;
-    const useRefreshCookieAuth = shouldUseRefreshCookieAuth(config);
-
     const refreshKey = config.getRefreshTokenStorageKey();
     const tokenKey = config.getTokenStorageKey();
-    const {
-      token: refreshToken,
-      source: refreshSource,
-      local,
-      session
-    } = readTokenFromAnyStorage(refreshKey);
-    if (!useRefreshCookieAuth && !refreshToken) return null;
+    const { local, session } = readSessionToken(refreshKey);
 
     const refreshPath =
       (typeof window !== 'undefined' && window.API_REFRESH_PATH) || DEFAULT_REFRESH_PATH;
     const url = buildUrl(baseUrl, refreshPath);
     const csrfToken = getCookie('csrftoken');
     const headers = { 'Content-Type': 'application/json' };
-    if (!useRefreshCookieAuth && refreshToken) {
-      headers['Authorization'] = 'Bearer ' + refreshToken;
-    }
-    if (useRefreshCookieAuth && csrfToken) {
+    if (csrfToken) {
       headers['X-CSRFToken'] = csrfToken;
     }
 
     const controller = new AbortController();
+    refreshAbortController = controller;
     const timeoutId = setTimeout(() => controller.abort(), config.getDefaultTimeout());
 
     try {
       const res = await fetch(url, {
         method: 'POST',
         headers,
-        credentials: useRefreshCookieAuth ? 'include' : 'same-origin',
-        body: useRefreshCookieAuth
-          ? JSON.stringify({})
-          : JSON.stringify({ refresh_token: refreshToken }),
+        credentials: 'include',
+        body: JSON.stringify({}),
         signal: controller.signal
       });
       clearTimeout(timeoutId);
+
+      if (logoutInProgress) {
+        return null;
+      }
 
       if (!res.ok) {
         // При невалидном/отозванном refresh очищаем все токены.
@@ -279,17 +273,12 @@ async function tryRefreshToken() {
 
       const json = await res.json().catch(() => ({}));
       const newAccess = json.access_token || json.accessToken;
-      const newRefresh = json.refresh_token || json.refreshToken;
       if (newAccess) {
         writeRefreshedTokens(
-          refreshSource,
           tokenKey,
-          refreshKey,
           newAccess,
-          newRefresh,
           local,
-          session,
-          useRefreshCookieAuth
+          session
         );
         return newAccess;
       }
@@ -297,6 +286,7 @@ async function tryRefreshToken() {
       clearTimeout(timeoutId);
       // Сетевые сбои не должны инвалидировать локальную сессию.
     }
+    refreshAbortController = null;
     return null;
   })();
 
@@ -304,13 +294,18 @@ async function tryRefreshToken() {
     return await refreshInFlightPromise;
   } finally {
     refreshInFlightPromise = null;
+    refreshAbortController = null;
   }
 }
 
 /**
- * Редирект на страницу авторизации и очистка токенов.
+ * Очищает auth-состояние и возвращает пользователя на публичную главную.
+ * На публичной главной и auth-страницах навигацию не форсируем.
  */
 function redirectToAuth() {
+  if (logoutInProgress) {
+    return;
+  }
   const config = getConfig();
   const local = getStorage();
   const session = getSessionStorage();
@@ -330,17 +325,10 @@ function redirectToAuth() {
   local.removeItem('role');
 
   if (typeof window !== 'undefined' && window.location) {
-    const path = window.location.pathname || '';
-    if (
-      path.includes('/src/pages/auth.html') ||
-      path.includes('/src/pages/auth-2fa-setup.html') ||
-      path.includes('/src/pages/auth-2fa-verify.html')
-    ) {
+    if (isPublicLandingPage() || isAuthFlowPage()) {
       return;
     }
-    const returnTo = window.location.pathname + window.location.search;
-    window.location.href =
-      AUTH_PAGE + (returnTo && returnTo !== '/' ? '?return=' + encodeURIComponent(returnTo) : '');
+    window.location.href = HOME_PAGE;
   }
 }
 
@@ -405,7 +393,7 @@ async function request(method, path, options) {
     let token = getAccessToken(config);
     // Cookie-режим: при отсутствии токена (после редиректа) сначала refresh,
     // чтобы не делать первый запрос без токена и не получать 401.
-    if (!token && useRefreshCookieAuth) {
+    if (!token && useRefreshCookieAuth && !logoutInProgress) {
       const newToken = await tryRefreshToken();
       if (newToken) {
         setAccessToken(newToken);
@@ -466,7 +454,7 @@ async function request(method, path, options) {
     data = text || null;
   }
 
-  if (res.status === 401 && !skipAuth) {
+  if (res.status === 401 && !skipAuth && !logoutInProgress) {
     const newToken = await tryRefreshToken();
     if (newToken) {
       setAccessToken(newToken);
@@ -535,6 +523,7 @@ function del(path, options) {
 const ApiClient = {
   setAccessToken,
   clearAccessToken,
+  setLogoutInProgress,
   request,
   get,
   post,

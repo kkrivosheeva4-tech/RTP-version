@@ -14,9 +14,13 @@ from technologies.views import (
     TechnologyListCreateAPIView,
     TechnologyProposalApproveAPIView,
     TechnologyProposalCreateAPIView,
+    TechnologyProposalMineHistoryAPIView,
     TechnologyProposalMineAPIView,
     TechnologyProposalPendingAPIView,
+    TechnologyProposalPostponeAPIView,
     TechnologyProposalRejectAPIView,
+    TechnologyProposalReviewHistoryAPIView,
+    EditorProposalNotificationsAPIView,
 )
 
 urlpatterns = [
@@ -59,6 +63,26 @@ urlpatterns = [
         name="technology-proposals-mine",
     ),
     path(
+        "technology-proposals/mine/history",
+        TechnologyProposalMineHistoryAPIView.as_view(),
+        name="technology-proposals-mine-history-noslash",
+    ),
+    path(
+        "technology-proposals/mine/history/",
+        TechnologyProposalMineHistoryAPIView.as_view(),
+        name="technology-proposals-mine-history",
+    ),
+    path(
+        "technology-proposals/history",
+        TechnologyProposalReviewHistoryAPIView.as_view(),
+        name="technology-proposals-history-noslash",
+    ),
+    path(
+        "technology-proposals/history/",
+        TechnologyProposalReviewHistoryAPIView.as_view(),
+        name="technology-proposals-history",
+    ),
+    path(
         "technology-proposals/pending",
         TechnologyProposalPendingAPIView.as_view(),
         name="technology-proposals-pending-noslash",
@@ -87,6 +111,26 @@ urlpatterns = [
         "technology-proposals/<int:pk>/reject/",
         TechnologyProposalRejectAPIView.as_view(),
         name="technology-proposals-reject",
+    ),
+    path(
+        "technology-proposals/<int:pk>/postpone",
+        TechnologyProposalPostponeAPIView.as_view(),
+        name="technology-proposals-postpone-noslash",
+    ),
+    path(
+        "technology-proposals/<int:pk>/postpone/",
+        TechnologyProposalPostponeAPIView.as_view(),
+        name="technology-proposals-postpone",
+    ),
+    path(
+        "proposal-notifications",
+        EditorProposalNotificationsAPIView.as_view(),
+        name="proposal-notifications-noslash",
+    ),
+    path(
+        "proposal-notifications/",
+        EditorProposalNotificationsAPIView.as_view(),
+        name="proposal-notifications",
     ),
     path("references/", include("references.urls")),
     path("auth/", include("auth_custom.urls")),

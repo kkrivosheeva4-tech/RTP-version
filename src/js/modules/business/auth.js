@@ -1,6 +1,5 @@
 // auth.js
-// Runtime-auth слой: backend/cookie auth является источником истины,
-// localStorage используется только как временный fallback для mock/legacy режима.
+// Runtime-auth слой: backend/cookie auth является источником истины.
 
 'use strict';
 
@@ -8,6 +7,20 @@ const AUTH_RUNTIME_KEY = '__RMK_AUTH_STATE__';
 
 function getApiConfig() {
   return typeof window !== 'undefined' ? window.ApiConfig || null : null;
+}
+
+function inferApiModeFromRuntime() {
+  if (typeof window === 'undefined' || !window.location) {
+    return true;
+  }
+  const protocol = String(window.location.protocol || '').toLowerCase();
+  const isHttpOrigin = protocol === 'http:' || protocol === 'https:';
+  if (!isHttpOrigin) {
+    return true;
+  }
+  const port = String(window.location.port || '');
+  const isViteDevPort = port === '5173' || port === '5174';
+  return !isViteDevPort;
 }
 
 function getApiClient() {
@@ -20,7 +33,10 @@ function getRoleApi() {
 
 function isApiModeEnabled() {
   const cfg = getApiConfig();
-  return !!(cfg && typeof cfg.getUseApi === 'function' && cfg.getUseApi() === true);
+  if (cfg && typeof cfg.getUseApi === 'function') {
+    return cfg.getUseApi() === true;
+  }
+  return inferApiModeFromRuntime();
 }
 
 function getRuntimeState() {
@@ -86,23 +102,7 @@ function clearLegacyAuthArtifacts() {
 }
 
 function getLegacyProfile() {
-  try {
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    const username = String(
-      localStorage.getItem('username') || localStorage.getItem('userName') || ''
-    ).trim();
-    if (!isLoggedIn || !username) {
-      return null;
-    }
-
-    return {
-      username,
-      role: normalizeRole(localStorage.getItem('role') || ''),
-      is_2fa_enabled: true
-    };
-  } catch (_) {
-    return null;
-  }
+  return null;
 }
 
 function normalizeRole(role) {
@@ -118,9 +118,6 @@ function isAuthenticated() {
   if (state.authenticated && state.profile) {
     return true;
   }
-  if (!isApiModeEnabled()) {
-    return !!getLegacyProfile();
-  }
   return false;
 }
 
@@ -129,15 +126,21 @@ function getCurrentProfile() {
   if (state.profile) {
     return state.profile;
   }
-  if (!isApiModeEnabled()) {
-    return getLegacyProfile();
-  }
   return null;
 }
 
 function getCurrentUsername() {
   const profile = getCurrentProfile();
   return profile && profile.username ? String(profile.username).trim() : '';
+}
+
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function getCurrentRole() {
@@ -154,7 +157,6 @@ function setAuthSession(profile, options = {}) {
         id: profile.id,
         username: String(profile.username || '').trim(),
         role: normalizeRole(profile.role || ''),
-        legacy_role: profile.legacy_role || '',
         is_2fa_enabled: profile.is_2fa_enabled === true
       }
     : null;
@@ -166,6 +168,9 @@ function setAuthSession(profile, options = {}) {
     if (options.accessToken !== undefined) {
       apiClient.setAccessToken(options.accessToken || '');
     }
+  }
+  if (apiClient && typeof apiClient.setLogoutInProgress === 'function') {
+    apiClient.setLogoutInProgress(false);
   }
 
   if (options.clearLegacy !== false) {
@@ -189,6 +194,9 @@ function clearAuthSession() {
   } else if (apiClient && typeof apiClient.setAccessToken === 'function') {
     apiClient.setAccessToken('');
   }
+  if (apiClient && typeof apiClient.setLogoutInProgress === 'function') {
+    apiClient.setLogoutInProgress(false);
+  }
 
   clearLegacyAuthArtifacts();
   // Очищаем состояние формы, чтобы следующий пользователь не видел данные предыдущего
@@ -208,16 +216,6 @@ async function bootstrapAuthSession(force = false) {
   }
 
   const bootstrapPromise = (async () => {
-    if (!isApiModeEnabled()) {
-      const legacyProfile = getLegacyProfile();
-      if (legacyProfile) {
-        setAuthSession(legacyProfile, { clearLegacy: false });
-      } else {
-        clearAuthSession();
-      }
-      return getRuntimeState();
-    }
-
     const apiClient = getApiClient();
     if (!apiClient || typeof apiClient.get !== 'function') {
       state.initialized = true;
@@ -244,6 +242,7 @@ async function bootstrapAuthSession(force = false) {
 }
 
 async function safeLogout() {
+  const apiClient = getApiClient();
   try {
     const role = getCurrentRole();
     if (typeof window !== 'undefined' && typeof window.appendAdminAudit === 'function') {
@@ -253,7 +252,9 @@ async function safeLogout() {
 
   try {
     if (isApiModeEnabled()) {
-      const apiClient = getApiClient();
+      if (apiClient && typeof apiClient.setLogoutInProgress === 'function') {
+        apiClient.setLogoutInProgress(true);
+      }
       if (apiClient && typeof apiClient.post === 'function') {
         // skipAuth: true — endpoint AllowAny, нужен только refresh-cookie (credentials: include).
         // Исключаем 401 при истёкшем access-токене.
@@ -281,6 +282,15 @@ function checkArchitectRole() {
 
 function checkDirectorRole() {
   return getCurrentRole() === 'owner';
+}
+
+function isPublicLandingPage() {
+  if (typeof window === 'undefined' || !window.location) {
+    return false;
+  }
+
+  const pathname = String(window.location.pathname || '');
+  return pathname === '/' || pathname === '/src/pages/index.html';
 }
 
 function renderAuth() {
@@ -312,8 +322,11 @@ function renderAuth() {
       ? roleApi.hasCapability('create_proposals', role) ||
         roleApi.hasCapability('review_proposals', role)
       : false;
+  const username = getCurrentUsername();
   const roleLabel =
     roleApi && typeof roleApi.getRoleLabel === 'function' ? roleApi.getRoleLabel(role) : role;
+  const escapedUsername = escapeHtml(username || roleLabel || '');
+  const escapedRoleLabel = escapeHtml(roleLabel || '');
   const exportPdfBtn = document.getElementById('exportPdfBtn');
   const editBtn = document.getElementById('editTechBtn');
   const deleteBtn = document.getElementById('deleteTechBtn');
@@ -344,7 +357,7 @@ function renderAuth() {
   document.body.classList.remove('not-authorized');
 
   if (authenticated && canManageTechnologies && role !== 'admin') {
-    authInfo.innerHTML = `<div class="user-role architect-role">${roleLabel}</div>`;
+    authInfo.innerHTML = `<div class="user-role architect-role" data-tooltip="${escapedRoleLabel}" title="${escapedRoleLabel}">${escapedUsername}</div>`;
     logoutContainer.innerHTML = `<button class="logout" data-tooltip="Выйти" aria-label="Выйти">
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -353,12 +366,14 @@ function renderAuth() {
     </svg>
   </button>`;
     setButtonsVisibility(canSubmitTechnologyChanges);
-    logoutContainer.querySelector('.logout').onclick = async () => {
+    logoutContainer.querySelector('.logout').onclick = async (event) => {
+      event?.preventDefault?.();
+      event?.stopPropagation?.();
       await safeLogout();
-      window.location.href = '/src/pages/auth.html';
+      window.location.href = '/';
     };
   } else if (authenticated && canAccessAdminPanel) {
-    authInfo.innerHTML = `<div class="user-role admin-role" data-tooltip="Перейти в админ-панель" style="cursor: pointer;">Администратор</div>`;
+    authInfo.innerHTML = `<div class="user-role admin-role" data-tooltip="${escapedRoleLabel}" title="${escapedRoleLabel}" style="cursor: pointer;">${escapedUsername}</div>`;
     logoutContainer.innerHTML = `<button class="logout" data-tooltip="Выйти" aria-label="Выйти">
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -373,15 +388,17 @@ function renderAuth() {
         try {
           sessionStorage.setItem('rmk_admin_nav_ts', String(Date.now()));
         } catch (_) {}
-        window.location.href = '/src/pages/admin.html';
+        window.location.href = '/admin-panel/';
       };
     }
-    logoutContainer.querySelector('.logout').onclick = async () => {
+    logoutContainer.querySelector('.logout').onclick = async (event) => {
+      event?.preventDefault?.();
+      event?.stopPropagation?.();
       await safeLogout();
-      location.reload();
+      window.location.href = '/';
     };
   } else if (authenticated && (role === 'editor' || role === 'guest')) {
-    authInfo.innerHTML = `<div class="user-role">${roleLabel}</div>`;
+    authInfo.innerHTML = `<div class="user-role" data-tooltip="${escapedRoleLabel}" title="${escapedRoleLabel}">${escapedUsername}</div>`;
     logoutContainer.innerHTML = `<button class="logout" data-tooltip="Выйти" aria-label="Выйти">
     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -390,9 +407,11 @@ function renderAuth() {
     </svg>
   </button>`;
     setButtonsVisibility(canSubmitTechnologyChanges);
-    logoutContainer.querySelector('.logout').onclick = async () => {
+    logoutContainer.querySelector('.logout').onclick = async (event) => {
+      event?.preventDefault?.();
+      event?.stopPropagation?.();
       await safeLogout();
-      location.reload();
+      window.location.href = '/';
     };
   } else {
     authInfo.innerHTML = '';
@@ -406,13 +425,8 @@ function renderAuth() {
     setButtonsVisibility(false);
     document.body.classList.add('not-authorized');
     logoutContainer.querySelector('.login').onclick = () => {
-      window.location.href = '/src/pages/auth.html';
+      window.location.href = '/auth/login/';
     };
-    const isAuthPage = window.location.pathname.includes('auth.html');
-    const state = getRuntimeState();
-    if (!isAuthPage && (!isApiModeEnabled() || state.initialized)) {
-      window.location.href = '/src/pages/auth.html';
-    }
   }
 
   if (window.ModerationFlow && typeof window.ModerationFlow.syncUiState === 'function') {

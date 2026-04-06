@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 http://localhost:5173 http://127.0.0.1:5173 ws://localhost:5173 ws://127.0.0.1:5173; worker-src 'self' blob:; base-uri 'self';"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 http://localhost:5173 http://127.0.0.1:5173 ws://localhost:5173 ws://127.0.0.1:5173; worker-src 'self' blob:; base-uri 'self';"
     />
     <meta
       name="description"
@@ -22,7 +22,7 @@
       property="og:description"
       content="Интерактивная визуализация технологических решений с расширенным функционалом для директоров и руководителей проектов"
     />
-    <meta property="og:image" content="/assets/images/icon.png" />
+    <meta property="og:image" content="/static/img/icon.png" />
     <!-- Twitter -->
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="Радар технологий - Для директоров и РП" />
@@ -30,7 +30,7 @@
       name="twitter:description"
       content="Интерактивная визуализация технологических решений с расширенным функционалом для директоров и руководителей проектов"
     />
-    <meta name="twitter:image" content="/assets/images/icon.png" />
+    <meta name="twitter:image" content="/static/img/icon.png" />
     <!-- PWA мета-теги -->
     <meta name="theme-color" content="#ce9068" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -50,29 +50,29 @@
       type="image/svg+xml"
       media="(prefers-color-scheme: light)"
     />
-    <link rel="stylesheet" href="/src/css/common.css" />
-    <link rel="stylesheet" href="/src/css/RMK.css" />
-    <link rel="stylesheet" href="/src/css/about.css" />
-    <link rel="stylesheet" href="/src/css/rmk-inline-styles.css" />
+    <link rel="stylesheet" href="/static/css/common.css" />
+    <link rel="stylesheet" href="/static/css/RMK.css" />
+    <link rel="stylesheet" href="/static/css/about.css" />
+    <link rel="stylesheet" href="/static/css/rmk-inline-styles.css" />
   </head>
 
   <body class="light" id="rmk-director">
     <header role="banner">
       <a
         class="logo"
-        href="/src/pages/index.html"
+        href="/"
         data-tooltip="На главную"
         aria-label="Радар технологий - на главную"
       >
-        <img
-          src="/assets/images/icon.png"
-          alt="Logo"
-          class="logo-img"
-          onerror="
-            this.style.display = 'none';
-            this.nextElementSibling?.style.display = 'inline';
-          "
-        />
+          <img
+            src="/static/img/icon.png"
+            alt="Logo"
+            class="logo-img"
+            onerror="
+              this.style.display = 'none';
+              if (this.nextElementSibling) { this.nextElementSibling.style.display = 'inline'; }
+            "
+          />
         <span class="logo-fallback" style="display: none">РТ</span>
         <span>Радар технологий</span>
       </a>
@@ -289,6 +289,28 @@
             <path d="M4 4h16v12H7l-3 3V4z"></path>
             <path d="M8 8h8"></path>
             <path d="M8 12h5"></path>
+          </svg>
+        </button>
+        <button
+          id="proposalHistoryIconBtn"
+          class="sidebar-icon-btn hidden"
+          data-tooltip="История предложений"
+          aria-label="История предложений"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M3 12a9 9 0 1 0 3-6.708"></path>
+            <path d="M3 3v6h6"></path>
+            <path d="M12 7v5l3 3"></path>
           </svg>
         </button>
         <button
@@ -2838,7 +2860,28 @@
     <div id="proposalReviewPanel" class="modal-panel proposal-panel">
       <div class="modal-header">
         <h2>Предложения изменений</h2>
-        <button class="close-btn" id="closeProposalPanel" aria-label="Закрыть">
+        <div class="proposal-header-actions">
+          <button
+            type="button"
+            id="proposalHistoryViewBtn"
+            class="btn-secondary proposal-header-btn hidden"
+            aria-label="История предложений"
+            title="История предложений"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+            >
+              <path d="M3 12a9 9 0 1 0 3-6.708" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M3 3v6h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <path d="M12 7v5l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+          <button class="close-btn" id="closeProposalPanel" aria-label="Закрыть">
           <svg
             width="20"
             height="20"
@@ -2855,7 +2898,8 @@
               stroke-linejoin="round"
             />
           </svg>
-        </button>
+          </button>
+        </div>
       </div>
       <div class="modal-tabs">
         <div class="tabs-container proposal-tabs">
@@ -2885,6 +2929,9 @@
 
     <div id="notificationPanel" class="notification-panel"></div>
     <!-- Точка входа: все модули загружаются через main.js (этап 7.2) -->
-    <script type="module" src="/src/main.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script type="module" src="/static/main.js"></script>
   </body>
 </html>

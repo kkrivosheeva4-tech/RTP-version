@@ -7,7 +7,6 @@
 
   const ADMIN_STORAGE = {
     USERS: 'adminUsers',
-    AUDIT: 'adminAuditLogs',
     BACKUPS: 'adminBackups',
     ENTERPRISES: 'adminEnterprises',
     INSTALL_DATE: 'appInstallDate'
@@ -19,7 +18,7 @@
     auditLogs: [],
     backups: [],
     enterprises: [],
-    currentSection: 'dashboard',
+    currentSection: 'users',
     currentUserId: null,
     currentEnterpriseId: null,
     auditCurrentPage: 1,
@@ -73,10 +72,6 @@
 
   function persistUsers() {
     writeStorageJson(ADMIN_STORAGE.USERS, AdminState.users);
-  }
-
-  function persistAuditLogs() {
-    writeStorageJson(ADMIN_STORAGE.AUDIT, AdminState.auditLogs);
   }
 
   function persistBackups() {
@@ -545,7 +540,6 @@
     const titleEl = document.getElementById('adminPageTitle');
     if (!titleEl) return;
     const titles = {
-      dashboard: 'Обзор',
       users: 'Пользователи',
       audit: 'Аудит',
       export: 'Экспорт',
@@ -565,7 +559,6 @@
     writeStorageJson: writeStorageJson,
     ensureInstallDate: ensureInstallDate,
     persistUsers: persistUsers,
-    persistAuditLogs: persistAuditLogs,
     persistBackups: persistBackups,
     persistEnterprises: persistEnterprises,
     getLoggedInUserName: getLoggedInUserName,

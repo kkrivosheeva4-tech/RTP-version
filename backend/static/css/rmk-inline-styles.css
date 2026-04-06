@@ -1,0 +1,342 @@
+/* ===== RMK Inline Styles ===== */
+/* Оптимизация стилей для страницы радара */
+/* Дата создания: 2024 */
+
+/* ===== ГРУППА 1: Простое скрытие элементов ===== */
+
+/* Скрытые элементы по умолчанию */
+.hidden,
+.hidden-by-default {
+  display: none;
+}
+
+/* Специфичные скрытые элементы */
+#reset-button-text {
+  display: none;
+}
+
+#reportIconBtn.hidden {
+  display: none;
+}
+
+#addIconBtn.hidden {
+  display: none;
+}
+
+/* Скрытый контейнер для кнопок */
+div[style*="display: none"]:not([id]):not([class]) {
+  display: none;
+}
+
+#panelRatingsHint {
+  display: none;
+}
+
+#addChoicePopover {
+  display: none;
+}
+
+#exportPdfModal {
+  display: none;
+}
+
+#reportLoadingModal {
+  display: none;
+}
+
+#loadingSuccess {
+  display: none;
+}
+
+#loadingError {
+  display: none;
+}
+
+#loadingErrorMessage {
+  display: none;
+}
+
+/* ===== ГРУППА 2: Скрытие с дополнительными стилями ===== */
+
+/* Кнопка добавления технологии (скрыта + позиционирование) */
+#addTechBtn {
+  display: none;
+  position: relative;
+}
+
+/* Контейнеры оценок компаний (скрыты + отступ) */
+#techCompanyRatingsContainer {
+  display: none;
+  margin-top: 12px;
+}
+
+#editCompanyRatingsContainer {
+  display: none;
+  margin-top: 12px;
+}
+
+/* Сообщение об ошибке экспорта */
+#exportFieldsError {
+  display: none;
+  color: #e74c3c;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* ===== ГРУППА 3: Предупреждения и информационные блоки ===== */
+
+/* Предупреждение о рейтингах */
+#techRatingsWarning {
+  display: none;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: 6px;
+  color: #856404;
+  font-size: 13px;
+}
+
+/* ===== ГРУППА 4: Модальное окно графика "Перспективные" ===== */
+
+/* Модальное окно графика */
+#prospectsModal {
+  display: none;
+}
+
+/* Модальное окно графика - размеры */
+#prospectsModal.modal-panel {
+  width: 60vw !important;
+  max-width: 1000px !important;
+  height: 72vh !important;
+  max-height: 72vh !important;
+}
+
+/* Тело модального окна графика */
+#prospectsModal .modal-body {
+  display: flex !important;
+  flex-direction: column !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  min-height: 0 !important;
+  padding: 16px !important;
+  padding-bottom: 16px !important;
+  padding-right: 16px !important;
+  padding-top: 0px !important;
+}
+
+/* Контейнер графика */
+#prospectsChartContainer {
+  width: 100%;
+  flex: 0 0 auto;
+  /* Делаем сам график заметно больше, не меняя размер модального окна */
+  min-height: 360px;
+  height: 48vh;
+  max-height: 58vh;
+}
+
+/* SVG графика */
+#prospectsChartSvg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Контейнер таблицы в модальном окне */
+#prospectsTableContainer {
+  width: 100%;
+  max-width: 100%;
+  margin-top: 16px;
+  border-top: 1px solid var(--input-border);
+  padding-top: 16px;
+  padding-bottom: 16px;
+  overflow-x: hidden;
+  overflow-y: visible;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  min-height: 0;
+}
+
+/* Адаптивные стили для модального окна */
+@media (max-width: 1024px) {
+  #prospectsModal.modal-panel {
+    width: 80vw !important;
+    max-width: 900px !important;
+  }
+
+  #prospectsModal .modal-body {
+    padding-bottom: 16px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  #prospectsModal.modal-panel {
+    width: 90vw !important;
+    max-width: 100% !important;
+    height: 85vh !important;
+    max-height: 85vh !important;
+  }
+
+  #prospectsModal .modal-body {
+    padding-bottom: 16px !important;
+  }
+
+  #prospectsChartContainer {
+    height: 40vh !important;
+    min-height: 280px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  #prospectsModal.modal-panel {
+    width: 95vw !important;
+    height: 90vh !important;
+    max-height: 90vh !important;
+  }
+
+  #prospectsModal .modal-body {
+    padding-bottom: 12px !important;
+  }
+
+  #prospectsChartContainer {
+    height: 36vh !important;
+    min-height: 240px !important;
+  }
+}
+
+/* ===== ГРУППА 5: Поиск в таблице графика ===== */
+
+/* Контейнер поиска */
+.table-search-container {
+  margin-bottom: 12px;
+  position: relative;
+}
+
+/* Иконка поиска SVG */
+.table-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--text, #666);
+  opacity: 0.6;
+}
+
+/* Input поиска */
+#prospectsTableSearch {
+  width: 100%;
+  padding: 8px 12px 8px 36px;
+  border: 1px solid var(--input-border, #ddd);
+  border-radius: 4px;
+  font-size: 14px;
+  background: var(--input-bg, #fff);
+  color: var(--text, #000);
+}
+
+/* ===== ГРУППА 6: Flexbox контейнеры ===== */
+
+/* Контейнер controls в форме экспорта - используется класс flex-row */
+
+/* ===== ГРУППА 7: Простые отступы ===== */
+
+/* Кнопка добавления функции */
+#addFunctionRow {
+  margin-top: 8px;
+}
+
+/* ===== ГРУППА 8: Типографика ===== */
+
+/* Сообщение подтверждения удаления */
+#deleteConfirmMessage {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* ===== ГРУППА 9: Динамические стили в JavaScript ===== */
+/* Эти стили применяются динамически через JavaScript */
+/* Классы для использования в JS коде */
+
+/* Label с flexbox для чекбоксов */
+.js-label-flex {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  width: 100%;
+  padding: 4px 0;
+}
+
+/* Checkbox с курсором pointer */
+.js-checkbox-pointer {
+  cursor: pointer;
+}
+
+/* TD с центрированием */
+.js-td-center {
+  text-align: center;
+  padding: 20px;
+}
+
+/* ===== Утилиты для позиционирования ===== */
+
+.position-relative {
+  position: relative;
+}
+
+.position-absolute {
+  position: absolute;
+}
+
+/* ===== Утилиты для flexbox ===== */
+
+.flex-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.flex-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ===== Контейнеры оценок ===== */
+
+.ratings-container {
+  display: none;
+  margin-top: 12px;
+}
+
+/* ===== Кнопки в формах ===== */
+
+.form-button-margin {
+  margin-top: 8px;
+}
+
+/* ===== Сообщения ===== */
+
+.confirm-message {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.warning-box {
+  display: none;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: 6px;
+  color: #856404;
+  font-size: 13px;
+}
+
+.error-message {
+  display: none;
+  color: #e74c3c;
+  font-size: 14px;
+  font-weight: 500;
+}

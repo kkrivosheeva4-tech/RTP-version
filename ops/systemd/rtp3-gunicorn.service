@@ -1,0 +1,15 @@
+[Unit]
+Description=RTP-3 gunicorn
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/rtp3
+EnvironmentFile=/opt/rtp3/backend/.env
+ExecStart=/opt/rtp3/.venv/bin/gunicorn --config /opt/rtp3/gunicorn.conf.py config.wsgi:application
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

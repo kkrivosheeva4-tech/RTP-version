@@ -1,9 +1,17 @@
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.utils import timezone
 from rest_framework import serializers
 
 from admin_panel.models import AuditLog, BackupSnapshot
-from auth_custom.models import UserProfile
+from auth_custom.models import UserPasswordHistory, UserProfile
+from auth_custom.security import (
+    PASSWORD_HISTORY_LIMIT,
+    ensure_password_not_reused,
+    normalize_email,
+    validate_login_email,
+    validate_password_policy,
+)
 from references.models import Enterprise, EnterpriseBlockMapping, FunctionalBlock
 
 User = get_user_model()
@@ -14,9 +22,13 @@ class AdminUserSerializer(serializers.Serializer):
     username = serializers.CharField(read_only=True)
     email = serializers.EmailField(read_only=True, allow_blank=True)
     role = serializers.CharField(read_only=True)
-    legacy_role = serializers.CharField(read_only=True, allow_blank=True)
     is_active = serializers.BooleanField(read_only=True)
     is_2fa_enabled = serializers.BooleanField(read_only=True)
+    must_setup_2fa = serializers.BooleanField(read_only=True)
+    must_change_password = serializers.BooleanField(read_only=True)
+    failed_login_attempts = serializers.IntegerField(read_only=True)
+    is_locked = serializers.BooleanField(read_only=True)
+    locked_at = serializers.DateTimeField(read_only=True, allow_null=True)
     created_at = serializers.DateTimeField(read_only=True)
     updated_at = serializers.DateTimeField(read_only=True)
 
@@ -27,9 +39,13 @@ class AdminUserSerializer(serializers.Serializer):
             "username": instance.username,
             "email": instance.email or "",
             "role": profile.get_effective_role(),
-            "legacy_role": profile.legacy_role or "",
             "is_active": instance.is_active,
             "is_2fa_enabled": profile.is_2fa_enabled,
+            "must_setup_2fa": profile.must_setup_2fa,
+            "must_change_password": profile.must_change_password,
+            "failed_login_attempts": profile.failed_login_attempts,
+            "is_locked": profile.is_locked,
+            "locked_at": profile.locked_at,
             "created_at": instance.date_joined,
             "updated_at": profile.updated_at,
         }
@@ -37,22 +53,34 @@ class AdminUserSerializer(serializers.Serializer):
 
 class AdminUserWriteSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=150, required=False)
-    email = serializers.EmailField(required=False, allow_blank=True)
+    email = serializers.CharField(
+        max_length=254,
+        required=False,
+        allow_blank=True,
+        trim_whitespace=False,
+    )
     password = serializers.CharField(
-        required=False, min_length=6, write_only=True, trim_whitespace=False
+        required=False, write_only=True, trim_whitespace=False
     )
     role = serializers.ChoiceField(choices=UserProfile.ROLE_CHOICES, required=False)
     is_active = serializers.BooleanField(required=False)
     is_2fa_enabled = serializers.BooleanField(required=False)
+    unlock_account = serializers.BooleanField(required=False)
 
     def validate(self, attrs):
         is_create = self.instance is None
         if is_create:
-            missing = [field for field in ("username", "password", "role") if field not in attrs]
+            missing = [
+                field for field in ("username", "email", "password", "role") if field not in attrs
+            ]
             if missing:
                 raise serializers.ValidationError(
                     {field: "This field is required." for field in missing}
                 )
+        password = attrs.get("password")
+        if password is not None:
+            validate_password_policy(password, user=self.instance)
+            ensure_password_not_reused(self.instance, password)
         return attrs
 
     def validate_username(self, value):
@@ -67,10 +95,11 @@ class AdminUserWriteSerializer(serializers.Serializer):
         return username
 
     def validate_email(self, value):
-        email = value.strip()
-        if not email:
-            return ""
-        queryset = User.objects.filter(email=email)
+        raw_value = str(value or "")
+        if not raw_value:
+            raise serializers.ValidationError("Email is required.")
+        email = validate_login_email(raw_value)
+        queryset = User.objects.filter(email__iexact=email)
         if self.instance is not None:
             queryset = queryset.exclude(id=self.instance.id)
         if queryset.exists():
@@ -81,18 +110,35 @@ class AdminUserWriteSerializer(serializers.Serializer):
     def create(self, validated_data):
         user = User.objects.create_user(
             username=validated_data["username"],
-            email=validated_data.get("email", ""),
+            email=normalize_email(validated_data["email"]),
             password=validated_data["password"],
             is_active=validated_data.get("is_active", True),
         )
+        UserPasswordHistory.objects.create(user=user, password_hash=user.password)
         profile, _ = UserProfile.objects.get_or_create(user=user)
         profile.role = validated_data["role"]
         profile.legacy_role = ""
         profile.is_2fa_enabled = validated_data.get("is_2fa_enabled", False)
+        profile.must_setup_2fa = not profile.is_2fa_enabled
+        profile.must_change_password = True
+        profile.password_changed_at = timezone.now()
+        profile.failed_login_attempts = 0
+        profile.locked_at = None
         if not profile.is_2fa_enabled:
             profile.totp_secret = ""
         profile.save(
-            update_fields=["role", "legacy_role", "is_2fa_enabled", "totp_secret", "updated_at"]
+            update_fields=[
+                "role",
+                "legacy_role",
+                "is_2fa_enabled",
+                "must_setup_2fa",
+                "must_change_password",
+                "password_changed_at",
+                "failed_login_attempts",
+                "locked_at",
+                "totp_secret",
+                "updated_at",
+            ]
         )
         return user
 
@@ -101,12 +147,21 @@ class AdminUserWriteSerializer(serializers.Serializer):
         if "username" in validated_data:
             instance.username = validated_data["username"]
         if "email" in validated_data:
-            instance.email = validated_data["email"]
+            instance.email = normalize_email(validated_data["email"])
         if "is_active" in validated_data:
             instance.is_active = validated_data["is_active"]
         if "password" in validated_data:
             instance.set_password(validated_data["password"])
         instance.save()
+        if "password" in validated_data:
+            UserPasswordHistory.objects.create(user=instance, password_hash=instance.password)
+            stale_ids = list(
+                instance.password_history.order_by("-created_at").values_list("id", flat=True)[
+                    PASSWORD_HISTORY_LIMIT:
+                ]
+            )
+            if stale_ids:
+                instance.password_history.filter(id__in=stale_ids).delete()
 
         profile, _ = UserProfile.objects.get_or_create(user=instance)
         if "role" in validated_data:
@@ -116,8 +171,24 @@ class AdminUserWriteSerializer(serializers.Serializer):
             profile.is_2fa_enabled = validated_data["is_2fa_enabled"]
             if not profile.is_2fa_enabled:
                 profile.totp_secret = ""
+        if "password" in validated_data:
+            profile.must_change_password = True
+            profile.password_changed_at = timezone.now()
+        if validated_data.get("unlock_account") is True:
+            profile.failed_login_attempts = 0
+            profile.locked_at = None
         profile.save(
-            update_fields=["role", "legacy_role", "is_2fa_enabled", "totp_secret", "updated_at"]
+            update_fields=[
+                "role",
+                "legacy_role",
+                "is_2fa_enabled",
+                "must_change_password",
+                "password_changed_at",
+                "failed_login_attempts",
+                "locked_at",
+                "totp_secret",
+                "updated_at",
+            ]
         )
         return instance
 

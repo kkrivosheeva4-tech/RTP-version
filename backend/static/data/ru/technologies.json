@@ -1,0 +1,677 @@
+[
+  {
+    "id": 1,
+    "name": "Технология 1",
+    "directions": [
+      1
+    ],
+    "block": 1,
+    "functionCoverage": [
+      "Маркшейдерские работы",
+      "Буровые работы",
+      "Лабораторные исследования",
+      "Взрывные работы",
+      "Экскавация",
+      "Транспортировка",
+      "Геологические работы"
+    ],
+    "description": "Описание технологии 1",
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 3,
+        "status": "Внедрена"
+      },
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 3,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 3,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 3,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 3,
+    "funcCover": 3,
+    "vendors": [
+      {
+        "name": "Вендор 1",
+        "integrators": [
+          "Интегратор 1",
+          "Интегратор 2"
+        ]
+      },
+      {
+        "name": "Вендор 2",
+        "integrators": [
+          "Интегратор 3",
+          "Интегратор 4"
+        ]
+      },
+      {
+        "name": "Вендор 3",
+        "integrators": [
+          "Интегратор 5",
+          "Интегратор 6"
+        ]
+      },
+      {
+        "name": "Вендор 4",
+        "integrators": [
+          "Интегратор 7",
+          "Интегратор 8"
+        ]
+      }
+    ],
+    "marketExamples": [
+      "Пример внедрения 1"
+    ],
+    "documentationFiles": [
+      "Файл документации 1",
+      "Файл документации 2",
+      "Файл документации 3"
+    ]
+  },
+  {
+    "id": 2,
+    "name": "Технология 2",
+    "directions": [
+      1
+    ],
+    "block": 2,
+    "functionCoverage": [
+      "Измельчение руды мельницами",
+      "Флотация",
+      "Сгущение концентрата",
+      "Крупное дробление"
+    ],
+    "description": "Описание технологии 2",
+    "enterprises": [
+      {
+        "enterpriseId": 4,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 5,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 6,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 2,
+    "vendors": [
+      {
+        "name": "Вендор 3",
+        "integrators": [
+          "Интегратор 2",
+          "Интегратор 5"
+        ]
+      },
+      {
+        "name": "Вендор 4",
+        "integrators": [
+          "Интегратор 2",
+          "Интегратор 4"
+        ]
+      }
+    ],
+    "marketExamples": [
+      "Пример внедрения 2"
+    ],
+    "documentationFiles": [
+      "Файл документации 1",
+      "Файл документации 2",
+      "Файл документации 3"
+    ]
+  },
+  {
+    "id": 3,
+    "name": "Технология 3",
+    "directions": [
+      1
+    ],
+    "blocks": [
+      3,
+      4
+    ],
+    "functionCoverage": [
+      "Контроль качества сырья и материалов",
+      "Транспортировка сырья",
+      "Транспортировка ГП",
+      "Складирование готовой продукции",
+      "Шихтоподготовка",
+      "Энергетика"
+    ],
+    "description": "Описание технологии 3",
+    "enterprises": [],
+    "trlStage": 1,
+    "vendors": [],
+    "marketExamples": [
+      "Пример внедрения 3"
+    ],
+    "documentationFiles": [
+      "Файл документации 1",
+      "Файл документации 2",
+      "Файл документации 3"
+    ]
+  },
+  {
+    "id": 4,
+    "name": "Технология 4",
+    "directions": [
+      2
+    ],
+    "blocks": [
+      8,
+      9
+    ],
+    "functionCoverage": [
+      "Охраны труда и промышленная безопасность",
+      "Пожарная безопасность",
+      "Ликвидация аварий",
+      "Экологический контроль",
+      "Рациональное природопользование",
+      "Экологический контроль горно-обогатительного, металлургического комплекса",
+      "Экологический мониторинга и отчётность"
+    ],
+    "description": "Описание технологии 4",
+    "enterprises": [
+      {
+        "enterpriseId": 3,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 3,
+        "status": "Внедрена"
+      },
+      {
+        "enterpriseId": 4,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 3,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 5,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 3,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 3,
+    "vendors": [
+      {
+        "name": "Вендор 1",
+        "integrators": [
+          "Интегратор 1",
+          "Интегратор 2"
+        ]
+      },
+      {
+        "name": "Вендор 2",
+        "integrators": [
+          "Интегратор 3",
+          "Интегратор 4"
+        ]
+      },
+      {
+        "name": "Вендор 3",
+        "integrators": [
+          "Интегратор 5",
+          "Интегратор 6"
+        ]
+      },
+      {
+        "name": "Вендор 4",
+        "integrators": [
+          "Интегратор 7",
+          "Интегратор 8"
+        ]
+      }
+    ],
+    "marketExamples": [
+      "Пример внедрения 4"
+    ],
+    "documentationFiles": [
+      "Файл документации 1",
+      "Файл документации 2",
+      "Файл документации 3"
+    ]
+  },
+  {
+    "id": 5,
+    "name": "Технология 5",
+    "directions": [
+      2
+    ],
+    "blocks": [
+      11,
+      12
+    ],
+    "functionCoverage": [
+      "Экономическая безопасность",
+      "Аккредитация",
+      "Ведение сводной отчетности",
+      "Экономика труда",
+      "Бюджетирование проектов"
+    ],
+    "description": "Описание технологии 2",
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 6,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 2,
+    "vendors": [
+      {
+        "name": "Вендор 3",
+        "integrators": [
+          "Интегратор 2",
+          "Интегратор 5"
+        ]
+      },
+      {
+        "name": "Вендор 4",
+        "integrators": [
+          "Интегратор 2",
+          "Интегратор 4"
+        ]
+      }
+    ],
+    "marketExamples": [
+      "Пример внедрения 5"
+    ],
+    "documentationFiles": [
+      "Файл документации 1",
+      "Файл документации 2",
+      "Файл документации 3"
+    ]
+  },
+  {
+    "id": 6,
+    "name": "Технология 6",
+    "directions": [
+      2
+    ],
+    "block": 13,
+    "functionCoverage": [
+      "Бюджетирования денежных потоков",
+      "Управление дебиторской и кредиторской задолженностью"
+    ],
+    "description": "Описание технологии 6",
+    "enterprises": [
+      {
+        "enterpriseId": 6,
+        "technologicalReadiness": 0,
+        "organizationalReadiness": 0,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 0,
+        "organizationalReadiness": 0,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 1,
+    "vendors": [],
+    "marketExamples": [
+      "Пример внедрения 6"
+    ],
+    "documentationFiles": [
+      "Файл документации 1",
+      "Файл документации 2",
+      "Файл документации 3"
+    ]
+  },
+  {
+    "id": 7,
+    "name": "Технология 7",
+    "directions": [
+      3
+    ],
+    "block": 22,
+    "functionCoverage": [
+      "Организационное делопроизводство",
+      "Работа с архивом",
+      "Переводы"
+    ],
+    "description": "Описание технологии 7",
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 1,
+        "status": "Внедрена"
+      },
+      {
+        "enterpriseId": 6,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 3,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 3,
+    "vendors": [
+      {
+        "name": "Вендор 1",
+        "integrators": [
+          "Интегратор 1",
+          "Интегратор 2"
+        ]
+      }
+    ],
+    "marketExamples": [
+      "Пример внедрения 7"
+    ],
+    "documentationFiles": [
+      "Файл документации 1",
+      "Файл документации 2",
+      "Файл документации 3"
+    ]
+  },
+  {
+    "id": 8,
+    "name": "Технология 8",
+    "directions": [
+      3
+    ],
+    "block": 18,
+    "functionCoverage": [
+      "Поддержка пользователей",
+      "Разработка",
+      "Тестирование и аналитика",
+      "Сопровождение цифровых решений",
+      "Развитие электронного документооборота",
+      "Развитие 1С"
+    ],
+    "description": "Описание технологии 8",
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 4,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 5,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 1,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 2,
+    "vendors": [
+      {
+        "name": "Вендор 3",
+        "integrators": [
+          "Интегратор 2",
+          "Интегратор 5"
+        ]
+      },
+      {
+        "name": "Вендор 4",
+        "integrators": [
+          "Интегратор 2",
+          "Интегратор 4"
+        ]
+      }
+    ],
+    "marketExamples": [
+      "Пример внедрения 8"
+    ],
+    "documentationFiles": [
+      "Файл документации 1",
+      "Файл документации 2",
+      "Файл документации 3"
+    ]
+  },
+  {
+    "id": 9,
+    "name": "Технология 9",
+    "directions": [
+      3
+    ],
+    "block": 19,
+    "functionCoverage": [
+      "Мониторинг и реагирование на инциденты",
+      "Аналитика"
+    ],
+    "description": "Описание технологии 9",
+    "enterprises": [
+      {
+        "enterpriseId": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 3,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 1,
+    "vendors": [],
+    "marketExamples": [
+      "Пример внедрения 9"
+    ],
+    "documentationFiles": [
+      "Файл документации 1",
+      "Файл документации 2",
+      "Файл документации 3"
+    ]
+  },
+  {
+    "id": 10,
+    "name": "Технология 10",
+    "directions": [
+      4
+    ],
+    "blocks": [
+      20,
+      25
+    ],
+    "functionCoverage": [
+      "Оцифровка показателей",
+      "Анализ показателей",
+      "Планирование и автоматизация",
+      "Информационная политика",
+      "Связи с общественностью"
+    ],
+    "description": "Описание технологии 10",
+    "enterprises": [
+      {
+        "enterpriseId": 6,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 5,
+        "technologicalReadiness": 3,
+        "organizationalReadiness": 3,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 3,
+    "vendors": [
+      {
+        "name": "Вендор 1",
+        "integrators": [
+          "Интегратор 1",
+          "Интегратор 2"
+        ]
+      },
+      {
+        "name": "Вендор 2",
+        "integrators": [
+          "Интегратор 3",
+          "Интегратор 4"
+        ]
+      },
+      {
+        "name": "Вендор 3",
+        "integrators": [
+          "Интегратор 5",
+          "Интегратор 6"
+        ]
+      },
+      {
+        "name": "Вендор 4",
+        "integrators": [
+          "Интегратор 7",
+          "Интегратор 8"
+        ]
+      }
+    ],
+    "marketExamples": [
+      "Пример внедрения 10"
+    ],
+    "documentationFiles": [
+      "Файл документации 1",
+      "Файл документации 2",
+      "Файл документации 3"
+    ]
+  },
+  {
+    "id": 11,
+    "name": "Технология 11",
+    "directions": [
+      4
+    ],
+    "blocks": [
+      21
+    ],
+    "functionCoverage": [
+      "Подбора персонала",
+      "адаптация персонала и работа с учебными заведениями",
+      "аналитика каналов привлечения",
+      "Обучение персонала"
+    ],
+    "description": "Описание технологии 11",
+    "enterprises": [
+      {
+        "enterpriseId": 3,
+        "technologicalReadiness": 1,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 4,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 5,
+        "technologicalReadiness": 2,
+        "organizationalReadiness": 2,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 2,
+    "vendors": [
+      {
+        "name": "Вендор 3",
+        "integrators": [
+          "Интегратор 2",
+          "Интегратор 5"
+        ]
+      },
+      {
+        "name": "Вендор 4",
+        "integrators": [
+          "Интегратор 2",
+          "Интегратор 4"
+        ]
+      }
+    ],
+    "marketExamples": [
+      "Пример внедрения 11"
+    ],
+    "documentationFiles": [
+      "Файл документации 1",
+      "Файл документации 2",
+      "Файл документации 3"
+    ]
+  },
+  {
+    "id": 12,
+    "name": "Технология 12",
+    "directions": [
+      4
+    ],
+    "blocks": [
+      24
+    ],
+    "functionCoverage": [
+      "Геологоразведка"
+    ],
+    "description": "Описание технологии 12",
+    "enterprises": [
+      {
+        "enterpriseId": 1,
+        "technologicalReadiness": 0,
+        "organizationalReadiness": 0,
+        "status": "Невнедренна"
+      },
+      {
+        "enterpriseId": 2,
+        "technologicalReadiness": 0,
+        "organizationalReadiness": 0,
+        "status": "Невнедренна"
+      }
+    ],
+    "trlStage": 1,
+    "vendors": [],
+    "marketExamples": [
+      "Пример внедрения 12"
+    ],
+    "documentationFiles": [
+      "Файл документации 1",
+      "Файл документации 2",
+      "Файл документации 3"
+    ]
+  }
+]

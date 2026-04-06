@@ -231,11 +231,13 @@ class TechnologyProposal(models.Model):
     ]
 
     STATUS_DRAFT = "draft"
+    STATUS_POSTPONED = "postponed"
     STATUS_APPROVED = "approved"
     STATUS_REJECTED = "rejected"
 
     STATUS_CHOICES = [
         (STATUS_DRAFT, "Draft"),
+        (STATUS_POSTPONED, "Postponed"),
         (STATUS_APPROVED, "Approved"),
         (STATUS_REJECTED, "Rejected"),
     ]
@@ -253,6 +255,7 @@ class TechnologyProposal(models.Model):
     payload = models.JSONField(default=dict, blank=True)
     comment = models.TextField(blank=True)
     review_comment = models.TextField(blank=True)
+    hidden_from_creator_history = models.BooleanField(default=False)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -266,6 +269,8 @@ class TechnologyProposal(models.Model):
         blank=True,
     )
     reviewed_at = models.DateTimeField(null=True, blank=True)
+    editor_notified = models.BooleanField(default=False)
+    notification_sent_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -274,3 +279,42 @@ class TechnologyProposal(models.Model):
 
     def __str__(self) -> str:
         return f"proposal#{self.id} {self.action} ({self.status})"
+
+
+class ProposalNotification(models.Model):
+    """Хранит уведомления редакторам о результатах модерации их предложений"""
+    
+    TYPE_APPROVED = "approved"
+    TYPE_REJECTED = "rejected"
+    TYPE_POSTPONED = "postponed"
+    
+    TYPE_CHOICES = [
+        (TYPE_APPROVED, "Одобрено"),
+        (TYPE_REJECTED, "Отклонено"),
+        (TYPE_POSTPONED, "Отложено"),
+    ]
+    
+    proposal = models.ForeignKey(
+        TechnologyProposal,
+        on_delete=models.CASCADE,
+        related_name="editor_notifications"
+    )
+    recipient = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="proposal_notifications_received"
+    )
+    notification_type = models.CharField(max_length=16, choices=TYPE_CHOICES)
+    title = models.CharField(max_length=255)
+    message = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ["-created_at"]
+        unique_together = ("proposal", "recipient", "notification_type")
+    
+    def __str__(self) -> str:
+        return f"notification#{self.id} to {self.recipient.username} ({self.notification_type})"
+

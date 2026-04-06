@@ -41,7 +41,9 @@ class ObservabilityMiddleware:
             increment_metric("http.errors.4xx.total")
 
         APP_LOGGER.info(
-            "http_request method=%s path=%s status=%s duration_ms=%s",
+            "http_request scheme=%s secure=%s method=%s path=%s status=%s duration_ms=%s",
+            request.scheme,
+            request.is_secure(),
             request.method,
             request.path,
             status_code,

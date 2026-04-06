@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 http://localhost:5173 http://127.0.0.1:5173 ws://localhost:5173 ws://127.0.0.1:5173; worker-src 'self' blob:; base-uri 'self';" />
+    content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 http://localhost:5173 http://127.0.0.1:5173 ws://localhost:5173 ws://127.0.0.1:5173; worker-src 'self' blob:; base-uri 'self';" />
   <meta name="description"
     content="Радар технологий - система управления и визуализации технологических решений для предприятий" />
   <meta name="keywords" content="радар технологий, управление технологиями, визуализация, технологии, предприятия" />
@@ -13,13 +13,13 @@
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Радар технологий" />
   <meta property="og:description" content="Система управления и визуализации технологических решений для предприятий" />
-  <meta property="og:image" content="/assets/images/icon.png" />
+  <meta property="og:image" content="/static/img/icon.png" />
   <!-- Twitter -->
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:title" content="Радар технологий" />
   <meta name="twitter:description"
     content="Система управления и визуализации технологических решений для предприятий" />
-  <meta name="twitter:image" content="/assets/images/icon.png" />
+  <meta name="twitter:image" content="/static/img/icon.png" />
   <!-- PWA мета-теги -->
   <meta name="theme-color" content="#ce9068" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -29,17 +29,17 @@
   <title>Радар технологий</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='55' height='64' viewBox='0 0 55 64' fill='none'><path d='M32.3111 24.2322L45.3017 31.7322M32.3111 24.2322L53.9609 1.73218M32.3111 24.2322L1.99998 31.7322M32.3111 24.2322V39.2329M45.3017 31.7322L53.9609 1.73218M45.3017 31.7322L32.3111 39.2329M45.3017 31.7322L53.9609 61.7322M53.9609 1.73218L1.99998 31.7322M53.9609 1.73218V61.7322M32.3111 39.2329L53.9609 61.7322M32.3111 39.2329L1.99998 31.7322M53.9609 61.7322L1.99998 31.7322' stroke='white' stroke-width='2'/></svg>" type="image/svg+xml" media="(prefers-color-scheme: dark)">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='55' height='64' viewBox='0 0 55 64' fill='none'><path d='M32.3111 24.2322L45.3017 31.7322M32.3111 24.2322L53.9609 1.73218M32.3111 24.2322L1.99998 31.7322M32.3111 24.2322V39.2329M45.3017 31.7322L53.9609 1.73218M45.3017 31.7322L32.3111 39.2329M45.3017 31.7322L53.9609 61.7322M53.9609 1.73218L1.99998 31.7322M53.9609 1.73218V61.7322M32.3111 39.2329L53.9609 61.7322M32.3111 39.2329L1.99998 31.7322M53.9609 61.7322L1.99998 31.7322' stroke='url(%23paint0_linear)' stroke-width='2'/><defs><linearGradient id='paint0_linear' x1='53.9609' y1='1.73218' x2='-5.42356' y2='53.1601' gradientUnits='userSpaceOnUse'><stop stop-color='%23A37151'/><stop offset='1' stop-color='%23C8977F'/></linearGradient></defs></svg>" type="image/svg+xml" media="(prefers-color-scheme: light)">
-  <link rel="stylesheet" href="/src/css/styles.css">
-  <link rel="stylesheet" href="/src/css/common.css">
-  <link rel="stylesheet" href="/src/css/about.css">
+  <link rel="stylesheet" href="/static/css/styles.css">
+  <link rel="stylesheet" href="/static/css/common.css">
+  <link rel="stylesheet" href="/static/css/about.css">
 </head>
 
 <body class="dark">
   <!-- ===== Хедер ===== -->
   <header role="banner">
-    <a class="logo" href="/src/pages/index.html" aria-label="Радар технологий - на главную">
-      <img src="/assets/images/icon.png" alt="Logo" class="logo-img"
-        onerror="this.style.display='none'; this.nextElementSibling?.style.display='inline';" />
+    <a class="logo" href="/" aria-label="Радар технологий - на главную">
+      <img src="/static/img/icon.png" alt="Logo" class="logo-img"
+        onerror="this.style.display='none'; if (this.nextElementSibling) { this.nextElementSibling.style.display='inline'; }" />
       <span class="logo-fallback" style="display:none;">РТ</span>
       <span>Радар технологий</span>
     </a>
@@ -79,7 +79,7 @@
         <span>ЦИФРОВОЙ ЗРЕЛОСТИ</span>
       </h1>
       <p class="hero-subtitle">Исследуйте технологический ландшафт вашего предприятия</p>
-      <a href="/src/pages/radar.html" class="radar-link" id="detailViewLink" aria-label="Перейти к детальному просмотру">
+      <a href="/radar/" class="radar-link" id="detailViewLink" aria-label="Перейти к детальному просмотру">
         <span>Перейти к детальному просмотру</span>
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -95,7 +95,10 @@
   <!-- Панель уведомлений -->
   <div id="notificationPanel" class="notification-panel"></div>
 
-  <!-- Точка входа: все модули загружаются через main.js (как в radar.html) -->
-  <script type="module" src="/src/main.js"></script>
+  <!-- Точка входа: главная использует общий runtime, а публичный preview обрабатывается в app-init -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <script type="module" src="/static/main.js"></script>
 </body>
 </html>

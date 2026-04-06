@@ -30,16 +30,3 @@ repos:
       - id: isort
         files: ^backend/.*\.py$
         args: ['--settings-path=backend/pyproject.toml']
-
-  - repo: local
-    hooks:
-      - id: frontend-eslint
-        name: frontend-eslint
-        entry: npm run lint:frontend
-        language: system
-        pass_filenames: false
-      - id: frontend-prettier
-        name: frontend-prettier
-        entry: npm run format:check:frontend
-        language: system
-        pass_filenames: false

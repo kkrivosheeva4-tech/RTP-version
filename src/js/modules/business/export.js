@@ -26,11 +26,7 @@ import { generatePdf } from './export-pdf.js';
     if (window.AuthModule && typeof window.AuthModule.isAuthenticated === 'function') {
       return window.AuthModule.isAuthenticated();
     }
-    try {
-      return String(localStorage.getItem('role') || '').trim() !== '';
-    } catch (_) {
-      return false;
-    }
+    return false;
   }
 
   // Универсальная функция для установки значений в multi-select
@@ -459,26 +455,6 @@ import { generatePdf } from './export-pdf.js';
       try {
         if (typeof window.appendAdminAudit === 'function') {
           window.appendAdminAudit('export', `Экспорт PDF отчета для предприятия "${name}" (полей: ${fieldsCount})`);
-        } else {
-          const key = 'adminAuditLogs';
-          const raw = localStorage.getItem(key);
-          const list = raw ? (JSON.parse(raw) || []) : [];
-          const arr = Array.isArray(list) ? list : [];
-          const username = (localStorage.getItem('username') || localStorage.getItem('userName') || 'system').trim() || 'system';
-          const now = (typeof window.getAuditTimestamp === 'function')
-            ? window.getAuditTimestamp()
-            : new Date().toISOString().slice(0, 19).replace('T', ' ');
-          const nextId = arr.length > 0 ? (Math.max(...arr.map(x => Number(x && x.id) || 0)) + 1) : 1;
-          arr.unshift({
-            id: nextId,
-            date: now,
-            user: username,
-            action: 'export',
-            details: `Экспорт PDF отчета для предприятия "${name}" (полей: ${fieldsCount})`,
-            tz: 'local',
-            ip: 'local'
-          });
-          localStorage.setItem(key, JSON.stringify(arr));
         }
       } catch (err) {
         if (Logger && typeof Logger.warn === 'function') Logger.warn('Ошибка при логировании экспорта:', err);

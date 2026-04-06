@@ -1320,6 +1320,17 @@ select:focus-visible {
   color: var(--accent);
 }
 
+.modal-header__main {
+  min-width: 0;
+}
+
+.modal-subtitle {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--admin-muted);
+}
+
 .modal-close {
   width: 38px;
   height: 38px;
@@ -1434,6 +1445,7 @@ body.dark .form-group .readonly-field:focus {
 }
 
 .form-group input,
+.form-group select,
 .form-group textarea {
   width: 100%;
   min-height: 44px;
@@ -1454,6 +1466,7 @@ body.dark .form-group .readonly-field:focus {
 }
 
 .form-group input:focus,
+.form-group select:focus,
 .form-group textarea:focus {
   outline: none;
   border-color: var(--accent);
@@ -1464,6 +1477,154 @@ body.dark .form-group .readonly-field:focus {
 .form-group input::placeholder,
 .form-group textarea::placeholder {
   color: var(--admin-muted-2);
+}
+
+.field-help {
+  margin: 0;
+  font-size: 12px;
+  color: var(--admin-muted-2);
+  line-height: 1.4;
+}
+
+.user-modal-content {
+  width: min(680px, 100%);
+}
+
+.user-modal-body {
+  padding-top: 16px;
+}
+
+.user-modal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.user-modal-field--wide {
+  grid-column: 1 / -1;
+}
+
+.user-modal-note {
+  grid-column: 1 / -1;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(206, 144, 104, 0.22);
+  background: rgba(206, 144, 104, 0.08);
+  color: var(--admin-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.user-password-group {
+  position: relative;
+  display: block;
+  width: 100%;
+  margin: 0;
+}
+
+.user-password-group .icon {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 12px;
+  display: grid;
+  place-items: center;
+  color: var(--text);
+  opacity: 0.82;
+}
+
+.user-password-group #userPassword {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 46px;
+  min-height: 46px;
+  padding: 10px 74px 10px 44px;
+  border-radius: 12px;
+}
+
+.user-password-group #toggleUserPasswordBtn,
+.user-password-group #generateUserPasswordBtn {
+  position: absolute !important;
+  top: 50%;
+  bottom: auto;
+  margin: 0;
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  opacity: 0.8;
+  cursor: pointer;
+  transform: translateY(-50%);
+  z-index: 2;
+}
+
+.user-password-group #toggleUserPasswordBtn:hover,
+.user-password-group #generateUserPasswordBtn:hover {
+  opacity: 1;
+  transform: translateY(-50%) scale(1.04);
+}
+
+.user-password-group #toggleUserPasswordBtn {
+  right: 42px;
+}
+
+.user-password-group #generateUserPasswordBtn {
+  right: 8px;
+}
+
+.user-password-group #toggleUserPasswordBtn:focus-visible,
+.user-password-group #generateUserPasswordBtn:focus-visible {
+  outline: 3px solid var(--admin-focus);
+  outline-offset: 2px;
+}
+
+.user-password-group #toggleUserPasswordBtn svg,
+.user-password-group #generateUserPasswordBtn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.password-visibility-icon {
+  display: block;
+}
+
+.password-visibility-icon--hide {
+  display: none;
+}
+
+#toggleUserPasswordBtn.is-visible .password-visibility-icon--show {
+  display: none;
+}
+
+#toggleUserPasswordBtn.is-visible .password-visibility-icon--hide {
+  display: block;
+}
+
+.password-generator-btn.is-rolling {
+  animation: password-dice-roll 0.55s ease;
+}
+
+@keyframes password-dice-roll {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+
+  35% {
+    transform: rotate(-12deg) scale(1.08);
+  }
+
+  65% {
+    transform: rotate(14deg) scale(0.96);
+  }
+
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
 }
 
 @keyframes modal-fade-in {
@@ -1623,6 +1784,10 @@ body.dark .form-group .readonly-field:focus {
   }
 
   .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .user-modal-grid {
     grid-template-columns: 1fr;
   }
 }

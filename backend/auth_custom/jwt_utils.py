@@ -79,6 +79,10 @@ def _twofa_session_lifetime_minutes() -> int:
     return int(os.getenv("TWOFA_SESSION_LIFETIME_MINUTES", "10"))
 
 
+def _password_change_session_lifetime_minutes() -> int:
+    return int(os.getenv("PASSWORD_CHANGE_SESSION_LIFETIME_MINUTES", "10"))
+
+
 def create_access_token(*, user_id: int, username: str, role: str) -> str:
     now = datetime.now(tz=timezone.utc)
     payload = {
@@ -120,6 +124,20 @@ def create_2fa_session_token(*, user_id: int, username: str, role: str) -> str:
     return encode_jwt(payload, _jwt_secret())
 
 
+def create_password_change_session_token(*, user_id: int, username: str, role: str) -> str:
+    now = datetime.now(tz=timezone.utc)
+    payload = {
+        "sub": str(user_id),
+        "username": username,
+        "role": role,
+        "type": "password_change_session",
+        "jti": uuid.uuid4().hex,
+        "iat": int(now.timestamp()),
+        "exp": int((now + timedelta(minutes=_password_change_session_lifetime_minutes())).timestamp()),
+    }
+    return encode_jwt(payload, _jwt_secret())
+
+
 def decode_access_token(token: str) -> dict:
     return decode_jwt(token, _jwt_secret(), expected_type="access")
 
@@ -130,3 +148,7 @@ def decode_refresh_token(token: str) -> dict:
 
 def decode_2fa_session_token(token: str) -> dict:
     return decode_jwt(token, _jwt_secret(), expected_type="2fa_session")
+
+
+def decode_password_change_session_token(token: str) -> dict:
+    return decode_jwt(token, _jwt_secret(), expected_type="password_change_session")

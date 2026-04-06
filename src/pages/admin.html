@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
@@ -22,7 +22,7 @@
       property="og:description"
       content="Административная панель радара технологий - управление пользователями, просмотр статистики и журнала аудита"
     />
-    <meta property="og:image" content="/assets/images/icon.png" />
+    <meta property="og:image" content="/static/img/icon.png" />
     <!-- Twitter -->
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="Админ-панель — Радар технологий" />
@@ -30,7 +30,7 @@
       name="twitter:description"
       content="Административная панель радара технологий - управление пользователями, просмотр статистики и журнала аудита"
     />
-    <meta name="twitter:image" content="/assets/images/icon.png" />
+    <meta name="twitter:image" content="/static/img/icon.png" />
     <!-- PWA мета-теги -->
     <meta name="theme-color" content="#ce9068" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -49,9 +49,9 @@
       type="image/svg+xml"
       media="(prefers-color-scheme: light)"
     />
-    <link rel="stylesheet" href="/src/css/admin.css" />
-    <link rel="stylesheet" href="/src/css/common.css" />
-    <link rel="stylesheet" href="/src/css/about.css" />
+    <link rel="stylesheet" href="/static/css/admin.css" />
+    <link rel="stylesheet" href="/static/css/common.css" />
+    <link rel="stylesheet" href="/static/css/about.css" />
   </head>
 
   <body class="dark">
@@ -59,17 +59,17 @@
     <header role="banner">
       <a
         class="logo"
-        href="/src/pages/index.html"
+        href="/"
         data-tooltip="На главную"
         aria-label="Радар технологий - на главную"
       >
         <img
-          src="/assets/images/icon.png"
+          src="/static/img/icon.png"
           alt="Logo"
           class="logo-img"
           onerror="
             this.style.display = 'none';
-            this.nextElementSibling?.style.display = 'inline';
+            if (this.nextElementSibling) { this.nextElementSibling.style.display = 'inline'; }
           "
         />
         <span class="logo-fallback" style="display: none">РТ</span>
@@ -160,28 +160,7 @@
           </div>
 
           <nav class="sidebar-menu" aria-label="Разделы">
-            <button
-              class="menu-item active"
-              type="button"
-              data-section="dashboard"
-              aria-current="page"
-            >
-              <svg
-                class="icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                aria-hidden="true"
-              >
-                <rect x="3" y="3" width="7" height="7"></rect>
-                <rect x="14" y="3" width="7" height="7"></rect>
-                <rect x="14" y="14" width="7" height="7"></rect>
-                <rect x="3" y="14" width="7" height="7"></rect>
-              </svg>
-              <span class="menu-item__label">Обзор</span>
-            </button>
-            <button class="menu-item" type="button" data-section="users">
+            <button class="menu-item active" type="button" data-section="users" aria-current="page">
               <svg
                 class="icon"
                 viewBox="0 0 24 24"
@@ -314,7 +293,7 @@
             </button>
             <div class="admin-topbar__title">
               <div class="admin-topbar__kicker">Администрирование</div>
-              <h1 class="admin-topbar__h1" id="adminPageTitle">Обзор</h1>
+              <h1 class="admin-topbar__h1" id="adminPageTitle">Пользователи</h1>
             </div>
             <div class="admin-topbar__right">
               <button
@@ -343,114 +322,29 @@
             </div>
           </div>
 
-          <!-- Дашборд -->
-          <section id="dashboard" class="content-section active" aria-label="Обзор системы">
-            <div class="section-header section-header--compact">
-              <div>
-                <h2>Сводка</h2>
-                <p>Ключевые метрики и тренды.</p>
-              </div>
-            </div>
-
-            <div class="stats-grid">
-              <article class="stat-card">
-                <div class="stat-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="12" cy="7" r="4"></circle>
-                  </svg>
-                </div>
-                <div class="stat-content">
-                  <div class="stat-value" id="totalUsers">0</div>
-                  <div class="stat-label">Пользователи</div>
-                </div>
-              </article>
-
-              <article class="stat-card">
-                <div class="stat-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                    <line x1="8" y1="21" x2="16" y2="21"></line>
-                    <line x1="12" y1="17" x2="12" y2="21"></line>
-                  </svg>
-                </div>
-                <div class="stat-content">
-                  <div class="stat-value" id="activeSessions">0</div>
-                  <div class="stat-label">Активные сессии</div>
-                </div>
-              </article>
-
-              <article class="stat-card">
-                <div class="stat-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                    <polyline points="14,2 14,8 20,8"></polyline>
-                    <line x1="16" y1="13" x2="8" y2="13"></line>
-                    <line x1="16" y1="17" x2="8" y2="17"></line>
-                    <polyline points="10,9 9,9 8,9"></polyline>
-                  </svg>
-                </div>
-                <div class="stat-content">
-                  <div class="stat-value" id="auditEvents">0</div>
-                  <div class="stat-label">События аудита</div>
-                </div>
-              </article>
-
-              <article class="stat-card">
-                <div class="stat-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path
-                      d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
-                    ></path>
-                    <polyline points="3.27,6.96 12,12.01 20.73,6.96"></polyline>
-                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
-                  </svg>
-                </div>
-                <div class="stat-content">
-                  <div class="stat-value" id="backupCount">0</div>
-                  <div class="stat-label">Резервные копии</div>
-                </div>
-              </article>
-            </div>
-
-            <div class="charts-grid">
-              <div class="panel">
-                <div class="panel__header">
-                  <h3>Регистрации</h3>
-                  <span class="panel__meta">последние 7 дней</span>
-                </div>
-                <div class="panel__body">
-                  <canvas id="usersChart"></canvas>
-                </div>
-              </div>
-              <div class="panel">
-                <div class="panel__header">
-                  <h3>Аудит</h3>
-                  <span class="panel__meta">активность</span>
-                </div>
-                <div class="panel__body">
-                  <canvas id="auditChart"></canvas>
-                </div>
-              </div>
-              <div class="panel">
-                <div class="panel__header">
-                  <h3>Роли</h3>
-                  <span class="panel__meta">распределение</span>
-                </div>
-                <div class="panel__body">
-                  <canvas id="rolesChart"></canvas>
-                </div>
-              </div>
-            </div>
-          </section>
-
           <!-- Пользователи -->
-          <section id="users" class="content-section" aria-label="Пользователи">
+          <section id="users" class="content-section active" aria-label="Пользователи">
             <div class="section-header">
               <div>
                 <h2>Пользователи</h2>
                 <p>Поиск, фильтрация и управление ролями.</p>
               </div>
+            </div>
+
+            <div class="header-actions" style="margin-bottom: 1rem">
+              <button class="btn btn-primary" id="addUserBtn" type="button">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  aria-hidden="true"
+                >
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Добавить пользователя
+              </button>
             </div>
 
             <div class="filters-bar">
@@ -737,8 +631,8 @@
                   class="btn btn-secondary"
                   id="clearVfsCacheBtn"
                   type="button"
-                  data-tooltip="Сбросить локальные правки данных (VFS)"
-                  aria-label="Сбросить локальные правки данных"
+                  data-tooltip="Информация о локальном кэше"
+                  aria-label="Информация о локальном кэше"
                 >
                   <svg
                     viewBox="0 0 24 24"
@@ -908,30 +802,117 @@
       aria-modal="true"
       aria-labelledby="userModalTitle"
     >
-      <div class="modal-content">
+      <div class="modal-content user-modal-content">
         <div class="modal-header">
-          <h3 id="userModalTitle">Пользователь</h3>
+          <div class="modal-header__main">
+            <h3 id="userModalTitle">Пользователь</h3>
+            <p class="modal-subtitle">Создание и редактирование учётной записи в админ-панели</p>
+          </div>
           <button class="modal-close" type="button" aria-label="Закрыть">&times;</button>
         </div>
         <form id="userForm">
-          <div class="modal-body">
-            <div class="form-grid">
-              <div class="form-group">
-                <label for="userName">Имя</label>
-                <input type="text" id="userName" readonly />
+          <div class="modal-body user-modal-body">
+            <div class="user-modal-grid">
+              <div class="form-group user-modal-field user-modal-field--wide">
+                <label for="userName">Имя пользователя</label>
+                <input type="text" id="userName" maxlength="150" required autocomplete="off" />
               </div>
-              <div class="form-group">
+              <div class="form-group user-modal-field">
                 <label for="userEmail">Email</label>
-                <input type="email" id="userEmail" readonly />
+                <input type="email" id="userEmail" autocomplete="off" placeholder="name@company.ru" />
               </div>
-              <div class="form-group">
+              <div class="form-group user-modal-field">
                 <label for="userRole">Роль</label>
-                <select id="userRole" required>
+                <select id="userRole" required aria-describedby="userRoleHelp">
                   <option value="admin">Администратор</option>
                   <option value="owner">Владелец</option>
                   <option value="editor">Редактор</option>
                   <option value="guest">Гость</option>
                 </select>
+                <small id="userRoleHelp" class="field-help"
+                  >Роль определяет доступ к действиям и разделам админ-панели.</small
+                >
+              </div>
+              <div class="form-group user-modal-field user-modal-field--wide">
+                <label for="userPassword" id="userPasswordLabel">Временный пароль</label>
+                <div class="group user-password-group">
+                  <span class="icon" aria-hidden="true">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                  </span>
+                  <input
+                    class="input"
+                    id="userPassword"
+                    name="userPassword"
+                    type="password"
+                    autocomplete="new-password"
+                    placeholder="Временный пароль"
+                    minlength="8"
+                    maxlength="20"
+                    aria-label="Временный пароль"
+                  />
+                  <button
+                    class="password-toggle"
+                    id="toggleUserPasswordBtn"
+                    type="button"
+                    aria-label="Показать пароль"
+                    aria-pressed="false"
+                  >
+                    <svg
+                      class="password-visibility-icon password-visibility-icon--show"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    <svg
+                      class="password-visibility-icon password-visibility-icon--hide"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.77 21.77 0 0 1 5.06-6.87"></path>
+                      <path d="M1 1l22 22"></path>
+                    </svg>
+                  </button>
+                  <button
+                    class="password-toggle password-toggle--generator password-generator-btn"
+                    id="generateUserPasswordBtn"
+                    type="button"
+                    aria-label="Сгенерировать временный пароль"
+                  >
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <rect x="4" y="4" width="16" height="16" rx="3"></rect>
+                      <circle cx="9" cy="9" r="1.2" fill="currentColor" stroke="none"></circle>
+                      <circle cx="15" cy="15" r="1.2" fill="currentColor" stroke="none"></circle>
+                      <circle cx="9" cy="15" r="1.2" fill="currentColor" stroke="none"></circle>
+                      <circle cx="15" cy="9" r="1.2" fill="currentColor" stroke="none"></circle>
+                    </svg>
+                  </button>
+                </div>
+                <small id="userPasswordHelp"
+                  >При первом входе пользователь должен будет его сменить.</small
+                >
+              </div>
+              <div class="user-modal-note" role="note">
+                Поддерживается создание нового пароля вручную или с помощью генератора.
               </div>
             </div>
           </div>
@@ -1013,24 +994,24 @@
     <div id="notificationPanel" class="notification-panel"></div>
 
     <!-- API config / client (должны загрузиться до auth для bootstrap) -->
-    <script type="module" src="/src/js/config/api-config-loader.js"></script>
-    <script type="module" src="/src/js/modules/core/api-client.js"></script>
+    <script type="module" src="/static/js/config/api-config-loader.js"></script>
+    <script type="module" src="/static/js/modules/core/api-client.js"></script>
     <!-- Auth module (нужен для getCurrentRole при проверке доступа к админ-панели) -->
-    <script type="module" src="/src/js/modules/business/auth.js"></script>
+    <script type="module" src="/static/js/modules/business/auth.js"></script>
     <!-- Общие UI компоненты (тема, авторизация) -->
-    <script type="module" src="/src/js/modules/ui/common-ui.js"></script>
+    <script type="module" src="/static/js/modules/ui/common-ui.js"></script>
     <!-- Аудит и логирование -->
-    <script type="module" src="/src/js/audit-logger.js"></script>
+    <script type="module" src="/static/js/audit-logger.js"></script>
     <!-- Конфигурация ролей -->
-    <script src="/src/js/config/roles-config.js"></script>
+    <script src="/static/js/config/roles-config.js"></script>
     <!-- Админ-панель: общие компоненты и разделы -->
-    <script src="/src/js/admin/admin-common.js"></script>
-    <script type="module" src="/src/js/admin/admin-dashboard.js"></script>
-    <script src="/src/js/admin/admin-users.js"></script>
-    <script src="/src/js/admin/admin-audit.js"></script>
-    <script src="/src/js/admin/admin-export.js"></script>
-    <script src="/src/js/admin/admin-backups.js"></script>
-    <script src="/src/js/admin/admin-enterprises.js"></script>
-    <script src="/src/js/admin.js"></script>
+    <script src="/static/js/admin/admin-common.js"></script>
+    <script src="/static/js/admin/admin-users.js"></script>
+    <script src="/static/js/admin/admin-audit.js"></script>
+    <script src="/static/js/admin/admin-export.js"></script>
+    <script src="/static/js/admin/admin-backups.js"></script>
+    <script src="/static/js/admin/admin-enterprises.js"></script>
+    <script src="/static/js/admin.js"></script>
   </body>
 </html>
+

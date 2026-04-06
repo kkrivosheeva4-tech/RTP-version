@@ -1,0 +1,48 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="{% block meta_description %}Авторизация и 2FA - Радар Технологий{% endblock %}">
+  <meta name="theme-color" content="#ce9068">
+  <meta name="color-scheme" content="light dark">
+  <title>{% block title %}Радар Технологий{% endblock %}</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='55' height='64' viewBox='0 0 55 64' fill='none'><path d='M32.3111 24.2322L45.3017 31.7322M32.3111 24.2322L53.9609 1.73218M32.3111 24.2322L1.99998 31.7322M32.3111 24.2322V39.2329M45.3017 31.7322L53.9609 1.73218M45.3017 31.7322L32.3111 39.2329M45.3017 31.7322L53.9609 61.7322M53.9609 1.73218L1.99998 31.7322M53.9609 1.73218V61.7322M32.3111 39.2329L53.9609 61.7322M32.3111 39.2329L1.99998 31.7322M53.9609 61.7322L1.99998 31.7322' stroke='white' stroke-width='2'/></svg>" type="image/svg+xml" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='55' height='64' viewBox='0 0 55 64' fill='none'><path d='M32.3111 24.2322L45.3017 31.7322M32.3111 24.2322L53.9609 1.73218M32.3111 24.2322L1.99998 31.7322M32.3111 24.2322V39.2329M45.3017 31.7322L53.9609 1.73218M45.3017 31.7322L32.3111 39.2329M45.3017 31.7322L53.9609 61.7322M53.9609 1.73218L1.99998 31.7322M53.9609 1.73218V61.7322M32.3111 39.2329L53.9609 61.7322M32.3111 39.2329L1.99998 31.7322M53.9609 61.7322L1.99998 31.7322' stroke='url(%23paint0_linear)' stroke-width='2'/><defs><linearGradient id='paint0_linear' x1='53.9609' y1='1.73218' x2='-5.42356' y2='53.1601' gradientUnits='userSpaceOnUse'><stop stop-color='%23A37151'/><stop offset='1' stop-color='%23C8977F'/></linearGradient></defs></svg>" type="image/svg+xml" media="(prefers-color-scheme: light)">
+  <link rel="stylesheet" href="{% static 'css/auth.css' %}">
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="light">
+  <div class="page" id="page">
+    <div class="decor" aria-hidden="true">
+      <div class="radar"></div>
+    </div>
+
+    <main class="card{% block card_modifier %}{% endblock %}" role="main" aria-labelledby="brand-title">
+      <div class="brand">
+        <div>
+          <h1 id="brand-title" class="brand__title">Радар Технологий</h1>
+          <p class="brand__subtitle">{% block brand_subtitle %}{% endblock %}</p>
+        </div>
+        <button id="themeToggle" class="theme-toggle" type="button" aria-label="Переключить тему">
+          <svg id="iconSun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>
+          </svg>
+          <svg id="iconMoon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none" aria-hidden="true">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+      </div>
+
+      {% block content %}{% endblock %}
+
+      <div class="foot">В© 2025 РМК-Диджитал</div>
+    </main>
+  </div>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

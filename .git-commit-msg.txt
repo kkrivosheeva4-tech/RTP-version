@@ -1,9 +1,0 @@
-﻿feat(e2e): С€Р°Рі 10.5 - Playwright smoke/E2E С‚РµСЃС‚С‹
-
-- Р”РѕР±Р°РІР»РµРЅ Playwright, playwright.config.js
-- e2e/auth.spec.js: Р»РѕРіРёРЅ architect, РѕС€РёР±РєР° РїР°СЂРѕР»СЏ
-- e2e/radar.spec.js: Р·Р°РіСЂСѓР·РєР° СЂР°РґР°СЂР°, РєРЅРѕРїРєР° РґРѕР±Р°РІР»РµРЅРёСЏ
-- e2e/add-technology.spec.js: С„РѕСЂРјР° РґРѕР±Р°РІР»РµРЅРёСЏ С‚РµС…РЅРѕР»РѕРіРёРё
-- .github/workflows/e2e.yml: CI РґР»СЏ push/PR
-- package.json: test:e2e, test:e2e:ui
-- docs/FRONTEND_FINAL_PLAN.md: СЃС‚Р°С‚СѓСЃ 10.5, РІРµСЂСЃРёСЏ 1.6

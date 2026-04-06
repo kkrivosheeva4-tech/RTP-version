@@ -1,0 +1,64 @@
+{% extends "pages/auth/base_auth.html" %}
+{% load static %}
+
+{% block title %}Настройка 2FA - Радар Технологий{% endblock %}
+{% block meta_description %}Настройка двухфакторной аутентификации - Радар Технологий{% endblock %}
+{% block brand_subtitle %}Настройка двухфакторной аутентификации{% endblock %}
+{% block card_modifier %} card--wide{% endblock %}
+
+{% block content %}
+  <div class="setup-2fa">
+    <p class="setup-2fa__intro">Для настройки 2FA используйте приложение-аутентификатор. Отсканируйте QR-код или введите секретный ключ вручную.</p>
+
+    <div class="qr-placeholder" id="qrPlaceholder" aria-label="QR-код для сканирования">
+      <div class="qr-placeholder__inner">
+        <svg class="qr-placeholder__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <rect x="3" y="3" width="7" height="7"></rect>
+          <rect x="14" y="3" width="7" height="7"></rect>
+          <rect x="3" y="14" width="7" height="7"></rect>
+          <rect x="14" y="14" width="3" height="3"></rect>
+          <rect x="19" y="14" width="2" height="2"></rect>
+        </svg>
+        <span class="qr-placeholder__text">QR-код появится после подключения API</span>
+      </div>
+    </div>
+
+    <div class="group">
+      <label class="setup-2fa__label" for="manualSecret">Секретный ключ</label>
+      <input class="input" id="manualSecret" type="text" readonly
+             placeholder="Секрет будет получен от сервера"
+             aria-describedby="manualSecret-hint">
+      <span id="manualSecret-hint" class="sr-only">Секретный ключ для ручного ввода в приложении аутентификатора</span>
+    </div>
+
+    <div class="setup-2fa__instructions">
+      <h3 class="setup-2fa__instructions-title">Инструкция</h3>
+      <ol class="setup-2fa__instructions-list">
+        <li>Установите приложение-аутентификатор на телефон.</li>
+        <li>Отсканируйте QR-код выше или введите секретный ключ вручную.</li>
+        <li>Введите 6-значный код из приложения для подтверждения.</li>
+        <li>Нажмите «Завершить настройку».</li>
+      </ol>
+    </div>
+
+    <div class="group" id="codeConfirmGroup" style="display:none">
+      <label class="setup-2fa__label" for="setupCode">Код подтверждения</label>
+      <input class="input" id="setupCode" type="text" inputmode="numeric" maxlength="6" pattern="[0-9]{6}"
+             placeholder="6 цифр" aria-label="Код подтверждения">
+      <p id="setupCodeError" class="error-msg" role="alert" style="display:none"></p>
+    </div>
+
+    <div class="btn-row">
+      <button id="retryQrBtn" class="btn btn--secondary" type="button">Повторить загрузку QR</button>
+      <button id="submitBtn" class="btn" type="button">
+        <span class="btn__text">Завершить настройку</span>
+        <span class="btn__spinner" aria-hidden="true"></span>
+      </button>
+      <a href="{% url 'ui-auth-login' %}" class="btn btn--secondary">Отмена</a>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script type="module" src="{% static 'js/auth-2fa-setup.js' %}"></script>
+{% endblock %}

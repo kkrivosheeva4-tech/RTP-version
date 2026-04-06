@@ -1,11 +1,4 @@
 // Управление авторизацией (для auth.html)
-// Список пользователей для mock-входа — из единого конфига (config/roles-config.js)
-function getUsers() {
-    if (typeof window.RolesConfig !== 'undefined' && typeof window.RolesConfig.getUsersForMockAuth === 'function') {
-        return window.RolesConfig.getUsersForMockAuth();
-    }
-    return [];
-}
 
 function pad2(n) {
     const v = Number(n) || 0;
@@ -44,7 +37,7 @@ function getApiConfig() {
 
 function isApiAuthEnabled() {
     const cfg = getApiConfig();
-    if (!cfg || typeof cfg.getUseApi !== 'function') return false;
+    if (!cfg || typeof cfg.getUseApi !== 'function') return true;
     return cfg.getUseApi() === true;
 }
 
@@ -71,7 +64,7 @@ function getRefreshTokenKey() {
 
 function isRefreshCookieMode() {
     const cfg = getApiConfig();
-    if (!cfg || typeof cfg.getUseRefreshCookieAuth !== 'function') return false;
+    if (!cfg || typeof cfg.getUseRefreshCookieAuth !== 'function') return true;
     return cfg.getUseRefreshCookieAuth() === true;
 }
 
@@ -98,34 +91,19 @@ async function apiLogin(username, password) {
 }
 
 function storeApiTokens(accessToken, refreshToken, remember) {
+    void refreshToken;
+    void remember;
     if (window.ApiClient && typeof window.ApiClient.setAccessToken === 'function') {
         window.ApiClient.setAccessToken(accessToken);
     }
     const tokenKey = getTokenKey();
     const refreshKey = getRefreshTokenKey();
     const useRefreshCookieAuth = isRefreshCookieMode();
-    if (useRefreshCookieAuth) {
-        try {
-            localStorage.removeItem(tokenKey);
-            localStorage.removeItem(refreshKey);
-            sessionStorage.removeItem(tokenKey);
-            sessionStorage.removeItem(refreshKey);
-        } catch (_) {}
-        return;
-    }
-    const primary = remember ? localStorage : sessionStorage;
-    const secondary = remember ? sessionStorage : localStorage;
     try {
-        primary.setItem(tokenKey, accessToken);
-        if (!useRefreshCookieAuth && refreshToken) {
-            primary.setItem(refreshKey, refreshToken);
-        } else {
-            primary.removeItem(refreshKey);
-        }
-    } catch (_) {}
-    try {
-        secondary.removeItem(tokenKey);
-        secondary.removeItem(refreshKey);
+        localStorage.removeItem(tokenKey);
+        localStorage.removeItem(refreshKey);
+        sessionStorage.setItem(tokenKey, accessToken);
+        sessionStorage.removeItem(refreshKey);
     } catch (_) {}
 }
 
@@ -156,56 +134,21 @@ function runAuthInit() {
 }
 
 async function initAuthPage() {
-    if (isApiAuthEnabled()) {
-        if (window.AuthModule && typeof window.AuthModule.bootstrapAuthSession === 'function') {
-            await window.AuthModule.bootstrapAuthSession();
-        }
-        if (window.AuthModule && typeof window.AuthModule.isAuthenticated === 'function' && window.AuthModule.isAuthenticated()) {
-            window.location.href = '/src/pages/index.html';
-            return;
-        }
-    } else {
-        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-        const savedUsername = localStorage.getItem('username');
-        if (isLoggedIn && savedUsername) {
-            const user = getUsers().find(u => u.username === savedUsername) || { role: localStorage.getItem('role') || 'user' };
-            if (user) {
-                try {
-                    let ok = false;
-                    if (typeof window.appendAdminAudit === 'function') {
-                        ok = !!window.appendAdminAudit('login', `Автовход (сессия активна) (${user.role})`);
-                    }
-                    if (!ok) {
-                        const key = 'adminAuditLogs';
-                        const raw = localStorage.getItem(key);
-                        const list = raw ? (JSON.parse(raw) || []) : [];
-                        const arr = Array.isArray(list) ? list : [];
-                        const now = getAuditTimestampLocal();
-                        const nextId = arr.length > 0 ? (Math.max(...arr.map(x => Number(x && x.id) || 0)) + 1) : 1;
-                        arr.unshift({
-                            id: nextId,
-                            date: now,
-                            user: savedUsername,
-                            action: 'login',
-                            details: `Автовход (сессия активна) (${user.role})`,
-                            tz: 'local',
-                            ip: 'local'
-                        });
-                        localStorage.setItem(key, JSON.stringify(arr));
-                    }
-                } catch (err) {
-                    if (window.Logger) window.Logger.warn('Ошибка при логировании автовхода:', err);
-                }
-                window.location.href = '/src/pages/index.html';
-                return;
+    if (window.AuthModule && typeof window.AuthModule.bootstrapAuthSession === 'function') {
+        await window.AuthModule.bootstrapAuthSession();
+    }
+    if (window.AuthModule && typeof window.AuthModule.isAuthenticated === 'function' && window.AuthModule.isAuthenticated()) {
+        try {
+            const profile = typeof window.AuthModule.getCurrentProfile === 'function' ? window.AuthModule.getCurrentProfile() : null;
+            const role = profile?.role || 'user';
+            if (typeof window.appendAdminAudit === 'function') {
+                window.appendAdminAudit('login', `Автовход (сессия активна) (${role})`);
             }
-            if (typeof window.clearAuthFromStorage === 'function') {
-                window.clearAuthFromStorage();
-            } else {
-                localStorage.removeItem('isLoggedIn');
-                localStorage.removeItem('username');
-            }
+        } catch (err) {
+            if (window.Logger) window.Logger.warn('Ошибка при логировании автовхода:', err);
         }
+        window.location.href = '/';
+        return;
     }
 
     // Если пользователь не авторизован, инициализируем частицы при наличии контейнера
@@ -286,135 +229,59 @@ async function initAuthPage() {
             const password = document.getElementById('password').value;
             const remember = document.getElementById('remember') ? document.getElementById('remember').checked : false;
 
-            if (isApiAuthEnabled()) {
-                const loginResult = await apiLogin(username, password);
-                const cookieMode = isRefreshCookieMode();
+            const loginResult = await apiLogin(username, password);
+            const cookieMode = isRefreshCookieMode();
 
-                if (
-                    loginResult.ok &&
-                    loginResult.data &&
-                    loginResult.data.access_token &&
-                    (cookieMode || loginResult.data.refresh_token)
-                ) {
-                    storeApiTokens(loginResult.data.access_token, loginResult.data.refresh_token, remember);
+            if (
+                loginResult.ok &&
+                loginResult.data &&
+                loginResult.data.access_token
+            ) {
+                storeApiTokens(loginResult.data.access_token, loginResult.data.refresh_token, remember);
 
-                    const me = await apiLoadMe(loginResult.data.access_token);
-                    const userRole = (me && me.role) || (getUsers().find(u => u.username === username) || {}).role || 'user';
-                    const userName = (me && me.username) || username;
-                    if (window.AuthModule && typeof window.AuthModule.setAuthSession === 'function') {
-                        window.AuthModule.setAuthSession(
-                            { username: userName, role: userRole, is_2fa_enabled: true },
-                            { accessToken: loginResult.data.access_token, clearLegacy: true }
-                        );
-                    }
-
-                    window.location.href = '/src/pages/index.html';
-                    return;
+                const me = await apiLoadMe(loginResult.data.access_token);
+                const userRole = (me && me.role) || loginResult.data.role || 'user';
+                const userName = (me && me.username) || loginResult.data.username || username;
+                if (window.AuthModule && typeof window.AuthModule.setAuthSession === 'function') {
+                    window.AuthModule.setAuthSession(
+                        { username: userName, role: userRole, is_2fa_enabled: true },
+                        { accessToken: loginResult.data.access_token, clearLegacy: true }
+                    );
                 }
 
-                if (loginResult.ok && loginResult.data && loginResult.data.requires_2fa && loginResult.data.session_id) {
-                    const userRole = loginResult.data.role || (getUsers().find(u => u.username === username) || {}).role || 'user';
-                    const userName = loginResult.data.username || username;
-                    const is2faSetup = loginResult.data.is_2fa_setup === true;
-                    try {
-                        sessionStorage.setItem('auth2faPending', JSON.stringify({
-                            username: userName,
-                            role: userRole,
-                            session_id: loginResult.data.session_id,
-                            api_base_url: getApiBaseUrl(),
-                            remember: remember,
-                            isApi: true
-                        }));
-                    } catch (err) {
-                        if (window.Logger) window.Logger.warn('auth: не удалось сохранить auth2faPending для API', err);
-                    }
-                    window.location.href = is2faSetup
-                        ? '/src/pages/auth-2fa-verify.html'
-                        : '/src/pages/auth-2fa-setup.html';
-                    return;
-                }
-
-                if (submitBtn) {
-                    submitBtn.classList.remove('loading');
-                    submitBtn.removeAttribute('disabled');
-                }
-
-                showNotification(loginResult.error || 'Ошибка авторизации', 'error');
+                window.location.href = '/';
                 return;
             }
 
-            const user = getUsers().find(u => u.username === username && u.password === password);
-            if (user) {
-                // Заглушка: имитация ответа сервера с флагом 2FA (для всех ролей)
-                const mockResponse = { requires_2fa: true };
-                if (mockResponse.requires_2fa) {
-                    try {
-                        sessionStorage.setItem('auth2faPending', JSON.stringify({
-                            username: username,
-                            role: user.role,
-                            token: 'mock-' + Date.now()
-                        }));
-                    } catch (e) {
-                        if (window.Logger) window.Logger.warn('auth: не удалось сохранить auth2faPending', e);
-                    }
-                    // Если 2FA уже настроена (QR сканировался) — сразу страница ввода кода
-                    const setupDone = (function () {
-                        try {
-                            const raw = localStorage.getItem('2fa_setup_usernames');
-                            if (!raw) return false;
-                            const list = JSON.parse(raw);
-                            return Array.isArray(list) && list.includes(username);
-                        } catch { return false; }
-                    })();
-                    window.location.href = setupDone
-                        ? '/src/pages/auth-2fa-verify.html'
-                        : '/src/pages/auth-2fa-setup.html';
-                    return;
-                }
-
-                localStorage.setItem('isLoggedIn', 'true');
-                localStorage.setItem('username', username);
-                localStorage.setItem('role', user.role);
-
-                // Пишем событие входа в журнал аудита (важное действие → должно попадать на график)
+            if (loginResult.ok && loginResult.data && loginResult.data.requires_2fa && loginResult.data.session_id) {
+                const userRole = loginResult.data.role || 'user';
+                const userName = loginResult.data.username || username;
+                const is2faSetup = loginResult.data.is_2fa_setup === true;
                 try {
-                    let ok = false;
-                    if (typeof window.appendAdminAudit === 'function') {
-                        ok = !!window.appendAdminAudit('login', `Успешный вход в систему (${user.role})`);
-                    }
-                    if (!ok) {
-                        // Fallback: прямое логирование в localStorage если функция недоступна (например, на auth.html)
-                        const key = 'adminAuditLogs';
-                        const raw = localStorage.getItem(key);
-                        const list = raw ? (JSON.parse(raw) || []) : [];
-                        const arr = Array.isArray(list) ? list : [];
-                        const now = getAuditTimestampLocal();
-                        const nextId = arr.length > 0 ? (Math.max(...arr.map(x => Number(x && x.id) || 0)) + 1) : 1;
-                        arr.unshift({
-                            id: nextId,
-                            date: now,
-                            user: username,
-                            action: 'login',
-                            details: `Успешный вход в систему (${user.role})`,
-                            tz: 'local',
-                            ip: 'local'
-                        });
-                        localStorage.setItem(key, JSON.stringify(arr));
-                    }
+                    sessionStorage.setItem('auth2faPending', JSON.stringify({
+                        username: userName,
+                        role: userRole,
+                        session_id: loginResult.data.session_id,
+                        api_base_url: getApiBaseUrl(),
+                        remember: remember,
+                        isApi: true
+                    }));
                 } catch (err) {
-                    if (window.Logger) window.Logger.warn('Ошибка при логировании входа:', err);
+                    if (window.Logger) window.Logger.warn('auth: не удалось сохранить auth2faPending для API', err);
                 }
-
-                // После успешной авторизации перенаправляем на нужную страницу в зависимости от роли
-                // Директоры и РП теперь идут на index.html, а затем выбирают предприятие для перехода на радар
-                window.location.href = '/src/pages/index.html';
-            } else {
-                if (submitBtn) {
-                    submitBtn.classList.remove('loading');
-                    submitBtn.removeAttribute('disabled');
-                }
-                showNotification('Неверное имя пользователя или пароль', 'error');
+                window.location.href = is2faSetup
+                    ? '/auth/2fa/verify/'
+                    : '/auth/2fa/setup/';
+                return;
             }
+
+            if (submitBtn) {
+                submitBtn.classList.remove('loading');
+                submitBtn.removeAttribute('disabled');
+            }
+
+            showNotification(loginResult.error || 'Ошибка авторизации', 'error');
+            return;
         });
     }
 }

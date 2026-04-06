@@ -1,3 +1,0 @@
-.gitignore
-playwright-report/index.html
-test-results/.last-run.json

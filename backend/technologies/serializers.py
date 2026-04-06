@@ -18,6 +18,7 @@ from technologies.models import (
     TechnologyProposal,
     TechnologyVendor,
     TechnologyVendorIntegrator,
+    ProposalNotification,
 )
 
 
@@ -503,3 +504,31 @@ class TechnologyProposalSerializer(serializers.Serializer):
             "created_at": instance.created_at,
             "updated_at": instance.updated_at,
         }
+
+
+class ProposalNotificationSerializer(serializers.ModelSerializer):
+    proposal_action = serializers.CharField(source='proposal.action', read_only=True)
+    proposal_status = serializers.CharField(source='proposal.status', read_only=True)
+    technology_name = serializers.CharField(
+        source='proposal.payload.name', 
+        read_only=True, 
+        allow_null=True
+    )
+    reviewer_username = serializers.CharField(source='proposal.reviewed_by.username', read_only=True, allow_null=True)
+    
+    class Meta:
+        model = ProposalNotification
+        fields = [
+            'id',
+            'notification_type',
+            'title',
+            'message',
+            'is_read',
+            'created_at',
+            'read_at',
+            'proposal_action',
+            'proposal_status',
+            'technology_name',
+            'reviewer_username',
+        ]
+        read_only_fields = fields

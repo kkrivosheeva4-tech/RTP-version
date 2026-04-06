@@ -10,7 +10,7 @@
 
   /**
    * Загрузка данных functionToBlock.
-   * При USE_API=true — из API (DataService), иначе — из JSON.
+   * Данные загружаются через DataService из backend API.
    * Кэш только в памяти, не в localStorage.
    * @returns {Promise<Object>} Объект с маппингом функций на блоки
    */
@@ -29,7 +29,7 @@
     } catch (_) {}
 
     try {
-      const response = await fetch('/src/data/ru/functionToBlock.json');
+      const response = await fetch('/static/data/ru/functionToBlock.json');
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -123,7 +123,7 @@
     // Пробуем загрузить с сервера
     // Используем более тихую обработку для опционального файла
     try {
-      const response = await fetch('/src/data/ru/functionWeights.json', {
+      const response = await fetch('/static/data/ru/functionWeights.json', {
         method: 'GET',
         headers: {
           'Accept': 'application/json'

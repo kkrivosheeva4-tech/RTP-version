@@ -1,14 +1,4 @@
-FROM node:20-bookworm-slim AS frontend-build
-
-WORKDIR /app
-
-COPY package.json package-lock.json ./
-RUN npm ci
-
-COPY . .
-RUN npm run build
-
-FROM python:3.12-slim AS runtime
+FROM python:3.14-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
@@ -23,8 +13,8 @@ COPY backend/requirements.txt /app/backend/requirements.txt
 RUN pip install --no-cache-dir -r /app/backend/requirements.txt
 
 COPY backend /app/backend
-COPY --from=frontend-build /app/dist /app/dist
+COPY gunicorn.conf.py /app/gunicorn.conf.py
 
 EXPOSE 8000
 
-CMD ["python", "backend/manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["gunicorn", "--config", "gunicorn.conf.py", "config.wsgi:application"]

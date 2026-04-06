@@ -122,7 +122,12 @@ import { DOMCache } from './dom-utils.js';
   // но updateRadar/renderRadar сами создадут фон и blip'ы
   function safeUpdateRadar(DOMCacheRef) {
     if (typeof window.updateRadar !== 'function') return;
-    const isRadarPage = typeof window !== 'undefined' && (window.location.pathname.includes('radar.html') || window.location.href.includes('radar.html'));
+    const isRadarPage = typeof window !== 'undefined' && (
+      window.location.pathname === '/radar/' ||
+      window.location.pathname === '/radar' ||
+      window.location.pathname.includes('radar.html') ||
+      window.location.href.includes('radar.html')
+    );
     if (!isRadarPage) return;
 
     const svgEl = DOMCacheRef.get('techRadar');
@@ -167,18 +172,7 @@ import { DOMCache } from './dom-utils.js';
         window.Positioning.clearPositionCache();
       }
 
-      // Автоматически сохраняем технологии только в mock-режиме.
-      // В API-режиме изменения должны идти через create/update/delete/bulk вызовы, иначе возникают гонки запросов.
-      try {
-        const shouldAutoSave = !isApiModeEnabled();
-        if (shouldAutoSave && newTechnologies && Array.isArray(newTechnologies) && window.DataService && typeof window.DataService.saveTechnologies === 'function') {
-          window.DataService.saveTechnologies(newTechnologies).catch(e => {
-            if (window.Logger) window.Logger.warn('Не удалось сохранить технологии при изменении', e);
-          });
-        }
-      } catch (e) {
-        if (window.Logger) window.Logger.warn('Не удалось сохранить технологии при изменении', e);
-      }
+      // Сохранение выполняется только через явные CRUD/bulk вызовы API.
 
       if (!isModalOpen(DOMCacheRef)) {
         safeUpdateRadar(DOMCacheRef);

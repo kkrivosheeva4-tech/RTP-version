@@ -1,5 +1,5 @@
 // data-source.js — ES module
-// Слой работы с данными: VFS (localStorage) и fetch-загрузка JSON.
+// Слой чтения статических JSON и fetch-кэша.
 
 import Logger from './logger.js';
 
@@ -13,35 +13,18 @@ function vfsKey(filename) {
 }
 
 function vfsRead(filename) {
-  try {
-    const raw = localStorage.getItem(vfsKey(filename));
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch (e) {
-    Logger.warn('vfsRead parse error', e);
-    return null;
-  }
+  void filename;
+  return null;
 }
 
 function vfsWrite(filename, data) {
-  try {
-    localStorage.setItem(vfsKey(filename), JSON.stringify(data));
-    Logger.debug(`vfsWrite: ${filename} saved to localStorage`);
-    return true;
-  } catch (e) {
-    return false;
-  }
+  void filename;
+  void data;
+  return false;
 }
 
 function clearVfsCache() {
-  try {
-    const vfsKeys = Object.keys(localStorage).filter((key) => key.startsWith('vfs:'));
-    vfsKeys.forEach((key) => localStorage.removeItem(key));
-    Logger.debug(`Очищено ${vfsKeys.length} ключей VFS из localStorage`);
-    return vfsKeys.length;
-  } catch (e) {
-    return 0;
-  }
+  return 0;
 }
 
 function clearFetchCache() {
@@ -96,8 +79,8 @@ function getDataBasePath() {
 
 async function loadJsonPreferVfs(filename, forceReload = false) {
   const basePath = getDataBasePath();
-  const path1 = `${basePath}/src/data/ru/${filename}`.replace(/\/+/g, '/');
-  const path2 = `${basePath}/src/data/${filename}`.replace(/\/+/g, '/');
+  const path1 = `${basePath}/static/data/ru/${filename}`.replace(/\/+/g, '/');
+  const path2 = `${basePath}/static/data/${filename}`.replace(/\/+/g, '/');
 
   if (forceReload) {
     [path1, path2].forEach((p) => fetchCache.delete(p));
@@ -105,7 +88,7 @@ async function loadJsonPreferVfs(filename, forceReload = false) {
 
   // Относительный путь как fallback (для production при деплое в подкаталог)
   let relPath = null;
-  if (typeof document !== 'undefined' && document.location && document.location.pathname.includes('/src/pages/')) {
+  if (typeof document !== 'undefined' && document.location && !document.location.pathname.startsWith('/api/')) {
     relPath = new URL('../data/ru/' + filename, document.location.href).href;
   }
 
@@ -142,12 +125,6 @@ async function loadJsonPreferVfs(filename, forceReload = false) {
     } catch (err) {
       Logger.warn(`Ошибка загрузки ${p}:`, err);
     }
-  }
-
-  const fromVfs = vfsRead(filename);
-  if (fromVfs !== null) {
-    Logger.debug(`Загружены данные из VFS для ${filename}:`, fromVfs);
-    return { path: `local:${filename}`, data: fromVfs };
   }
 
   return { path: null, data: null };

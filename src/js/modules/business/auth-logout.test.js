@@ -62,34 +62,60 @@ describe('auth logout regression', () => {
     expect(document.querySelector('#logoutContainer .login')).not.toBeNull();
   });
 
-  test('bootstrapAuthSession restores mock admin session from legacy storage', async () => {
+  test('legacy localStorage auth markers do not authenticate user in API mode', async () => {
     const AuthModule = await loadAuthModule();
-    const store = new Map();
-    localStorage.getItem.mockImplementation((key) => (store.has(key) ? store.get(key) : null));
-    localStorage.setItem.mockImplementation((key, value) => {
-      store.set(key, String(value));
-    });
-    localStorage.removeItem.mockImplementation((key) => {
-      store.delete(key);
-    });
-    localStorage.clear.mockImplementation(() => {
-      store.clear();
-    });
-    window.ApiConfig = {
-      getUseApi: () => false,
-      getTokenStorageKey: () => 'rmk_access_token',
-      getRefreshTokenStorageKey: () => 'rmk_refresh_token'
-    };
     localStorage.setItem('isLoggedIn', 'true');
-    localStorage.setItem('username', 'admin');
+    localStorage.setItem('username', 'legacy-user');
     localStorage.setItem('role', 'admin');
+
+    AuthModule.renderAuth();
+
+    expect(AuthModule.isAuthenticated()).toBe(false);
+    expect(document.getElementById('authInfo').textContent.trim()).toBe('');
+    expect(document.querySelector('#logoutContainer .login')).not.toBeNull();
+  });
+
+  test('bootstrapAuthSession keeps API mode on early page bootstrap without ApiConfig', async () => {
+    const AuthModule = await loadAuthModule();
+    delete window.ApiConfig;
+
+    const originalLocation = window.location;
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: {
+        ...originalLocation,
+        protocol: 'https:',
+        port: '',
+        hostname: 'rtp3.localhost',
+        origin: 'https://rtp3.localhost'
+      }
+    });
+
+    const response = {
+      ok: true,
+      data: {
+        id: 1,
+        username: 'admin',
+        role: 'admin',
+        is_2fa_enabled: true
+      }
+    };
+    window.ApiClient = {
+      get: vi.fn().mockResolvedValue(response),
+      setAccessToken: vi.fn(),
+      setLogoutInProgress: vi.fn()
+    };
 
     await AuthModule.bootstrapAuthSession(true);
 
+    expect(window.ApiClient.get).toHaveBeenCalledWith('/api/v1/users/me/', null, { skipAuth: false });
     expect(AuthModule.isAuthenticated()).toBe(true);
-    expect(AuthModule.getCurrentUsername()).toBe('admin');
     expect(AuthModule.getCurrentRole()).toBe('admin');
 
-    delete window.ApiConfig;
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: originalLocation
+    });
+    delete window.ApiClient;
   });
 });

@@ -4,6 +4,7 @@ from auth_custom.views import (
     LoginAPIView,
     LogoutAPIView,
     MeAPIView,
+    PasswordChangeConfirmAPIView,
     RefreshAPIView,
     TwoFAQrAPIView,
     TwoFASetupAPIView,
@@ -13,6 +14,16 @@ from auth_custom.views import (
 urlpatterns = [
     path("login", LoginAPIView.as_view(), name="auth-login-noslash"),
     path("login/", LoginAPIView.as_view(), name="auth-login"),
+    path(
+        "change-password",
+        PasswordChangeConfirmAPIView.as_view(),
+        name="auth-change-password-noslash",
+    ),
+    path(
+        "change-password/",
+        PasswordChangeConfirmAPIView.as_view(),
+        name="auth-change-password",
+    ),
     path("refresh", RefreshAPIView.as_view(), name="auth-refresh-noslash"),
     path("refresh/", RefreshAPIView.as_view(), name="auth-refresh"),
     path("2fa/setup", TwoFASetupAPIView.as_view(), name="auth-2fa-setup-noslash"),

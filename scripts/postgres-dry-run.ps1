@@ -25,6 +25,7 @@ function Invoke-Step([string]$Name, [scriptblock]$Action) {
 function Set-SqliteEnv {
     param([string]$DbName)
     $env:DB_ENGINE = "sqlite3"
+    $env:ALLOW_SQLITE_MIGRATION_EXPORT = "1"
     $env:DB_NAME = $DbName
     Remove-Item Env:DB_USER -ErrorAction SilentlyContinue
     Remove-Item Env:DB_PASSWORD -ErrorAction SilentlyContinue
@@ -41,6 +42,7 @@ function Set-PostgresEnv {
         [string]$Password
     )
     $env:DB_ENGINE = "postgresql"
+    Remove-Item Env:ALLOW_SQLITE_MIGRATION_EXPORT -ErrorAction SilentlyContinue
     $env:DB_NAME = $Db
     $env:DB_USER = $User
     $env:DB_PASSWORD = $Password

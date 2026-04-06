@@ -1,0 +1,37 @@
+{% extends "pages/auth/base_auth.html" %}
+{% load static %}
+
+{% block title %}Проверка кода 2FA - Радар Технологий{% endblock %}
+{% block meta_description %}Проверка кода двухфакторной аутентификации - Радар Технологий{% endblock %}
+{% block brand_subtitle %}Введите код двухфакторной аутентификации{% endblock %}
+
+{% block content %}
+  <form id="verify2faForm" novalidate>
+    <div class="group">
+      <span class="icon" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+      </span>
+      <input class="input" id="code2fa" name="code" type="text" inputmode="numeric" autocomplete="one-time-code"
+             placeholder="Код из приложения (6 цифр)" maxlength="6" pattern="[0-9]{6}"
+             required aria-label="Код двухфакторной аутентификации" aria-describedby="code2fa-hint">
+      <span id="code2fa-hint" class="sr-only">Введите 6 цифр из приложения аутентификатора</span>
+    </div>
+    <p id="code2faError" class="error-msg" role="alert" aria-live="polite" style="display:none"></p>
+
+    <div class="btn-row">
+      <button id="submitBtn" class="btn" type="submit">
+        <span class="btn__text">Подтвердить</span>
+        <span class="btn__spinner" aria-hidden="true"></span>
+      </button>
+      <a href="{% url 'ui-auth-2fa-setup' %}" class="btn btn--secondary" id="rescanBtn">Сканировать QR заново</a>
+      <a href="{% url 'ui-auth-login' %}" class="btn btn--secondary" id="cancelBtn">Отмена</a>
+    </div>
+  </form>
+{% endblock %}
+
+{% block scripts %}
+  <script type="module" src="{% static 'js/auth-2fa-verify.js' %}"></script>
+{% endblock %}

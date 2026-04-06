@@ -59,7 +59,7 @@ import Logger from '../core/logger.js';
     let refVendors = [];
     let localVendors = [];
 
-    // Загружаем через DataService (API при USE_API=true, иначе JSON)
+    // Загружаем через DataService из backend API
     try {
       const ds = typeof window !== 'undefined' ? window.DataService : null;
       if (ds && typeof ds.loadReference === 'function') {
@@ -74,7 +74,7 @@ import Logger from '../core/logger.js';
     // Fallback: прямой fetch JSON (если DataService недоступен)
     if (refVendors.length === 0) {
       try {
-        const response = await fetch('/src/data/ru/vendors.json');
+        const response = await fetch('/static/data/ru/vendors.json');
         if (response.ok) {
           const json = await response.json();
           refVendors = Array.isArray(json) ? json : [];
@@ -134,7 +134,7 @@ import Logger from '../core/logger.js';
     let refIntegrators = [];
     let localIntegrators = [];
 
-    // Загружаем через DataService (API при USE_API=true, иначе JSON)
+    // Загружаем через DataService из backend API
     try {
       const ds = typeof window !== 'undefined' ? window.DataService : null;
       if (ds && typeof ds.loadReference === 'function') {
@@ -149,7 +149,7 @@ import Logger from '../core/logger.js';
     // Fallback: прямой fetch JSON (если DataService недоступен)
     if (refIntegrators.length === 0) {
       try {
-        const response = await fetch('/src/data/ru/integrators.json');
+        const response = await fetch('/static/data/ru/integrators.json');
         if (response.ok) {
           const json = await response.json();
           refIntegrators = Array.isArray(json) ? json : [];

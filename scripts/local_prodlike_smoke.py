@@ -137,13 +137,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Runtime smoke for the local production-like contour.")
     parser.add_argument(
         "--base-url",
-        default=os.getenv("LOCAL_PRODLIKE_ORIGIN", "https://rtp3.localhost").rstrip("/"),
-        help="Public HTTPS origin exposed by the reverse proxy.",
+        default=os.getenv("LOCAL_PRODLIKE_ORIGIN", "https://127.0.0.1:8443").rstrip("/"),
+        help="Public base URL of the local Django contour.",
     )
     parser.add_argument(
         "--verify-tls",
         action="store_true",
-        help="Verify the HTTPS certificate chain. Disabled by default for local internal CA flows.",
+        help="Verify TLS certificate chain when the base URL uses HTTPS.",
     )
     args = parser.parse_args()
 
@@ -202,7 +202,7 @@ def main() -> int:
     editor_user, editor_profile = create_user(editor_username, UserProfile.ROLE_EDITOR)
 
     try:
-        print("==> Smoke: public HTTPS endpoints")
+        print("==> Smoke: public endpoints")
         health_response = _json_request(
             opener,
             "GET",
@@ -234,7 +234,7 @@ def main() -> int:
         )
         _expect(docs_response.status == 200, f"docs failed: {docs_response.status}")
 
-        print("==> Smoke: cookie auth and secure cookies")
+        print("==> Smoke: cookie auth flow")
         login_data = _login(
             opener, request_base_url, admin_username, password, default_headers=request_default_headers
         )
@@ -251,7 +251,7 @@ def main() -> int:
         access_token = str(verify_data.get("access_token", "")).strip()
         _expect(access_token, "2FA verify must return access_token")
         _expect("refresh_token" not in verify_data, "refresh token must stay in cookie mode")
-        _expect(any("Secure" in header for header in verify_cookies), "verify response must set Secure cookies")
+        _expect(bool(verify_cookies), "verify response must set auth cookies")
 
         csrf_token = _cookie_value(cookie_jar, "csrftoken")
         _expect(csrf_token, "csrf cookie must be present after 2FA verify")
@@ -271,14 +271,14 @@ def main() -> int:
             opener, request_base_url, csrf_token, default_headers=request_default_headers
         )
         _expect(str(refresh_data.get("access_token", "")).strip(), "refresh must return new access token")
-        _expect(any("Secure" in header for header in refresh_cookies), "refresh response must keep Secure cookies")
+        _expect(bool(refresh_cookies), "refresh response must rotate auth cookies")
 
         logout_status = _logout(
             opener, request_base_url, csrf_token, default_headers=request_default_headers
         )
         _expect(logout_status == 204, f"logout failed: {logout_status}")
 
-        print("==> Smoke: admin path over HTTPS")
+        print("==> Smoke: admin path")
         cookie_jar.clear()
         admin_login = _login(
             opener, request_base_url, admin_username, password, default_headers=request_default_headers

@@ -1,13 +1,21 @@
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
+from django.core.management.color import no_style
+from django.db import connection
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from admin_panel.models import AuditLog
 from auth_custom.models import UserProfile
 from auth_custom.totp_utils import generate_totp_token
-from references.models import DigitalDirection, Enterprise, FunctionalBlock, FunctionReference
-from technologies.models import Technology
+from references.models import (
+    DigitalDirection,
+    Enterprise,
+    EnterpriseBlockMapping,
+    FunctionalBlock,
+    FunctionReference,
+)
+from technologies.models import Technology, TechnologyProposal
 
 User = get_user_model()
 
@@ -19,6 +27,11 @@ class TestTechnologiesApi(APITestCase):
         cache.clear()
         FunctionalBlock.objects.create(id=1, name="Block 1")
         FunctionalBlock.objects.create(id=2, name="Block 2")
+        sequence_sql = connection.ops.sequence_reset_sql(no_style(), [FunctionalBlock])
+        if sequence_sql:
+            with connection.cursor() as cursor:
+                for sql in sequence_sql:
+                    cursor.execute(sql)
         DigitalDirection.objects.create(id=1, name="Direction 1", quadrant=1)
         DigitalDirection.objects.create(id=2, name="Direction 2", quadrant=2)
         Enterprise.objects.create(id=1, name="Enterprise 1", code="E1")
@@ -393,3 +406,358 @@ class TestTechnologiesApi(APITestCase):
         )
         self.assertEqual(reject_response.status_code, status.HTTP_200_OK)
         self.assertEqual(reject_response.data["status"], "rejected")
+
+    def test_owner_can_postpone_proposal(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.editor_token}")
+        proposal_response = self.client.post(
+            "/api/v1/technology-proposals",
+            data={
+                "action": "create",
+                "payload": {
+                    "name": "Postponed Draft",
+                    "description": "draft",
+                    "block": 1,
+                    "blocks": [1],
+                    "functionCoverage": ["Function A"],
+                    "enterprises": [
+                        {
+                            "enterpriseId": 1,
+                            "technologicalReadiness": 3,
+                            "organizationalReadiness": 3,
+                            "status": "planned",
+                        }
+                    ],
+                    "directions": [1],
+                    "trlStage": 3,
+                    "status": "planned",
+                    "vendors": [],
+                },
+            },
+            format="json",
+        )
+        proposal_id = proposal_response.data["id"]
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_token}")
+        postpone_response = self.client.post(
+            f"/api/v1/technology-proposals/{proposal_id}/postpone",
+            data={"review_comment": "Need to revisit later"},
+            format="json",
+        )
+        self.assertEqual(postpone_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(postpone_response.data["status"], "postponed")
+
+    def test_owner_can_approve_postponed_proposal(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.editor_token}")
+        proposal_response = self.client.post(
+            "/api/v1/technology-proposals",
+            data={"action": "create", "payload": self.payload(name="Approve Postponed")},
+            format="json",
+        )
+        proposal_id = proposal_response.data["id"]
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_token}")
+        self.client.post(
+            f"/api/v1/technology-proposals/{proposal_id}/postpone",
+            data={"review_comment": "Later"},
+            format="json",
+        )
+        approve_response = self.client.post(
+            f"/api/v1/technology-proposals/{proposal_id}/approve",
+            data={"review_comment": "Now approved"},
+            format="json",
+        )
+        self.assertEqual(approve_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(approve_response.data["status"], "approved")
+
+    def test_owner_can_reject_postponed_proposal(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.editor_token}")
+        proposal_response = self.client.post(
+            "/api/v1/technology-proposals",
+            data={"action": "create", "payload": self.payload(name="Reject Postponed")},
+            format="json",
+        )
+        proposal_id = proposal_response.data["id"]
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_token}")
+        self.client.post(
+            f"/api/v1/technology-proposals/{proposal_id}/postpone",
+            data={"review_comment": "Later"},
+            format="json",
+        )
+        reject_response = self.client.post(
+            f"/api/v1/technology-proposals/{proposal_id}/reject",
+            data={"review_comment": "Rejected later"},
+            format="json",
+        )
+        self.assertEqual(reject_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(reject_response.data["status"], "rejected")
+
+    def test_editor_history_endpoint_returns_reviewed_and_postponed_items(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.editor_token}")
+        approved_response = self.client.post(
+            "/api/v1/technology-proposals",
+            data={"action": "create", "payload": self.payload(name="History Approved")},
+            format="json",
+        )
+        postponed_response = self.client.post(
+            "/api/v1/technology-proposals",
+            data={"action": "create", "payload": self.payload(name="History Postponed")},
+            format="json",
+        )
+        approved_id = approved_response.data["id"]
+        postponed_id = postponed_response.data["id"]
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_token}")
+        self.client.post(
+            f"/api/v1/technology-proposals/{approved_id}/approve",
+            data={"review_comment": "Approved"},
+            format="json",
+        )
+        self.client.post(
+            f"/api/v1/technology-proposals/{postponed_id}/postpone",
+            data={"review_comment": "Postponed"},
+            format="json",
+        )
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.editor_token}")
+        history_response = self.client.get("/api/v1/technology-proposals/mine/history")
+        self.assertEqual(history_response.status_code, status.HTTP_200_OK)
+        returned_statuses = {item["status"] for item in history_response.data}
+        self.assertIn("approved", returned_statuses)
+        self.assertIn("postponed", returned_statuses)
+
+    def test_owner_review_history_endpoint_returns_non_draft_items(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.editor_token}")
+        rejected_response = self.client.post(
+            "/api/v1/technology-proposals",
+            data={"action": "create", "payload": self.payload(name="History Rejected")},
+            format="json",
+        )
+        rejected_id = rejected_response.data["id"]
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_token}")
+        self.client.post(
+            f"/api/v1/technology-proposals/{rejected_id}/reject",
+            data={"review_comment": "Rejected"},
+            format="json",
+        )
+        history_response = self.client.get("/api/v1/technology-proposals/history")
+        self.assertEqual(history_response.status_code, status.HTTP_200_OK)
+        self.assertTrue(any(item["id"] == rejected_id for item in history_response.data))
+
+    def test_editor_can_clear_only_reviewed_proposal_history(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.editor_token}")
+        reviewed_response = self.client.post(
+            "/api/v1/technology-proposals",
+            data={
+                "action": "create",
+                "payload": {
+                    "name": "History Reviewed Draft",
+                    "description": "draft",
+                    "block": 1,
+                    "blocks": [1],
+                    "functionCoverage": ["Function A"],
+                    "enterprises": [
+                        {
+                            "enterpriseId": 1,
+                            "technologicalReadiness": 3,
+                            "organizationalReadiness": 3,
+                            "status": "planned",
+                        }
+                    ],
+                    "directions": [1],
+                    "trlStage": 3,
+                    "status": "planned",
+                    "vendors": [],
+                },
+            },
+            format="json",
+        )
+        draft_response = self.client.post(
+            "/api/v1/technology-proposals",
+            data={
+                "action": "create",
+                "payload": {
+                    "name": "History Active Draft",
+                    "description": "draft",
+                    "block": 1,
+                    "blocks": [1],
+                    "functionCoverage": ["Function A"],
+                    "enterprises": [
+                        {
+                            "enterpriseId": 1,
+                            "technologicalReadiness": 2,
+                            "organizationalReadiness": 2,
+                            "status": "planned",
+                        }
+                    ],
+                    "directions": [1],
+                    "trlStage": 2,
+                    "status": "planned",
+                    "vendors": [],
+                },
+            },
+            format="json",
+        )
+        self.assertEqual(reviewed_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(draft_response.status_code, status.HTTP_201_CREATED)
+
+        reviewed_id = reviewed_response.data["id"]
+        draft_id = draft_response.data["id"]
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_token}")
+        approve_response = self.client.post(
+            f"/api/v1/technology-proposals/{reviewed_id}/approve",
+            data={"review_comment": "Approved for history cleanup"},
+            format="json",
+        )
+        self.assertEqual(approve_response.status_code, status.HTTP_200_OK)
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.editor_token}")
+        clear_response = self.client.delete("/api/v1/technology-proposals/mine/history")
+        self.assertEqual(clear_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(clear_response.data["deleted_count"], 1)
+        self.assertTrue(TechnologyProposal.objects.filter(id=reviewed_id).exists())
+        self.assertTrue(
+            TechnologyProposal.objects.filter(
+                id=reviewed_id,
+                hidden_from_creator_history=True,
+            ).exists()
+        )
+        self.assertTrue(TechnologyProposal.objects.filter(id=draft_id).exists())
+
+    def test_editor_can_clear_selected_reviewed_proposals_only(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.editor_token}")
+        first_response = self.client.post(
+            "/api/v1/technology-proposals",
+            data={
+                "action": "create",
+                "payload": {
+                    "name": "History Selected One",
+                    "description": "draft",
+                    "block": 1,
+                    "blocks": [1],
+                    "functionCoverage": ["Function A"],
+                    "enterprises": [{"enterpriseId": 1, "technologicalReadiness": 3, "organizationalReadiness": 3, "status": "planned"}],
+                    "directions": [1],
+                    "trlStage": 3,
+                    "status": "planned",
+                    "vendors": [],
+                },
+            },
+            format="json",
+        )
+        second_response = self.client.post(
+            "/api/v1/technology-proposals",
+            data={
+                "action": "create",
+                "payload": {
+                    "name": "History Selected Two",
+                    "description": "draft",
+                    "block": 1,
+                    "blocks": [1],
+                    "functionCoverage": ["Function A"],
+                    "enterprises": [{"enterpriseId": 1, "technologicalReadiness": 3, "organizationalReadiness": 3, "status": "planned"}],
+                    "directions": [1],
+                    "trlStage": 3,
+                    "status": "planned",
+                    "vendors": [],
+                },
+            },
+            format="json",
+        )
+        first_id = first_response.data["id"]
+        second_id = second_response.data["id"]
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_token}")
+        self.client.post(f"/api/v1/technology-proposals/{first_id}/reject", data={"review_comment": "Reject first"}, format="json")
+        self.client.post(f"/api/v1/technology-proposals/{second_id}/reject", data={"review_comment": "Reject second"}, format="json")
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.editor_token}")
+        clear_response = self.client.delete(
+            "/api/v1/technology-proposals/mine/history",
+            data={"ids": [first_id]},
+            format="json",
+        )
+        self.assertEqual(clear_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(clear_response.data["deleted_count"], 1)
+        self.assertTrue(
+            TechnologyProposal.objects.filter(
+                id=first_id,
+                hidden_from_creator_history=True,
+            ).exists()
+        )
+        self.assertTrue(TechnologyProposal.objects.filter(id=second_id).exists())
+
+    def test_editor_history_cleanup_does_not_remove_owner_review_history(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.editor_token}")
+        proposal_response = self.client.post(
+            "/api/v1/technology-proposals",
+            data={"action": "create", "payload": self.payload(name="History Shared Visibility")},
+            format="json",
+        )
+        self.assertEqual(proposal_response.status_code, status.HTTP_201_CREATED)
+        proposal_id = proposal_response.data["id"]
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_token}")
+        review_response = self.client.post(
+            f"/api/v1/technology-proposals/{proposal_id}/approve",
+            data={"review_comment": "Keep in owner history"},
+            format="json",
+        )
+        self.assertEqual(review_response.status_code, status.HTTP_200_OK)
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.editor_token}")
+        clear_response = self.client.delete(
+            "/api/v1/technology-proposals/mine/history",
+            data={"ids": [proposal_id]},
+            format="json",
+        )
+        self.assertEqual(clear_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(clear_response.data["deleted_count"], 1)
+
+        my_history_response = self.client.get("/api/v1/technology-proposals/mine/history")
+        self.assertEqual(my_history_response.status_code, status.HTTP_200_OK)
+        self.assertFalse(any(item["id"] == proposal_id for item in my_history_response.data))
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_token}")
+        owner_history_response = self.client.get("/api/v1/technology-proposals/history")
+        self.assertEqual(owner_history_response.status_code, status.HTTP_200_OK)
+        self.assertTrue(any(item["id"] == proposal_id for item in owner_history_response.data))
+
+    def test_editor_can_submit_functional_block_proposal_and_owner_can_approve(self):
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.editor_token}")
+        proposal_response = self.client.post(
+            "/api/v1/technology-proposals",
+            data={
+                "action": "create",
+                "payload": {
+                    "referenceType": "functional_block",
+                    "operation": "create_block",
+                    "blockName": "Proposed Block",
+                    "enterpriseIds": [1, 2],
+                    "directionName": "Direction 1",
+                },
+                "comment": "Need a new functional block",
+            },
+            format="json",
+        )
+        self.assertEqual(proposal_response.status_code, status.HTTP_201_CREATED)
+        proposal_id = proposal_response.data["id"]
+
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.owner_token}")
+        approve_response = self.client.post(
+            f"/api/v1/technology-proposals/{proposal_id}/approve",
+            data={"review_comment": "Approved block proposal"},
+            format="json",
+        )
+        self.assertEqual(approve_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(approve_response.data["status"], "approved")
+        self.assertTrue(FunctionalBlock.objects.filter(name="Proposed Block").exists())
+        block = FunctionalBlock.objects.get(name="Proposed Block")
+        self.assertTrue(
+            EnterpriseBlockMapping.objects.filter(enterprise_id=1, block=block).exists()
+        )
+        self.assertTrue(
+            EnterpriseBlockMapping.objects.filter(enterprise_id=2, block=block).exists()
+        )

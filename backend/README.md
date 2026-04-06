@@ -15,54 +15,63 @@
    `python backend/manage.py seed_technologies`
 7. Seed test users:
    `python backend/manage.py seed_users`
-8. Build frontend:
-   `npm run build`
-9. Start server:
+8. Start server:
    `python backend/manage.py runserver`
 
-## Run frontend from Django (single server)
+## Django-served UI (single origin)
 
-1. Build frontend in repository root:
-   `npm run build`
-2. Configure frontend API mode in `src/js/config/api-config.local.js`:
+1. Configure frontend API mode in `src/js/config/api-config.local.js`:
    - `window.API_BASE_URL = window.location.origin`
-   - `window.USE_API = true`
-3. Enable frontend serving from Django:
-   - PowerShell: `$env:SERVE_FRONTEND_FROM_DJANGO='1'`
-4. Start backend:
+2. Start backend:
    `python backend/manage.py runserver`
 
-Then open `http://127.0.0.1:8000/` (Django will serve files from `dist/`).
+Then open `http://127.0.0.1:8000/` and Django will serve UI pages and static assets directly.
 
-`SERVE_FRONTEND_FROM_DJANGO=True` is the target deployment mode baseline.
+## Production WSGI start
+
+Production baseline entrypoint:
+
+`gunicorn --config gunicorn.conf.py config.wsgi:application`
+
+Config lives in `gunicorn.conf.py` and defaults to:
+
+- `chdir=backend`
+- bind `0.0.0.0:8000`
+- worker/thread settings via `GUNICORN_*` env vars
+
+Production transport baseline:
+
+- external TLS termination happens in `nginx`;
+- `nginx` must redirect `80 -> 443`;
+- `nginx` must forward `X-Forwarded-Proto=https`, `X-Forwarded-Port=443`, `X-Forwarded-Host`;
+- reference config: `ops/nginx/rtp3.conf.example`.
 
 ## Local production-like contour
 
 If you want local runtime to behave closer to the target deployment profile:
 
 1. Bootstrap local prodlike files:
-   `npm run prodlike:setup`
+   `powershell -ExecutionPolicy Bypass -File scripts/local-prodlike-setup.ps1`
 2. Prepare PostgreSQL runtime:
-   `npm run prodlike:postgres`
-3. Start HTTPS + proxy contour:
-   `npm run prodlike:start`
+   `powershell -ExecutionPolicy Bypass -File scripts/local-prodlike-postgres.ps1`
+3. Start local HTTPS contour:
+   `powershell -ExecutionPolicy Bypass -File scripts/local-prodlike-start.ps1`
 4. Run external smoke:
-   `npm run prodlike:smoke`
+   `powershell -ExecutionPolicy Bypass -File scripts/local-prodlike-smoke.ps1`
 5. Stop contour:
-   `npm run prodlike:stop`
+   `powershell -ExecutionPolicy Bypass -File scripts/local-prodlike-stop.ps1`
 
 This mode uses:
 
 - `backend/.env.prodlike.local` as the local secure env profile;
 - `PostgreSQL` as the runtime database;
-- `Caddy` for local HTTPS termination and proxy headers;
-- `https://rtp3.localhost` as the public origin;
-- `SERVE_FRONTEND_FROM_DJANGO=True` for same-origin frontend/API behavior.
+- `Django runserver` as the local application entrypoint;
+- `https://127.0.0.1:8443` as the public origin;
+- Django templates/staticfiles for same-origin frontend/API behavior.
 
 Detailed instructions live in:
 
 - `docs/LOCAL_PRODLIKE_SETUP.md`
-- `docs/LOCAL_PRODLIKE_QUICKSTART.md`
 
 ## Health endpoint
 
@@ -114,7 +123,7 @@ Run container baseline:
 The compose baseline uses:
 
 - PostgreSQL service;
-- Django-serving for frontend `dist/`;
+- Django templates/staticfiles for frontend delivery;
 - cookie refresh auth;
 - same-origin API/frontend on `http://localhost:8000`.
 
@@ -130,11 +139,15 @@ The compose baseline uses:
 
 - In production mode (`DEBUG=False`), backend validates secure config on startup:
   - `SECRET_KEY` must be set and must not use placeholders.
+  - `TOTP_SECRET_ENCRYPTION_KEY` must be set and must be a valid Fernet key for encrypted-at-rest 2FA secrets.
   - `ALLOWED_HOSTS` must be non-empty and must not contain `*`.
   - `CORS_ALLOW_ALL_ORIGINS` must be disabled and `CORS_ALLOWED_ORIGINS` must be explicit.
   - `SECURE_SSL_REDIRECT`, `SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE` must be enabled.
   - `CORS_ALLOWED_ORIGINS` and `CSRF_TRUSTED_ORIGINS` must use `https://`.
   - `SECURE_HSTS_SECONDS` must be greater than `0`.
+- CSP is backend-managed and emitted by middleware.
+- Temporary third-party allowances for script/style/img/connect sources must be declared through `CSP_*_EXTRA` env vars.
+- `CSP_INCLUDE_UPGRADE_INSECURE_REQUESTS=True` is recommended for reverse-proxied HTTPS contours.
 - Auth endpoints are throttled (DRF scoped throttling):
   - `auth_login` -> `AUTH_LOGIN_RATE` (default `20/min`)
   - `auth_2fa` -> `AUTH_2FA_RATE` (default `30/min`)
@@ -169,17 +182,15 @@ All API errors are normalized to a single structure:
 ## Tests
 
 - Stable local test workflow:
-  - frontend: `npm.cmd run test:frontend`
   - backend: `python backend/manage.py test auth_custom references technologies admin_panel config --noinput`
-  - combined: `npm.cmd run test:local`
+  - focused auth/config: `python backend/manage.py test auth_custom config --noinput`
+  - production-like smoke: `powershell -ExecutionPolicy Bypass -File scripts/local-prodlike-smoke.ps1`
 - Run all backend tests:
   - `python backend/manage.py test auth_custom references technologies admin_panel config --noinput`
 - Run focused checks:
   - `python backend/manage.py test auth_custom config`
 - JWT unit tests:
   - `python backend/manage.py test auth_custom.test_jwt_utils`
-
-For Windows PowerShell, prefer `npm.cmd` instead of `npm`, otherwise local execution policy can block `npm.ps1`.
 
 **PostgreSQL test database:** Django creates a temporary `test_*` database for each run. The DB user must have `CREATEDB` privilege. If you see "нет прав для создания базы данных":
 
@@ -191,7 +202,7 @@ ALTER USER rtp3 CREATEDB;
 ## Frontend Smoke
 
 - Local prodlike smoke checklist:
-  - `docs/LOCAL_PRODLIKE_QUICKSTART.md`
+  - `docs/LOCAL_PRODLIKE_SETUP.md`
   - `docs/TEST_AD_SMOKE_PROTOCOL.md`
 - Load / release baseline:
   - `docs/LOAD_SMOKE_RUNBOOK.md`

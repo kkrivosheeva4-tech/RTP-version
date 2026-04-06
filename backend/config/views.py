@@ -1,7 +1,6 @@
-import mimetypes
 from pathlib import Path
 
-from django.conf import settings
+from django.shortcuts import render
 from django.http import FileResponse, Http404, HttpResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -87,59 +86,36 @@ def swagger_ui_asset_view(request, asset_path: str):
     return FileResponse(requested.open("rb"))
 
 
-def frontend_dist_view(request, path: str = ""):
-    dist_dir = Path(settings.FRONTEND_DIST_DIR).resolve()
-    project_root = Path(settings.PROJECT_ROOT).resolve()
-    if not dist_dir.exists():
-        return HttpResponse(
-            "Frontend build not found. Run `npm run build` in the project root.",
-            status=503,
-        )
+def ui_home_view(request):
+    return render(request, "pages/home.html")
 
-    relative_path = (path or "").lstrip("/")
-    source_candidate = _resolve_frontend_source_path(relative_path)
-    requested = dist_dir / (relative_path or "index.html")
 
-    try:
-        resolved = requested.resolve(strict=False)
-    except OSError as exc:
-        raise Http404("Invalid frontend path") from exc
+def ui_radar_view(request):
+    return render(request, "pages/radar.html")
 
-    in_dist_dir = dist_dir in resolved.parents or resolved == dist_dir
-    in_project_root = project_root in resolved.parents or resolved == project_root
-    if not in_dist_dir and not in_project_root:
-        raise Http404("Invalid frontend path")
 
-    # In local debug sessions prefer source files for /src and /assets paths
-    # so stale dist copies cannot break interactive pages (auth, admin, etc.).
-    if (
-        settings.DEBUG
-        and source_candidate
-        and source_candidate.exists()
-        and source_candidate.is_file()
-    ):
-        resolved = source_candidate.resolve()
+def ui_admin_panel_view(request):
+    return render(request, "pages/admin.html")
 
-    if resolved.is_dir():
-        resolved = resolved / "index.html"
 
-    if not resolved.exists() or not resolved.is_file():
-        if source_candidate and source_candidate.exists() and source_candidate.is_file():
-            resolved = source_candidate.resolve()
+def ui_help_view(request):
+    return render(request, "pages/help.html")
 
-    if not resolved.exists() or not resolved.is_file():
-        # Missing files with an extension should stay 404, not fallback.
-        if Path(relative_path).suffix:
-            raise Http404("Frontend file not found")
-        fallback = dist_dir / "index.html"
-        if not fallback.exists():
-            raise Http404("Frontend entrypoint not found")
-        resolved = fallback
 
-    content_type = _frontend_content_type(resolved)
-    if content_type:
-        return FileResponse(resolved.open("rb"), content_type=content_type)
-    return FileResponse(resolved.open("rb"))
+def ui_auth_login_view(request):
+    return render(request, "pages/auth/login.html")
+
+
+def ui_auth_change_password_view(request):
+    return render(request, "pages/auth/change_password.html")
+
+
+def ui_auth_2fa_setup_view(request):
+    return render(request, "pages/auth/2fa_setup.html")
+
+
+def ui_auth_2fa_verify_view(request):
+    return render(request, "pages/auth/2fa_verify.html")
 
 
 def _frontend_content_type(file_path: Path) -> str | None:
@@ -164,21 +140,7 @@ def _frontend_content_type(file_path: Path) -> str | None:
     if suffix in explicit_types:
         return explicit_types[suffix]
 
+    import mimetypes
+
     guessed, _ = mimetypes.guess_type(str(file_path), strict=False)
     return guessed
-
-
-def _resolve_frontend_source_path(relative_path: str) -> Path | None:
-    if not relative_path:
-        return None
-
-    allowed_prefixes = ("src/", "assets/")
-    allowed_files = {"index.html", "favicon.ico"}
-    if not relative_path.startswith(allowed_prefixes) and relative_path not in allowed_files:
-        return None
-
-    project_root = Path(settings.PROJECT_ROOT).resolve()
-    candidate = (project_root / relative_path).resolve(strict=False)
-    if project_root not in candidate.parents and candidate != project_root:
-        return None
-    return candidate

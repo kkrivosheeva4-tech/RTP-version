@@ -15,29 +15,33 @@ $repoRoot = Get-RepoRoot
 $examplePath = Resolve-PathFromRepo "backend/.env.prodlike.example"
 $targetPath = Resolve-PathFromRepo $EnvTarget
 $apiConfigPath = Resolve-PathFromRepo "src/js/config/api-config.local.js"
+$envFileExists = Test-Path -LiteralPath $targetPath
 
-if ((Test-Path -LiteralPath $targetPath) -and -not $Force) {
-    throw "Env file already exists: $targetPath . Use -Force to overwrite."
+if ($envFileExists -and -not $Force) {
+    Write-Step "Reuse existing local production-like env file"
+    Write-Host "Env file already exists and will be kept:" -ForegroundColor Yellow
+    Write-Host "  $targetPath"
+    Write-Host "Use -Force to regenerate it with a new secret and DB settings." -ForegroundColor Yellow
 }
+else {
+    $python = Get-BackendPython
+    $secretKey = New-SecretKey -PythonCommand $python
 
-$python = Get-BackendPython
-$secretKey = New-SecretKey -PythonCommand $python
-
-Write-Step "Create local production-like env file"
-$template = Get-Content -LiteralPath $examplePath -Raw -Encoding UTF8
-$rendered = $template.Replace("replace-with-generated-secret", $secretKey)
-$rendered = $rendered.Replace("rtp3.localhost", $LocalHost)
-$rendered = $rendered.Replace("DB_NAME=rtp3", "DB_NAME=$PostgresDb")
-$rendered = $rendered.Replace("DB_USER=rtp3", "DB_USER=$PostgresUser")
-$rendered = $rendered.Replace("DB_PASSWORD=rtp3", "DB_PASSWORD=$PostgresPassword")
-$rendered = $rendered.Replace("DB_HOST=localhost", "DB_HOST=$PostgresHost")
-$rendered = $rendered.Replace("DB_PORT=5432", "DB_PORT=$PostgresPort")
-[System.IO.File]::WriteAllText($targetPath, $rendered, [System.Text.UTF8Encoding]::new($false))
+    Write-Step "Create local production-like env file"
+    $template = Get-Content -LiteralPath $examplePath -Raw -Encoding UTF8
+    $rendered = $template.Replace("replace-with-generated-secret", $secretKey)
+    $rendered = $rendered.Replace("rtp3.localhost", $LocalHost)
+    $rendered = $rendered.Replace("DB_NAME=rtp3", "DB_NAME=$PostgresDb")
+    $rendered = $rendered.Replace("DB_USER=rtp3", "DB_USER=$PostgresUser")
+    $rendered = $rendered.Replace("DB_PASSWORD=rtp3", "DB_PASSWORD=$PostgresPassword")
+    $rendered = $rendered.Replace("DB_HOST=localhost", "DB_HOST=$PostgresHost")
+    $rendered = $rendered.Replace("DB_PORT=5432", "DB_PORT=$PostgresPort")
+    [System.IO.File]::WriteAllText($targetPath, $rendered, [System.Text.UTF8Encoding]::new($false))
+}
 
 Write-Step "Create same-origin frontend API config"
 $apiConfig = @'
 if (typeof window !== 'undefined') {
-  window.USE_API = true;
   window.USE_REFRESH_COOKIE_AUTH = true;
 }
 
@@ -46,12 +50,11 @@ export {};
 [System.IO.File]::WriteAllText($apiConfigPath, $apiConfig, [System.Text.UTF8Encoding]::new($false))
 
 Write-Host ""
-Write-Host "Local production-like files created:" -ForegroundColor Green
+Write-Host "Local production-like files are ready:" -ForegroundColor Green
 Write-Host "  $targetPath"
 Write-Host "  $apiConfigPath"
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Yellow
 Write-Host "  1. Install PostgreSQL and create database/user matching the env file."
-Write-Host "  2. Install Caddy and make sure `caddy` is available in PATH."
-Write-Host "  3. Run: powershell -ExecutionPolicy Bypass -File scripts/local-prodlike-postgres.ps1"
-Write-Host "  4. Run: powershell -ExecutionPolicy Bypass -File scripts/local-prodlike-start.ps1"
+Write-Host "  2. Run: powershell -ExecutionPolicy Bypass -File scripts/local-prodlike-postgres.ps1"
+Write-Host "  3. Run: powershell -ExecutionPolicy Bypass -File scripts/local-prodlike-start.ps1"

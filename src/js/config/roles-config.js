@@ -67,25 +67,6 @@
     { username: 'guest', role: ROLES.GUEST }
   ];
 
-  // Legacy-учетки оставляем только для плавного перехода в mock-режиме.
-  var LEGACY_ALIAS_ACCOUNTS = [
-    { username: 'architect', role: ROLES.OWNER },
-    { username: 'director', role: ROLES.OWNER },
-    { username: 'project_manager', role: ROLES.OWNER },
-    { username: 'analyst', role: ROLES.GUEST }
-  ];
-
-  var MOCK_PASSWORDS = {
-    admin: 'admin123',
-    owner: 'owner123',
-    editor: 'editor123',
-    guest: 'guest123',
-    architect: 'architect123',
-    director: 'director123',
-    project_manager: 'pm123',
-    analyst: 'analyst123'
-  };
-
   function normalizeRole(role) {
     var key = (role == null ? '' : String(role)).trim().toLowerCase();
     if (!key) return ROLES.GUEST;
@@ -135,17 +116,6 @@
     return canCreateProposals(role) && !canManageTechnologies(role);
   }
 
-  function getUsersForMockAuth() {
-    var merged = SYSTEM_ACCOUNTS.concat(LEGACY_ALIAS_ACCOUNTS);
-    return merged.map(function (acc) {
-      return {
-        username: acc.username,
-        password: MOCK_PASSWORDS[acc.username] || '',
-        role: normalizeRole(acc.role)
-      };
-    });
-  }
-
   function getSystemAccountsForAdmin() {
     return SYSTEM_ACCOUNTS.slice();
   }
@@ -175,7 +145,6 @@
     canReviewProposals: canReviewProposals,
     canSubmitTechnologyChanges: canSubmitTechnologyChanges,
     isProposalOnlyRole: isProposalOnlyRole,
-    getUsersForMockAuth: getUsersForMockAuth,
     getSystemAccountsForAdmin: getSystemAccountsForAdmin,
     getRoleLabel: getRoleLabel,
     isKnownRole: isKnownRole
