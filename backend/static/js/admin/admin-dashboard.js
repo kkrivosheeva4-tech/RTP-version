@@ -113,7 +113,7 @@ import Chart from 'chart.js/auto';
     var state = getState();
     var auditLogs = state.auditLogs || [];
     var common = getCommon();
-    var order = ['login', 'logout', 'create', 'update', 'delete', 'export', 'backup'];
+    var order = ['login', 'logout', 'create', 'update', 'delete', 'export'];
     var labels = order.map(function (a) {
       return common.getActionName(a);
     });
@@ -261,7 +261,6 @@ import Chart from 'chart.js/auto';
     var elTotalUsers = document.getElementById('totalUsers');
     var elActiveSessions = document.getElementById('activeSessions');
     var elAuditEvents = document.getElementById('auditEvents');
-    var elBackupCount = document.getElementById('backupCount');
     if (elTotalUsers) elTotalUsers.textContent = (state.users || []).length;
     var hasSession = !!(
       window.AuthModule &&
@@ -270,7 +269,6 @@ import Chart from 'chart.js/auto';
     );
     if (elActiveSessions) elActiveSessions.textContent = hasSession ? 1 : 0;
     if (elAuditEvents) elAuditEvents.textContent = (state.auditLogs || []).length;
-    if (elBackupCount) elBackupCount.textContent = (state.backups || []).length;
 
     if (usersChart) {
       var usersData = generateUserRegistrationData();

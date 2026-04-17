@@ -3,7 +3,7 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework import serializers
 
-from admin_panel.models import AuditLog, BackupSnapshot
+from admin_panel.models import AuditLog
 from auth_custom.models import UserPasswordHistory, UserProfile
 from auth_custom.security import (
     PASSWORD_HISTORY_LIMIT,
@@ -59,9 +59,7 @@ class AdminUserWriteSerializer(serializers.Serializer):
         allow_blank=True,
         trim_whitespace=False,
     )
-    password = serializers.CharField(
-        required=False, write_only=True, trim_whitespace=False
-    )
+    password = serializers.CharField(required=False, write_only=True, trim_whitespace=False)
     role = serializers.ChoiceField(choices=UserProfile.ROLE_CHOICES, required=False)
     is_active = serializers.BooleanField(required=False)
     is_2fa_enabled = serializers.BooleanField(required=False)
@@ -220,39 +218,6 @@ class AuditLogSerializer(serializers.ModelSerializer):
             "id": obj.actor_id,
             "username": obj.actor.username,
         }
-
-
-class BackupSnapshotSerializer(serializers.ModelSerializer):
-    created_by = serializers.SerializerMethodField()
-    download_url = serializers.SerializerMethodField()
-
-    class Meta:
-        model = BackupSnapshot
-        fields = [
-            "id",
-            "name",
-            "description",
-            "checksum",
-            "size_bytes",
-            "metadata",
-            "is_restorable",
-            "created_by",
-            "created_at",
-            "download_url",
-        ]
-
-    @staticmethod
-    def get_created_by(obj):
-        if not obj.created_by:
-            return None
-        return {
-            "id": obj.created_by_id,
-            "username": obj.created_by.username,
-        }
-
-    @staticmethod
-    def get_download_url(obj):
-        return f"/api/v1/admin-panel/backups/{obj.id}/download"
 
 
 class EnterpriseSerializer(serializers.Serializer):

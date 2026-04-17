@@ -21,6 +21,11 @@
 - перспективы развития и масштабирования;
 - модель доступа пользователей, разработчиков и администраторов.
 
+### 1.1 Уточнение границ MVP (07.04.2026)
+
+Для `MVP` в рамках ответственности команды разработки из прикладного контура исключается app-level блок `backup/restore` (UI/API и локальное backup storage приложения).
+Резервирование, хранение и восстановление выполняются во внешнем эксплуатационном контуре по регламенту `СРК` (Confluence), владельцем процесса является инфраструктурная команда.
+
 ## 2. Основание для разработки и бизнес-контекст
 
 ### 2.1 Основание для разработки
@@ -70,7 +75,7 @@
 - двухфакторная аутентификация;
 - аудит действий пользователей;
 - формирование отчетов и экспорт данных;
-- резервное копирование и восстановление;
+- резервирование и восстановление по регламенту `СРК` (вне app-level MVP);
 - предоставление структурированной справочной информации по системе.
 
 ### 3.2 Объекты автоматизации
@@ -93,7 +98,7 @@
 4. Пользователь просматривает карточки технологий и связанные сведения.
 5. Пользователь с соответствующими правами создает, редактирует или удаляет технологии.
 6. Пользователь формирует экспорт и отчетные материалы.
-7. Администратор управляет пользователями, аудитом и резервным копированием.
+7. Администратор управляет пользователями и аудитом; резервирование выполняется по регламенту `СРК`.
 
 ## 4. Бизнес-, функциональные и нефункциональные требования
 
@@ -121,7 +126,7 @@
 - экспорт отчетов в машиночитаемые и пользовательские форматы;
 - аудит значимых действий;
 - справочный раздел;
-- административные функции управления пользователями и резервным копированием.
+- административные функции управления пользователями и аудитом.
 
 ### 4.3 Нефункциональные требования
 
@@ -131,7 +136,7 @@
 - бизнес-данные должны храниться централизованно в серверной БД;
 - доступ к системе должен осуществляться по `HTTPS`;
 - система должна иметь журналирование ошибок и событий;
-- должна быть обеспечена возможность резервного копирования и контролируемого восстановления;
+- должна быть обеспечена возможность резервного копирования и контролируемого восстановления во внешнем контуре по регламенту `СРК`;
 - должны поддерживаться мониторинг, smoke-проверки и эксплуатационная документация;
 - архитектура должна допускать развитие и масштабирование без пересмотра базовой модели системы.
 
@@ -178,14 +183,13 @@
 - модуль управления технологиями;
 - модуль справочников;
 - модуль аудита;
-- модуль резервного копирования;
 - модуль метрик и health-check.
 
 #### Слой данных
 
 - `PostgreSQL 14+`;
 - хранение данных о технологиях, предприятиях, функциях, направлениях, пользователях и журнале аудита;
-- хранение служебных данных по сессиям, ролям и резервным копиям.
+- хранение служебных данных по сессиям и ролям.
 
 ### 5.3 Логическая схема взаимодействия систем
 
@@ -210,11 +214,11 @@
         <mxCell id="auth-box" value="Auth / Roles / 2FA&#xa;login&#xa;refresh&#xa;logout&#xa;users/me" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="app-layer"><mxGeometry x="20" y="140" width="130" height="120" as="geometry"/></mxCell>
         <mxCell id="ref-box" value="References&#xa;enterprises&#xa;blocks&#xa;functions&#xa;directions&#xa;vendors / integrators" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="app-layer"><mxGeometry x="170" y="140" width="130" height="140" as="geometry"/></mxCell>
         <mxCell id="tech-box" value="Technologies&#xa;catalog&#xa;coverage&#xa;readiness&#xa;proposals / moderation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="app-layer"><mxGeometry x="320" y="140" width="150" height="130" as="geometry"/></mxCell>
-        <mxCell id="ops-box" value="Operational modules&#xa;audit&#xa;backup / restore&#xa;metrics / health&#xa;export" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="app-layer"><mxGeometry x="20" y="330" width="170" height="130" as="geometry"/></mxCell>
+        <mxCell id="ops-box" value="Operational modules&#xa;audit&#xa;metrics / health&#xa;export" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="app-layer"><mxGeometry x="20" y="330" width="170" height="130" as="geometry"/></mxCell>
         <mxCell id="policy-box" value="Security / policy&#xa;RBAC&#xa;CSRF / CORS&#xa;TLS / secure cookies" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="app-layer"><mxGeometry x="220" y="330" width="150" height="100" as="geometry"/></mxCell>
         <mxCell id="data-layer" value="Data layer" style="swimlane;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="1140" y="70" width="250" height="390" as="geometry"/></mxCell>
         <mxCell id="db-main" value="PostgreSQL&#xa;business data&#xa;auth state&#xa;audit metadata" style="shape=cylinder;whiteSpace=wrap;html=1;boundedLbl=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="data-layer"><mxGeometry x="40" y="60" width="140" height="100" as="geometry"/></mxCell>
-        <mxCell id="db-backup" value="Backup storage" style="shape=cylinder;whiteSpace=wrap;html=1;boundedLbl=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="data-layer"><mxGeometry x="40" y="220" width="140" height="80" as="geometry"/></mxCell>
+        <mxCell id="db-backup" value="External SRK process&#xa;(outside MVP app)" style="shape=cylinder;whiteSpace=wrap;html=1;boundedLbl=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="data-layer"><mxGeometry x="40" y="220" width="140" height="80" as="geometry"/></mxCell>
         <mxCell id="ops-layer" value="Operations layer" style="swimlane;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="1450" y="70" width="190" height="390" as="geometry"/></mxCell>
         <mxCell id="release" value="CI/CD" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="ops-layer"><mxGeometry x="25" y="50" width="120" height="50" as="geometry"/></mxCell>
         <mxCell id="deploy" value="SSH deploy + systemd" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="ops-layer"><mxGeometry x="25" y="130" width="140" height="60" as="geometry"/></mxCell>
@@ -229,7 +233,7 @@
         <mxCell id="ae8" value="SQL" style="endArrow=block;html=1;" edge="1" parent="1" source="auth-box" target="db-main"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="ae9" value="SQL" style="endArrow=block;html=1;" edge="1" parent="1" source="ref-box" target="db-main"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="ae10" value="SQL" style="endArrow=block;html=1;" edge="1" parent="1" source="tech-box" target="db-main"><mxGeometry relative="1" as="geometry"/></mxCell>
-        <mxCell id="ae11" value="backup / restore" style="endArrow=block;html=1;" edge="1" parent="1" source="ops-box" target="db-backup"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ae11" value="SRK regulation reference" style="endArrow=block;html=1;" edge="1" parent="1" source="ops-box" target="db-backup"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="ae12" value="deploy" style="endArrow=block;html=1;" edge="1" parent="1" source="release" target="deploy"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="ae13" value="release update" style="endArrow=block;html=1;" edge="1" parent="1" source="deploy" target="gun"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="ae14" value="metrics / logs" style="endArrow=block;html=1;" edge="1" parent="1" source="ops-box" target="monitor"><mxGeometry relative="1" as="geometry"/></mxCell>
@@ -245,7 +249,7 @@
 
 На левой стороне схемы расположены пользователи, которые обращаются к системе через браузер. Далее следует web-слой, представленный внешним `nginx`, страницами интерфейса и страницами аутентификации. Этот слой отвечает за публикацию интерфейса по `HTTPS`, первичную маршрутизацию запросов и доставку пользовательских страниц. На следующем уровне расположен прикладной слой, в котором выделены `Gunicorn`, доставка UI через `Django`, API-шлюз `/api/v1/*`, а также основные доменные блоки: аутентификация и роли, справочники, технологии, эксплуатационные функции и политики безопасности.
 
-Отдельный слой данных содержит рабочую `PostgreSQL`-базу и резервное хранилище. Это подчёркивает, что бизнес-данные, состояние аутентификации и служебные метаданные хранятся централизованно, а операции резервного копирования рассматриваются как часть целевой архитектуры. Справа вынесен operations layer, в который входят поставка релизов, развёртывание и мониторинг. Такое выделение показывает, что эксплуатационные процессы не смешиваются с пользовательским runtime, а организуются как самостоятельный сопровождающий контур.
+Отдельный слой данных содержит рабочую `PostgreSQL`-базу и ссылку на внешний контур `СРК` для резервирования (вне MVP приложения). Это подчёркивает, что бизнес-данные и состояние аутентификации хранятся централизованно в runtime-БД, а операции резервирования выполняются по корпоративному регламенту. Справа вынесен operations layer, в который входят поставка релизов, развёртывание и мониторинг. Такое выделение показывает, что эксплуатационные процессы не смешиваются с пользовательским runtime, а организуются как самостоятельный сопровождающий контур.
 
 Связи между блоками отражают базовые направления обмена: пользовательский `HTTPS`-трафик идёт во внешний web-слой, затем запросы передаются в прикладной слой, прикладные компоненты работают с базой данных, а эксплуатационный слой обеспечивает поставку обновлений и получение метрик/логов. В результате схема фиксирует центральный архитектурный принцип проекта: единый пользовательский вход, единый backend-контур для UI и API, централизованное хранение данных и вынесенные процессы сопровождения.
 
@@ -265,7 +269,7 @@
         <mxCell id="authapp" value="auth_custom&#xa;users&#xa;roles&#xa;JWT lifecycle&#xa;2FA / TOTP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1"><mxGeometry x="740" y="40" width="170" height="130" as="geometry"/></mxCell>
         <mxCell id="refapp" value="references&#xa;enterprises&#xa;blocks&#xa;functions&#xa;directions&#xa;vendors / integrators" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1"><mxGeometry x="740" y="200" width="170" height="150" as="geometry"/></mxCell>
         <mxCell id="techapp" value="technologies&#xa;catalog&#xa;readiness&#xa;coverage&#xa;proposals / moderation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1"><mxGeometry x="950" y="40" width="180" height="140" as="geometry"/></mxCell>
-        <mxCell id="adminapp" value="admin_panel&#xa;admin users&#xa;audit&#xa;backup / restore&#xa;metrics" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1"><mxGeometry x="950" y="220" width="180" height="140" as="geometry"/></mxCell>
+        <mxCell id="adminapp" value="admin_panel&#xa;admin users&#xa;audit&#xa;metrics" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1"><mxGeometry x="950" y="220" width="180" height="140" as="geometry"/></mxCell>
         <mxCell id="docs" value="OpenAPI / docs / runbooks" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1" parent="1"><mxGeometry x="740" y="390" width="170" height="60" as="geometry"/></mxCell>
         <mxCell id="db" value="PostgreSQL 14+" style="shape=cylinder;whiteSpace=wrap;html=1;boundedLbl=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1"><mxGeometry x="1210" y="170" width="150" height="90" as="geometry"/></mxCell>
         <mxCell id="ce1" value="HTTPS" style="endArrow=block;html=1;" edge="1" parent="1" source="browser" target="proxy"><mxGeometry relative="1" as="geometry"/></mxCell>
@@ -292,7 +296,7 @@
 
 Слева показаны браузерный клиент и `nginx reverse proxy`, через которые пользователь получает страницы и выполняет API-вызовы. Далее идут два узла прикладного входа: `Web UI layer`, который отвечает за шаблоны, статические ресурсы, формы и визуальные представления, и `REST API layer`, который выступает единой точкой входа для клиент-серверного взаимодействия через `/api/v1/*`. Эти два элемента образуют общий прикладной фасад системы.
 
-Правее расположены основные доменные компоненты. Блок `auth_custom` отвечает за пользователей, роли, жизненный цикл токенов и сценарии `2FA / TOTP`. Блок `references` содержит справочники предприятий, блоков, функций, направлений, вендоров и интеграторов. Блок `technologies` концентрирует предметную область каталога технологий, готовности, покрытия функций, предложений и модерации. Блок `admin_panel` отвечает за административные функции, аудит, резервное копирование и метрики. Отдельно вынесен узел `OpenAPI / docs / runbooks`, который показывает, что документация и контракт API рассматриваются как полноценная часть архитектуры, а не как внешний необязательный артефакт.
+Правее расположены основные доменные компоненты. Блок `auth_custom` отвечает за пользователей, роли, жизненный цикл токенов и сценарии `2FA / TOTP`. Блок `references` содержит справочники предприятий, блоков, функций, направлений, вендоров и интеграторов. Блок `technologies` концентрирует предметную область каталога технологий, готовности, покрытия функций, предложений и модерации. Блок `admin_panel` отвечает за административные функции, аудит и метрики. Отдельно вынесен узел `OpenAPI / docs / runbooks`, который показывает, что документация и контракт API рассматриваются как полноценная часть архитектуры, а не как внешний необязательный артефакт.
 
 Все прикладные модули связаны с единой `PostgreSQL`-базой, что подчёркивает целостность модели данных. Стрелки от API-слоя к доменным блокам показывают, что клиент взаимодействует не с разрозненными сервисами, а с единым приложением, внутри которого логически разделены домены ответственности. Практический смысл этой схемы в том, чтобы показать модульность backend-а: система остаётся цельной на уровне runtime, но внутри организована как набор чётко различимых прикладных подсистем.
 
@@ -306,7 +310,7 @@
 - взаимодействие `nginx` с прикладным сервером;
 - взаимодействие прикладного сервера с `PostgreSQL`;
 - эксплуатационное взаимодействие через `SSH` и `systemd`;
-- выгрузка backup-артефактов в файловый контур организации.
+- взаимодействие с внешним регламентом `СРК` для операций резервирования.
 
 ### 6.2 Методы интеграции
 
@@ -314,7 +318,7 @@
 - `REST API / JSON` для клиент-серверного обмена;
 - native protocol `PostgreSQL` для взаимодействия backend и БД;
 - `SSH` для deployment и сопровождения;
-- файловый обмен для резервных копий и экспортных материалов.
+- файловый обмен для экспортных материалов; резервирование выполняется по внешнему регламенту `СРК`.
 
 ### 6.3 Потоки данных
 
@@ -431,7 +435,7 @@
 - `technology proposals / moderation`;
 - `export`;
 - `audit`;
-- `backup / restore`;
+- `backup / restore` (вне MVP API; выполняется по регламенту `СРК`);
 - `health / metrics / docs`.
 
 ### 7.4 Документация системы
@@ -444,7 +448,7 @@
 - OpenAPI schema;
 - описание ролевой модели;
 - release и deployment runbook;
-- backup/restore runbook;
+- ссылка на регламент `СРК` по резервированию и восстановлению (Confluence);
 - регрессионные и smoke-checklists;
 - эксплуатационные инструкции для тестового и промышленного контуров.
 
@@ -517,19 +521,19 @@
         <mxCell id="52" value="&#1054;&#1089;&#1085;&#1086;&#1074;&#1085;&#1072;&#1103; &#1041;&#1044;&#xa;PostgreSQL 14+&#xa;&#1087;&#1086;&#1088;&#1090; 5432" style="shape=cylinder3;html=1;whiteSpace=wrap;fillColor=#A9DFBF;strokeColor=#27AE60;fontSize=9" vertex="1" parent="51">
           <mxGeometry x="35" y="40" width="150" height="75" as="geometry"/>
         </mxCell>
-        <mxCell id="53" value="&#1044;&#1072;&#1085;&#1085;&#1099;&#1077; &#1076;&#1086;&#1084;&#1077;&#1085;&#1072;&#xa;technologies, references, enterprises&#xa;users, audit, proposals, backups metadata" style="rounded=1;html=1;whiteSpace=wrap;fillColor=#A9DFBF;strokeColor=#27AE60;fontSize=9" vertex="1" parent="51">
+        <mxCell id="53" value="&#1044;&#1072;&#1085;&#1085;&#1099;&#1077; &#1076;&#1086;&#1084;&#1077;&#1085;&#1072;&#xa;technologies, references, enterprises&#xa;users, audit, proposals" style="rounded=1;html=1;whiteSpace=wrap;fillColor=#A9DFBF;strokeColor=#27AE60;fontSize=9" vertex="1" parent="51">
           <mxGeometry x="205" y="40" width="150" height="95" as="geometry"/>
         </mxCell>
         <mxCell id="54" value="&#1054;&#1087;&#1077;&#1088;&#1072;&#1094;&#1080;&#1080; &#1089;&#1086;&#1087;&#1088;&#1086;&#1074;&#1086;&#1078;&#1076;&#1077;&#1085;&#1080;&#1103;&#xa;django migrate&#xa;seed_references, seed_technologies, seed_users" style="rounded=1;html=1;whiteSpace=wrap;fillColor=#A9DFBF;strokeColor=#27AE60;fontSize=9" vertex="1" parent="51">
           <mxGeometry x="35" y="140" width="320" height="70" as="geometry"/>
         </mxCell>
-        <mxCell id="60" value="&#1056;&#1077;&#1079;&#1077;&#1088;&#1074;&#1085;&#1086;&#1077; &#1093;&#1088;&#1072;&#1085;&#1077;&#1085;&#1080;&#1077; &#1080; &#1074;&#1086;&#1089;&#1089;&#1090;&#1072;&#1085;&#1086;&#1074;&#1083;&#1077;&#1085;&#1080;&#1077;" style="swimlane;html=1;startSize=25;container=1;rounded=1;strokeColor=#16A085;fillColor=#D1F2EB;fontStyle=1;fontSize=10" vertex="1" parent="50">
+        <mxCell id="60" value="&#1042;&#1085;&#1077;&#1096;&#1085;&#1080;&#1081; &#1082;&#1086;&#1085;&#1090;&#1091;&#1088; &#1057;&#1056;&#1050;&#xa;backup / restore &#1074;&#1085;&#1077; MVP app" style="swimlane;html=1;startSize=25;container=1;rounded=1;strokeColor=#16A085;fillColor=#D1F2EB;fontStyle=1;fontSize=10" vertex="1" parent="50">
           <mxGeometry x="450" y="40" width="350" height="240" as="geometry"/>
         </mxCell>
-        <mxCell id="61" value="Backup storage&#xa;&#1083;&#1086;&#1075;&#1080;&#1095;&#1077;&#1089;&#1082;&#1080;&#1077; &#1076;&#1072;&#1084;&#1087;&#1099; &#1041;&#1044;&#xa;&#1089;&#1082;&#1072;&#1095;&#1080;&#1074;&#1072;&#1077;&#1084;&#1099;&#1077; backup-&#1072;&#1088;&#1090;&#1077;&#1092;&#1072;&#1082;&#1090;&#1099;&#xa;dry-run restore evidence" style="shape=folder;html=1;whiteSpace=wrap;fillColor=#76D7C4;strokeColor=#16A085;fontSize=9" vertex="1" parent="60">
+        <mxCell id="61" value="Confluence / SRK regulation&#xa;retention, access policy&#xa;restore drill evidence" style="shape=folder;html=1;whiteSpace=wrap;fillColor=#76D7C4;strokeColor=#16A085;fontSize=9" vertex="1" parent="60">
           <mxGeometry x="40" y="40" width="260" height="120" as="geometry"/>
         </mxCell>
-        <mxCell id="62" value="&#1061;&#1088;&#1072;&#1085;&#1077;&#1085;&#1080;&#1077; &#1086;&#1090;&#1076;&#1077;&#1083;&#1100;&#1085;&#1086; &#1086;&#1090; runtime-&#1082;&#1086;&#1085;&#1090;&#1091;&#1088;&#1072;" style="rounded=1;html=1;whiteSpace=wrap;fillColor=#76D7C4;strokeColor=#16A085;fontSize=9" vertex="1" parent="60">
+        <mxCell id="62" value="&#1055;&#1088;&#1086;&#1094;&#1077;&#1089;&#1089; &#1074;&#1099;&#1085;&#1077;&#1089;&#1077;&#1085; &#1074;&#1086; &#1074;&#1085;&#1077;&#1096;&#1085;&#1080;&#1081; &#1082;&#1086;&#1085;&#1090;&#1091;&#1088; &#1080;&#1085;&#1092;&#1088;&#1072;&#1089;&#1090;&#1088;&#1091;&#1082;&#1090;&#1091;&#1088;&#1099;" style="rounded=1;html=1;whiteSpace=wrap;fillColor=#76D7C4;strokeColor=#16A085;fontSize=9" vertex="1" parent="60">
           <mxGeometry x="40" y="175" width="260" height="35" as="geometry"/>
         </mxCell>
         <mxCell id="70" value="&#1048;&#1085;&#1092;&#1088;&#1072;&#1089;&#1090;&#1088;&#1091;&#1082;&#1090;&#1091;&#1088;&#1085;&#1099;&#1077; &#1089;&#1077;&#1088;&#1074;&#1080;&#1089;&#1099;" style="swimlane;html=1;startSize=25;container=1;rounded=1;strokeColor=#7F8C8D;fillColor=#F2F4F4;fontStyle=1;fontSize=11" vertex="1" parent="10">
@@ -573,7 +577,7 @@
         <mxCell id="204" value="DB migrations / seeds" style="endArrow=classic;html=1;rounded=0;strokeColor=#27AE60;dashed=1" edge="1" parent="1" source="34" target="54">
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="205" value="Backup create / restore" style="endArrow=classic;html=1;rounded=0;strokeColor=#16A085" edge="1" parent="1" source="34" target="61">
+        <mxCell id="205" value="SRK process reference" style="endArrow=classic;html=1;rounded=0;strokeColor=#16A085" edge="1" parent="1" source="34" target="61">
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
         <mxCell id="206" value="Health / docs / OpenAPI" style="endArrow=classic;html=1;rounded=0;strokeColor=#F39C12" edge="1" parent="1" source="32" target="41">
@@ -629,13 +633,13 @@
 
 Прикладной контур содержит сервер приложений под управлением `Debian 12`, блок same-origin доставки интерфейса через `Django templates + staticfiles`, а также собранную статику, публикуемую после `collectstatic`. Здесь же расположен backend runtime на `Gunicorn + Django`, внутри которого выделены точки входа WSGI, прикладное приложение, блоки аутентификации и безопасности, а также бизнес-модули системы. Отдельным подблоком вынесены сервисные endpoint'ы наблюдаемости: health-check, OpenAPI, встроенная документация и метрики. Это показывает, что прикладной слой не ограничивается только бизнес-логикой, а сразу включает механизмы эксплуатационного контроля.
 
-Контур данных разделён на рабочее хранилище и резервное хранение. В рабочей части показана основная `PostgreSQL`-база, доменные данные и операции сопровождения, такие как миграции и загрузка начальных данных. Во второй части размещено резервное хранилище, предназначенное для логических дампов, backup-артефактов и подтверждений тестового восстановления. Диаграмма специально подчёркивает разнесение runtime-данных и backup-контента, чтобы зафиксировать архитектурное требование к восстановлению и устойчивости системы.
+Контур данных в `MVP` содержит рабочую `PostgreSQL`-базу, доменные данные и операции сопровождения (миграции, загрузка начальных данных). Резервирование и восстановление выполняются во внешнем эксплуатационном контуре по регламенту `СРК`; в приложении не разворачивается отдельный app-level блок backup storage.
 
 Отдельным блоком показаны инфраструктурные сервисы. В них входят `Service management`, который отвечает за жизненный цикл сервисов через `systemd`, контур поставки `Release / CI-CD`, отражающий процессы сборки, доставки и развёртывания релизов, а также `Monitoring / diagnostics contour`, который описывает сбор логов, метрик и последующий мониторинг состояния системы. На диаграмме эти элементы вынесены за пределы прикладного runtime, потому что их задача - сопровождать основное приложение, а не участвовать напрямую в пользовательском сценарии.
 
 В нижней части схемы показаны основные акторы: пользователь, администратор и `Release owner / DevOps`. Их связи с компонентами схемы помогают понять, кто именно взаимодействует с каждым инфраструктурным уровнем. Пользователь работает с системой по `HTTPS`, администратор получает эксплуатационный доступ, а выпуск и сопровождение релизов происходят через отдельный инфраструктурный контур.
 
-Стрелки между блоками отражают ключевые эксплуатационные потоки: пользовательский трафик проходит через `nginx` к интерфейсу и API, backend работает с `PostgreSQL`, бизнес-модули инициируют миграции и резервное копирование, сервисные endpoint'ы отдают сигналы для наблюдаемости, а контур поставки и управления сервисами обеспечивает выпуск изменений и поддержание работоспособности среды. Практический смысл этой схемы состоит в фиксации целевой эксплуатационной модели приложения как серверо-центричной корпоративной системы с единым защищённым входом, единым прикладным runtime, централизованной БД и отдельными контурами сопровождения, поставки и восстановления.
+Стрелки между блоками отражают ключевые эксплуатационные потоки: пользовательский трафик проходит через `nginx` к интерфейсу и API, backend работает с `PostgreSQL`, бизнес-модули инициируют миграции, сервисные endpoint'ы отдают сигналы для наблюдаемости, а контур поставки и управления сервисами обеспечивает выпуск изменений и поддержание работоспособности среды. Резервирование и восстановление выполняются по внешнему регламенту `СРК`.
 
 ## 8. Системные требования и целевой стек
 
@@ -661,7 +665,7 @@
 - предприятия и оценки готовности;
 - модерация изменений;
 - аудит;
-- резервное копирование и восстановление;
+- интеграция с процессом резервирования/восстановления по регламенту `СРК` (вне MVP runtime);
 - метрики и эксплуатационный контроль.
 
 #### Рисунок 5. ERD-диаграмма базы данных (`draw.io / mxGraphModel`)
@@ -688,7 +692,6 @@
         <mxCell id="t13" value="TechnologyEnterpriseReadiness&#xa;FK technology_id&#xa;FK enterprise_id&#xa;tech_readiness&#xa;org_readiness&#xa;status" style="shape=swimlane;whiteSpace=wrap;html=1;" vertex="1" parent="1"><mxGeometry x="30" y="430" width="220" height="170" as="geometry"/></mxCell>
         <mxCell id="t14" value="TechnologyProposal&#xa;PK id&#xa;FK technology_id&#xa;FK created_by_id&#xa;FK reviewed_by_id&#xa;action&#xa;status" style="shape=swimlane;whiteSpace=wrap;html=1;" vertex="1" parent="1"><mxGeometry x="310" y="430" width="220" height="180" as="geometry"/></mxCell>
         <mxCell id="t15" value="AuditLog&#xa;PK id&#xa;FK actor_id&#xa;action_type&#xa;timestamp" style="shape=swimlane;whiteSpace=wrap;html=1;" vertex="1" parent="1"><mxGeometry x="590" y="450" width="180" height="130" as="geometry"/></mxCell>
-        <mxCell id="t16" value="BackupSnapshot&#xa;PK id&#xa;FK created_by_id&#xa;status&#xa;created_at" style="shape=swimlane;whiteSpace=wrap;html=1;" vertex="1" parent="1"><mxGeometry x="820" y="450" width="190" height="130" as="geometry"/></mxCell>
         <mxCell id="rel1" value="1:1" style="endArrow=block;html=1;" edge="1" parent="1" source="t1" target="t2"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="rel2" value="1:N" style="endArrow=block;html=1;" edge="1" parent="1" source="t1" target="t3"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="rel3" value="1:N" style="endArrow=block;html=1;" edge="1" parent="1" source="t5" target="t6"><mxGeometry relative="1" as="geometry"/></mxCell>
@@ -701,7 +704,6 @@
         <mxCell id="rel10" value="1:N" style="endArrow=block;html=1;" edge="1" parent="1" source="t10" target="t14"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="rel11" value="1:N" style="endArrow=block;html=1;" edge="1" parent="1" source="t1" target="t14"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="rel12" value="1:N" style="endArrow=block;html=1;" edge="1" parent="1" source="t1" target="t15"><mxGeometry relative="1" as="geometry"/></mxCell>
-        <mxCell id="rel13" value="1:N" style="endArrow=block;html=1;" edge="1" parent="1" source="t1" target="t16"><mxGeometry relative="1" as="geometry"/></mxCell>
       </root>
     </mxGraphModel>
   </diagram>
@@ -718,9 +720,9 @@ ERD-диаграмма базы данных показывает логичес
 
 Предметная технологическая модель сосредоточена вокруг сущности `Technology`. С ней связаны таблицы `TechnologyFunctionCoverage`, которая показывает покрытие функций технологиями, `TechnologyDirection`, которая связывает технологии с направлениями, и `TechnologyEnterpriseReadiness`, которая отражает готовность конкретной технологии для конкретного предприятия. За счёт этих связей система может не только хранить описание технологии, но и показывать её применимость, зрелость и релевантность для разных организационных контуров.
 
-Отдельный прикладной блок составляют `TechnologyProposal` и `AuditLog`. Первая сущность отвечает за предложения изменений и процессы модерации, вторая - за журналирование значимых действий пользователей. Наличие этих таблиц показывает, что система проектируется не как статичный каталог, а как управляемая среда изменения данных с трассируемой историей действий. Сущность `BackupSnapshot` дополняет модель эксплуатационной информацией о резервных копиях и сценариях сопровождения.
+Отдельный прикладной блок составляют `TechnologyProposal` и `AuditLog`. Первая сущность отвечает за предложения изменений и процессы модерации, вторая - за журналирование значимых действий пользователей. Наличие этих таблиц показывает, что система проектируется не как статичный каталог, а как управляемая среда изменения данных с трассируемой историей действий.
 
-Связи между сущностями показывают, что база данных служит единым центром хранения не только для каталога технологий, но и для аутентификации, ролевой модели, справочников, модерации, аудита и резервного копирования. Практический смысл диаграммы состоит в том, что она фиксирует целостную модель данных будущей системы и показывает, какие прикладные и эксплуатационные процессы будут опираться на `PostgreSQL` как на единый источник истины.
+Связи между сущностями показывают, что база данных служит единым центром хранения каталога технологий, аутентификации, ролевой модели, справочников, модерации и аудита. Для `MVP` операции резервирования выведены во внешний контур `СРК` и не реализуются как app-level runtime процесс.
 
 ### 8.3 Клиентская среда
 
@@ -755,12 +757,12 @@ ERD-диаграмма базы данных показывает логичес
   - `4 vCPU`;
   - `8-16 GB RAM`;
   - `100+ GB SSD`;
-- отдельное размещение резервных копий и журналов.
+- отдельное размещение журналов; резервирование выносится во внешний контур по регламенту `СРК`.
 
 ### 9.3 Рекомендации по запасу
 
 - резерв по CPU и RAM не менее `30%`;
-- резерв диска под backup, логи и экспортные артефакты;
+- резерв диска под логи и экспортные артефакты; требования к backup storage задаются внешним регламентом `СРК`;
 - возможность выделения отдельного сервера БД;
 - возможность горизонтального масштабирования application-слоя;
 - возможность подключения внешнего хранилища файлов и отчетов на следующих этапах.
@@ -774,7 +776,7 @@ ERD-диаграмма базы данных показывает логичес
 - `guest` - просмотр данных, фильтрация и экспорт;
 - `editor` - инициирование изменений и работа через согласование;
 - `owner` - прямое управление технологиями и утверждение изменений;
-- `admin` - администрирование системы, пользователей, аудита и резервного копирования;
+- `admin` - администрирование системы, пользователей и аудита; операции резервирования выполняются во внешнем контуре `СРК`;
 - `vendor` - перспективный внешний пользовательский контур следующего этапа.
 
 ### 10.2 Рекомендуемый состав пилотного тестового контура
@@ -825,7 +827,7 @@ ERD-диаграмма базы данных показывает логичес
 
 - доступ к серверам test/prod контуров;
 - управление `nginx`, `gunicorn`, `systemd`, сертификатами и журналами;
-- доступ к операциям backup/restore;
+- взаимодействие с внешним процессом backup/restore по регламенту `СРК`;
 - доступ к метрикам и диагностике;
 - контроль сетевых политик, TLS и эксплуатационной безопасности.
 
@@ -847,6 +849,5 @@ ERD-диаграмма базы данных показывает логичес
 - надежное хранение и обработку бизнес-данных;
 - ролевую модель доступа и двухфакторную аутентификацию;
 - визуализацию технологического радара;
-- управляемость, аудит и резервное копирование;
+- управляемость, аудит и соблюдение регламента `СРК` по резервированию.
 - возможность поэтапного масштабирования и развития без смены базового архитектурного подхода.
-

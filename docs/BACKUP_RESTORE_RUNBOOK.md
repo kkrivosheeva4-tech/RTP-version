@@ -1,92 +1,25 @@
 # Backup Restore Runbook
 
-## Цель
+## MVP status (07.04.2026)
 
-Зафиксировать минимально воспроизводимый backup/restore flow для `RTP-3` admin API.
+App-level backup/restore in `RTP-3` is removed from MVP scope:
 
-## Охват
+- there are no backup endpoints in admin API;
+- there is no `BackupSnapshot` app model/table;
+- local app backup storage is not used as part of MVP deployment.
 
-Текущий baseline backup включает:
+## Operating model for MVP
 
-- пользователей и их роли;
-- audit log records;
-- предприятия и связи с функциональными блоками.
+Backup and restore are performed in an external operational contour according to the corporate `СРК` regulation (Confluence).
 
-Restore работает как controlled upsert:
+Development team scope for MVP:
 
-- восстанавливает пользователей, роль и `is_active`;
-- восстанавливает enterprises и `block_ids`;
-- дозаливает audit log records, которых еще нет в БД;
-- не восстанавливает пароли пользователей в исходное состояние.
+- use only business/application data model inside the app;
+- do not implement app-level backup storage/process;
+- document interface requirements to external SRK process (if needed for the next phase).
 
-## Create Backup
+## Evidence for architecture review
 
-```bash
-POST /api/v1/admin-panel/backups
-```
-
-Пример payload:
-
-```json
-{
-  "name": "rc-backup",
-  "description": "Pre-release snapshot"
-}
-```
-
-## Dry-Run Restore
-
-```bash
-POST /api/v1/admin-panel/backups/{id}/restore
-```
-
-Пример payload:
-
-```json
-{
-  "dry_run": true
-}
-```
-
-Ожидаемый результат:
-
-- `200 OK`
-- объект `counts`
-- без изменения данных в БД
-
-## Actual Restore
-
-```bash
-POST /api/v1/admin-panel/backups/{id}/restore
-```
-
-Пример payload:
-
-```json
-{}
-```
-
-Ожидаемый результат:
-
-- `200 OK`
-- `restored_counts`
-- audit event `restore`
-
-## Verification
-
-После restore нужно проверить:
-
-1. измененный enterprise вернулся к значениям из snapshot;
-2. `block_ids` синхронизированы со snapshot;
-3. backup file доступен для download;
-4. в audit присутствует restore event;
-5. backup не помечен как `is_restorable=false`.
-
-## Release Evidence
-
-Для release baseline достаточно приложить:
-
-- ID backup snapshot;
-- dry-run output;
-- actual restore output;
-- подтверждение одного восстановленного enterprise/user сценария.
+- ссылка на актуальный регламент `СРК` в Confluence;
+- подтверждение, что в MVP API отсутствуют backup/restore routes;
+- подтверждение, что резервирование выполняется вне прикладного контура.

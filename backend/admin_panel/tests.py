@@ -6,7 +6,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from admin_panel.models import AuditLog, BackupSnapshot
+from admin_panel.models import AuditLog
 from auth_custom.models import UserProfile
 from auth_custom.totp_utils import generate_totp_token
 from references.models import (
@@ -96,17 +96,6 @@ class TestAdminPanelApi(APITestCase):
 
     def tearDown(self):
         cache.clear()
-        for backup in BackupSnapshot.objects.all():
-            try:
-                path = backup.storage_path
-                if path:
-                    from pathlib import Path
-
-                    backup_file = Path(path)
-                    if backup_file.exists():
-                        backup_file.unlink()
-            except OSError:
-                pass
 
     def _login(self, email, password):
         response = self.client.post(
@@ -277,135 +266,10 @@ class TestAdminPanelApi(APITestCase):
         self.assertEqual(cleanup_response.status_code, status.HTTP_200_OK)
         self.assertGreaterEqual(cleanup_response.data["deleted"], 1)
 
-    def test_backup_create_download_delete(self):
+    def test_backup_api_removed_from_mvp(self):
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_token}")
-        create_response = self.client.post(
-            "/api/v1/admin-panel/backups",
-            data={"name": "smoke-backup", "description": "backup for test"},
-            format="json",
-        )
-        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
-        backup_id = create_response.data["id"]
-
-        list_response = self.client.get("/api/v1/admin-panel/backups")
-        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
-        self.assertTrue(any(row["id"] == backup_id for row in list_response.data))
-
-        download_response = self.client.get(f"/api/v1/admin-panel/backups/{backup_id}/download")
-        self.assertEqual(download_response.status_code, status.HTTP_200_OK)
-        self.assertIn("attachment", download_response.headers.get("Content-Disposition", ""))
-        self.assertGreater(len(download_response.content), 0)
-
-        delete_response = self.client.delete(f"/api/v1/admin-panel/backups/{backup_id}")
-        self.assertEqual(delete_response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertFalse(BackupSnapshot.objects.filter(id=backup_id).exists())
-
-    def test_backup_restore_recovers_domain_state(self):
-        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_token}")
-        create_response = self.client.post(
-            "/api/v1/admin-panel/backups",
-            data={"name": "restore-backup", "description": "restore test"},
-            format="json",
-        )
-        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
-        backup_id = create_response.data["id"]
-        self.assertEqual(create_response.data["metadata"]["schema_version"], 2)
-
-        self.enterprise.description = "mutated"
-        self.enterprise.code = "MUT"
-        self.enterprise.save(update_fields=["description", "code"])
-        EnterpriseBlockMapping.objects.filter(enterprise=self.enterprise).delete()
-        EnterpriseBlockMapping.objects.create(enterprise=self.enterprise, block=self.block_2)
-        self.block_1.name = "Block 1 Mutated"
-        self.block_1.save(update_fields=["name"])
-        self.function.name = "Function Mutated"
-        self.function.save(update_fields=["name"])
-        self.direction.name = "Direction Mutated"
-        self.direction.quadrant = 4
-        self.direction.save(update_fields=["name", "quadrant"])
-        self.vendor.name = "Vendor Mutated"
-        self.vendor.save(update_fields=["name"])
-        self.integrator.name = "Integrator Mutated"
-        self.integrator.save(update_fields=["name"])
-        self.technology.name = "Tech Mutated"
-        self.technology.description = "mutated description"
-        self.technology.trl_stage = 8
-        self.technology.status = "implemented"
-        self.technology.market_examples = ["Changed"]
-        self.technology.documentation_files = ["mutated.pdf"]
-        self.technology.save(
-            update_fields=[
-                "name",
-                "description",
-                "trl_stage",
-                "status",
-                "market_examples",
-                "documentation_files",
-            ]
-        )
-        self.proposal.status = TechnologyProposal.STATUS_APPROVED
-        self.proposal.payload = {"name": "Changed proposal"}
-        self.proposal.save(update_fields=["status", "payload", "updated_at"])
-        FunctionalBlock.objects.create(id=99, name="Extra Block")
-        Enterprise.objects.create(id=99, name="Extra Enterprise", code="EX")
-        Technology.objects.create(name="Extra Tech", primary_block=self.block_2)
-
-        dry_run_response = self.client.post(
-            f"/api/v1/admin-panel/backups/{backup_id}/restore",
-            data={"dry_run": True},
-            format="json",
-        )
-        self.assertEqual(dry_run_response.status_code, status.HTTP_200_OK)
-        self.assertTrue(dry_run_response.data["dry_run"])
-        self.assertGreaterEqual(dry_run_response.data["counts"]["enterprises"], 1)
-        self.assertGreaterEqual(dry_run_response.data["counts"]["technologies"], 1)
-        self.assertGreaterEqual(dry_run_response.data["counts"]["technology_proposals"], 1)
-
-        restore_response = self.client.post(
-            f"/api/v1/admin-panel/backups/{backup_id}/restore",
-            data={},
-            format="json",
-        )
-        self.assertEqual(restore_response.status_code, status.HTTP_200_OK)
-        self.assertTrue(restore_response.data["ok"])
-        self.assertGreaterEqual(restore_response.data["restored_counts"]["references"], 1)
-        self.assertGreaterEqual(restore_response.data["restored_counts"]["technologies"], 1)
-
-        self.block_1.refresh_from_db()
-        self.function.refresh_from_db()
-        self.direction.refresh_from_db()
-        self.vendor.refresh_from_db()
-        self.integrator.refresh_from_db()
-        self.enterprise.refresh_from_db()
-        self.technology.refresh_from_db()
-        self.proposal.refresh_from_db()
-        self.assertEqual(self.block_1.name, "Block 1")
-        self.assertEqual(self.function.name, "Function 1")
-        self.assertEqual(self.direction.name, "Direction 1")
-        self.assertEqual(self.direction.quadrant, 1)
-        self.assertEqual(self.vendor.name, "Vendor 1")
-        self.assertEqual(self.integrator.name, "Integrator 1")
-        self.assertEqual(self.enterprise.description, "")
-        self.assertEqual(self.enterprise.code, "EA")
-        self.assertEqual(
-            list(
-                EnterpriseBlockMapping.objects.filter(enterprise=self.enterprise)
-                .order_by("block_id")
-                .values_list("block_id", flat=True)
-            ),
-            [self.block_1.id],
-        )
-        self.assertEqual(self.technology.name, "Tech A")
-        self.assertEqual(self.technology.description, "stable description")
-        self.assertEqual(self.technology.trl_stage, 5)
-        self.assertEqual(self.technology.status, "planned")
-        self.assertEqual(self.technology.market_examples, ["Example A"])
-        self.assertEqual(self.technology.documentation_files, ["doc-a.pdf"])
-        self.assertEqual(self.proposal.status, TechnologyProposal.STATUS_DRAFT)
-        self.assertEqual(self.proposal.payload, {"name": "Tech A proposal"})
-        self.assertFalse(FunctionalBlock.objects.filter(id=99).exists())
-        self.assertFalse(Enterprise.objects.filter(id=99).exists())
-        self.assertFalse(Technology.objects.filter(name="Extra Tech").exists())
+        response = self.client.get("/api/v1/admin-panel/backups")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_enterprises_crud_with_block_ids(self):
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.admin_token}")

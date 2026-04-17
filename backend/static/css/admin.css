@@ -1198,84 +1198,6 @@ select:focus-visible {
   flex-wrap: wrap;
 }
 
-/* ===== Backups ===== */
-.backup-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.backup-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 14px;
-  border-radius: var(--admin-radius);
-  border: 1px solid rgba(206, 144, 104, 0.18);
-  background: rgba(206, 144, 104, 0.06);
-}
-
-.backup-item+.backup-item {
-  margin-top: 0;
-}
-
-/* gap управляет расстоянием */
-.backup-info h4 {
-  margin: 0 0 4px;
-  font-size: 14px;
-}
-
-.backup-info p {
-  margin: 0;
-  font-size: 12px;
-  color: var(--admin-muted);
-}
-
-.backup-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.backup-restore-btn,
-.backup-delete-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 40px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  cursor: pointer;
-  border: 1px solid rgba(206, 144, 104, 0.24);
-  background: color-mix(in srgb, var(--modal-bg) 90%, transparent);
-  color: var(--text);
-  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
-}
-
-.backup-restore-btn:hover {
-  transform: translateY(-1px);
-  background: rgba(206, 144, 104, 0.14);
-  border-color: rgba(206, 144, 104, 0.38);
-}
-
-.backup-delete-btn {
-  border-color: rgba(231, 76, 60, 0.35);
-  color: #ffb3ad;
-}
-
-.backup-delete-btn:hover {
-  transform: translateY(-1px);
-  background: rgba(231, 76, 60, 0.14);
-  border-color: rgba(231, 76, 60, 0.55);
-}
-
-.backup-restore-btn svg,
-.backup-delete-btn svg {
-  width: 18px;
-  height: 18px;
-}
-
 /* ===== Modals ===== */
 .modal {
   display: none;
@@ -1758,8 +1680,7 @@ body.light .btn-danger {
   border-color: rgba(231, 76, 60, 0.32);
 }
 
-body.light .delete-btn,
-body.light .backup-delete-btn {
+body.light .delete-btn {
   color: #721c24;
 }
 
@@ -1785,9 +1706,7 @@ body.light .btn-secondary:hover,
 body.light .btn-danger:hover,
 body.light .pill:hover,
 body.light .stat-card:hover,
-body.light .action-btn:hover,
-body.light .backup-restore-btn:hover,
-body.light .backup-delete-btn:hover {
+body.light .action-btn:hover {
   transform: none !important;
   box-shadow: none !important;
 }

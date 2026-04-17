@@ -9,8 +9,6 @@ class AuditLog(models.Model):
     ACTION_LOGIN = "login"
     ACTION_LOGOUT = "logout"
     ACTION_EXPORT = "export"
-    ACTION_BACKUP = "backup"
-    ACTION_RESTORE = "restore"
 
     ACTION_CHOICES = [
         (ACTION_CREATE, "Create"),
@@ -19,8 +17,6 @@ class AuditLog(models.Model):
         (ACTION_LOGIN, "Login"),
         (ACTION_LOGOUT, "Logout"),
         (ACTION_EXPORT, "Export"),
-        (ACTION_BACKUP, "Backup"),
-        (ACTION_RESTORE, "Restore"),
     ]
 
     actor = models.ForeignKey(
@@ -45,27 +41,3 @@ class AuditLog(models.Model):
 
     def __str__(self) -> str:
         return f"{self.created_at.isoformat()} {self.action} {self.entity_type}:{self.entity_id}"
-
-
-class BackupSnapshot(models.Model):
-    name = models.CharField(max_length=255, unique=True)
-    description = models.TextField(blank=True)
-    storage_path = models.CharField(max_length=1024)
-    checksum = models.CharField(max_length=128, blank=True)
-    size_bytes = models.BigIntegerField(default=0)
-    metadata = models.JSONField(default=dict, blank=True)
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="created_backups",
-    )
-    is_restorable = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
-
-    class Meta:
-        ordering = ["-created_at"]
-
-    def __str__(self) -> str:
-        return self.name

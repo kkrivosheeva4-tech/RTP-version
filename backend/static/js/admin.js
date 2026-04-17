@@ -1,6 +1,6 @@
 /**
  * Точка входа админ-панели: проверка доступа, тема, навигация, загрузка данных и координация разделов.
- * Разделы: AdminDashboard, AdminUsers, AdminAudit, AdminExport, AdminBackups, AdminEnterprises.
+ * Разделы: AdminDashboard, AdminUsers, AdminAudit, AdminExport, AdminEnterprises.
  */
 (function () {
   'use strict';
@@ -89,7 +89,6 @@
       }
     }
     if (section === 'audit' && window.AdminAudit) window.AdminAudit.loadAuditLogs();
-    if (section === 'backup' && window.AdminBackups) window.AdminBackups.loadBackups();
     if (section === 'enterprises' && window.AdminEnterprises)
       window.AdminEnterprises.loadEnterprises();
     if (section === 'dashboard' && window.AdminDashboard)
@@ -167,7 +166,6 @@
     if (
       !window.AdminUsers ||
       !window.AdminAudit ||
-      !window.AdminBackups ||
       !window.AdminEnterprises
     )
       return;
@@ -199,19 +197,6 @@
     } else {
       state.auditLogs = window.AdminAudit.normalizeAuditLogs(
         common.readStorageJson(common.ADMIN_STORAGE.AUDIT, [])
-      );
-    }
-    if (window.AdminBackups.isApiMode && window.AdminBackups.isApiMode()) {
-      try {
-        state.backups = await window.AdminBackups.fetchBackupsFromApi
-          ? (await window.AdminBackups.fetchBackupsFromApi())
-          : [];
-      } catch (_) {
-        state.backups = [];
-      }
-    } else {
-      state.backups = window.AdminBackups.normalizeBackups(
-        common.readStorageJson(common.ADMIN_STORAGE.BACKUPS, [])
       );
     }
     if (window.AdminEnterprises.isApiMode && window.AdminEnterprises.isApiMode()) {
@@ -359,7 +344,6 @@
     if (window.AdminUsers) window.AdminUsers.init();
     if (window.AdminAudit) window.AdminAudit.init();
     if (window.AdminExport) window.AdminExport.init();
-    if (window.AdminBackups) window.AdminBackups.init();
     if (window.AdminEnterprises) window.AdminEnterprises.init();
     showSection('users');
     common.updatePageTitle('users');

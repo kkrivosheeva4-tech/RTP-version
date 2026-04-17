@@ -133,7 +133,7 @@ const STORAGE_KEY = 'adminAuditLogs';
 
   /**
    * Добавить запись в журнал аудита.
-   * @param {string} action - login/logout/create/update/delete/export/backup
+   * @param {string} action - login/logout/create/update/delete/export
    * @param {string} details
    * @param {object} [meta]
    * @param {string} [meta.user] - override user

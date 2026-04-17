@@ -8,7 +8,6 @@
   const ADMIN_STORAGE = {
     USERS: 'adminUsers',
     AUDIT: 'adminAuditLogs',
-    BACKUPS: 'adminBackups',
     ENTERPRISES: 'adminEnterprises',
     INSTALL_DATE: 'appInstallDate'
   };
@@ -17,7 +16,6 @@
   const AdminState = {
     users: [],
     auditLogs: [],
-    backups: [],
     enterprises: [],
     currentSection: 'users',
     currentUserId: null,
@@ -77,10 +75,6 @@
 
   function persistAuditLogs() {
     writeStorageJson(ADMIN_STORAGE.AUDIT, AdminState.auditLogs);
-  }
-
-  function persistBackups() {
-    writeStorageJson(ADMIN_STORAGE.BACKUPS, AdminState.backups);
   }
 
   function persistEnterprises() {
@@ -182,7 +176,6 @@
       'update': 'Изменение',
       'delete': 'Удаление',
       'export': 'Экспорт',
-      'backup': 'Бэкап'
     };
     return actions[action] || action;
   }
@@ -195,7 +188,6 @@
       'update': 'status-active',
       'delete': 'status-inactive',
       'export': 'status-active',
-      'backup': 'status-active'
     };
     return classes[action] || 'status-inactive';
   }
@@ -548,7 +540,6 @@
       users: 'Пользователи',
       audit: 'Аудит',
       export: 'Экспорт',
-      backup: 'Бэкапы',
       enterprises: 'Предприятия'
     };
     titleEl.textContent = titles[sectionId] || 'Админ‑панель';
@@ -565,7 +556,6 @@
     ensureInstallDate: ensureInstallDate,
     persistUsers: persistUsers,
     persistAuditLogs: persistAuditLogs,
-    persistBackups: persistBackups,
     persistEnterprises: persistEnterprises,
     getLoggedInUserName: getLoggedInUserName,
     safeLogout: safeLogout,
