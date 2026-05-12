@@ -215,7 +215,7 @@ ALTER USER rtp3 CREATEDB;
 - `python backend/manage.py seed_technologies`
   Imports all records from `src/data/ru/technologies.json` and syncs related entities.
 - `python backend/manage.py seed_users`
-  Creates test accounts for roles: `admin`, `architect`, `director`, `project_manager`, `analyst`, `viewer`.
+  Creates test accounts for roles: `admin`, `owner`, `editor`, `guest`, `architect`, `director`, `project_manager`, `analyst`, `viewer`.
 
 Optional flags:
 - `python backend/manage.py seed_references --clear-mappings`
@@ -224,9 +224,12 @@ Optional flags:
 
 ## Test users (dev only)
 
-- `admin` / `admin123`
-- `architect` / `architect123`
-- `director` / `director123`
-- `project_manager` / `pm123`
-- `analyst` / `analyst123`
-- `viewer` / `viewer123`
+- `admin@example.com` / `Admin123!`
+- `owner@example.com` / `Owner123!`
+- `editor@example.com` / `Editor123!`
+- `guest@example.com` / `Guest123!`
+- `architect@example.com` / `Architect123!`
+- `director@example.com` / `Director123!`
+- `project_manager@example.com` / `Manager123!`
+- `analyst@example.com` / `Analyst123!`
+- `viewer@example.com` / `Viewer123!`

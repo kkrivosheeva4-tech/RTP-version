@@ -9,16 +9,61 @@ class Command(BaseCommand):
     help = "Create or update test users for all roles."
 
     DEFAULT_USERS = [
-        {"username": "admin", "password": "admin123", "role": UserProfile.ROLE_ADMIN},
-        {"username": "owner", "password": "owner123", "role": UserProfile.ROLE_OWNER},
-        {"username": "editor", "password": "editor123", "role": UserProfile.ROLE_EDITOR},
-        {"username": "guest", "password": "guest123", "role": UserProfile.ROLE_GUEST},
+        {
+            "username": "admin",
+            "email": "admin@example.com",
+            "password": "Admin123!",
+            "role": UserProfile.ROLE_ADMIN,
+        },
+        {
+            "username": "owner",
+            "email": "owner@example.com",
+            "password": "Owner123!",
+            "role": UserProfile.ROLE_OWNER,
+        },
+        {
+            "username": "editor",
+            "email": "editor@example.com",
+            "password": "Editor123!",
+            "role": UserProfile.ROLE_EDITOR,
+        },
+        {
+            "username": "guest",
+            "email": "guest@example.com",
+            "password": "Guest123!",
+            "role": UserProfile.ROLE_GUEST,
+        },
         # Legacy aliases retained for compatibility during migration.
-        {"username": "architect", "password": "architect123", "role": UserProfile.ROLE_OWNER},
-        {"username": "director", "password": "director123", "role": UserProfile.ROLE_OWNER},
-        {"username": "project_manager", "password": "pm123", "role": UserProfile.ROLE_OWNER},
-        {"username": "analyst", "password": "analyst123", "role": UserProfile.ROLE_GUEST},
-        {"username": "viewer", "password": "viewer123", "role": UserProfile.ROLE_GUEST},
+        {
+            "username": "architect",
+            "email": "architect@example.com",
+            "password": "Architect123!",
+            "role": UserProfile.ROLE_OWNER,
+        },
+        {
+            "username": "director",
+            "email": "director@example.com",
+            "password": "Director123!",
+            "role": UserProfile.ROLE_OWNER,
+        },
+        {
+            "username": "project_manager",
+            "email": "project_manager@example.com",
+            "password": "Manager123!",
+            "role": UserProfile.ROLE_OWNER,
+        },
+        {
+            "username": "analyst",
+            "email": "analyst@example.com",
+            "password": "Analyst123!",
+            "role": UserProfile.ROLE_GUEST,
+        },
+        {
+            "username": "viewer",
+            "email": "viewer@example.com",
+            "password": "Viewer123!",
+            "role": UserProfile.ROLE_GUEST,
+        },
     ]
 
     def add_arguments(self, parser):
@@ -37,12 +82,13 @@ class Command(BaseCommand):
         with transaction.atomic():
             for row in self.DEFAULT_USERS:
                 username = row["username"]
+                email = row["email"]
                 password = row["password"]
                 role = row["role"]
 
                 user, is_created = User.objects.get_or_create(
                     username=username,
-                    defaults={"is_active": True},
+                    defaults={"email": email, "is_active": True},
                 )
                 if is_created:
                     user.set_password(password)
@@ -53,18 +99,32 @@ class Command(BaseCommand):
                 else:
                     if reset_passwords:
                         user.set_password(password)
+                    user.email = email
                     user.is_staff = role == UserProfile.ROLE_ADMIN
                     user.is_superuser = role == UserProfile.ROLE_ADMIN
                     if reset_passwords:
-                        user.save(update_fields=["password", "is_staff", "is_superuser"])
+                        user.save(update_fields=["email", "password", "is_staff", "is_superuser"])
                     else:
-                        user.save(update_fields=["is_staff", "is_superuser"])
+                        user.save(update_fields=["email", "is_staff", "is_superuser"])
                     updated += 1
 
                 profile, _ = UserProfile.objects.get_or_create(user=user)
                 profile.role = role
                 profile.legacy_role = ""
-                profile.save(update_fields=["role", "legacy_role", "updated_at"])
+                if reset_passwords:
+                    profile.failed_login_attempts = 0
+                    profile.locked_at = None
+                    profile.save(
+                        update_fields=[
+                            "role",
+                            "legacy_role",
+                            "failed_login_attempts",
+                            "locked_at",
+                            "updated_at",
+                        ]
+                    )
+                else:
+                    profile.save(update_fields=["role", "legacy_role", "updated_at"])
 
         self.stdout.write(self.style.SUCCESS("Test users seeded."))
         self.stdout.write(f"Created: {created}")
